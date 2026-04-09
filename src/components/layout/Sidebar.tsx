@@ -27,6 +27,7 @@ const adminNav: NavItem[] = [
 
 const sharedNav: NavItem[] = [
   { href: "/maintenance", label: "Maintenance", icon: "🔧" },
+  { href: "/maintenance/inventory", label: "Inventory", icon: "📦" },
   { href: "/tasks", label: "Tasks", icon: "✅" },
 ];
 
