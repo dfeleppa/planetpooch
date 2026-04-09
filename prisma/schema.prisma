@@ -48,6 +48,15 @@ enum TaskPriority {
   URGENT
 }
 
+enum InventoryCategory {
+  TOOLS
+  MATERIALS
+  EQUIPMENT
+  PARTS
+  SUPPLIES
+  OTHER
+}
+
 model User {
   id           String   @id @default(cuid())
   email        String   @unique
@@ -229,14 +238,15 @@ model MaintenanceTask {
 }
 
 model InventoryItem {
-  id               String   @id @default(cuid())
+  id               String              @id @default(cuid())
   name             String
-  description      String   @default("")
-  unit             String   @default("units")
-  currentQuantity  Int      @default(0)
-  minimumThreshold Int      @default(0)
-  createdAt        DateTime @default(now())
-  updatedAt        DateTime @updatedAt
+  description      String              @default("")
+  category         InventoryCategory   @default(SUPPLIES)
+  unit             String              @default("units")
+  currentQuantity  Int                 @default(0)
+  minimumThreshold Int                 @default(0)
+  createdAt        DateTime            @default(now())
+  updatedAt        DateTime            @updatedAt
 
   requirements MaintenanceInventoryRequirement[]
   usages       InventoryUsage[]

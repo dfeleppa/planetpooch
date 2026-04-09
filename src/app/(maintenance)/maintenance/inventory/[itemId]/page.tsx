@@ -8,6 +8,24 @@ import { Badge } from "@/components/ui/badge";
 import { InventoryItemActions } from "./InventoryItemActions";
 import Link from "next/link";
 
+const categoryLabels: Record<string, string> = {
+  TOOLS: "Tools",
+  MATERIALS: "Materials",
+  EQUIPMENT: "Equipment",
+  PARTS: "Parts",
+  SUPPLIES: "Supplies",
+  OTHER: "Other",
+};
+
+const categoryColors: Record<string, string> = {
+  TOOLS: "bg-purple-100 text-purple-800",
+  MATERIALS: "bg-blue-100 text-blue-800",
+  EQUIPMENT: "bg-green-100 text-green-800",
+  PARTS: "bg-orange-100 text-orange-800",
+  SUPPLIES: "bg-gray-100 text-gray-800",
+  OTHER: "bg-slate-100 text-slate-800",
+};
+
 export default async function InventoryItemPage({
   params,
 }: {
@@ -51,11 +69,14 @@ export default async function InventoryItemPage({
 
       <div className="flex items-start justify-between mb-6">
         <div>
-          <div className="flex items-center gap-3 mb-1">
+          <div className="flex items-center gap-3 mb-2">
             <h1 className="text-2xl font-bold text-gray-900">{item.name}</h1>
             <Badge variant={item.currentQuantity === 0 ? "danger" : isLow ? "warning" : "success"}>
               {item.currentQuantity === 0 ? "Out of stock" : isLow ? "Low stock" : "OK"}
             </Badge>
+            <span className={`px-2 py-1 text-xs font-medium rounded-full ${categoryColors[item.category as keyof typeof categoryColors]}`}>
+              {categoryLabels[item.category as keyof typeof categoryLabels]}
+            </span>
           </div>
           {item.description && <p className="text-gray-500">{item.description}</p>}
         </div>

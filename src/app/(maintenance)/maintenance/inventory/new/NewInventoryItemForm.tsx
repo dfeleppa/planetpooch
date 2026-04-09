@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Select } from "@/components/ui/Select";
 
 export function NewInventoryItemForm() {
   const router = useRouter();
@@ -13,9 +14,19 @@ export function NewInventoryItemForm() {
 
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
+  const [category, setCategory] = useState("SUPPLIES");
   const [unit, setUnit] = useState("units");
   const [currentQuantity, setCurrentQuantity] = useState("0");
   const [minimumThreshold, setMinimumThreshold] = useState("0");
+
+  const categories = [
+    { value: "TOOLS", label: "Tools" },
+    { value: "MATERIALS", label: "Materials" },
+    { value: "EQUIPMENT", label: "Equipment" },
+    { value: "PARTS", label: "Parts" },
+    { value: "SUPPLIES", label: "Supplies" },
+    { value: "OTHER", label: "Other" },
+  ];
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -28,6 +39,7 @@ export function NewInventoryItemForm() {
         body: JSON.stringify({
           name,
           description,
+          category,
           unit,
           currentQuantity: Number(currentQuantity),
           minimumThreshold: Number(minimumThreshold),
@@ -67,6 +79,12 @@ export function NewInventoryItemForm() {
               placeholder="Optional..."
             />
           </div>
+          <Select
+            label="Category"
+            value={category}
+            onChange={(e) => setCategory(e.target.value)}
+            options={categories}
+          />
           <Input
             label="Unit"
             value={unit}

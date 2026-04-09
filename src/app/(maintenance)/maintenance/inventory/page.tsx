@@ -9,6 +9,24 @@ import { EmptyState } from "@/components/ui/EmptyState";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/Table";
 import Link from "next/link";
 
+const categoryLabels: Record<string, string> = {
+  TOOLS: "Tools",
+  MATERIALS: "Materials",
+  EQUIPMENT: "Equipment",
+  PARTS: "Parts",
+  SUPPLIES: "Supplies",
+  OTHER: "Other",
+};
+
+const categoryColors: Record<string, string> = {
+  TOOLS: "bg-purple-100 text-purple-800",
+  MATERIALS: "bg-blue-100 text-blue-800",
+  EQUIPMENT: "bg-green-100 text-green-800",
+  PARTS: "bg-orange-100 text-orange-800",
+  SUPPLIES: "bg-gray-100 text-gray-800",
+  OTHER: "bg-slate-100 text-slate-800",
+};
+
 export default async function InventoryPage() {
   await requireAuth();
   const session = await getServerSession(authOptions);
@@ -54,6 +72,7 @@ export default async function InventoryPage() {
           <TableHead>
             <tr>
               <TableHeader>Name</TableHeader>
+              <TableHeader>Category</TableHeader>
               <TableHeader>Unit</TableHeader>
               <TableHeader>On Hand</TableHeader>
               <TableHeader>Min. Threshold</TableHeader>
@@ -71,6 +90,11 @@ export default async function InventoryPage() {
                       {item.name}
                     </Link>
                     {item.description && <p className="text-xs text-gray-500">{item.description}</p>}
+                  </TableCell>
+                  <TableCell>
+                    <span className={`px-2 py-1 text-xs font-medium rounded-full ${categoryColors[item.category as keyof typeof categoryColors]}`}>
+                      {categoryLabels[item.category as keyof typeof categoryLabels]}
+                    </span>
                   </TableCell>
                   <TableCell className="text-gray-600">{item.unit}</TableCell>
                   <TableCell className="font-semibold text-gray-900">{item.currentQuantity}</TableCell>
