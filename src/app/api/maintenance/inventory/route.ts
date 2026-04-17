@@ -9,6 +9,7 @@ export async function GET() {
   const items = await prisma.inventoryItem.findMany({
     orderBy: { name: "asc" },
     include: {
+      category: true,
       _count: { select: { requirements: true, usages: true } },
     },
   });
@@ -23,19 +24,27 @@ export async function POST(req: NextRequest) {
   }
 
   const body = await req.json();
-  const { name, description, unit, currentQuantity, minimumThreshold } = body;
+  const { name, description, categoryId, unit, currentQuantity, minimumThreshold } = body;
 
   if (!name) {
     return NextResponse.json({ error: "name is required" }, { status: 400 });
+  }
+
+  if (!categoryId) {
+    return NextResponse.json({ error: "categoryId is required" }, { status: 400 });
   }
 
   const item = await prisma.inventoryItem.create({
     data: {
       name,
       description: description ?? "",
+      categoryId,
       unit: unit ?? "units",
       currentQuantity: currentQuantity ?? 0,
       minimumThreshold: minimumThreshold ?? 0,
+    },
+    include: {
+      category: true,
     },
   });
 

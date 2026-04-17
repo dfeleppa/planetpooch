@@ -1,9 +1,10 @@
-import { requireAuth } from "@/lib/auth-helpers";
+import { getSession } from "@/lib/auth-helpers";
 import { prisma } from "@/lib/prisma";
 import { NextRequest, NextResponse } from "next/server";
 
 export async function GET() {
-  await requireAuth();
+  const session = await getSession();
+  if (!session?.user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const categories = await prisma.inventoryCategory.findMany({
     orderBy: { name: "asc" },
@@ -13,7 +14,10 @@ export async function GET() {
 }
 
 export async function POST(req: NextRequest) {
-  await requireAuth();
+  const session = await getSession();
+  if (!session?.user || (session.user as { role: string }).role !== "ADMIN") {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
 
   try {
     const { name, color } = await req.json();
