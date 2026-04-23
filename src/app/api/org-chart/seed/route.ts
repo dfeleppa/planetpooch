@@ -128,6 +128,14 @@ export async function POST(req: Request) {
       order: 1,
     },
   });
+  await prisma.orgPosition.create({
+    data: {
+      title: "In-house Groomer",
+      company: Company.RESORT,
+      parentPositionId: asstMgr.id,
+      order: 2,
+    },
+  });
 
   // Best-effort: auto-assign existing users whose jobTitle matches a seeded position
   const users = await prisma.user.findMany({
