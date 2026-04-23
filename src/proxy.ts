@@ -1,34 +1,38 @@
-import { withAuth } from "next-auth/middleware";
 import { NextResponse } from "next/server";
+import { getToken } from "next-auth/jwt";
+import type { NextRequest } from "next/server";
 
-export default withAuth(
-  function proxy(req) {
-    const { pathname } = req.nextUrl;
-    const token = req.nextauth.token;
+export async function proxy(req: NextRequest) {
+  const token = await getToken({
+    req,
+    secret: process.env.NEXTAUTH_SECRET,
+  });
 
-    // Force users with mustChangePassword=true to set a new password before
-    // going anywhere else (except the change-password page itself).
-    if (
-      token?.mustChangePassword &&
-      !pathname.startsWith("/change-password") &&
-      !pathname.startsWith("/api/auth")
-    ) {
-      return NextResponse.redirect(new URL("/change-password", req.url));
-    }
+  const { pathname } = req.nextUrl;
 
-    // Redirect non-admins away from admin pages
-    if (pathname.startsWith("/admin") && token?.role !== "ADMIN") {
-      return NextResponse.redirect(new URL("/dashboard", req.url));
-    }
-
-    return NextResponse.next();
-  },
-  {
-    callbacks: {
-      authorized: ({ token }) => !!token,
-    },
+  // Not authenticated — redirect to login
+  if (!token) {
+    const loginUrl = new URL("/login", req.url);
+    loginUrl.searchParams.set("callbackUrl", req.url);
+    return NextResponse.redirect(loginUrl);
   }
-);
+
+  // Force password change before accessing anything else
+  if (
+    token.mustChangePassword &&
+    !pathname.startsWith("/change-password") &&
+    !pathname.startsWith("/api/auth")
+  ) {
+    return NextResponse.redirect(new URL("/change-password", req.url));
+  }
+
+  // Non-admins cannot access admin pages
+  if (pathname.startsWith("/admin") && token.role !== "ADMIN") {
+    return NextResponse.redirect(new URL("/dashboard", req.url));
+  }
+
+  return NextResponse.next();
+}
 
 export const config = {
   matcher: [
