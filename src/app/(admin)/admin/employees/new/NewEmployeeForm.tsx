@@ -224,12 +224,11 @@ export function NewEmployeeForm({ currentRole, currentCompany }: Props) {
               required
             />
             <Input
-              label="Email"
+              label="Email (optional)"
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               placeholder="jane@planetpooch.com"
-              required
             />
           </div>
 
@@ -299,7 +298,7 @@ export function NewEmployeeForm({ currentRole, currentCompany }: Props) {
           {/* Phone + Hire Date */}
           <div className="grid grid-cols-2 gap-4">
             <Input
-              label="Phone"
+              label="Phone (optional)"
               value={phone}
               onChange={(e) => setPhone(e.target.value)}
               placeholder="(555) 123-4567"

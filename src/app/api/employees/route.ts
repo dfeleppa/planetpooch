@@ -91,9 +91,6 @@ export async function POST(req: NextRequest) {
     if (!name?.trim()) {
       return NextResponse.json({ error: "Name is required" }, { status: 400 });
     }
-    if (!email?.trim()) {
-      return NextResponse.json({ error: "Email is required" }, { status: 400 });
-    }
 
     const sessionUser = session.user as { role: Role; company: Company | null };
 
@@ -103,10 +100,24 @@ export async function POST(req: NextRequest) {
       assignedCompany = sessionUser.company;
     }
 
-    const normalizedEmail = email.trim().toLowerCase();
-    const existing = await prisma.user.findUnique({ where: { email: normalizedEmail } });
-    if (existing) {
-      return NextResponse.json({ error: "A user with that email already exists" }, { status: 400 });
+    // Email is optional — generate a placeholder if not provided so the user can
+    // still be created (email is used as login identity and must be unique).
+    let normalizedEmail: string;
+    if (email?.trim()) {
+      normalizedEmail = email.trim().toLowerCase();
+      const existing = await prisma.user.findUnique({ where: { email: normalizedEmail } });
+      if (existing) {
+        return NextResponse.json({ error: "A user with that email already exists" }, { status: 400 });
+      }
+    } else {
+      const slug = name
+        .trim()
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, "-")
+        .replace(/^-+|-+$/g, "")
+        .slice(0, 24) || "employee";
+      const suffix = Math.random().toString(36).slice(2, 8);
+      normalizedEmail = `${slug}-${suffix}@placeholder.local`;
     }
 
     // Only SUPER_ADMIN can create SUPER_ADMIN or MANAGER accounts
