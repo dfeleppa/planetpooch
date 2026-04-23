@@ -53,6 +53,7 @@ export function OrgChartClient({
     canViewBothCompanies ? "BOTH" : (lockedCompany as CompanyView) ?? "BOTH"
   );
   const [showNames, setShowNames] = useState(true);
+  const [layout, setLayout] = useState<"LIST" | "CHART">("CHART");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const [draggingId, setDraggingId] = useState<string | null>(null);
@@ -245,6 +246,24 @@ export function OrgChartClient({
             )}
 
             <div className="flex items-center gap-2">
+              <span className="text-sm font-medium text-gray-700">Layout:</span>
+              <div className="inline-flex rounded-lg border border-gray-300 bg-white p-1">
+                {(["CHART", "LIST"] as const).map((l) => (
+                  <button
+                    key={l}
+                    type="button"
+                    onClick={() => setLayout(l)}
+                    className={`px-3 py-1 text-sm rounded-md transition-colors ${
+                      layout === l ? "bg-blue-600 text-white" : "text-gray-600 hover:bg-gray-100"
+                    }`}
+                  >
+                    {l === "CHART" ? "Chart" : "List"}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2">
               <span className="text-sm font-medium text-gray-700">Names:</span>
               <button
                 type="button"
@@ -285,6 +304,7 @@ export function OrgChartClient({
           onAssign={(pos) => setAssignModalFor(pos)}
           onEdit={(pos) => setEditingPos(pos)}
           onDelete={deletePosition}
+          layout={layout}
           onAdd={() => setCreateModalCompany("CROSS")}
         />
       )}
@@ -309,6 +329,7 @@ export function OrgChartClient({
           onAssign={(pos) => setAssignModalFor(pos)}
           onEdit={(pos) => setEditingPos(pos)}
           onDelete={deletePosition}
+          layout={layout}
           onAdd={() => setCreateModalCompany("MOBILE")}
         />
       )}
@@ -333,6 +354,7 @@ export function OrgChartClient({
           onAssign={(pos) => setAssignModalFor(pos)}
           onEdit={(pos) => setEditingPos(pos)}
           onDelete={deletePosition}
+          layout={layout}
           onAdd={() => setCreateModalCompany("RESORT")}
         />
       )}
@@ -484,6 +506,7 @@ function CompanySection({
   onEdit,
   onDelete,
   onAdd,
+  layout,
 }: {
   title: string;
   subtitle: string;
@@ -504,6 +527,7 @@ function CompanySection({
   onEdit: (pos: Position) => void;
   onDelete: (positionId: string) => void;
   onAdd: () => void;
+  layout: "LIST" | "CHART";
 }) {
   const ids = new Set(positions.map((p) => p.id));
   const roots = positions.filter((p) => !p.parentPositionId || !ids.has(p.parentPositionId));
@@ -538,7 +562,7 @@ function CompanySection({
           <p className="text-sm text-gray-500 italic">
             No positions for this company yet. Click "+ Add Position".
           </p>
-        ) : (
+        ) : layout === "LIST" ? (
           <div className="space-y-2">
             {roots.map((root) => (
               <PositionNode
@@ -560,6 +584,22 @@ function CompanySection({
               />
             ))}
           </div>
+        ) : (
+          <OrgChartTree
+            roots={roots}
+            allPositions={positions}
+            userById={userById}
+            showNames={showNames}
+            draggingId={draggingId}
+            dragOverId={dragOverId}
+            setDragOverId={setDragOverId}
+            onDragStart={onDragStart}
+            onDragEnd={onDragEnd}
+            onDropOnPosition={onDropOnPosition}
+            onAssign={onAssign}
+            onEdit={onEdit}
+            onDelete={onDelete}
+          />
         )}
       </CardContent>
     </Card>
@@ -697,6 +737,200 @@ function PositionNode({
         </div>
       )}
     </div>
+  );
+}
+
+// ──────────────────────────────────────────────────────────────────────────────
+// Chart (tree diagram) layout — boxes connected with lines, top-down
+// ──────────────────────────────────────────────────────────────────────────────
+
+function OrgChartTree({
+  roots,
+  allPositions,
+  userById,
+  showNames,
+  draggingId,
+  dragOverId,
+  setDragOverId,
+  onDragStart,
+  onDragEnd,
+  onDropOnPosition,
+  onAssign,
+  onEdit,
+  onDelete,
+}: {
+  roots: Position[];
+  allPositions: Position[];
+  userById: Map<string, UserOption>;
+  showNames: boolean;
+  draggingId: string | null;
+  dragOverId: string | null;
+  setDragOverId: (id: string | null) => void;
+  onDragStart: (e: React.DragEvent, id: string) => void;
+  onDragEnd: () => void;
+  onDropOnPosition: (e: React.DragEvent, id: string) => void;
+  onAssign: (pos: Position) => void;
+  onEdit: (pos: Position) => void;
+  onDelete: (positionId: string) => void;
+}) {
+  return (
+    <div className="overflow-x-auto">
+      <style>{`
+        .oc-tree, .oc-tree ul { list-style: none; margin: 0; padding: 0; }
+        .oc-tree { display: flex; justify-content: center; padding: 12px 4px; }
+        .oc-tree ul { display: flex; justify-content: center; padding-top: 24px; position: relative; }
+        .oc-tree li { position: relative; padding: 24px 10px 0 10px; display: flex; flex-direction: column; align-items: center; }
+        /* Horizontal line across siblings */
+        .oc-tree li::before, .oc-tree li::after {
+          content: ''; position: absolute; top: 0;
+          border-top: 2px solid #cbd5e1; width: 50%; height: 24px;
+        }
+        .oc-tree li::before { right: 50%; }
+        .oc-tree li::after  { left: 50%; border-left: 2px solid #cbd5e1; }
+        .oc-tree li:only-child::before, .oc-tree li:only-child::after { display: none; }
+        .oc-tree li:only-child { padding-top: 24px; }
+        .oc-tree li:first-child::before, .oc-tree li:last-child::after { border: 0 none; }
+        .oc-tree li:last-child::before { border-right: 2px solid #cbd5e1; }
+        /* Vertical connector down from a node to its children's horizontal line */
+        .oc-tree li > ul::before {
+          content: ''; position: absolute; top: 0; left: 50%;
+          border-left: 2px solid #cbd5e1; height: 24px;
+        }
+      `}</style>
+      <ul className="oc-tree">
+        {roots.map((root) => (
+          <ChartNode
+            key={root.id}
+            node={root}
+            allPositions={allPositions}
+            userById={userById}
+            showNames={showNames}
+            draggingId={draggingId}
+            dragOverId={dragOverId}
+            setDragOverId={setDragOverId}
+            onDragStart={onDragStart}
+            onDragEnd={onDragEnd}
+            onDropOnPosition={onDropOnPosition}
+            onAssign={onAssign}
+            onEdit={onEdit}
+            onDelete={onDelete}
+          />
+        ))}
+      </ul>
+    </div>
+  );
+}
+
+function ChartNode({
+  node,
+  allPositions,
+  userById,
+  showNames,
+  draggingId,
+  dragOverId,
+  setDragOverId,
+  onDragStart,
+  onDragEnd,
+  onDropOnPosition,
+  onAssign,
+  onEdit,
+  onDelete,
+}: {
+  node: Position;
+  allPositions: Position[];
+  userById: Map<string, UserOption>;
+  showNames: boolean;
+  draggingId: string | null;
+  dragOverId: string | null;
+  setDragOverId: (id: string | null) => void;
+  onDragStart: (e: React.DragEvent, id: string) => void;
+  onDragEnd: () => void;
+  onDropOnPosition: (e: React.DragEvent, id: string) => void;
+  onAssign: (pos: Position) => void;
+  onEdit: (pos: Position) => void;
+  onDelete: (positionId: string) => void;
+}) {
+  const children = allPositions.filter((p) => p.parentPositionId === node.id);
+  const assigned = node.assignedUserId ? userById.get(node.assignedUserId) : null;
+  const vacant = !assigned;
+  const isDragging = draggingId === node.id;
+  const isDragOver = dragOverId === node.id;
+
+  const cardBg = vacant
+    ? "bg-white border-dashed border-gray-300"
+    : "bg-blue-50 border-blue-300";
+
+  return (
+    <li>
+      <div
+        draggable
+        onDragStart={(e) => onDragStart(e, node.id)}
+        onDragEnd={onDragEnd}
+        onDragOver={(e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          if (draggingId && draggingId !== node.id) setDragOverId(node.id);
+        }}
+        onDragLeave={(e) => {
+          e.stopPropagation();
+          setDragOverId(null);
+        }}
+        onDrop={(e) => onDropOnPosition(e, node.id)}
+        className={`group relative w-48 px-3 py-2 rounded-lg border cursor-move transition-all ${cardBg} ${
+          isDragging ? "opacity-40" : ""
+        } ${isDragOver ? "ring-2 ring-blue-500 ring-offset-1" : ""}`}
+      >
+        <div className="flex items-center gap-2 flex-wrap">
+          <span className="text-sm font-semibold text-gray-900 truncate">{node.title}</span>
+          {vacant ? (
+            <span className="text-[10px] bg-gray-100 text-gray-500 px-1.5 py-0.5 rounded">Vacant</span>
+          ) : (
+            <span className="text-[10px] bg-green-100 text-green-700 px-1.5 py-0.5 rounded">Filled</span>
+          )}
+        </div>
+        {showNames && assigned && (
+          <p className="text-xs text-gray-700 mt-1 truncate">{assigned.name}</p>
+        )}
+        {showNames && vacant && (
+          <p className="text-xs text-gray-400 italic mt-1">— open —</p>
+        )}
+
+        <div className="flex items-center gap-1 mt-1 opacity-0 group-hover:opacity-100 transition-opacity">
+          <IconButton title={vacant ? "Assign" : "Reassign"} onClick={() => onAssign(node)}>
+            👤
+          </IconButton>
+          <IconButton title="Edit title" onClick={() => onEdit(node)}>
+            ✏️
+          </IconButton>
+          <IconButton title="Delete" onClick={() => onDelete(node.id)}>
+            🗑️
+          </IconButton>
+        </div>
+      </div>
+
+      {children.length > 0 && (
+        <ul>
+          {children.map((child) => (
+            <ChartNode
+              key={child.id}
+              node={child}
+              allPositions={allPositions}
+              userById={userById}
+              showNames={showNames}
+              draggingId={draggingId}
+              dragOverId={dragOverId}
+              setDragOverId={setDragOverId}
+              onDragStart={onDragStart}
+              onDragEnd={onDragEnd}
+              onDropOnPosition={onDropOnPosition}
+              onAssign={onAssign}
+              onEdit={onEdit}
+              onDelete={onDelete}
+            />
+          ))}
+        </ul>
+      )}
+    </li>
   );
 }
 
