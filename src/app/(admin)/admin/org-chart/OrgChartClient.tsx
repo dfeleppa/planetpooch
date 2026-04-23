@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 
@@ -352,6 +352,7 @@ export function OrgChartClient({
           onDelete={deletePosition}
           layout={layout}
           zoom={zoom}
+          setZoom={setZoom}
           onAdd={() => setCreateModalCompany("CROSS")}
         />
       ) : view === "MOBILE" ? (
@@ -377,6 +378,7 @@ export function OrgChartClient({
           onDelete={deletePosition}
           layout={layout}
           zoom={zoom}
+          setZoom={setZoom}
           onAdd={() => setCreateModalCompany("MOBILE")}
         />
       ) : (
@@ -402,6 +404,7 @@ export function OrgChartClient({
           onDelete={deletePosition}
           layout={layout}
           zoom={zoom}
+          setZoom={setZoom}
           onAdd={() => setCreateModalCompany("RESORT")}
         />
       )}
@@ -556,6 +559,7 @@ function CompanySection({
   onAdd,
   layout,
   zoom,
+  setZoom,
 }: {
   title: string;
   subtitle: string;
@@ -579,6 +583,7 @@ function CompanySection({
   onAdd: () => void;
   layout: "LIST" | "CHART";
   zoom: number;
+  setZoom: (z: number | ((z: number) => number)) => void;
 }) {
   const ids = new Set(positions.map((p) => p.id));
   const roots = positions.filter((p) => !p.parentPositionId || !ids.has(p.parentPositionId));
@@ -614,13 +619,7 @@ function CompanySection({
             No positions for this company yet. Click "+ Add Position".
           </p>
         ) : (
-          <div
-            style={{
-              transform: `scale(${zoom})`,
-              transformOrigin: layout === "CHART" ? "top center" : "top left",
-              width: zoom < 1 ? `${100 / zoom}%` : undefined,
-            }}
-          >
+          <PanZoomViewport zoom={zoom} setZoom={setZoom}>
           {layout === "LIST" ? (
           <div className="space-y-2">
             {roots.map((root) => (
@@ -662,7 +661,7 @@ function CompanySection({
             onDelete={onDelete}
           />
         )}
-          </div>
+          </PanZoomViewport>
         )}
       </CardContent>
     </Card>
@@ -860,7 +859,7 @@ function OrgChartTree({
   onDelete: (positionId: string) => void;
 }) {
   return (
-    <div className="overflow-x-auto">
+    <div>
       <style>{`
         .oc-tree, .oc-tree ul { list-style: none; margin: 0; padding: 0; }
         .oc-tree { display: flex; justify-content: center; padding: 12px 4px; }
@@ -1038,6 +1037,80 @@ function ChartNode({
         </ul>
       )}
     </li>
+  );
+}
+
+// ──────────────────────────────────────────────────────────────────────────────
+// Pan + Zoom Viewport — constrains content to a fixed-size window. Users zoom
+// with the toolbar buttons (or Ctrl/⌘ + wheel) and click-drag empty space to
+// pan. Dragging a position card still triggers HTML5 drag-and-drop reparenting.
+// ──────────────────────────────────────────────────────────────────────────────
+
+function PanZoomViewport({
+  zoom,
+  setZoom,
+  children,
+}: {
+  zoom: number;
+  setZoom: (z: number | ((z: number) => number)) => void;
+  children: React.ReactNode;
+}) {
+  const [pan, setPan] = useState({ x: 0, y: 0 });
+  const panStart = useRef<{ x: number; y: number; panX: number; panY: number } | null>(null);
+  const [isPanning, setIsPanning] = useState(false);
+
+  function onMouseDown(e: React.MouseEvent) {
+    // Let card drags pass through — HTML5 DnD sets draggable=true on cards.
+    const target = e.target as HTMLElement;
+    if (target.closest('[draggable="true"]') || target.closest("button") || target.closest("a")) {
+      return;
+    }
+    panStart.current = { x: e.clientX, y: e.clientY, panX: pan.x, panY: pan.y };
+    setIsPanning(true);
+  }
+  function onMouseMove(e: React.MouseEvent) {
+    if (!panStart.current) return;
+    const dx = e.clientX - panStart.current.x;
+    const dy = e.clientY - panStart.current.y;
+    setPan({ x: panStart.current.panX + dx, y: panStart.current.panY + dy });
+  }
+  function endPan() {
+    panStart.current = null;
+    setIsPanning(false);
+  }
+  function onWheel(e: React.WheelEvent) {
+    if (!(e.ctrlKey || e.metaKey)) return;
+    e.preventDefault();
+    const delta = e.deltaY > 0 ? -0.1 : 0.1;
+    setZoom((z) => Math.min(2, Math.max(0.4, +(z + delta).toFixed(2))));
+  }
+
+  return (
+    <div
+      onMouseDown={onMouseDown}
+      onMouseMove={onMouseMove}
+      onMouseUp={endPan}
+      onMouseLeave={endPan}
+      onWheel={onWheel}
+      className={`relative w-full overflow-hidden rounded-lg border border-gray-200 bg-gray-50 select-none ${
+        isPanning ? "cursor-grabbing" : "cursor-grab"
+      }`}
+      style={{ height: "70vh" }}
+    >
+      <div
+        style={{
+          transform: `translate(${pan.x}px, ${pan.y}px) scale(${zoom})`,
+          transformOrigin: "0 0",
+          display: "inline-block",
+          minWidth: "100%",
+        }}
+      >
+        {children}
+      </div>
+      <div className="absolute bottom-2 right-3 text-[11px] text-gray-400 pointer-events-none">
+        Drag to pan · Ctrl/⌘ + scroll to zoom
+      </div>
+    </div>
   );
 }
 
