@@ -104,6 +104,27 @@ model User {
 
   // Onboarding relations
   onboardingTemplatesCreated OnboardingTemplate[] @relation("TemplateCreator")
+
+  // Org chart relation
+  orgPosition OrgPosition? @relation("UserPosition")
+}
+
+model OrgPosition {
+  id               String   @id @default(cuid())
+  title            String
+  company          Company? // null = cross-company (CEO, Director of Strategy)
+  parentPositionId String?
+  assignedUserId   String?  @unique
+  order            Int      @default(0)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  parent       OrgPosition?  @relation("PositionHierarchy", fields: [parentPositionId], references: [id], onDelete: SetNull)
+  children     OrgPosition[] @relation("PositionHierarchy")
+  assignedUser User?         @relation("UserPosition", fields: [assignedUserId], references: [id], onDelete: SetNull)
+
+  @@index([parentPositionId])
+  @@index([company])
 }
 
 model Module {
