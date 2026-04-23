@@ -1,11 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { getSession, getCompanyFilter } from "@/lib/auth-helpers";
+import { getSession, getCompanyFilter, isManagerOrAbove } from "@/lib/auth-helpers";
 import { Company, Prisma, Role } from "@prisma/client";
-
-function isManagerOrAbove(role: string) {
-  return role === "SUPER_ADMIN" || role === "MANAGER" || role === "ADMIN";
-}
 
 export async function GET(req: NextRequest) {
   const session = await getSession();

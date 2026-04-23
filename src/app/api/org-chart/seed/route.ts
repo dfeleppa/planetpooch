@@ -1,11 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { getSession } from "@/lib/auth-helpers";
+import { getSession, isSuperAdmin } from "@/lib/auth-helpers";
 import { Company, Role } from "@prisma/client";
-
-function isSuperAdmin(role: string) {
-  return role === "SUPER_ADMIN" || role === "ADMIN";
-}
 
 /**
  * POST — seeds the canonical org chart: Leadership + Mobile + Resort hierarchies.

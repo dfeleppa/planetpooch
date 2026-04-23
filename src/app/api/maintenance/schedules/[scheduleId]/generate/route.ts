@@ -1,17 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getSession } from "@/lib/auth-helpers";
+import { getSession, isManagerOrAbove } from "@/lib/auth-helpers";
 import { generateMaintenanceTask } from "@/lib/maintenance";
-
-function isManagerOrAbove(role: string) {
-  return role === "SUPER_ADMIN" || role === "MANAGER" || role === "ADMIN";
-}
 
 export async function POST(
   _req: NextRequest,
   { params }: { params: Promise<{ scheduleId: string }> }
 ) {
   const session = await getSession();
-  if (!session?.user || !isManagerOrAbove((session.user as { role: string }).role)) {
+  if (!session?.user || !isManagerOrAbove(session.user.role)) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
