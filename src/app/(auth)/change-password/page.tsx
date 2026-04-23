@@ -1,7 +1,5 @@
 "use client";
 
-export const dynamic = "force-dynamic";
-
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { signOut, useSession } from "next-auth/react";
@@ -11,7 +9,9 @@ import { Card, CardContent } from "@/components/ui/card";
 
 export default function ChangePasswordPage() {
   const router = useRouter();
-  const { data: session, update } = useSession();
+  const sessionResult = useSession();
+  const session = sessionResult?.data;
+  const update = sessionResult?.update;
   const mustChange = Boolean(
     (session?.user as { mustChangePassword?: boolean } | undefined)
       ?.mustChangePassword
@@ -49,7 +49,7 @@ export default function ChangePasswordPage() {
       }
 
       // Refresh the JWT so mustChangePassword is cleared in the session.
-      await update();
+      if (update) await update();
       router.push("/dashboard");
       router.refresh();
     } catch (err) {
