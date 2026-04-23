@@ -15,21 +15,21 @@ export async function requireAuth() {
   return session;
 }
 
-/** Requires MANAGER or SUPER_ADMIN. Use for most admin pages. */
+/** Requires MANAGER or SUPER_ADMIN (or legacy ADMIN). Use for most admin pages. */
 export async function requireManager() {
   const session = await requireAuth();
   const role = (session.user as { role: Role }).role;
-  if (role !== "MANAGER" && role !== "SUPER_ADMIN") {
+  if (role !== "MANAGER" && role !== "SUPER_ADMIN" && role !== "ADMIN") {
     redirect("/dashboard");
   }
   return session;
 }
 
-/** Requires SUPER_ADMIN only. Use for module/lesson management. */
+/** Requires SUPER_ADMIN only (or legacy ADMIN). Use for module/lesson management. */
 export async function requireSuperAdmin() {
   const session = await requireAuth();
   const role = (session.user as { role: Role }).role;
-  if (role !== "SUPER_ADMIN") {
+  if (role !== "SUPER_ADMIN" && role !== "ADMIN") {
     redirect("/admin");
   }
   return session;
