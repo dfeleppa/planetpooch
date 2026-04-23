@@ -8,9 +8,8 @@ function isManagerOrAbove(role: string) {
 }
 
 /**
- * GET — returns all users the caller is allowed to see, flat list.
- * SUPER_ADMIN/ADMIN: everyone.
- * MANAGER: only their own company.
+ * GET — returns all positions + all users (for the Assign picker).
+ * MANAGER scope: only their company's positions/users.
  */
 export async function GET() {
   const session = await getSession();
@@ -21,28 +20,46 @@ export async function GET() {
   const sessionUser = session.user as { role: Role; company: Company | null };
   const companyFilter = getCompanyFilter(sessionUser.role, sessionUser.company);
 
-  const users = await prisma.user.findMany({
-    where: { ...companyFilter },
-    orderBy: [{ company: "asc" }, { role: "asc" }, { name: "asc" }],
-    select: {
-      id: true,
-      name: true,
-      email: true,
-      role: true,
-      company: true,
-      jobTitle: true,
-      managerId: true,
-    },
-  });
+  // For MANAGER: positions where company === their company OR company IS NULL (leadership)
+  // For SUPER_ADMIN: everything
+  const positionWhere = companyFilter.company
+    ? { OR: [{ company: companyFilter.company }, { company: null }] }
+    : {};
 
-  return NextResponse.json(users);
+  const [positions, users] = await Promise.all([
+    prisma.orgPosition.findMany({
+      where: positionWhere,
+      orderBy: [{ company: "asc" }, { order: "asc" }],
+      select: {
+        id: true,
+        title: true,
+        company: true,
+        parentPositionId: true,
+        assignedUserId: true,
+        order: true,
+      },
+    }),
+    prisma.user.findMany({
+      where: { ...companyFilter },
+      orderBy: [{ company: "asc" }, { name: "asc" }],
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        role: true,
+        company: true,
+        jobTitle: true,
+      },
+    }),
+  ]);
+
+  return NextResponse.json({ positions, users });
 }
 
 /**
- * PATCH — update a user's managerId (or clear it with null).
- * Body: { userId: string, managerId: string | null }
+ * POST — create a new position. Body: { title, company, parentPositionId? }
  */
-export async function PATCH(req: NextRequest) {
+export async function POST(req: NextRequest) {
   const session = await getSession();
   if (!session?.user || !isManagerOrAbove(session.user.role)) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
@@ -52,72 +69,57 @@ export async function PATCH(req: NextRequest) {
   const companyFilter = getCompanyFilter(sessionUser.role, sessionUser.company);
 
   try {
-    const { userId, managerId } = await req.json();
+    const body = await req.json();
+    const { title, company, parentPositionId } = body;
 
-    if (!userId) {
-      return NextResponse.json({ error: "userId is required" }, { status: 400 });
+    if (!title || typeof title !== "string" || !title.trim()) {
+      return NextResponse.json({ error: "title is required" }, { status: 400 });
     }
 
-    // Prevent self-management
-    if (userId === managerId) {
-      return NextResponse.json({ error: "A user cannot manage themselves" }, { status: 400 });
+    // MANAGERs can only create positions in their own company (not cross-company null)
+    if (companyFilter.company && company !== companyFilter.company) {
+      return NextResponse.json(
+        { error: "You can only create positions in your own company" },
+        { status: 403 }
+      );
     }
 
-    // Fetch the target user; scope to company for MANAGERs
-    const user = await prisma.user.findUnique({
-      where: { id: userId },
-      select: { id: true, company: true },
-    });
-    if (!user) {
-      return NextResponse.json({ error: "User not found" }, { status: 404 });
-    }
-    if (companyFilter.company && user.company !== companyFilter.company) {
-      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-    }
-
-    // If setting a manager, verify they exist and (for MANAGER callers) are in the same company
-    if (managerId) {
-      const mgr = await prisma.user.findUnique({
-        where: { id: managerId },
+    // Verify parent exists and is visible to this user
+    if (parentPositionId) {
+      const parent = await prisma.orgPosition.findUnique({
+        where: { id: parentPositionId },
         select: { id: true, company: true },
       });
-      if (!mgr) {
-        return NextResponse.json({ error: "Manager not found" }, { status: 404 });
+      if (!parent) {
+        return NextResponse.json({ error: "Parent position not found" }, { status: 404 });
       }
-      if (companyFilter.company && mgr.company !== companyFilter.company) {
+      if (
+        companyFilter.company &&
+        parent.company !== null &&
+        parent.company !== companyFilter.company
+      ) {
         return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-      }
-
-      // Prevent cycles: walk up from proposed manager, fail if we hit userId
-      let cursor: string | null = managerId;
-      const seen = new Set<string>();
-      while (cursor) {
-        if (cursor === userId) {
-          return NextResponse.json(
-            { error: "That would create a reporting cycle" },
-            { status: 400 }
-          );
-        }
-        if (seen.has(cursor)) break;
-        seen.add(cursor);
-        const parent: { managerId: string | null } | null =
-          await prisma.user.findUnique({
-            where: { id: cursor },
-            select: { managerId: true },
-          });
-        cursor = parent?.managerId ?? null;
       }
     }
 
-    const updated = await prisma.user.update({
-      where: { id: userId },
-      data: { managerId: managerId ?? null },
-      select: { id: true, managerId: true },
+    // Compute next order value among siblings
+    const last = await prisma.orgPosition.findFirst({
+      where: { parentPositionId: parentPositionId ?? null, company: company ?? null },
+      orderBy: { order: "desc" },
     });
 
-    return NextResponse.json(updated);
+    const position = await prisma.orgPosition.create({
+      data: {
+        title: title.trim(),
+        company: company ?? null,
+        parentPositionId: parentPositionId ?? null,
+        order: (last?.order ?? -1) + 1,
+      },
+    });
+
+    return NextResponse.json(position, { status: 201 });
   } catch (err) {
-    const message = err instanceof Error ? err.message : "Failed to update manager";
+    const message = err instanceof Error ? err.message : "Failed to create position";
     return NextResponse.json({ error: message }, { status: 500 });
   }
 }
