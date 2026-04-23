@@ -48,6 +48,17 @@ enum TaskPriority {
   URGENT
 }
 
+// ============================================================
+// Onboarding enums (Phase 2+)
+// ============================================================
+
+enum OnboardingTaskType {
+  ESIGN_REQUEST       // Employee signs doc via Google eSignature (admin triggers)
+  EMPLOYEE_CONFIRM    // Employee self-reports done (e.g., "Bring ID to meeting")
+  ADMIN_FILE_UPLOAD   // Admin uploads a file to employee's Drive folder
+  ADMIN_TASK          // Admin-only self-reported checkbox
+}
+
 model User {
   id                 String    @id @default(cuid())
   email              String    @unique
@@ -82,6 +93,9 @@ model User {
   tasksCreated     Task[]           @relation("TaskCreator")
   taskAssignments  TaskAssignee[]
   taskComments     TaskComment[]
+
+  // Onboarding relations
+  onboardingTemplatesCreated OnboardingTemplate[] @relation("TemplateCreator")
 }
 
 model Module {
@@ -412,4 +426,42 @@ model TaskComment {
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([taskId])
+}
+
+// ============================================================
+// Onboarding Models (Phase 2: templates only — no assignment yet)
+// ============================================================
+
+model OnboardingTemplate {
+  id          String   @id @default(cuid())
+  name        String
+  description String   @default("")
+  isActive    Boolean  @default(true)
+  createdById String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  createdBy User                     @relation("TemplateCreator", fields: [createdById], references: [id])
+  tasks     OnboardingTemplateTask[]
+
+  @@index([createdById])
+}
+
+model OnboardingTemplateTask {
+  id          String             @id @default(cuid())
+  templateId  String
+  type        OnboardingTaskType
+  title       String
+  description String             @default("")
+  required    Boolean            @default(true)
+  order       Int
+  // Type-specific fields (nullable because only some types use each)
+  handbookFileName String?        // For ESIGN_REQUEST — label shown in admin UI
+  externalUrl      String?        // For ADMIN_TASK — optional link (e.g., ADP)
+  createdAt   DateTime           @default(now())
+  updatedAt   DateTime           @updatedAt
+
+  template OnboardingTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
+
+  @@index([templateId])
 }

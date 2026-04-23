@@ -22,6 +22,7 @@ const adminNav: NavItem[] = [
   { href: "/admin", label: "Dashboard", icon: "📊" },
   { href: "/admin/modules", label: "Manage Modules", icon: "📚" },
   { href: "/admin/employees", label: "Employees", icon: "👥" },
+  { href: "/admin/onboarding", label: "Onboarding", icon: "🎯" },
   { href: "/admin/audit-log", label: "Audit Log", icon: "📋" },
 ];
 
