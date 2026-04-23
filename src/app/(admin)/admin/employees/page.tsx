@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { formatDate } from "@/lib/utils";
 import { Company, Role } from "@prisma/client";
+import { DeleteEmployeeButton } from "./DeleteEmployeeButton";
 
 export default async function AdminEmployeesPage() {
   const session = await requireManager();
@@ -75,9 +76,12 @@ export default async function AdminEmployeesPage() {
                     <p className="text-xs text-gray-400 mt-1">Joined {formatDate(emp.createdAt)}</p>
                     <ProgressBar value={completed} max={totalLessons} className="mt-2" />
                   </div>
-                  <Link href={`/admin/employees/${emp.id}`} className="flex-shrink-0">
-                    <Badge variant="info">View Details</Badge>
-                  </Link>
+                  <div className="flex items-center gap-2 flex-shrink-0">
+                    <Link href={`/admin/employees/${emp.id}`}>
+                      <Badge variant="info">View Details</Badge>
+                    </Link>
+                    <DeleteEmployeeButton employeeId={emp.id} employeeName={emp.name} />
+                  </div>
                 </div>
               </CardContent>
             </Card>
