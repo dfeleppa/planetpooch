@@ -54,6 +54,7 @@ export function OrgChartClient({
   );
   const [showNames, setShowNames] = useState(true);
   const [layout, setLayout] = useState<"LIST" | "CHART">("CHART");
+  const [zoom, setZoom] = useState(1);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const [draggingId, setDraggingId] = useState<string | null>(null);
@@ -292,6 +293,36 @@ export function OrgChartClient({
               </button>
             </div>
 
+            <div className="flex items-center gap-2">
+              <span className="text-sm font-medium text-gray-700">Zoom:</span>
+              <div className="inline-flex rounded-lg border border-gray-300 bg-white overflow-hidden">
+                <button
+                  type="button"
+                  onClick={() => setZoom((z) => Math.max(0.4, +(z - 0.1).toFixed(2)))}
+                  className="px-2 py-1 text-sm text-gray-700 hover:bg-gray-100"
+                  title="Zoom out"
+                >
+                  −
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setZoom(1)}
+                  className="px-3 py-1 text-sm text-gray-700 border-x border-gray-300 hover:bg-gray-100 font-mono"
+                  title="Reset zoom to 100%"
+                >
+                  {Math.round(zoom * 100)}%
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setZoom((z) => Math.min(2, +(z + 0.1).toFixed(2)))}
+                  className="px-2 py-1 text-sm text-gray-700 hover:bg-gray-100"
+                  title="Zoom in"
+                >
+                  +
+                </button>
+              </div>
+            </div>
+
             {saving && <span className="text-sm text-gray-500">Saving…</span>}
             {error && <span className="text-sm text-red-600">{error}</span>}
           </div>
@@ -320,6 +351,7 @@ export function OrgChartClient({
           onEdit={(pos) => setEditingPos(pos)}
           onDelete={deletePosition}
           layout={layout}
+          zoom={zoom}
           onAdd={() => setCreateModalCompany("CROSS")}
         />
       ) : view === "MOBILE" ? (
@@ -344,6 +376,7 @@ export function OrgChartClient({
           onEdit={(pos) => setEditingPos(pos)}
           onDelete={deletePosition}
           layout={layout}
+          zoom={zoom}
           onAdd={() => setCreateModalCompany("MOBILE")}
         />
       ) : (
@@ -368,6 +401,7 @@ export function OrgChartClient({
           onEdit={(pos) => setEditingPos(pos)}
           onDelete={deletePosition}
           layout={layout}
+          zoom={zoom}
           onAdd={() => setCreateModalCompany("RESORT")}
         />
       )}
@@ -521,6 +555,7 @@ function CompanySection({
   onDelete,
   onAdd,
   layout,
+  zoom,
 }: {
   title: string;
   subtitle: string;
@@ -543,6 +578,7 @@ function CompanySection({
   onDelete: (positionId: string) => void;
   onAdd: () => void;
   layout: "LIST" | "CHART";
+  zoom: number;
 }) {
   const ids = new Set(positions.map((p) => p.id));
   const roots = positions.filter((p) => !p.parentPositionId || !ids.has(p.parentPositionId));
@@ -577,7 +613,15 @@ function CompanySection({
           <p className="text-sm text-gray-500 italic">
             No positions for this company yet. Click "+ Add Position".
           </p>
-        ) : layout === "LIST" ? (
+        ) : (
+          <div
+            style={{
+              transform: `scale(${zoom})`,
+              transformOrigin: layout === "CHART" ? "top center" : "top left",
+              width: zoom < 1 ? `${100 / zoom}%` : undefined,
+            }}
+          >
+          {layout === "LIST" ? (
           <div className="space-y-2">
             {roots.map((root) => (
               <PositionNode
@@ -617,6 +661,8 @@ function CompanySection({
             onEdit={onEdit}
             onDelete={onDelete}
           />
+        )}
+          </div>
         )}
       </CardContent>
     </Card>
