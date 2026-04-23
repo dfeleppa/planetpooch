@@ -49,13 +49,22 @@ enum TaskPriority {
 }
 
 model User {
-  id           String   @id @default(cuid())
-  email        String   @unique
-  passwordHash String
-  name         String
-  role         Role     @default(EMPLOYEE)
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  id                 String    @id @default(cuid())
+  email              String    @unique
+  passwordHash       String
+  name               String
+  role               Role      @default(EMPLOYEE)
+  mustChangePassword Boolean   @default(false)
+  hireDate           DateTime?
+  jobTitle           String?
+  department         String?
+  phone              String?
+  managerId          String?
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+
+  manager  User?  @relation("UserManager", fields: [managerId], references: [id])
+  reports  User[] @relation("UserManager")
 
   completions LessonCompletion[]
   auditLogs   CompletionAuditLog[]

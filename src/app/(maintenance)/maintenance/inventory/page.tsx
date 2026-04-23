@@ -34,6 +34,7 @@ export default async function InventoryPage() {
 
   const items = await prisma.inventoryItem.findMany({
     orderBy: { name: "asc" },
+    include: { category: true },
   });
 
   return (
@@ -92,8 +93,8 @@ export default async function InventoryPage() {
                     {item.description && <p className="text-xs text-gray-500">{item.description}</p>}
                   </TableCell>
                   <TableCell>
-                    <span className={`px-2 py-1 text-xs font-medium rounded-full ${categoryColors[item.category as keyof typeof categoryColors]}`}>
-                      {categoryLabels[item.category as keyof typeof categoryLabels]}
+                    <span className={`px-2 py-1 text-xs font-medium rounded-full ${item.category.color}`}>
+                      {item.category.name}
                     </span>
                   </TableCell>
                   <TableCell className="text-gray-600">{item.unit}</TableCell>

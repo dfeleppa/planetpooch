@@ -40,6 +40,7 @@ export default async function InventoryItemPage({
   const item = await prisma.inventoryItem.findUnique({
     where: { id: itemId },
     include: {
+      category: true,
       adjustments: {
         orderBy: { createdAt: "desc" },
         take: 20,
@@ -74,8 +75,8 @@ export default async function InventoryItemPage({
             <Badge variant={item.currentQuantity === 0 ? "danger" : isLow ? "warning" : "success"}>
               {item.currentQuantity === 0 ? "Out of stock" : isLow ? "Low stock" : "OK"}
             </Badge>
-            <span className={`px-2 py-1 text-xs font-medium rounded-full ${categoryColors[item.category as keyof typeof categoryColors]}`}>
-              {categoryLabels[item.category as keyof typeof categoryLabels]}
+            <span className={`px-2 py-1 text-xs font-medium rounded-full ${item.category.color}`}>
+              {item.category.name}
             </span>
           </div>
           {item.description && <p className="text-gray-500">{item.description}</p>}

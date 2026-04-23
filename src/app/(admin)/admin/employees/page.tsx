@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { ProgressBar } from "@/components/ui/progress-bar";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { formatDate } from "@/lib/utils";
 
@@ -29,8 +30,15 @@ export default async function AdminEmployeesPage() {
 
   return (
     <div>
-      <h1 className="text-2xl font-bold text-gray-900">Employees</h1>
-      <p className="text-gray-500 mt-1">Track employee onboarding progress</p>
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900">Employees</h1>
+          <p className="text-gray-500 mt-1">Track employee onboarding progress</p>
+        </div>
+        <Link href="/admin/employees/new">
+          <Button>+ Add Employee</Button>
+        </Link>
+      </div>
 
       <div className="grid gap-4 mt-6">
         {employees.map((emp) => {
