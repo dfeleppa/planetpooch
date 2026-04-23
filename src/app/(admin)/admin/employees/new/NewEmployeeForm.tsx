@@ -25,10 +25,10 @@ const JOB_TITLES: Record<"NONE" | Company, { title: string; suggestedRole: Role 
   NONE: [
     { title: "CEO", suggestedRole: "SUPER_ADMIN" },
     { title: "Director of Strategy", suggestedRole: "SUPER_ADMIN" },
+    { title: "CMO", suggestedRole: "MANAGER" },
   ],
   MOBILE: [
     { title: "COO", suggestedRole: "MANAGER" },
-    { title: "CMO", suggestedRole: "MANAGER" },
     { title: "Groomer", suggestedRole: "EMPLOYEE" },
     { title: "Office Staff", suggestedRole: "EMPLOYEE" },
   ],
