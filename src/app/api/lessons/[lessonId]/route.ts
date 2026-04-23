@@ -3,6 +3,10 @@ import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/auth-helpers";
 import { extractTextFromTiptapJson } from "@/lib/utils";
 
+function isSuperAdmin(role: string) {
+  return role === "SUPER_ADMIN" || role === "ADMIN";
+}
+
 export async function GET(req: NextRequest, { params }: { params: Promise<{ lessonId: string }> }) {
   const session = await getSession();
   if (!session?.user) {
@@ -54,7 +58,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ less
 
 export async function PUT(req: NextRequest, { params }: { params: Promise<{ lessonId: string }> }) {
   const session = await getSession();
-  if (!session?.user || session.user.role !== "SUPER_ADMIN" && role !== "ADMIN") {
+  if (!session?.user || !isSuperAdmin(session.user.role)) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
@@ -80,7 +84,7 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ less
 
 export async function DELETE(req: NextRequest, { params }: { params: Promise<{ lessonId: string }> }) {
   const session = await getSession();
-  if (!session?.user || session.user.role !== "SUPER_ADMIN" && role !== "ADMIN") {
+  if (!session?.user || !isSuperAdmin(session.user.role)) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
