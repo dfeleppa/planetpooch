@@ -93,3 +93,60 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ empl
     recentAuditLogs: auditLogs,
   });
 }
+
+/**
+ * DELETE — hard-delete an employee. Related records cascade via schema.
+ * Any org position the user held becomes vacant (assignedUserId → null).
+ * A user cannot delete themselves.
+ */
+export async function DELETE(
+  _req: NextRequest,
+  { params }: { params: Promise<{ employeeId: string }> }
+) {
+  const session = await getSession();
+  if (!session?.user || !isManagerOrAbove(session.user.role)) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
+
+  const sessionUser = session.user as {
+    id: string;
+    role: Role;
+    company: Company | null;
+  };
+  const companyFilter = getCompanyFilter(sessionUser.role, sessionUser.company);
+
+  const { employeeId } = await params;
+
+  if (employeeId === sessionUser.id) {
+    return NextResponse.json({ error: "You can't delete your own account" }, { status: 400 });
+  }
+
+  const target = await prisma.user.findUnique({
+    where: { id: employeeId },
+    select: { id: true, role: true, company: true },
+  });
+  if (!target) {
+    return NextResponse.json({ error: "Employee not found" }, { status: 404 });
+  }
+
+  // Company-scope check for MANAGERs
+  if (companyFilter.company && target.company !== companyFilter.company) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
+
+  // Only SUPER_ADMIN can delete other admins/managers; MANAGER can only delete EMPLOYEEs
+  if (sessionUser.role === "MANAGER" && target.role !== "EMPLOYEE") {
+    return NextResponse.json(
+      { error: "Managers can only delete employees" },
+      { status: 403 }
+    );
+  }
+
+  try {
+    await prisma.user.delete({ where: { id: employeeId } });
+    return NextResponse.json({ success: true });
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "Failed to delete employee";
+    return NextResponse.json({ error: message }, { status: 500 });
+  }
+}
