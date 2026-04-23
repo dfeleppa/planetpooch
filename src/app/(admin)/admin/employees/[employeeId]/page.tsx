@@ -1,4 +1,4 @@
-import { requireAdmin } from "@/lib/auth-helpers";
+import { requireManager, getCompanyFilter } from "@/lib/auth-helpers";
 import { prisma } from "@/lib/prisma";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { ProgressBar } from "@/components/ui/progress-bar";
@@ -6,17 +6,34 @@ import { Badge } from "@/components/ui/badge";
 import { formatDateTime } from "@/lib/utils";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { Company, Role } from "@prisma/client";
+import { EditEmployeeForm } from "./EditEmployeeForm";
 
 export default async function EmployeeDetailPage({ params }: { params: Promise<{ employeeId: string }> }) {
-  await requireAdmin();
+  const session = await requireManager();
+  const sessionUser = session.user as { role: Role; company: Company | null };
+  const companyFilter = getCompanyFilter(sessionUser.role, sessionUser.company);
   const { employeeId } = await params;
 
   const employee = await prisma.user.findUnique({
     where: { id: employeeId },
-    select: { id: true, name: true, email: true, role: true, createdAt: true },
+    select: {
+      id: true,
+      name: true,
+      email: true,
+      role: true,
+      company: true,
+      jobTitle: true,
+      department: true,
+      phone: true,
+      hireDate: true,
+      createdAt: true,
+    },
   });
 
-  if (!employee || employee.role !== "EMPLOYEE") notFound();
+  if (!employee) notFound();
+  if (companyFilter.company && employee.company !== companyFilter.company) notFound();
+  if (sessionUser.role === "MANAGER" && employee.role !== "EMPLOYEE") notFound();
 
   const modules = await prisma.module.findMany({
     orderBy: { order: "asc" },
@@ -56,7 +73,28 @@ export default async function EmployeeDetailPage({ params }: { params: Promise<{
       </div>
 
       <h1 className="text-2xl font-bold text-gray-900">{employee.name}</h1>
-      <p className="text-gray-500">{employee.email}</p>
+      <p className="text-gray-500">
+        {employee.email.endsWith("@placeholder.local") ? "No email on file" : employee.email}
+      </p>
+
+      <div className="mt-6">
+        <EditEmployeeForm
+          employee={{
+            id: employee.id,
+            name: employee.name,
+            email: employee.email,
+            role: employee.role,
+            company: employee.company,
+            jobTitle: employee.jobTitle,
+            department: employee.department,
+            phone: employee.phone,
+            hireDate: employee.hireDate ? employee.hireDate.toISOString() : null,
+          }}
+          canEditCompany={sessionUser.role !== "MANAGER"}
+          canAssignSuperAdmin={sessionUser.role === "SUPER_ADMIN"}
+          canEditRole={sessionUser.role === "SUPER_ADMIN"}
+        />
+      </div>
 
       {/* Module progress */}
       <div className="space-y-6 mt-6">

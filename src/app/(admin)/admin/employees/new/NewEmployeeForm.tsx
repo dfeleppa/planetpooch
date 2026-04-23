@@ -24,7 +24,7 @@ const COMPANY_LABELS: Record<Company, string> = {
 const JOB_TITLES: Record<"NONE" | Company, { title: string; suggestedRole: Role }[]> = {
   NONE: [
     { title: "CEO", suggestedRole: "SUPER_ADMIN" },
-    { title: "Director of Strategy", suggestedRole: "SUPER_ADMIN" },
+    { title: "DOS", suggestedRole: "SUPER_ADMIN" },
     { title: "CMO", suggestedRole: "MANAGER" },
   ],
   MOBILE: [
