@@ -1,14 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
-import { OnboardingTaskType } from "@prisma/client";
+import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { getSession, isManagerOrAbove } from "@/lib/auth-helpers";
-
-const VALID_TYPES: OnboardingTaskType[] = [
-  "ESIGN_REQUEST",
-  "EMPLOYEE_CONFIRM",
-  "ADMIN_FILE_UPLOAD",
-  "ADMIN_TASK",
-];
+import { validateBody } from "@/lib/validate";
+import {
+  CreateTemplateTaskSchema,
+  ReorderTasksSchema,
+} from "@/lib/validators/onboarding";
 
 export async function POST(
   req: NextRequest,
@@ -21,43 +19,34 @@ export async function POST(
 
   const { templateId } = await params;
 
+  const parsed = await validateBody(req, CreateTemplateTaskSchema);
+  if (!parsed.ok) return parsed.response;
+  const d = parsed.data;
+
   try {
-    const body = await req.json();
-    const { type, title, description, required, handbookFileName, externalUrl } = body;
-
-    if (!type || !VALID_TYPES.includes(type)) {
-      return NextResponse.json(
-        { error: `type must be one of: ${VALID_TYPES.join(", ")}` },
-        { status: 400 }
-      );
-    }
-    if (!title || !title.trim()) {
-      return NextResponse.json({ error: "title is required" }, { status: 400 });
-    }
-
-    // Compute next order value at the end of the list
+    // Append to the end of the task list — server owns order on create.
     const last = await prisma.onboardingTemplateTask.findFirst({
       where: { templateId },
       orderBy: { order: "desc" },
     });
     const nextOrder = (last?.order ?? -1) + 1;
 
-    const task = await prisma.onboardingTemplateTask.create({
-      data: {
-        templateId,
-        type,
-        title: title.trim(),
-        description: description?.trim() ?? "",
-        required: required ?? true,
-        order: nextOrder,
-        handbookFileName: handbookFileName?.trim() || null,
-        externalUrl: externalUrl?.trim() || null,
-      },
-    });
+    const data: Prisma.OnboardingTemplateTaskUncheckedCreateInput = {
+      templateId,
+      type: d.type,
+      title: d.title,
+      description: d.description,
+      required: d.required,
+      order: nextOrder,
+    };
+    if (d.type === "ESIGN_REQUEST") data.handbookFileName = d.handbookFileName;
+    if (d.type === "ADMIN_TASK" && d.externalUrl) data.externalUrl = d.externalUrl;
 
+    const task = await prisma.onboardingTemplateTask.create({ data });
     return NextResponse.json(task, { status: 201 });
   } catch (err) {
-    const message = err instanceof Error ? err.message : "Failed to create task";
+    const message =
+      err instanceof Error ? err.message : "Failed to create task";
     return NextResponse.json({ error: message }, { status: 500 });
   }
 }
@@ -76,24 +65,22 @@ export async function PATCH(
 
   const { templateId } = await params;
 
-  try {
-    const { taskIds } = await req.json();
-    if (!Array.isArray(taskIds)) {
-      return NextResponse.json({ error: "taskIds must be an array" }, { status: 400 });
-    }
+  const parsed = await validateBody(req, ReorderTasksSchema);
+  if (!parsed.ok) return parsed.response;
 
+  try {
     await prisma.$transaction(
-      taskIds.map((id: string, idx: number) =>
+      parsed.data.taskIds.map((id, idx) =>
         prisma.onboardingTemplateTask.update({
           where: { id },
           data: { order: idx, templateId },
         })
       )
     );
-
     return NextResponse.json({ success: true });
   } catch (err) {
-    const message = err instanceof Error ? err.message : "Failed to reorder tasks";
+    const message =
+      err instanceof Error ? err.message : "Failed to reorder tasks";
     return NextResponse.json({ error: message }, { status: 500 });
   }
 }
