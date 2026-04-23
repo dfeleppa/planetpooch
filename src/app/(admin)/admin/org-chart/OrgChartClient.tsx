@@ -666,13 +666,18 @@ function PositionNode({
   const isDragging = draggingId === node.id;
   const isDragOver = dragOverId === node.id;
 
-  // People with matching job title + company (besides the primary assigned user)
+  // Union of assigned user + any user matching this role's title+company.
   const matchingUsers =
     usersByPositionKey.get(`${node.title}|${node.company ?? "NONE"}`) ?? [];
-  const additionalPeople = matchingUsers.filter((u) => u.id !== assigned?.id);
+  const peopleMap = new Map<string, UserOption>();
+  if (assigned) peopleMap.set(assigned.id, assigned);
+  for (const u of matchingUsers) peopleMap.set(u.id, u);
+  const people = Array.from(peopleMap.values());
+  const hasPeople = people.length > 0;
+  const isEmpty = !hasPeople;
 
-  // Color by whether vacant or filled
-  const cardBg = vacant
+  // Color by whether empty or filled
+  const cardBg = isEmpty
     ? "bg-white border-dashed border-gray-300"
     : "bg-blue-50 border-blue-300";
 
@@ -703,26 +708,16 @@ function PositionNode({
           <div className="flex items-center gap-2 flex-wrap">
             <span className="text-sm font-semibold text-gray-900">{node.title}</span>
             <CompanyTag company={node.company} />
-            {vacant ? (
+            {isEmpty ? (
               <span className="text-xs bg-gray-100 text-gray-500 px-1.5 py-0.5 rounded">Vacant</span>
             ) : (
               <span className="text-xs bg-green-100 text-green-700 px-1.5 py-0.5 rounded">
-                Filled
+                {people.length} {people.length === 1 ? "person" : "people"}
               </span>
             )}
           </div>
-          {showNames && assigned && (
-            <p className="text-sm text-gray-700 mt-0.5 truncate">{assigned.name}</p>
-          )}
-          {showNames && vacant && additionalPeople.length === 0 && (
+          {showNames && isEmpty && (
             <p className="text-xs text-gray-400 italic mt-0.5">— open —</p>
-          )}
-          {showNames && additionalPeople.length > 0 && (
-            <ul className="mt-1 space-y-0.5 text-xs text-gray-600">
-              {additionalPeople.map((u) => (
-                <li key={u.id} className="truncate">• {u.name}</li>
-              ))}
-            </ul>
           )}
         </div>
 
@@ -733,7 +728,7 @@ function PositionNode({
         )}
 
         <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-          <IconButton title={vacant ? "Assign" : "Reassign"} onClick={() => onAssign(node)}>
+          <IconButton title={vacant ? "Assign primary" : "Change primary"} onClick={() => onAssign(node)}>
             👤
           </IconButton>
           <IconButton title="Edit title" onClick={() => onEdit(node)}>
@@ -745,8 +740,18 @@ function PositionNode({
         </div>
       </div>
 
-      {children.length > 0 && (
+      {(children.length > 0 || (showNames && hasPeople)) && (
         <div className="mt-1 space-y-1 border-l-2 border-gray-200 ml-4">
+          {showNames &&
+            people.map((u) => (
+              <div
+                key={`emp-${u.id}`}
+                style={{ marginLeft: (depth + 1) * 24 }}
+                className="py-1"
+              >
+                <EmployeeChip user={u} />
+              </div>
+            ))}
           {children.map((child) => (
             <PositionNode
               key={child.id}
@@ -894,11 +899,18 @@ function ChartNode({
   const isDragging = draggingId === node.id;
   const isDragOver = dragOverId === node.id;
 
+  // Union of (assignedUser, if any) + (users matching this role's title+company),
+  // deduped by id. These render as individual employee chips beneath the position.
   const matchingUsers =
     usersByPositionKey.get(`${node.title}|${node.company ?? "NONE"}`) ?? [];
-  const additionalPeople = matchingUsers.filter((u) => u.id !== assigned?.id);
+  const peopleMap = new Map<string, UserOption>();
+  if (assigned) peopleMap.set(assigned.id, assigned);
+  for (const u of matchingUsers) peopleMap.set(u.id, u);
+  const people = Array.from(peopleMap.values());
+  const hasPeople = people.length > 0;
+  const isEmpty = !hasPeople;
 
-  const cardBg = vacant
+  const cardBg = isEmpty
     ? "bg-white border-dashed border-gray-300"
     : "bg-blue-50 border-blue-300";
 
@@ -925,28 +937,20 @@ function ChartNode({
         <div className="flex items-center gap-1.5 flex-wrap">
           <span className="text-sm font-semibold text-gray-900 truncate">{node.title}</span>
           <CompanyTag company={node.company} />
-          {vacant ? (
+          {isEmpty ? (
             <span className="text-[10px] bg-gray-100 text-gray-500 px-1.5 py-0.5 rounded">Vacant</span>
           ) : (
-            <span className="text-[10px] bg-green-100 text-green-700 px-1.5 py-0.5 rounded">Filled</span>
+            <span className="text-[10px] bg-green-100 text-green-700 px-1.5 py-0.5 rounded">
+              {people.length} {people.length === 1 ? "person" : "people"}
+            </span>
           )}
         </div>
-        {showNames && assigned && (
-          <p className="text-xs text-gray-700 mt-1 truncate">{assigned.name}</p>
-        )}
-        {showNames && vacant && additionalPeople.length === 0 && (
+        {showNames && isEmpty && (
           <p className="text-xs text-gray-400 italic mt-1">— open —</p>
-        )}
-        {showNames && additionalPeople.length > 0 && (
-          <ul className="mt-1 space-y-0.5 text-[11px] text-gray-600 text-left">
-            {additionalPeople.map((u) => (
-              <li key={u.id} className="truncate">• {u.name}</li>
-            ))}
-          </ul>
         )}
 
         <div className="flex items-center gap-1 mt-1 opacity-0 group-hover:opacity-100 transition-opacity">
-          <IconButton title={vacant ? "Assign" : "Reassign"} onClick={() => onAssign(node)}>
+          <IconButton title={vacant ? "Assign primary" : "Change primary"} onClick={() => onAssign(node)}>
             👤
           </IconButton>
           <IconButton title="Edit title" onClick={() => onEdit(node)}>
@@ -958,8 +962,14 @@ function ChartNode({
         </div>
       </div>
 
-      {children.length > 0 && (
+      {(children.length > 0 || (showNames && hasPeople)) && (
         <ul>
+          {showNames &&
+            people.map((u) => (
+              <li key={`emp-${u.id}`}>
+                <EmployeeChip user={u} />
+              </li>
+            ))}
           {children.map((child) => (
             <ChartNode
               key={child.id}
@@ -982,6 +992,28 @@ function ChartNode({
         </ul>
       )}
     </li>
+  );
+}
+
+function EmployeeChip({ user }: { user: UserOption }) {
+  return (
+    <div className="w-40 px-2 py-1.5 rounded-lg border border-gray-200 bg-white shadow-sm flex items-center gap-2">
+      <div className="flex-shrink-0 w-7 h-7 rounded-full bg-gradient-to-br from-blue-400 to-blue-600 text-white text-xs font-semibold flex items-center justify-center">
+        {user.name
+          .split(/\s+/)
+          .map((p) => p[0])
+          .filter(Boolean)
+          .slice(0, 2)
+          .join("")
+          .toUpperCase() || "?"}
+      </div>
+      <div className="min-w-0 flex-1">
+        <div className="text-xs font-medium text-gray-900 truncate">{user.name}</div>
+        {user.jobTitle && (
+          <div className="text-[10px] text-gray-500 truncate">{user.jobTitle}</div>
+        )}
+      </div>
+    </div>
   );
 }
 

@@ -29,7 +29,7 @@ interface Props {
 const JOB_TITLES: Record<"NONE" | Company, string[]> = {
   NONE: ["CEO", "DOS", "CMO"],
   MOBILE: ["COO", "Groomer", "Office Staff"],
-  RESORT: ["Facility Manager", "Assistant Manager", "Training Manager", "Front Desk Staff", "Floor Staff"],
+  RESORT: ["Facility Manager", "Assistant Manager", "Training Manager", "In-house Groomer", "Front Desk Staff", "Floor Staff"],
 };
 
 export function EditEmployeeForm({ employee, canEditCompany, canAssignSuperAdmin, canEditRole }: Props) {
