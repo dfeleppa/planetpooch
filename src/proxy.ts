@@ -6,6 +6,10 @@ export async function proxy(req: NextRequest) {
   const token = await getToken({
     req,
     secret: process.env.NEXTAUTH_SECRET,
+    // On Vercel (HTTPS) NextAuth uses the __Secure- cookie prefix;
+    // NEXTAUTH_URL may not have the https:// scheme in all envs so
+    // we detect secureness from the VERCEL env var instead.
+    secureCookie: !!process.env.VERCEL,
   });
 
   const { pathname } = req.nextUrl;
