@@ -3,6 +3,10 @@ import { OnboardingTaskType } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/auth-helpers";
 
+function isManagerOrAbove(role: string) {
+  return role === "SUPER_ADMIN" || role === "MANAGER" || role === "ADMIN";
+}
+
 const VALID_TYPES: OnboardingTaskType[] = [
   "ESIGN_REQUEST",
   "EMPLOYEE_CONFIRM",
@@ -15,7 +19,7 @@ export async function POST(
   { params }: { params: Promise<{ templateId: string }> }
 ) {
   const session = await getSession();
-  if (!session?.user || (session.user as { role: string }).role !== "ADMIN") {
+  if (!session?.user || !isManagerOrAbove((session.user as { role: string }).role)) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
@@ -70,7 +74,7 @@ export async function PATCH(
   { params }: { params: Promise<{ templateId: string }> }
 ) {
   const session = await getSession();
-  if (!session?.user || (session.user as { role: string }).role !== "ADMIN") {
+  if (!session?.user || !isManagerOrAbove((session.user as { role: string }).role)) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 

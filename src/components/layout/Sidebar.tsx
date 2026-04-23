@@ -18,9 +18,18 @@ const employeeNav: NavItem[] = [
   { href: "/search", label: "Search", icon: "🔍" },
 ];
 
-const adminNav: NavItem[] = [
+// Full admin nav — SUPER_ADMIN only (includes module management)
+const superAdminNav: NavItem[] = [
   { href: "/admin", label: "Dashboard", icon: "📊" },
   { href: "/admin/modules", label: "Manage Modules", icon: "📚" },
+  { href: "/admin/employees", label: "Employees", icon: "👥" },
+  { href: "/admin/onboarding", label: "Onboarding", icon: "🎯" },
+  { href: "/admin/audit-log", label: "Audit Log", icon: "📋" },
+];
+
+// Manager nav — no module management
+const managerNav: NavItem[] = [
+  { href: "/admin", label: "Dashboard", icon: "📊" },
   { href: "/admin/employees", label: "Employees", icon: "👥" },
   { href: "/admin/onboarding", label: "Onboarding", icon: "🎯" },
   { href: "/admin/audit-log", label: "Audit Log", icon: "📋" },
@@ -35,8 +44,12 @@ const sharedNav: NavItem[] = [
 export function Sidebar() {
   const pathname = usePathname();
   const { data: session } = useSession();
-  const isAdmin = session?.user?.role === "ADMIN";
-  const nav = isAdmin ? adminNav : employeeNav;
+  const role = session?.user?.role;
+  const isSuperAdmin = role === "SUPER_ADMIN" || role === "ADMIN";
+  const isManager = role === "MANAGER";
+  const isManagerOrAbove = isSuperAdmin || isManager;
+
+  const nav = isSuperAdmin ? superAdminNav : isManager ? managerNav : employeeNav;
 
   const [collapsed, setCollapsed] = useState(false);
 
@@ -132,8 +145,8 @@ export function Sidebar() {
           </Link>
         ))}
 
-        {/* Admin: Employee View section */}
-        {isAdmin && (
+        {/* Manager/Admin: Employee View section */}
+        {isManagerOrAbove && (
           <>
             {!collapsed && (
               <div className="pt-4 pb-1">

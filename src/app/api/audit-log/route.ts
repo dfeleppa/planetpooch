@@ -1,13 +1,20 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { getSession } from "@/lib/auth-helpers";
-import { Prisma } from "@prisma/client";
+import { getSession, getCompanyFilter } from "@/lib/auth-helpers";
+import { Company, Prisma, Role } from "@prisma/client";
+
+function isManagerOrAbove(role: string) {
+  return role === "SUPER_ADMIN" || role === "MANAGER" || role === "ADMIN";
+}
 
 export async function GET(req: NextRequest) {
   const session = await getSession();
-  if (!session?.user || session.user.role !== "ADMIN") {
+  if (!session?.user || !isManagerOrAbove(session.user.role)) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
+
+  const sessionUser = session.user as { role: Role; company: Company | null };
+  const companyFilter = getCompanyFilter(sessionUser.role, sessionUser.company);
 
   const searchParams = req.nextUrl.searchParams;
   const userId = searchParams.get("userId");
@@ -17,7 +24,10 @@ export async function GET(req: NextRequest) {
   const page = parseInt(searchParams.get("page") || "1");
   const limit = parseInt(searchParams.get("limit") || "50");
 
-  const where: Prisma.CompletionAuditLogWhereInput = {};
+  const where: Prisma.CompletionAuditLogWhereInput = {
+    // Scope to manager's company by filtering on the user's company
+    ...(companyFilter.company ? { user: { company: companyFilter.company } } : {}),
+  };
 
   if (userId) where.userId = userId;
   if (action === "COMPLETED" || action === "UNCOMPLETED") where.action = action;

@@ -1,21 +1,35 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { getSession } from "@/lib/auth-helpers";
+import { getSession, getCompanyFilter } from "@/lib/auth-helpers";
+import { Company, Role } from "@prisma/client";
+
+function isManagerOrAbove(role: string) {
+  return role === "SUPER_ADMIN" || role === "MANAGER" || role === "ADMIN";
+}
 
 export async function GET(req: NextRequest, { params }: { params: Promise<{ employeeId: string }> }) {
   const session = await getSession();
-  if (!session?.user || session.user.role !== "ADMIN") {
+  if (!session?.user || !isManagerOrAbove(session.user.role)) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
+  const sessionUser = session.user as { role: Role; company: Company | null };
+  const companyFilter = getCompanyFilter(sessionUser.role, sessionUser.company);
+
   const { employeeId } = await params;
 
+  // For MANAGERs, verify the employee belongs to their company
   const employee = await prisma.user.findUnique({
     where: { id: employeeId },
-    select: { id: true, email: true, name: true, role: true, createdAt: true },
+    select: { id: true, email: true, name: true, role: true, company: true, createdAt: true },
   });
 
   if (!employee || employee.role !== "EMPLOYEE") {
+    return NextResponse.json({ error: "Employee not found" }, { status: 404 });
+  }
+
+  // Company-scope check for MANAGERs
+  if (companyFilter.company && employee.company !== companyFilter.company) {
     return NextResponse.json({ error: "Employee not found" }, { status: 404 });
   }
 

@@ -2,6 +2,10 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/auth-helpers";
 
+function isManagerOrAbove(role: string) {
+  return role === "SUPER_ADMIN" || role === "MANAGER" || role === "ADMIN";
+}
+
 export async function GET(
   _req: NextRequest,
   { params }: { params: Promise<{ itemId: string }> }
@@ -37,7 +41,7 @@ export async function PUT(
   { params }: { params: Promise<{ itemId: string }> }
 ) {
   const session = await getSession();
-  if (!session?.user || (session.user as { role: string }).role !== "ADMIN") {
+  if (!session?.user || !isManagerOrAbove((session.user as { role: string }).role)) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
@@ -63,7 +67,7 @@ export async function DELETE(
   { params }: { params: Promise<{ itemId: string }> }
 ) {
   const session = await getSession();
-  if (!session?.user || (session.user as { role: string }).role !== "ADMIN") {
+  if (!session?.user || !isManagerOrAbove((session.user as { role: string }).role)) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 

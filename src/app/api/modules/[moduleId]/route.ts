@@ -64,7 +64,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ modu
 
 export async function PUT(req: NextRequest, { params }: { params: Promise<{ moduleId: string }> }) {
   const session = await getSession();
-  if (!session?.user || session.user.role !== "ADMIN") {
+  if (!session?.user || session.user.role !== "SUPER_ADMIN" && role !== "ADMIN") {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
@@ -86,7 +86,7 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ modu
 
 export async function DELETE(req: NextRequest, { params }: { params: Promise<{ moduleId: string }> }) {
   const session = await getSession();
-  if (!session?.user || session.user.role !== "ADMIN") {
+  if (!session?.user || session.user.role !== "SUPER_ADMIN" && role !== "ADMIN") {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
