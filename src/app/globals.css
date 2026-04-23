@@ -1,26 +1,202 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
-
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
+  --color-background: #ffffff;
+  --color-foreground: #171717;
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+body {
+  background: var(--color-background);
+  color: var(--color-foreground);
+  font-family: var(--font-sans), Arial, Helvetica, sans-serif;
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+/* Tiptap editor styles */
+.tiptap {
+  outline: none;
+  min-height: 400px;
+}
+
+.tiptap p {
+  margin: 0.5em 0;
+}
+
+.tiptap h1 {
+  font-size: 2em;
+  font-weight: 700;
+  margin: 0.67em 0;
+}
+
+.tiptap h2 {
+  font-size: 1.5em;
+  font-weight: 600;
+  margin: 0.75em 0;
+}
+
+.tiptap h3 {
+  font-size: 1.25em;
+  font-weight: 600;
+  margin: 0.75em 0;
+}
+
+.tiptap ul {
+  list-style: disc;
+  padding-left: 1.5em;
+  margin: 0.5em 0;
+}
+
+.tiptap ol {
+  list-style: decimal;
+  padding-left: 1.5em;
+  margin: 0.5em 0;
+}
+
+.tiptap li {
+  margin: 0.25em 0;
+}
+
+.tiptap blockquote {
+  border-left: 3px solid #d1d5db;
+  padding-left: 1em;
+  margin: 0.5em 0;
+  color: #6b7280;
+}
+
+.tiptap pre {
+  background: #1f2937;
+  color: #e5e7eb;
+  padding: 1em;
+  border-radius: 0.5em;
+  overflow-x: auto;
+  margin: 0.5em 0;
+}
+
+.tiptap code {
+  background: #f3f4f6;
+  padding: 0.2em 0.4em;
+  border-radius: 0.25em;
+  font-size: 0.9em;
+}
+
+.tiptap pre code {
+  background: none;
+  padding: 0;
+}
+
+.tiptap img {
+  max-width: 100%;
+  height: auto;
+  border-radius: 0.5em;
+  margin: 1em 0;
+}
+
+.tiptap iframe {
+  max-width: 100%;
+  border-radius: 0.5em;
+  margin: 1em 0;
+}
+
+.tiptap a {
+  color: #2563eb;
+  text-decoration: underline;
+}
+
+.tiptap hr {
+  border: none;
+  border-top: 2px solid #e5e7eb;
+  margin: 1.5em 0;
+}
+
+/* Lesson viewer prose styles */
+.lesson-content p {
+  margin: 0.5em 0;
+  line-height: 1.75;
+}
+
+.lesson-content h1 {
+  font-size: 2em;
+  font-weight: 700;
+  margin: 0.67em 0;
+}
+
+.lesson-content h2 {
+  font-size: 1.5em;
+  font-weight: 600;
+  margin: 0.75em 0;
+}
+
+.lesson-content h3 {
+  font-size: 1.25em;
+  font-weight: 600;
+  margin: 0.75em 0;
+}
+
+.lesson-content ul {
+  list-style: disc;
+  padding-left: 1.5em;
+  margin: 0.5em 0;
+}
+
+.lesson-content ol {
+  list-style: decimal;
+  padding-left: 1.5em;
+  margin: 0.5em 0;
+}
+
+.lesson-content li {
+  margin: 0.25em 0;
+}
+
+.lesson-content blockquote {
+  border-left: 3px solid #d1d5db;
+  padding-left: 1em;
+  margin: 0.5em 0;
+  color: #6b7280;
+}
+
+.lesson-content pre {
+  background: #1f2937;
+  color: #e5e7eb;
+  padding: 1em;
+  border-radius: 0.5em;
+  overflow-x: auto;
+  margin: 0.5em 0;
+}
+
+.lesson-content code {
+  background: #f3f4f6;
+  padding: 0.2em 0.4em;
+  border-radius: 0.25em;
+  font-size: 0.9em;
+}
+
+.lesson-content pre code {
+  background: none;
+  padding: 0;
+}
+
+.lesson-content img {
+  max-width: 100%;
+  height: auto;
+  border-radius: 0.5em;
+  margin: 1em 0;
+}
+
+.lesson-content iframe {
+  max-width: 100%;
+  border-radius: 0.5em;
+  margin: 1em 0;
+}
+
+.lesson-content a {
+  color: #2563eb;
+  text-decoration: underline;
+}
+
+.lesson-content hr {
+  border: none;
+  border-top: 2px solid #e5e7eb;
+  margin: 1.5em 0;
 }

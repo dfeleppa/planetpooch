@@ -1,0 +1,145 @@
+import { requireAdmin } from "@/lib/auth-helpers";
+import { prisma } from "@/lib/prisma";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import { ProgressBar } from "@/components/ui/progress-bar";
+import { Badge } from "@/components/ui/badge";
+import { formatDateTime } from "@/lib/utils";
+import Link from "next/link";
+import { notFound } from "next/navigation";
+
+export default async function EmployeeDetailPage({ params }: { params: Promise<{ employeeId: string }> }) {
+  await requireAdmin();
+  const { employeeId } = await params;
+
+  const employee = await prisma.user.findUnique({
+    where: { id: employeeId },
+    select: { id: true, name: true, email: true, role: true, createdAt: true },
+  });
+
+  if (!employee || employee.role !== "EMPLOYEE") notFound();
+
+  const modules = await prisma.module.findMany({
+    orderBy: { order: "asc" },
+    include: {
+      subsections: {
+        orderBy: { order: "asc" },
+        include: {
+          lessons: {
+            orderBy: { order: "asc" },
+            select: { id: true, title: true, estimatedMinutes: true },
+          },
+        },
+      },
+    },
+  });
+
+  const completions = await prisma.lessonCompletion.findMany({
+    where: { userId: employeeId },
+    select: { lessonId: true, isCompleted: true, completedAt: true },
+  });
+
+  const completionMap = new Map(completions.map((c) => [c.lessonId, c]));
+
+  const recentAudit = await prisma.completionAuditLog.findMany({
+    where: { userId: employeeId },
+    orderBy: { timestamp: "desc" },
+    take: 20,
+    include: { lesson: { select: { title: true } } },
+  });
+
+  return (
+    <div>
+      <div className="flex items-center gap-2 text-sm text-gray-500 mb-4">
+        <Link href="/admin/employees" className="hover:text-blue-600">Employees</Link>
+        <span>/</span>
+        <span className="text-gray-900">{employee.name}</span>
+      </div>
+
+      <h1 className="text-2xl font-bold text-gray-900">{employee.name}</h1>
+      <p className="text-gray-500">{employee.email}</p>
+
+      {/* Module progress */}
+      <div className="space-y-6 mt-6">
+        {modules.map((mod) => {
+          const allLessons = mod.subsections.flatMap((s) => s.lessons);
+          const total = allLessons.length;
+          const completed = allLessons.filter((l) => completionMap.get(l.id)?.isCompleted).length;
+
+          return (
+            <Card key={mod.id}>
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <h2 className="font-semibold text-gray-900">{mod.title}</h2>
+                  <Badge variant={completed === total && total > 0 ? "success" : completed > 0 ? "warning" : "default"}>
+                    {total > 0 ? Math.round((completed / total) * 100) : 0}%
+                  </Badge>
+                </div>
+                <ProgressBar value={completed} max={total} className="mt-2" />
+              </CardHeader>
+              <CardContent className="p-0">
+                {mod.subsections.map((sub) => (
+                  <div key={sub.id}>
+                    <div className="px-6 py-2 bg-gray-50 text-sm font-medium text-gray-600">
+                      {sub.title}
+                    </div>
+                    <ul className="divide-y divide-gray-100">
+                      {sub.lessons.map((lesson) => {
+                        const comp = completionMap.get(lesson.id);
+                        return (
+                          <li key={lesson.id} className="flex items-center justify-between px-6 py-2">
+                            <div className="flex items-center gap-2">
+                              <span className={`w-4 h-4 rounded-full border-2 flex items-center justify-center ${
+                                comp?.isCompleted ? "bg-green-500 border-green-500 text-white" : "border-gray-300"
+                              }`}>
+                                {comp?.isCompleted && (
+                                  <svg className="w-2.5 h-2.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                                    <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                                  </svg>
+                                )}
+                              </span>
+                              <span className="text-sm text-gray-700">{lesson.title}</span>
+                            </div>
+                            {comp?.isCompleted && comp.completedAt && (
+                              <span className="text-xs text-gray-400">
+                                {formatDateTime(comp.completedAt)}
+                              </span>
+                            )}
+                          </li>
+                        );
+                      })}
+                    </ul>
+                  </div>
+                ))}
+              </CardContent>
+            </Card>
+          );
+        })}
+      </div>
+
+      {/* Recent audit log */}
+      <Card className="mt-8">
+        <CardHeader>
+          <h2 className="font-semibold text-gray-900">Recent Activity</h2>
+        </CardHeader>
+        <CardContent className="p-0">
+          <ul className="divide-y divide-gray-100">
+            {recentAudit.map((log) => (
+              <li key={log.id} className="flex items-center justify-between px-6 py-3">
+                <div className="flex items-center gap-2">
+                  <Badge variant={log.action === "COMPLETED" ? "success" : "danger"}>
+                    {log.action === "COMPLETED" ? "Completed" : "Uncompleted"}
+                  </Badge>
+                  <span className="text-sm text-gray-700">{log.lesson.title}</span>
+                </div>
+                <span className="text-xs text-gray-400">{formatDateTime(log.timestamp)}</span>
+              </li>
+            ))}
+            {recentAudit.length === 0 && (
+              <li className="px-6 py-4 text-sm text-gray-400 text-center">No activity yet</li>
+            )}
+          </ul>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
