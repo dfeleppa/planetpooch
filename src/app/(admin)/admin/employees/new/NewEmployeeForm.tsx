@@ -35,6 +35,7 @@ const JOB_TITLES: Record<"NONE" | Company, { title: string; suggestedRole: Role 
   RESORT: [
     { title: "Facility Manager", suggestedRole: "MANAGER" },
     { title: "Assistant Manager", suggestedRole: "MANAGER" },
+    { title: "Training Manager", suggestedRole: "MANAGER" },
     { title: "Front Desk Staff", suggestedRole: "EMPLOYEE" },
     { title: "Floor Staff", suggestedRole: "EMPLOYEE" },
   ],

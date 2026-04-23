@@ -106,6 +106,14 @@ export async function POST(req: Request) {
   });
   await prisma.orgPosition.create({
     data: {
+      title: "Training Manager",
+      company: Company.RESORT,
+      parentPositionId: facilityMgr.id,
+      order: 1,
+    },
+  });
+  await prisma.orgPosition.create({
+    data: {
       title: "Front Desk Staff",
       company: Company.RESORT,
       parentPositionId: asstMgr.id,
