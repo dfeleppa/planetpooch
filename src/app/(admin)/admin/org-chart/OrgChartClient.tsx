@@ -287,7 +287,7 @@ export function OrgChartClient({
       {view === "BOTH" ? (
         <CompanySection
           title="Planet Pooch Org Chart"
-          subtitle="CEO and Director of Strategy lead both companies. CMO serves both divisions. Mobile and Resort have dedicated operations leaders."
+          subtitle="CEO and DOS lead both companies. CMO serves both divisions. Mobile and Resort have dedicated operations leaders."
           company={null}
           positions={positions}
           userById={userById}
@@ -458,7 +458,7 @@ function EmptyState({
         <h2 className="text-lg font-semibold text-gray-900">No positions yet</h2>
         <p className="text-gray-500 mt-2 max-w-md mx-auto">
           Start with the standard Planet Pooch org structure (CEO, COO, CMO, Groomer, Office Staff,
-          Facility Manager, Assistant Manager, Front Desk Staff, Floor Staff, Director of Strategy)
+          Facility Manager, Assistant Manager, Front Desk Staff, Floor Staff, DOS)
           — then customize.
         </p>
         {isSuperAdmin ? (

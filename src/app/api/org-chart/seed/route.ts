@@ -44,7 +44,7 @@ export async function POST(req: Request) {
   });
   await prisma.orgPosition.create({
     data: {
-      title: "Director of Strategy",
+      title: "DOS",
       company: null,
       parentPositionId: ceo.id,
       order: 1,
