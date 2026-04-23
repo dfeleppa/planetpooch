@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getSession, isManagerOrAbove } from "@/lib/auth-helpers";
+import { validateBody } from "@/lib/validate";
+import { UpdateTemplateSchema } from "@/lib/validators/onboarding";
 
 export async function GET(
   _req: NextRequest,
@@ -39,26 +41,18 @@ export async function PATCH(
 
   const { templateId } = await params;
 
+  const parsed = await validateBody(req, UpdateTemplateSchema);
+  if (!parsed.ok) return parsed.response;
+
   try {
-    const { name, description, isActive } = await req.json();
-    const data: {
-      name?: string;
-      description?: string;
-      isActive?: boolean;
-    } = {};
-
-    if (typeof name === "string" && name.trim()) data.name = name.trim();
-    if (typeof description === "string") data.description = description.trim();
-    if (typeof isActive === "boolean") data.isActive = isActive;
-
     const template = await prisma.onboardingTemplate.update({
       where: { id: templateId },
-      data,
+      data: parsed.data,
     });
-
     return NextResponse.json(template);
   } catch (err) {
-    const message = err instanceof Error ? err.message : "Failed to update template";
+    const message =
+      err instanceof Error ? err.message : "Failed to update template";
     return NextResponse.json({ error: message }, { status: 500 });
   }
 }
@@ -78,7 +72,8 @@ export async function DELETE(
     await prisma.onboardingTemplate.delete({ where: { id: templateId } });
     return NextResponse.json({ success: true });
   } catch (err) {
-    const message = err instanceof Error ? err.message : "Failed to delete template";
+    const message =
+      err instanceof Error ? err.message : "Failed to delete template";
     return NextResponse.json({ error: message }, { status: 500 });
   }
 }

@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getSession, isManagerOrAbove } from "@/lib/auth-helpers";
+import { validateBody } from "@/lib/validate";
+import { UpdateTemplateTaskSchema } from "@/lib/validators/onboarding";
 
 export async function PATCH(
   req: NextRequest,
@@ -13,35 +15,18 @@ export async function PATCH(
 
   const { taskId } = await params;
 
+  const parsed = await validateBody(req, UpdateTemplateTaskSchema);
+  if (!parsed.ok) return parsed.response;
+
   try {
-    const body = await req.json();
-    const { title, description, required, handbookFileName, externalUrl } = body;
-    const data: {
-      title?: string;
-      description?: string;
-      required?: boolean;
-      handbookFileName?: string | null;
-      externalUrl?: string | null;
-    } = {};
-
-    if (typeof title === "string" && title.trim()) data.title = title.trim();
-    if (typeof description === "string") data.description = description.trim();
-    if (typeof required === "boolean") data.required = required;
-    if (typeof handbookFileName === "string") {
-      data.handbookFileName = handbookFileName.trim() || null;
-    }
-    if (typeof externalUrl === "string") {
-      data.externalUrl = externalUrl.trim() || null;
-    }
-
     const task = await prisma.onboardingTemplateTask.update({
       where: { id: taskId },
-      data,
+      data: parsed.data,
     });
-
     return NextResponse.json(task);
   } catch (err) {
-    const message = err instanceof Error ? err.message : "Failed to update task";
+    const message =
+      err instanceof Error ? err.message : "Failed to update task";
     return NextResponse.json({ error: message }, { status: 500 });
   }
 }
@@ -61,7 +46,8 @@ export async function DELETE(
     await prisma.onboardingTemplateTask.delete({ where: { id: taskId } });
     return NextResponse.json({ success: true });
   } catch (err) {
-    const message = err instanceof Error ? err.message : "Failed to delete task";
+    const message =
+      err instanceof Error ? err.message : "Failed to delete task";
     return NextResponse.json({ error: message }, { status: 500 });
   }
 }

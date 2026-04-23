@@ -38,7 +38,6 @@ export const CreateTemplateTaskSchema = z.discriminatedUnion("type", [
     title: z.string().trim().min(1).max(200),
     description: z.string().trim().max(2000).default(""),
     required: z.boolean().default(true),
-    order: z.number().int().nonnegative(),
     handbookFileName: z.string().trim().min(1).max(200),
   }),
   z.object({
@@ -46,21 +45,18 @@ export const CreateTemplateTaskSchema = z.discriminatedUnion("type", [
     title: z.string().trim().min(1).max(200),
     description: z.string().trim().max(2000).default(""),
     required: z.boolean().default(true),
-    order: z.number().int().nonnegative(),
   }),
   z.object({
     type: z.literal("ADMIN_FILE_UPLOAD"),
     title: z.string().trim().min(1).max(200),
     description: z.string().trim().max(2000).default(""),
     required: z.boolean().default(true),
-    order: z.number().int().nonnegative(),
   }),
   z.object({
     type: z.literal("ADMIN_TASK"),
     title: z.string().trim().min(1).max(200),
     description: z.string().trim().max(2000).default(""),
     required: z.boolean().default(true),
-    order: z.number().int().nonnegative(),
     externalUrl: z.string().url().optional().nullable(),
   }),
 ]);
