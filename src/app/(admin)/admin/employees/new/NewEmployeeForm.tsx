@@ -7,18 +7,36 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 
-export function NewEmployeeForm() {
+type Role = "SUPER_ADMIN" | "MANAGER" | "EMPLOYEE" | "ADMIN";
+type Company = "MOBILE" | "RESORT";
+
+interface Props {
+  currentRole: Role;
+  currentCompany: Company | null;
+}
+
+const COMPANY_LABELS: Record<Company, string> = {
+  MOBILE: "Planet Pooch Mobile Inc",
+  RESORT: "Planet Pooch Pet Resort Inc",
+};
+
+export function NewEmployeeForm({ currentRole, currentCompany }: Props) {
   const router = useRouter();
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
 
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
-  const [role, setRole] = useState<"EMPLOYEE" | "ADMIN">("EMPLOYEE");
+  const [role, setRole] = useState<Role>("EMPLOYEE");
+  // For MANAGERs the company is locked to their own; SUPER_ADMIN picks freely.
+  const [company, setCompany] = useState<Company | "">(currentCompany ?? "");
   const [jobTitle, setJobTitle] = useState("");
   const [department, setDepartment] = useState("");
   const [phone, setPhone] = useState("");
   const [hireDate, setHireDate] = useState("");
+
+  const isSuperAdmin = currentRole === "SUPER_ADMIN" || currentRole === "ADMIN";
+  const isManager = currentRole === "MANAGER";
 
   // Shown once after successful create.
   const [result, setResult] = useState<{
@@ -39,6 +57,7 @@ export function NewEmployeeForm() {
           name,
           email,
           role,
+          company: company || null,
           jobTitle,
           department,
           phone,
@@ -107,6 +126,8 @@ export function NewEmployeeForm() {
                 setResult(null);
                 setName("");
                 setEmail("");
+                setRole("EMPLOYEE");
+                setCompany(currentCompany ?? "");
                 setJobTitle("");
                 setDepartment("");
                 setPhone("");
@@ -141,16 +162,42 @@ export function NewEmployeeForm() {
             required
           />
 
-          <div className="flex flex-col gap-1">
-            <label className="text-sm font-medium text-gray-700">Role</label>
-            <select
-              value={role}
-              onChange={(e) => setRole(e.target.value as "EMPLOYEE" | "ADMIN")}
-              className="rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-            >
-              <option value="EMPLOYEE">Employee</option>
-              <option value="ADMIN">Admin</option>
-            </select>
+          <div className="grid grid-cols-2 gap-4">
+            {/* Role */}
+            <div className="flex flex-col gap-1">
+              <label className="text-sm font-medium text-gray-700">Role</label>
+              <select
+                value={role}
+                onChange={(e) => setRole(e.target.value as Role)}
+                className="rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                <option value="EMPLOYEE">Employee</option>
+                <option value="MANAGER">Manager</option>
+                {isSuperAdmin && <option value="SUPER_ADMIN">Super Admin</option>}
+              </select>
+            </div>
+
+            {/* Company — locked for MANAGERs */}
+            <div className="flex flex-col gap-1">
+              <label className="text-sm font-medium text-gray-700">Company</label>
+              {isManager ? (
+                <input
+                  readOnly
+                  value={currentCompany ? COMPANY_LABELS[currentCompany] : "—"}
+                  className="rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-500 cursor-not-allowed"
+                />
+              ) : (
+                <select
+                  value={company}
+                  onChange={(e) => setCompany(e.target.value as Company | "")}
+                  className="rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="">— None (Super Admin) —</option>
+                  <option value="MOBILE">Planet Pooch Mobile Inc</option>
+                  <option value="RESORT">Planet Pooch Pet Resort Inc</option>
+                </select>
+              )}
+            </div>
           </div>
 
           <div className="grid grid-cols-2 gap-4">

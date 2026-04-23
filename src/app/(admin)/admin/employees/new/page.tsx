@@ -1,9 +1,11 @@
-import { requireAdmin } from "@/lib/auth-helpers";
+import { requireManager } from "@/lib/auth-helpers";
 import { NewEmployeeForm } from "./NewEmployeeForm";
 import Link from "next/link";
+import { Company, Role } from "@prisma/client";
 
 export default async function NewEmployeePage() {
-  await requireAdmin();
+  const session = await requireManager();
+  const user = session.user as { role: Role; company: Company | null };
 
   return (
     <div className="max-w-2xl">
@@ -20,7 +22,7 @@ export default async function NewEmployeePage() {
           once — share it with the employee so they can log in and set their own.
         </p>
       </div>
-      <NewEmployeeForm />
+      <NewEmployeeForm currentRole={user.role} currentCompany={user.company} />
     </div>
   );
 }

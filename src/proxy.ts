@@ -6,9 +6,6 @@ export async function proxy(req: NextRequest) {
   const token = await getToken({
     req,
     secret: process.env.NEXTAUTH_SECRET,
-    // On Vercel (HTTPS) NextAuth uses the __Secure- cookie prefix;
-    // NEXTAUTH_URL may not have the https:// scheme in all envs so
-    // we detect secureness from the VERCEL env var instead.
     secureCookie: !!process.env.VERCEL,
   });
 
@@ -30,8 +27,16 @@ export async function proxy(req: NextRequest) {
     return NextResponse.redirect(new URL("/change-password", req.url));
   }
 
-  // Non-admins cannot access admin pages
-  if (pathname.startsWith("/admin") && token.role !== "ADMIN") {
+  const role = token.role as string;
+  const isManagerOrAbove = role === "MANAGER" || role === "SUPER_ADMIN" || role === "ADMIN";
+
+  // Only SUPER_ADMIN can manage modules/lessons
+  if (pathname.startsWith("/admin/modules") && role !== "SUPER_ADMIN" && role !== "ADMIN") {
+    return NextResponse.redirect(new URL("/admin", req.url));
+  }
+
+  // Admin section requires MANAGER or SUPER_ADMIN
+  if (pathname.startsWith("/admin") && !isManagerOrAbove) {
     return NextResponse.redirect(new URL("/dashboard", req.url));
   }
 

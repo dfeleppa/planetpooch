@@ -1,18 +1,26 @@
 import { NextRequest, NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
-import { getSession } from "@/lib/auth-helpers";
+import { getSession, getCompanyFilter } from "@/lib/auth-helpers";
 import { generateTempPassword } from "@/lib/onboarding";
+import { Company, Role } from "@prisma/client";
+
+function isManagerOrAbove(role: string) {
+  return role === "SUPER_ADMIN" || role === "MANAGER" || role === "ADMIN";
+}
 
 export async function GET() {
   const session = await getSession();
-  if (!session?.user || session.user.role !== "ADMIN") {
+  if (!session?.user || !isManagerOrAbove(session.user.role)) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
+  const user = session.user as { role: Role; company: Company | null };
+  const companyFilter = getCompanyFilter(user.role, user.company);
+
   const employees = await prisma.user.findMany({
-    where: { role: "EMPLOYEE" },
-    select: { id: true, email: true, name: true, createdAt: true },
+    where: { role: "EMPLOYEE", ...companyFilter },
+    select: { id: true, email: true, name: true, company: true, jobTitle: true, createdAt: true },
     orderBy: { name: "asc" },
   });
 
@@ -72,26 +80,41 @@ export async function GET() {
 
 export async function POST(req: NextRequest) {
   const session = await getSession();
-  if (!session?.user || (session.user as { role: string }).role !== "ADMIN") {
+  if (!session?.user || !isManagerOrAbove(session.user.role)) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
   try {
     const body = await req.json();
-    const { name, email, role, jobTitle, department, phone, hireDate, managerId } = body;
+    const { name, email, role, company, jobTitle, department, phone, hireDate, managerId } = body;
 
-    if (!name || !name.trim()) {
+    if (!name?.trim()) {
       return NextResponse.json({ error: "Name is required" }, { status: 400 });
     }
-    if (!email || !email.trim()) {
+    if (!email?.trim()) {
       return NextResponse.json({ error: "Email is required" }, { status: 400 });
     }
 
-    const normalizedEmail = email.trim().toLowerCase();
+    const sessionUser = session.user as { role: Role; company: Company | null };
 
+    // MANAGERs can only create employees in their own company
+    let assignedCompany: Company | null = company ?? null;
+    if (sessionUser.role === "MANAGER") {
+      assignedCompany = sessionUser.company;
+    }
+
+    const normalizedEmail = email.trim().toLowerCase();
     const existing = await prisma.user.findUnique({ where: { email: normalizedEmail } });
     if (existing) {
       return NextResponse.json({ error: "A user with that email already exists" }, { status: 400 });
+    }
+
+    // Only SUPER_ADMIN can create SUPER_ADMIN or MANAGER accounts
+    let assignedRole: Role = "EMPLOYEE";
+    if (role === "SUPER_ADMIN" && sessionUser.role === "SUPER_ADMIN") {
+      assignedRole = "SUPER_ADMIN";
+    } else if (role === "MANAGER" && (sessionUser.role === "SUPER_ADMIN" || sessionUser.role === "MANAGER")) {
+      assignedRole = "MANAGER";
     }
 
     const tempPassword = generateTempPassword();
@@ -102,7 +125,8 @@ export async function POST(req: NextRequest) {
         name: name.trim(),
         email: normalizedEmail,
         passwordHash,
-        role: role === "ADMIN" ? "ADMIN" : "EMPLOYEE",
+        role: assignedRole,
+        company: assignedCompany,
         mustChangePassword: true,
         jobTitle: jobTitle?.trim() || null,
         department: department?.trim() || null,
@@ -115,12 +139,12 @@ export async function POST(req: NextRequest) {
         name: true,
         email: true,
         role: true,
+        company: true,
         jobTitle: true,
         department: true,
       },
     });
 
-    // Return temp password ONCE so admin can share it with the new hire.
     return NextResponse.json({ user, tempPassword }, { status: 201 });
   } catch (err) {
     const message = err instanceof Error ? err.message : "Failed to create employee";
