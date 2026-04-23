@@ -69,6 +69,20 @@ export function OrgChartClient({
     return m;
   }, [users]);
 
+  // Group users by "title|company" so we can show everyone with a matching job
+  // title under each position card — not just the single assignedUser.
+  const usersByPositionKey = useMemo(() => {
+    const m = new Map<string, UserOption[]>();
+    for (const u of users) {
+      if (!u.jobTitle) continue;
+      const key = `${u.jobTitle}|${u.company ?? "NONE"}`;
+      const arr = m.get(key);
+      if (arr) arr.push(u);
+      else m.set(key, [u]);
+    }
+    return m;
+  }, [users]);
+
   const crossPositions = useMemo(() => positions.filter((p) => p.company === null), [positions]);
   const mobilePositions = useMemo(() => positions.filter((p) => p.company === "MOBILE"), [positions]);
   const resortPositions = useMemo(() => positions.filter((p) => p.company === "RESORT"), [positions]);
@@ -291,6 +305,7 @@ export function OrgChartClient({
           company={null}
           positions={positions}
           userById={userById}
+          usersByPositionKey={usersByPositionKey}
           showNames={showNames}
           draggingId={draggingId}
           dragOverId={dragOverId}
@@ -314,6 +329,7 @@ export function OrgChartClient({
           company="MOBILE"
           positions={[...crossPositions, ...mobilePositions]}
           userById={userById}
+          usersByPositionKey={usersByPositionKey}
           showNames={showNames}
           draggingId={draggingId}
           dragOverId={dragOverId}
@@ -337,6 +353,7 @@ export function OrgChartClient({
           company="RESORT"
           positions={[...crossPositions, ...resortPositions]}
           userById={userById}
+          usersByPositionKey={usersByPositionKey}
           showNames={showNames}
           draggingId={draggingId}
           dragOverId={dragOverId}
@@ -488,6 +505,7 @@ function CompanySection({
   company,
   positions,
   userById,
+  usersByPositionKey,
   showNames,
   draggingId,
   dragOverId,
@@ -509,6 +527,7 @@ function CompanySection({
   company: CompanyVal | null;
   positions: Position[];
   userById: Map<string, UserOption>;
+  usersByPositionKey: Map<string, UserOption[]>;
   showNames: boolean;
   draggingId: string | null;
   dragOverId: string | null;
@@ -567,6 +586,7 @@ function CompanySection({
                 allPositions={positions}
                 depth={0}
                 userById={userById}
+                usersByPositionKey={usersByPositionKey}
                 showNames={showNames}
                 draggingId={draggingId}
                 dragOverId={dragOverId}
@@ -585,6 +605,7 @@ function CompanySection({
             roots={roots}
             allPositions={positions}
             userById={userById}
+            usersByPositionKey={usersByPositionKey}
             showNames={showNames}
             draggingId={draggingId}
             dragOverId={dragOverId}
@@ -611,6 +632,7 @@ function PositionNode({
   allPositions,
   depth,
   userById,
+  usersByPositionKey,
   showNames,
   draggingId,
   dragOverId,
@@ -626,6 +648,7 @@ function PositionNode({
   allPositions: Position[];
   depth: number;
   userById: Map<string, UserOption>;
+  usersByPositionKey: Map<string, UserOption[]>;
   showNames: boolean;
   draggingId: string | null;
   dragOverId: string | null;
@@ -642,6 +665,11 @@ function PositionNode({
   const vacant = !assigned;
   const isDragging = draggingId === node.id;
   const isDragOver = dragOverId === node.id;
+
+  // People with matching job title + company (besides the primary assigned user)
+  const matchingUsers =
+    usersByPositionKey.get(`${node.title}|${node.company ?? "NONE"}`) ?? [];
+  const additionalPeople = matchingUsers.filter((u) => u.id !== assigned?.id);
 
   // Color by whether vacant or filled
   const cardBg = vacant
@@ -686,8 +714,15 @@ function PositionNode({
           {showNames && assigned && (
             <p className="text-sm text-gray-700 mt-0.5 truncate">{assigned.name}</p>
           )}
-          {showNames && vacant && (
+          {showNames && vacant && additionalPeople.length === 0 && (
             <p className="text-xs text-gray-400 italic mt-0.5">— open —</p>
+          )}
+          {showNames && additionalPeople.length > 0 && (
+            <ul className="mt-1 space-y-0.5 text-xs text-gray-600">
+              {additionalPeople.map((u) => (
+                <li key={u.id} className="truncate">• {u.name}</li>
+              ))}
+            </ul>
           )}
         </div>
 
@@ -719,6 +754,7 @@ function PositionNode({
               allPositions={allPositions}
               depth={depth + 1}
               userById={userById}
+              usersByPositionKey={usersByPositionKey}
               showNames={showNames}
               draggingId={draggingId}
               dragOverId={dragOverId}
@@ -745,6 +781,7 @@ function OrgChartTree({
   roots,
   allPositions,
   userById,
+  usersByPositionKey,
   showNames,
   draggingId,
   dragOverId,
@@ -759,6 +796,7 @@ function OrgChartTree({
   roots: Position[];
   allPositions: Position[];
   userById: Map<string, UserOption>;
+  usersByPositionKey: Map<string, UserOption[]>;
   showNames: boolean;
   draggingId: string | null;
   dragOverId: string | null;
@@ -801,6 +839,7 @@ function OrgChartTree({
             node={root}
             allPositions={allPositions}
             userById={userById}
+            usersByPositionKey={usersByPositionKey}
             showNames={showNames}
             draggingId={draggingId}
             dragOverId={dragOverId}
@@ -822,6 +861,7 @@ function ChartNode({
   node,
   allPositions,
   userById,
+  usersByPositionKey,
   showNames,
   draggingId,
   dragOverId,
@@ -836,6 +876,7 @@ function ChartNode({
   node: Position;
   allPositions: Position[];
   userById: Map<string, UserOption>;
+  usersByPositionKey: Map<string, UserOption[]>;
   showNames: boolean;
   draggingId: string | null;
   dragOverId: string | null;
@@ -852,6 +893,10 @@ function ChartNode({
   const vacant = !assigned;
   const isDragging = draggingId === node.id;
   const isDragOver = dragOverId === node.id;
+
+  const matchingUsers =
+    usersByPositionKey.get(`${node.title}|${node.company ?? "NONE"}`) ?? [];
+  const additionalPeople = matchingUsers.filter((u) => u.id !== assigned?.id);
 
   const cardBg = vacant
     ? "bg-white border-dashed border-gray-300"
@@ -889,8 +934,15 @@ function ChartNode({
         {showNames && assigned && (
           <p className="text-xs text-gray-700 mt-1 truncate">{assigned.name}</p>
         )}
-        {showNames && vacant && (
+        {showNames && vacant && additionalPeople.length === 0 && (
           <p className="text-xs text-gray-400 italic mt-1">— open —</p>
+        )}
+        {showNames && additionalPeople.length > 0 && (
+          <ul className="mt-1 space-y-0.5 text-[11px] text-gray-600 text-left">
+            {additionalPeople.map((u) => (
+              <li key={u.id} className="truncate">• {u.name}</li>
+            ))}
+          </ul>
         )}
 
         <div className="flex items-center gap-1 mt-1 opacity-0 group-hover:opacity-100 transition-opacity">
@@ -914,6 +966,7 @@ function ChartNode({
               node={child}
               allPositions={allPositions}
               userById={userById}
+              usersByPositionKey={usersByPositionKey}
               showNames={showNames}
               draggingId={draggingId}
               dragOverId={dragOverId}
