@@ -23,6 +23,7 @@ const superAdminNav: NavItem[] = [
   { href: "/admin", label: "Dashboard", icon: "📊" },
   { href: "/admin/modules", label: "Manage Modules", icon: "📚" },
   { href: "/admin/employees", label: "Employees", icon: "👥" },
+  { href: "/admin/org-chart", label: "Org Chart", icon: "🗂️" },
   { href: "/admin/onboarding", label: "Onboarding", icon: "🎯" },
   { href: "/admin/audit-log", label: "Audit Log", icon: "📋" },
 ];
@@ -31,6 +32,7 @@ const superAdminNav: NavItem[] = [
 const managerNav: NavItem[] = [
   { href: "/admin", label: "Dashboard", icon: "📊" },
   { href: "/admin/employees", label: "Employees", icon: "👥" },
+  { href: "/admin/org-chart", label: "Org Chart", icon: "🗂️" },
   { href: "/admin/onboarding", label: "Onboarding", icon: "🎯" },
   { href: "/admin/audit-log", label: "Audit Log", icon: "📋" },
 ];
