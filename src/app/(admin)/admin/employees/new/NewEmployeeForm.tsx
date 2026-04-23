@@ -20,6 +20,57 @@ const COMPANY_LABELS: Record<Company, string> = {
   RESORT: "Planet Pooch Pet Resort Inc",
 };
 
+// Job titles grouped by company (null = cross-company / SUPER_ADMIN)
+const JOB_TITLES: Record<"NONE" | Company, { title: string; suggestedRole: Role }[]> = {
+  NONE: [
+    { title: "CEO", suggestedRole: "SUPER_ADMIN" },
+    { title: "Director of Strategy", suggestedRole: "SUPER_ADMIN" },
+  ],
+  MOBILE: [
+    { title: "COO", suggestedRole: "MANAGER" },
+    { title: "CMO", suggestedRole: "MANAGER" },
+    { title: "Groomer", suggestedRole: "EMPLOYEE" },
+    { title: "Office Staff", suggestedRole: "EMPLOYEE" },
+  ],
+  RESORT: [
+    { title: "Facility Manager", suggestedRole: "MANAGER" },
+    { title: "Assistant Manager", suggestedRole: "MANAGER" },
+    { title: "Front Desk Staff", suggestedRole: "EMPLOYEE" },
+    { title: "Floor Staff", suggestedRole: "EMPLOYEE" },
+  ],
+};
+
+function SelectField({
+  label,
+  value,
+  onChange,
+  children,
+  required,
+}: {
+  label: string;
+  value: string;
+  onChange: (v: string) => void;
+  children: React.ReactNode;
+  required?: boolean;
+}) {
+  return (
+    <div className="flex flex-col gap-1">
+      <label className="text-sm font-medium text-gray-700">
+        {label}
+        {required && <span className="text-red-500 ml-0.5">*</span>}
+      </label>
+      <select
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        required={required}
+        className="rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+      >
+        {children}
+      </select>
+    </div>
+  );
+}
+
 export function NewEmployeeForm({ currentRole, currentCompany }: Props) {
   const router = useRouter();
   const [saving, setSaving] = useState(false);
@@ -28,17 +79,38 @@ export function NewEmployeeForm({ currentRole, currentCompany }: Props) {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [role, setRole] = useState<Role>("EMPLOYEE");
-  // For MANAGERs the company is locked to their own; SUPER_ADMIN picks freely.
   const [company, setCompany] = useState<Company | "">(currentCompany ?? "");
   const [jobTitle, setJobTitle] = useState("");
-  const [department, setDepartment] = useState("");
+  const [customJobTitle, setCustomJobTitle] = useState("");
   const [phone, setPhone] = useState("");
   const [hireDate, setHireDate] = useState("");
 
   const isSuperAdmin = currentRole === "SUPER_ADMIN" || currentRole === "ADMIN";
   const isManager = currentRole === "MANAGER";
 
-  // Shown once after successful create.
+  const companyKey: "NONE" | Company = company || "NONE";
+  const titleOptions = JOB_TITLES[companyKey];
+  const isCustomTitle = jobTitle === "__custom__";
+  const effectiveJobTitle = isCustomTitle ? customJobTitle : jobTitle;
+
+  function handleCompanyChange(val: string) {
+    setCompany(val as Company | "");
+    // Reset job title when company changes — options are different
+    setJobTitle("");
+    setCustomJobTitle("");
+  }
+
+  function handleJobTitleChange(val: string) {
+    setJobTitle(val);
+    setCustomJobTitle("");
+    // Auto-suggest role based on selected title
+    if (val && val !== "__custom__") {
+      const match = titleOptions.find((t) => t.title === val);
+      if (match) setRole(match.suggestedRole);
+    }
+  }
+
+  // Result state
   const [result, setResult] = useState<{
     user: { id: string; name: string; email: string };
     tempPassword: string;
@@ -58,8 +130,7 @@ export function NewEmployeeForm({ currentRole, currentCompany }: Props) {
           email,
           role,
           company: company || null,
-          jobTitle,
-          department,
+          jobTitle: effectiveJobTitle || null,
           phone,
           hireDate: hireDate || null,
         }),
@@ -84,14 +155,24 @@ export function NewEmployeeForm({ currentRole, currentCompany }: Props) {
     setTimeout(() => setCopied(false), 2000);
   };
 
+  function resetForm() {
+    setResult(null);
+    setName("");
+    setEmail("");
+    setRole("EMPLOYEE");
+    setCompany(currentCompany ?? "");
+    setJobTitle("");
+    setCustomJobTitle("");
+    setPhone("");
+    setHireDate("");
+  }
+
   if (result) {
     return (
       <Card>
         <CardContent className="space-y-4">
           <div>
-            <h2 className="text-lg font-semibold text-gray-900">
-              Employee created
-            </h2>
+            <h2 className="text-lg font-semibold text-gray-900">Employee created</h2>
             <p className="text-sm text-gray-600 mt-1">
               {result.user.name} &lt;{result.user.email}&gt;
             </p>
@@ -119,21 +200,7 @@ export function NewEmployeeForm({ currentRole, currentCompany }: Props) {
             <Link href="/admin/employees">
               <Button type="button">Back to employees</Button>
             </Link>
-            <Button
-              type="button"
-              variant="secondary"
-              onClick={() => {
-                setResult(null);
-                setName("");
-                setEmail("");
-                setRole("EMPLOYEE");
-                setCompany(currentCompany ?? "");
-                setJobTitle("");
-                setDepartment("");
-                setPhone("");
-                setHireDate("");
-              }}
-            >
+            <Button type="button" variant="secondary" onClick={resetForm}>
               Add another
             </Button>
           </div>
@@ -145,39 +212,30 @@ export function NewEmployeeForm({ currentRole, currentCompany }: Props) {
   return (
     <form onSubmit={handleSubmit}>
       <Card>
-        <CardContent className="space-y-4">
-          <Input
-            label="Full Name"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            placeholder="Jane Doe"
-            required
-          />
-          <Input
-            label="Email"
-            type="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            placeholder="jane@company.com"
-            required
-          />
+        <CardContent className="space-y-5">
 
+          {/* Name + Email */}
           <div className="grid grid-cols-2 gap-4">
-            {/* Role */}
-            <div className="flex flex-col gap-1">
-              <label className="text-sm font-medium text-gray-700">Role</label>
-              <select
-                value={role}
-                onChange={(e) => setRole(e.target.value as Role)}
-                className="rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-              >
-                <option value="EMPLOYEE">Employee</option>
-                <option value="MANAGER">Manager</option>
-                {isSuperAdmin && <option value="SUPER_ADMIN">Super Admin</option>}
-              </select>
-            </div>
+            <Input
+              label="Full Name"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="Jane Doe"
+              required
+            />
+            <Input
+              label="Email"
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="jane@planetpooch.com"
+              required
+            />
+          </div>
 
-            {/* Company — locked for MANAGERs */}
+          {/* Company + Role */}
+          <div className="grid grid-cols-2 gap-4">
+            {/* Company */}
             <div className="flex flex-col gap-1">
               <label className="text-sm font-medium text-gray-700">Company</label>
               {isManager ? (
@@ -189,8 +247,8 @@ export function NewEmployeeForm({ currentRole, currentCompany }: Props) {
               ) : (
                 <select
                   value={company}
-                  onChange={(e) => setCompany(e.target.value as Company | "")}
-                  className="rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  onChange={(e) => handleCompanyChange(e.target.value)}
+                  className="rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
                 >
                   <option value="">— None (Super Admin) —</option>
                   <option value="MOBILE">Planet Pooch Mobile Inc</option>
@@ -198,23 +256,47 @@ export function NewEmployeeForm({ currentRole, currentCompany }: Props) {
                 </select>
               )}
             </div>
+
+            {/* Role */}
+            <SelectField label="Role" value={role} onChange={(v) => setRole(v as Role)}>
+              <option value="EMPLOYEE">Employee</option>
+              <option value="MANAGER">Manager</option>
+              {isSuperAdmin && <option value="SUPER_ADMIN">Super Admin</option>}
+            </SelectField>
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
-            <Input
-              label="Job Title"
+          {/* Job Title */}
+          <div className="flex flex-col gap-1">
+            <label className="text-sm font-medium text-gray-700">Job Title</label>
+            <select
               value={jobTitle}
-              onChange={(e) => setJobTitle(e.target.value)}
-              placeholder="e.g., Groomer"
-            />
-            <Input
-              label="Department"
-              value={department}
-              onChange={(e) => setDepartment(e.target.value)}
-              placeholder="e.g., Operations"
-            />
+              onChange={(e) => handleJobTitleChange(e.target.value)}
+              className="rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+            >
+              <option value="">— Select a position —</option>
+              {titleOptions.map((t) => (
+                <option key={t.title} value={t.title}>
+                  {t.title}
+                </option>
+              ))}
+              <option value="__custom__">Other / Custom…</option>
+            </select>
+            {isCustomTitle && (
+              <Input
+                value={customJobTitle}
+                onChange={(e) => setCustomJobTitle(e.target.value)}
+                placeholder="Enter job title"
+                className="mt-1"
+              />
+            )}
+            {jobTitle && !isCustomTitle && (
+              <p className="text-xs text-gray-400 mt-0.5">
+                Role auto-set to match — adjust above if needed.
+              </p>
+            )}
           </div>
 
+          {/* Phone + Hire Date */}
           <div className="grid grid-cols-2 gap-4">
             <Input
               label="Phone"
@@ -232,18 +314,15 @@ export function NewEmployeeForm({ currentRole, currentCompany }: Props) {
 
           {error && <p className="text-sm text-red-600">{error}</p>}
 
-          <div className="flex gap-3 pt-2">
+          <div className="flex gap-3 pt-1">
             <Button type="submit" disabled={saving}>
               {saving ? "Creating..." : "Create Employee"}
             </Button>
-            <Button
-              type="button"
-              variant="secondary"
-              onClick={() => router.back()}
-            >
+            <Button type="button" variant="secondary" onClick={() => router.back()}>
               Cancel
             </Button>
           </div>
+
         </CardContent>
       </Card>
     </form>
