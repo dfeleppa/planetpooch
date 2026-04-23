@@ -1,17 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { getSession } from "@/lib/auth-helpers";
-
-function isManagerOrAbove(role: string) {
-  return role === "SUPER_ADMIN" || role === "MANAGER" || role === "ADMIN";
-}
+import { getSession, isManagerOrAbove } from "@/lib/auth-helpers";
 
 export async function PATCH(
   req: NextRequest,
   { params }: { params: Promise<{ templateId: string; taskId: string }> }
 ) {
   const session = await getSession();
-  if (!session?.user || !isManagerOrAbove((session.user as { role: string }).role)) {
+  if (!session?.user || !isManagerOrAbove(session.user.role)) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
@@ -55,7 +51,7 @@ export async function DELETE(
   { params }: { params: Promise<{ templateId: string; taskId: string }> }
 ) {
   const session = await getSession();
-  if (!session?.user || !isManagerOrAbove((session.user as { role: string }).role)) {
+  if (!session?.user || !isManagerOrAbove(session.user.role)) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 

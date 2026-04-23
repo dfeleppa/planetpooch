@@ -50,5 +50,20 @@ export function getCompanyFilter(
   return {};
 }
 
+// ──────────────────────────────────────────────────────────────────────────────
+// Pure predicates — for API routes which can't use `redirect()`. Pair with
+// `getSession()` + a 403 JSON response.
+// ──────────────────────────────────────────────────────────────────────────────
+
+/** True if the role has manager-level access (MANAGER, SUPER_ADMIN, or legacy ADMIN). */
+export function isManagerOrAbove(role: string | undefined | null): boolean {
+  return role === "MANAGER" || role === "SUPER_ADMIN" || role === "ADMIN";
+}
+
+/** True if the role is SUPER_ADMIN (or legacy ADMIN). */
+export function isSuperAdmin(role: string | undefined | null): boolean {
+  return role === "SUPER_ADMIN" || role === "ADMIN";
+}
+
 // Keep requireAdmin as an alias for backward compatibility during migration
 export const requireAdmin = requireManager;

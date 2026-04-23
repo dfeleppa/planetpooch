@@ -1,11 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { getSession } from "@/lib/auth-helpers";
+import { getSession, isSuperAdmin } from "@/lib/auth-helpers";
 import { extractTextFromTiptapJson } from "@/lib/utils";
-
-function isSuperAdmin(role: string) {
-  return role === "SUPER_ADMIN" || role === "ADMIN";
-}
 
 export async function GET(req: NextRequest, { params }: { params: Promise<{ lessonId: string }> }) {
   const session = await getSession();

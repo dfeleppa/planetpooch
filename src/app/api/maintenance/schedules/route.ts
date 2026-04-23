@@ -1,12 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { getSession } from "@/lib/auth-helpers";
+import { getSession, isManagerOrAbove } from "@/lib/auth-helpers";
 import { calculateNextDueDate } from "@/lib/maintenance";
 import { RecurrenceInterval } from "@prisma/client";
-
-function isManagerOrAbove(role: string) {
-  return role === "SUPER_ADMIN" || role === "MANAGER" || role === "ADMIN";
-}
 
 export async function GET() {
   const session = await getSession();
@@ -14,6 +10,9 @@ export async function GET() {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
+  // TODO(phase-2+): add `company` column to MaintenanceSchedule + apply
+  // getCompanyFilter so MANAGERs only see their own company's schedules.
+  // Blocked by schema migration — see codebase review notes.
   const schedules = await prisma.maintenanceSchedule.findMany({
     orderBy: { nextDueDate: "asc" },
     include: {
@@ -29,7 +28,7 @@ export async function GET() {
 
 export async function POST(req: NextRequest) {
   const session = await getSession();
-  if (!session?.user || !isManagerOrAbove((session.user as { role: string }).role)) {
+  if (!session?.user || !isManagerOrAbove(session.user.role)) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
