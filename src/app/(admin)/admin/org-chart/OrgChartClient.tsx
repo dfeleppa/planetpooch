@@ -284,12 +284,12 @@ export function OrgChartClient({
         </CardContent>
       </Card>
 
-      {showCross && isSuperAdmin && (
+      {view === "BOTH" ? (
         <CompanySection
-          title="Leadership (Cross-Company)"
-          subtitle="CEO, Director of Strategy"
+          title="Planet Pooch Org Chart"
+          subtitle="CEO and Director of Strategy lead both companies. CMO serves both divisions. Mobile and Resort have dedicated operations leaders."
           company={null}
-          positions={crossPositions}
+          positions={positions}
           userById={userById}
           showNames={showNames}
           draggingId={draggingId}
@@ -307,14 +307,12 @@ export function OrgChartClient({
           layout={layout}
           onAdd={() => setCreateModalCompany("CROSS")}
         />
-      )}
-
-      {showMobile && (
+      ) : view === "MOBILE" ? (
         <CompanySection
           title={COMPANY_LABELS.MOBILE}
-          subtitle="Mobile grooming division"
+          subtitle="Mobile grooming division (includes shared cross-company leadership)"
           company="MOBILE"
-          positions={mobilePositions}
+          positions={[...crossPositions, ...mobilePositions]}
           userById={userById}
           showNames={showNames}
           draggingId={draggingId}
@@ -332,14 +330,12 @@ export function OrgChartClient({
           layout={layout}
           onAdd={() => setCreateModalCompany("MOBILE")}
         />
-      )}
-
-      {showResort && (
+      ) : (
         <CompanySection
           title={COMPANY_LABELS.RESORT}
-          subtitle="Pet resort division"
+          subtitle="Pet resort division (includes shared cross-company leadership)"
           company="RESORT"
-          positions={resortPositions}
+          positions={[...crossPositions, ...resortPositions]}
           userById={userById}
           showNames={showNames}
           draggingId={draggingId}
@@ -360,7 +356,7 @@ export function OrgChartClient({
       )}
 
       <p className="text-xs text-gray-400 text-center">
-        Drag a position onto another to reassign reporting. Drop on a section header to make it top-level.
+        Drag a position onto another to reassign reporting. Drop on the title area to make it top-level.
       </p>
 
       {/* Assign Modal */}
@@ -678,6 +674,7 @@ function PositionNode({
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 flex-wrap">
             <span className="text-sm font-semibold text-gray-900">{node.title}</span>
+            <CompanyTag company={node.company} />
             {vacant ? (
               <span className="text-xs bg-gray-100 text-gray-500 px-1.5 py-0.5 rounded">Vacant</span>
             ) : (
@@ -880,8 +877,9 @@ function ChartNode({
           isDragging ? "opacity-40" : ""
         } ${isDragOver ? "ring-2 ring-blue-500 ring-offset-1" : ""}`}
       >
-        <div className="flex items-center gap-2 flex-wrap">
+        <div className="flex items-center gap-1.5 flex-wrap">
           <span className="text-sm font-semibold text-gray-900 truncate">{node.title}</span>
+          <CompanyTag company={node.company} />
           {vacant ? (
             <span className="text-[10px] bg-gray-100 text-gray-500 px-1.5 py-0.5 rounded">Vacant</span>
           ) : (
@@ -931,6 +929,28 @@ function ChartNode({
         </ul>
       )}
     </li>
+  );
+}
+
+function CompanyTag({ company }: { company: CompanyVal | null }) {
+  if (company === null) {
+    return (
+      <span className="text-[10px] bg-purple-100 text-purple-700 px-1.5 py-0.5 rounded font-medium">
+        Both
+      </span>
+    );
+  }
+  if (company === "MOBILE") {
+    return (
+      <span className="text-[10px] bg-sky-100 text-sky-700 px-1.5 py-0.5 rounded font-medium">
+        Mobile
+      </span>
+    );
+  }
+  return (
+    <span className="text-[10px] bg-amber-100 text-amber-800 px-1.5 py-0.5 rounded font-medium">
+      Resort
+    </span>
   );
 }
 

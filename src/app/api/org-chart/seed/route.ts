@@ -60,12 +60,13 @@ export async function POST(req: Request) {
       order: 0,
     },
   });
-  const cmo = await prisma.orgPosition.create({
+  // CMO is cross-company (serves both Mobile and Resort)
+  await prisma.orgPosition.create({
     data: {
       title: "CMO",
-      company: Company.MOBILE,
-      parentPositionId: coo.id,
-      order: 0,
+      company: null,
+      parentPositionId: ceo.id,
+      order: 2,
     },
   });
   await prisma.orgPosition.create({
@@ -76,12 +77,13 @@ export async function POST(req: Request) {
       order: 1,
     },
   });
+  // Office Staff reports to COO (CMO is marketing, not ops)
   await prisma.orgPosition.create({
     data: {
       title: "Office Staff",
       company: Company.MOBILE,
-      parentPositionId: cmo.id,
-      order: 0,
+      parentPositionId: coo.id,
+      order: 2,
     },
   });
 
