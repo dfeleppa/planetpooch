@@ -996,22 +996,26 @@ function ChartNode({
 }
 
 function EmployeeChip({ user }: { user: UserOption }) {
+  const initials =
+    user.name
+      .split(/\s+/)
+      .map((p) => p[0])
+      .filter(Boolean)
+      .slice(0, 2)
+      .join("")
+      .toUpperCase() || "?";
   return (
-    <div className="w-40 px-2 py-1.5 rounded-lg border border-gray-200 bg-white shadow-sm flex items-center gap-2">
-      <div className="flex-shrink-0 w-7 h-7 rounded-full bg-gradient-to-br from-blue-400 to-blue-600 text-white text-xs font-semibold flex items-center justify-center">
-        {user.name
-          .split(/\s+/)
-          .map((p) => p[0])
-          .filter(Boolean)
-          .slice(0, 2)
-          .join("")
-          .toUpperCase() || "?"}
-      </div>
-      <div className="min-w-0 flex-1">
-        <div className="text-xs font-medium text-gray-900 truncate">{user.name}</div>
-        {user.jobTitle && (
-          <div className="text-[10px] text-gray-500 truncate">{user.jobTitle}</div>
-        )}
+    <div className="w-48 px-3 py-2 rounded-lg border border-emerald-300 bg-emerald-50 shadow-sm">
+      <div className="flex items-center gap-2">
+        <div className="flex-shrink-0 w-8 h-8 rounded-full bg-gradient-to-br from-emerald-400 to-emerald-600 text-white text-xs font-semibold flex items-center justify-center">
+          {initials}
+        </div>
+        <div className="min-w-0 flex-1">
+          <div className="text-sm font-semibold text-gray-900 truncate">{user.name}</div>
+          {user.jobTitle && (
+            <div className="text-[11px] text-gray-600 truncate">{user.jobTitle}</div>
+          )}
+        </div>
       </div>
     </div>
   );
