@@ -79,6 +79,8 @@ model User {
   department         String?
   phone              String?
   managerId          String?
+  driveFolderId      String?   // Google Drive folder for this employee's signed docs
+
   createdAt          DateTime  @default(now())
   updatedAt          DateTime  @updatedAt
 
