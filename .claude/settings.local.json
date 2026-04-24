@@ -3,7 +3,12 @@
     "allow": [
       "Bash(npx create-next-app@latest . --typescript --tailwind --app --src-dir --eslint --use-npm --no-git --import-alias \"@/*\")",
       "Bash(cd /tmp)",
-      "Bash(npx create-next-app@latest classroom-app --typescript --tailwind --app --src-dir --eslint --use-npm --no-git --import-alias \"@/*\")"
+      "Bash(npx create-next-app@latest classroom-app --typescript --tailwind --app --src-dir --eslint --use-npm --no-git --import-alias \"@/*\")",
+      "Bash(npx prisma *)"
     ]
-  }
+  },
+  "enableAllProjectMcpServers": true,
+  "enabledMcpjsonServers": [
+    "supabase"
+  ]
 }

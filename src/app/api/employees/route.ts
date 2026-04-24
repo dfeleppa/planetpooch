@@ -3,6 +3,7 @@ import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
 import { getSession, getCompanyFilter, isManagerOrAbove } from "@/lib/auth-helpers";
 import { generateTempPassword } from "@/lib/onboarding";
+import { createEmployeeFolder } from "@/lib/drive";
 import { Company, Role } from "@prisma/client";
 
 export async function GET() {
@@ -151,6 +152,20 @@ export async function POST(req: NextRequest) {
         department: true,
       },
     });
+
+    // Best-effort Drive folder provisioning. In local dev (no WIF env) this
+    // returns a stub ID; on Vercel it creates `Portal Onboarding/<Name>/`.
+    // Failures are logged but do NOT roll back the user — a missing folder
+    // can be repaired later by a separate endpoint.
+    try {
+      const folderId = await createEmployeeFolder(user.name);
+      await prisma.user.update({
+        where: { id: user.id },
+        data: { driveFolderId: folderId },
+      });
+    } catch (err) {
+      console.error("[employees.POST] Drive folder creation failed:", err);
+    }
 
     return NextResponse.json({ user, tempPassword }, { status: 201 });
   } catch (err) {
