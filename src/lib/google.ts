@@ -2,23 +2,27 @@
  * Google API client factory.
  *
  * Auth strategy: Workload Identity Federation (WIF) on Vercel.
- * Vercel issues an OIDC token on every serverless invocation (`VERCEL_OIDC_TOKEN`);
- * Google's STS exchanges it for a short-lived access token scoped to the
- * `portal-storage` service account, which is granted access to the Shared Drive.
+ * Vercel issues a short-lived OIDC token per invocation; Google's STS exchanges
+ * it for an access token scoped to the `portal-storage` service account, which
+ * has access to the Shared Drive.
  *
- * Local dev: if the WIF env vars aren't set, `isDriveEnabled()` returns false and
- * callers fall back to stub behavior (no real Drive calls, fake IDs). This keeps
- * `npm run dev` working with zero Google setup — real Drive only runs on Vercel.
+ * On Fluid Compute the token is delivered as the `x-vercel-oidc-token` request
+ * header (not `process.env.VERCEL_OIDC_TOKEN`) — `@vercel/oidc` reads from the
+ * request context and falls back to the env var on non-Fluid runtimes.
+ *
+ * Local dev: if the WIF env vars aren't set, `isDriveEnabled()` returns false
+ * and callers fall back to stub behavior (no real Drive calls, fake IDs). Real
+ * Drive only runs on Vercel.
  */
 import { ExternalAccountClient } from "google-auth-library";
 import { google, drive_v3 } from "googleapis";
+import { getVercelOidcToken } from "@vercel/oidc";
 
 type Env = {
   projectNumber: string;
   poolId: string;
   providerId: string;
   serviceAccountEmail: string;
-  oidcToken: string;
 };
 
 function readEnv(): Env | null {
@@ -26,34 +30,25 @@ function readEnv(): Env | null {
   const poolId = process.env.GCP_WORKLOAD_IDENTITY_POOL_ID;
   const providerId = process.env.GCP_WORKLOAD_IDENTITY_PROVIDER_ID;
   const serviceAccountEmail = process.env.GCP_SERVICE_ACCOUNT_EMAIL;
-  const oidcToken = process.env.VERCEL_OIDC_TOKEN;
-  if (
-    !projectNumber ||
-    !poolId ||
-    !providerId ||
-    !serviceAccountEmail ||
-    !oidcToken
-  ) {
+  if (!projectNumber || !poolId || !providerId || !serviceAccountEmail) {
     return null;
   }
-  return { projectNumber, poolId, providerId, serviceAccountEmail, oidcToken };
+  return { projectNumber, poolId, providerId, serviceAccountEmail };
 }
 
 /**
- * True when every WIF env var + the Vercel OIDC token are present. Use this
- * before making real Drive calls; when false, callers should stub.
+ * True when every WIF static config var is present. The OIDC token itself is
+ * request-scoped on Fluid Compute, so we do NOT check it here — it's fetched
+ * inside `subject_token_supplier` at the moment of each STS exchange.
  */
 export function isDriveEnabled(): boolean {
   const env = readEnv();
   if (env) return true;
-  // One-shot diagnostic: log which specific vars are missing so we can tell
-  // WIF-misconfigured from OIDC-token-missing from everything-fine-but-stub.
   const missing: string[] = [];
   if (!process.env.GCP_PROJECT_NUMBER) missing.push("GCP_PROJECT_NUMBER");
   if (!process.env.GCP_WORKLOAD_IDENTITY_POOL_ID) missing.push("GCP_WORKLOAD_IDENTITY_POOL_ID");
   if (!process.env.GCP_WORKLOAD_IDENTITY_PROVIDER_ID) missing.push("GCP_WORKLOAD_IDENTITY_PROVIDER_ID");
   if (!process.env.GCP_SERVICE_ACCOUNT_EMAIL) missing.push("GCP_SERVICE_ACCOUNT_EMAIL");
-  if (!process.env.VERCEL_OIDC_TOKEN) missing.push("VERCEL_OIDC_TOKEN");
   console.warn("[drive] Drive disabled — missing env vars:", missing.join(", "));
   return false;
 }
@@ -79,8 +74,7 @@ export function getDriveClient(): drive_v3.Drive | null {
     token_url: "https://sts.googleapis.com/v1/token",
     service_account_impersonation_url: `https://iamcredentials.googleapis.com/v1/projects/-/serviceAccounts/${env.serviceAccountEmail}:generateAccessToken`,
     subject_token_supplier: {
-      // eslint-disable-next-line @typescript-eslint/require-await
-      getSubjectToken: async () => env.oidcToken,
+      getSubjectToken: () => getVercelOidcToken(),
     },
   });
 

@@ -25,6 +25,7 @@
     "@tiptap/pm": "^3.22.2",
     "@tiptap/react": "^3.22.2",
     "@tiptap/starter-kit": "^3.22.2",
+    "@vercel/oidc": "^3.2.1",
     "bcryptjs": "^3.0.3",
     "google-auth-library": "^10.6.2",
     "googleapis": "^171.4.0",
