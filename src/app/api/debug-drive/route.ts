@@ -23,12 +23,16 @@ export async function GET() {
     VERCEL_OIDC_TOKEN: !!process.env.VERCEL_OIDC_TOKEN,
   };
 
+  // All VERCEL_* system vars present in this invocation (names only, no values).
+  const vercelEnvKeys = Object.keys(process.env).filter((k) => k.startsWith("VERCEL_"));
+
   const enabled = isDriveEnabled();
 
   if (!enabled) {
     return NextResponse.json({
       enabled: false,
       envPresence,
+      vercelEnvKeys,
       message: "isDriveEnabled() returned false — at least one required env var is missing.",
     });
   }
