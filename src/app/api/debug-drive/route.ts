@@ -26,12 +26,27 @@ export async function GET() {
   // All VERCEL_* system vars present in this invocation (names only, no values).
   const vercelEnvKeys = Object.keys(process.env).filter((k) => k.startsWith("VERCEL_"));
 
+  // Non-sensitive deployment context — tells us which deployment actually served
+  // this request, so we can reconcile against the Vercel dashboard.
+  const deployment = {
+    VERCEL_ENV: process.env.VERCEL_ENV ?? null,
+    VERCEL_TARGET_ENV: process.env.VERCEL_TARGET_ENV ?? null,
+    VERCEL_URL: process.env.VERCEL_URL ?? null,
+    VERCEL_DEPLOYMENT_ID: process.env.VERCEL_DEPLOYMENT_ID ?? null,
+    VERCEL_GIT_COMMIT_REF: process.env.VERCEL_GIT_COMMIT_REF ?? null,
+    VERCEL_GIT_COMMIT_SHA: process.env.VERCEL_GIT_COMMIT_SHA ?? null,
+    VERCEL_GIT_PULL_REQUEST_ID: process.env.VERCEL_GIT_PULL_REQUEST_ID ?? null,
+    VERCEL_REGION: process.env.VERCEL_REGION ?? null,
+    VERCEL_OIDC_TOKEN_LENGTH: process.env.VERCEL_OIDC_TOKEN?.length ?? 0,
+  };
+
   const enabled = isDriveEnabled();
 
   if (!enabled) {
     return NextResponse.json({
       enabled: false,
       envPresence,
+      deployment,
       vercelEnvKeys,
       message: "isDriveEnabled() returned false — at least one required env var is missing.",
     });
@@ -53,6 +68,7 @@ export async function GET() {
     return NextResponse.json({
       enabled: true,
       envPresence,
+      deployment,
       driveCall: "success",
       files: res.data.files ?? [],
     });
@@ -60,6 +76,7 @@ export async function GET() {
     return NextResponse.json({
       enabled: true,
       envPresence,
+      deployment,
       driveCall: "error",
       error: err instanceof Error ? `${err.name}: ${err.message}` : String(err),
     });
