@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { getVercelOidcToken } from "@vercel/oidc";
 import { getSession, isSuperAdmin } from "@/lib/auth-helpers";
 import { isDriveEnabled, getDriveClient, getSharedDriveId, getRootFolderId } from "@/lib/google";
 
@@ -20,8 +21,22 @@ export async function GET() {
     GCP_SERVICE_ACCOUNT_EMAIL: !!process.env.GCP_SERVICE_ACCOUNT_EMAIL,
     GOOGLE_DRIVE_SHARED_DRIVE_ID: !!process.env.GOOGLE_DRIVE_SHARED_DRIVE_ID,
     GOOGLE_DRIVE_ROOT_FOLDER_ID: !!process.env.GOOGLE_DRIVE_ROOT_FOLDER_ID,
-    VERCEL_OIDC_TOKEN: !!process.env.VERCEL_OIDC_TOKEN,
   };
+
+  // On Fluid Compute the OIDC token is delivered as the `x-vercel-oidc-token`
+  // request header, not via process.env. Probe via @vercel/oidc, which reads
+  // from the request context and falls back to the env var on non-Fluid.
+  let oidc: { available: boolean; length: number; error?: string };
+  try {
+    const token = await getVercelOidcToken();
+    oidc = { available: !!token, length: token?.length ?? 0 };
+  } catch (err) {
+    oidc = {
+      available: false,
+      length: 0,
+      error: err instanceof Error ? `${err.name}: ${err.message}` : String(err),
+    };
+  }
 
   // All VERCEL_* system vars present in this invocation (names only, no values).
   const vercelEnvKeys = Object.keys(process.env).filter((k) => k.startsWith("VERCEL_"));
@@ -37,7 +52,6 @@ export async function GET() {
     VERCEL_GIT_COMMIT_SHA: process.env.VERCEL_GIT_COMMIT_SHA ?? null,
     VERCEL_GIT_PULL_REQUEST_ID: process.env.VERCEL_GIT_PULL_REQUEST_ID ?? null,
     VERCEL_REGION: process.env.VERCEL_REGION ?? null,
-    VERCEL_OIDC_TOKEN_LENGTH: process.env.VERCEL_OIDC_TOKEN?.length ?? 0,
   };
 
   const enabled = isDriveEnabled();
@@ -46,6 +60,7 @@ export async function GET() {
     return NextResponse.json({
       enabled: false,
       envPresence,
+      oidc,
       deployment,
       vercelEnvKeys,
       message: "isDriveEnabled() returned false — at least one required env var is missing.",
@@ -68,6 +83,7 @@ export async function GET() {
     return NextResponse.json({
       enabled: true,
       envPresence,
+      oidc,
       deployment,
       driveCall: "success",
       files: res.data.files ?? [],
@@ -76,6 +92,7 @@ export async function GET() {
     return NextResponse.json({
       enabled: true,
       envPresence,
+      oidc,
       deployment,
       driveCall: "error",
       error: err instanceof Error ? `${err.name}: ${err.message}` : String(err),
