@@ -7,6 +7,7 @@
  * exposed for UI hints ("Drive folder" link vs "Drive disabled" badge).
  */
 import { Readable } from "node:stream";
+import { Company } from "@prisma/client";
 import {
   getDriveClient,
   getSharedDriveId,
@@ -23,11 +24,60 @@ function isStubId(id: string | null | undefined): boolean {
   return !!id && id.startsWith(STUB_PREFIX);
 }
 
+const COMPANY_SUBFOLDER: Record<Company, string> = {
+  GROOMING: "Grooming",
+  RESORT: "Resort",
+  CORPORATE: "Corporate",
+};
+
+// Cache resolved subfolder IDs for the lifetime of the function instance to
+// avoid one Drive lookup per employee creation.
+const subfolderIdCache = new Map<string, string>();
+
 /**
- * Create a folder for a single employee inside the configured root folder.
+ * Find a child folder by name within `parentFolderId`. Returns the folder ID,
+ * or null if no match. Used to route new employee folders into Grooming /
+ * Resort / Corporate subfolders without requiring three additional env vars.
+ */
+async function findSubfolderByName(
+  parentFolderId: string,
+  name: string
+): Promise<string | null> {
+  const cacheKey = `${parentFolderId}::${name}`;
+  const cached = subfolderIdCache.get(cacheKey);
+  if (cached) return cached;
+
+  const drive = getDriveClient();
+  const sharedDriveId = getSharedDriveId();
+  if (!drive || !sharedDriveId) return null;
+
+  const escaped = name.replace(/'/g, "\\'");
+  const res = await drive.files.list({
+    q: `'${parentFolderId}' in parents and name = '${escaped}' and mimeType = '${FOLDER_MIME}' and trashed = false`,
+    fields: "files(id)",
+    pageSize: 1,
+    supportsAllDrives: true,
+    includeItemsFromAllDrives: true,
+    driveId: sharedDriveId,
+    corpora: "drive",
+  });
+
+  const id = res.data.files?.[0]?.id ?? null;
+  if (id) subfolderIdCache.set(cacheKey, id);
+  return id;
+}
+
+/**
+ * Create an employee folder named `folderName` (e.g. "Smith, Jane") inside the
+ * company subfolder ("Grooming" / "Resort" / "Corporate") within the root.
+ * Falls back to creating directly under the root folder if the expected
+ * subfolder doesn't exist (logged warning) — admin can move it manually.
  * Returns the folder's Drive file ID. In stub mode, returns `stub-folder-<rand>`.
  */
-export async function createEmployeeFolder(employeeName: string): Promise<string> {
+export async function createEmployeeFolder(
+  folderName: string,
+  company: Company
+): Promise<string> {
   const drive = getDriveClient();
   const rootFolderId = getRootFolderId();
   const sharedDriveId = getSharedDriveId();
@@ -36,11 +86,20 @@ export async function createEmployeeFolder(employeeName: string): Promise<string
     return `${STUB_PREFIX}folder-${Math.random().toString(36).slice(2, 10)}`;
   }
 
+  const subfolderName = COMPANY_SUBFOLDER[company];
+  let parentId = await findSubfolderByName(rootFolderId, subfolderName);
+  if (!parentId) {
+    console.warn(
+      `[drive] Subfolder "${subfolderName}" not found under root; creating "${folderName}" at root instead`
+    );
+    parentId = rootFolderId;
+  }
+
   const res = await drive.files.create({
     requestBody: {
-      name: employeeName,
+      name: folderName,
       mimeType: FOLDER_MIME,
-      parents: [rootFolderId],
+      parents: [parentId],
     },
     fields: "id",
     supportsAllDrives: true,

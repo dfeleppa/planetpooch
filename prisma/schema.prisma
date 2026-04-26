@@ -15,8 +15,9 @@ enum Role {
 }
 
 enum Company {
-  MOBILE
+  GROOMING
   RESORT
+  CORPORATE
 }
 
 enum AuditAction {
@@ -71,8 +72,10 @@ model User {
   email              String    @unique
   passwordHash       String
   name               String
+  firstName          String
+  lastName           String
   role               Role      @default(EMPLOYEE)
-  company            Company?
+  company            Company   @default(CORPORATE)
   mustChangePassword Boolean   @default(false)
   hireDate           DateTime?
   jobTitle           String?

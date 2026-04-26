@@ -4,7 +4,7 @@ import { getSession, isSuperAdmin } from "@/lib/auth-helpers";
 import { Company, Role } from "@prisma/client";
 
 /**
- * POST — seeds the canonical org chart: Leadership + Mobile + Resort hierarchies.
+ * POST — seeds the canonical org chart: Leadership + Grooming + Resort hierarchies.
  * Refuses to run if positions already exist (pass { force: true } to wipe + reseed).
  * SUPER_ADMIN only since this creates cross-company leadership.
  */
@@ -47,16 +47,16 @@ export async function POST(req: Request) {
     },
   });
 
-  // Mobile
+  // Grooming
   const coo = await prisma.orgPosition.create({
     data: {
       title: "COO",
-      company: Company.MOBILE,
+      company: Company.GROOMING,
       parentPositionId: ceo.id,
       order: 0,
     },
   });
-  // CMO is cross-company (serves both Mobile and Resort)
+  // CMO is cross-company (serves both Grooming and Resort)
   await prisma.orgPosition.create({
     data: {
       title: "CMO",
@@ -68,7 +68,7 @@ export async function POST(req: Request) {
   await prisma.orgPosition.create({
     data: {
       title: "Groomer",
-      company: Company.MOBILE,
+      company: Company.GROOMING,
       parentPositionId: coo.id,
       order: 1,
     },
@@ -77,7 +77,7 @@ export async function POST(req: Request) {
   await prisma.orgPosition.create({
     data: {
       title: "Office Staff",
-      company: Company.MOBILE,
+      company: Company.GROOMING,
       parentPositionId: coo.id,
       order: 2,
     },
@@ -140,11 +140,13 @@ export async function POST(req: Request) {
   });
   for (const u of users) {
     if (!u.jobTitle) continue;
+    // CORPORATE users (cross-division leadership) hold cross-company positions
+    // (CEO, DOS, CMO) which have OrgPosition.company = null.
+    const positionCompany = u.company === "CORPORATE" ? null : u.company;
     const match = await prisma.orgPosition.findFirst({
       where: {
         title: u.jobTitle,
-        // Cross-company positions for SUPER_ADMIN users with no company
-        company: u.company ?? null,
+        company: positionCompany,
         assignedUserId: null,
       },
     });
