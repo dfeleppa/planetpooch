@@ -11,7 +11,7 @@ import { EditEmployeeForm } from "./EditEmployeeForm";
 
 export default async function EmployeeDetailPage({ params }: { params: Promise<{ employeeId: string }> }) {
   const session = await requireManager();
-  const sessionUser = session.user as { role: Role; company: Company | null };
+  const sessionUser = session.user as { role: Role; company: Company };
   const companyFilter = getCompanyFilter(sessionUser.role, sessionUser.company);
   const { employeeId } = await params;
 
@@ -20,6 +20,8 @@ export default async function EmployeeDetailPage({ params }: { params: Promise<{
     select: {
       id: true,
       name: true,
+      firstName: true,
+      lastName: true,
       email: true,
       role: true,
       company: true,
@@ -81,7 +83,8 @@ export default async function EmployeeDetailPage({ params }: { params: Promise<{
         <EditEmployeeForm
           employee={{
             id: employee.id,
-            name: employee.name,
+            firstName: employee.firstName,
+            lastName: employee.lastName,
             email: employee.email,
             role: employee.role,
             company: employee.company,

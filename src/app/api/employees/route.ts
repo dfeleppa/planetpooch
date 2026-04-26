@@ -17,8 +17,17 @@ export async function GET() {
 
   const employees = await prisma.user.findMany({
     where: { role: "EMPLOYEE", ...companyFilter },
-    select: { id: true, email: true, name: true, company: true, jobTitle: true, createdAt: true },
-    orderBy: { name: "asc" },
+    select: {
+      id: true,
+      email: true,
+      name: true,
+      firstName: true,
+      lastName: true,
+      company: true,
+      jobTitle: true,
+      createdAt: true,
+    },
+    orderBy: [{ lastName: "asc" }, { firstName: "asc" }],
   });
 
   const modules = await prisma.module.findMany({
@@ -83,18 +92,46 @@ export async function POST(req: NextRequest) {
 
   try {
     const body = await req.json();
-    const { name, email, role, company, jobTitle, department, phone, hireDate, managerId } = body;
+    const {
+      firstName,
+      lastName,
+      email,
+      role,
+      company,
+      jobTitle,
+      department,
+      phone,
+      hireDate,
+      managerId,
+    } = body;
 
-    if (!name?.trim()) {
-      return NextResponse.json({ error: "Name is required" }, { status: 400 });
+    const trimmedFirst = typeof firstName === "string" ? firstName.trim() : "";
+    const trimmedLast = typeof lastName === "string" ? lastName.trim() : "";
+    if (!trimmedFirst || !trimmedLast) {
+      return NextResponse.json(
+        { error: "First name and last name are required" },
+        { status: 400 }
+      );
     }
+    const fullName = `${trimmedFirst} ${trimmedLast}`;
 
-    const sessionUser = session.user as { role: Role; company: Company | null };
+    const sessionUser = session.user as { role: Role; company: Company };
 
-    // MANAGERs can only create employees in their own company
-    let assignedCompany: Company | null = company ?? null;
+    // MANAGERs can only create employees in their own company. SUPER_ADMINs
+    // must pick one of the three companies — there is no "no company" option
+    // anymore; CORPORATE is the explicit value for cross-division employees.
+    let assignedCompany: Company;
     if (sessionUser.role === "MANAGER") {
       assignedCompany = sessionUser.company;
+    } else {
+      const valid: Company[] = ["GROOMING", "RESORT", "CORPORATE"];
+      if (!valid.includes(company)) {
+        return NextResponse.json(
+          { error: "Company is required (Grooming, Resort, or Corporate)" },
+          { status: 400 }
+        );
+      }
+      assignedCompany = company;
     }
 
     // Email is optional — generate a placeholder if not provided so the user can
@@ -107,8 +144,7 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ error: "A user with that email already exists" }, { status: 400 });
       }
     } else {
-      const slug = name
-        .trim()
+      const slug = fullName
         .toLowerCase()
         .replace(/[^a-z0-9]+/g, "-")
         .replace(/^-+|-+$/g, "")
@@ -130,7 +166,9 @@ export async function POST(req: NextRequest) {
 
     const user = await prisma.user.create({
       data: {
-        name: name.trim(),
+        name: fullName,
+        firstName: trimmedFirst,
+        lastName: trimmedLast,
         email: normalizedEmail,
         passwordHash,
         role: assignedRole,
@@ -145,6 +183,8 @@ export async function POST(req: NextRequest) {
       select: {
         id: true,
         name: true,
+        firstName: true,
+        lastName: true,
         email: true,
         role: true,
         company: true,
@@ -154,11 +194,12 @@ export async function POST(req: NextRequest) {
     });
 
     // Best-effort Drive folder provisioning. In local dev (no WIF env) this
-    // returns a stub ID; on Vercel it creates `Portal Onboarding/<Name>/`.
+    // returns a stub ID; on Vercel it creates `<Company subfolder>/Last, First/`.
     // Failures are logged but do NOT roll back the user — a missing folder
     // can be repaired later by a separate endpoint.
     try {
-      const folderId = await createEmployeeFolder(user.name);
+      const folderName = `${user.lastName}, ${user.firstName}`;
+      const folderId = await createEmployeeFolder(folderName, user.company);
       await prisma.user.update({
         where: { id: user.id },
         data: { driveFolderId: folderId },

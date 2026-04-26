@@ -7,15 +7,16 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 
 type Role = "SUPER_ADMIN" | "MANAGER" | "EMPLOYEE" | "ADMIN";
-type Company = "MOBILE" | "RESORT";
+type Company = "GROOMING" | "RESORT" | "CORPORATE";
 
 interface Props {
   employee: {
     id: string;
-    name: string;
+    firstName: string;
+    lastName: string;
     email: string;
     role: Role;
-    company: Company | null;
+    company: Company;
     jobTitle: string | null;
     department: string | null;
     phone: string | null;
@@ -26,10 +27,16 @@ interface Props {
   canEditRole: boolean;
 }
 
-const JOB_TITLES: Record<"NONE" | Company, string[]> = {
-  NONE: ["CEO", "DOS", "CMO"],
-  MOBILE: ["COO", "Groomer", "Office Staff"],
+const COMPANY_LABELS: Record<Company, string> = {
+  GROOMING: "Planet Pooch Grooming",
+  RESORT: "Planet Pooch Resort",
+  CORPORATE: "Planet Pooch Corporate",
+};
+
+const JOB_TITLES: Record<Company, string[]> = {
+  GROOMING: ["COO", "Groomer", "Office Staff"],
   RESORT: ["Facility Manager", "Assistant Manager", "Training Manager", "In-house Groomer", "Front Desk Staff", "Floor Staff"],
+  CORPORATE: ["CEO", "DOS", "CMO"],
 };
 
 export function EditEmployeeForm({ employee, canEditCompany, canAssignSuperAdmin, canEditRole }: Props) {
@@ -38,29 +45,30 @@ export function EditEmployeeForm({ employee, canEditCompany, canAssignSuperAdmin
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
 
-  const [name, setName] = useState(employee.name);
+  const [firstName, setFirstName] = useState(employee.firstName);
+  const [lastName, setLastName] = useState(employee.lastName);
   const [email, setEmail] = useState(
     employee.email.endsWith("@placeholder.local") ? "" : employee.email
   );
   const [phone, setPhone] = useState(employee.phone ?? "");
   const [role, setRole] = useState<Role>(employee.role);
-  const [company, setCompany] = useState<Company | "">(employee.company ?? "");
+  const [company, setCompany] = useState<Company>(employee.company);
   const [jobTitle, setJobTitle] = useState(employee.jobTitle ?? "");
   const [customTitle, setCustomTitle] = useState(false);
   const [hireDate, setHireDate] = useState(
     employee.hireDate ? employee.hireDate.slice(0, 10) : ""
   );
 
-  const companyKey = (company || "NONE") as "NONE" | Company;
-  const titleOptions = JOB_TITLES[companyKey];
+  const titleOptions = JOB_TITLES[company];
   const isCustom = customTitle || (jobTitle && !titleOptions.includes(jobTitle));
 
   function cancel() {
-    setName(employee.name);
+    setFirstName(employee.firstName);
+    setLastName(employee.lastName);
     setEmail(employee.email.endsWith("@placeholder.local") ? "" : employee.email);
     setPhone(employee.phone ?? "");
     setRole(employee.role);
-    setCompany(employee.company ?? "");
+    setCompany(employee.company);
     setJobTitle(employee.jobTitle ?? "");
     setHireDate(employee.hireDate ? employee.hireDate.slice(0, 10) : "");
     setCustomTitle(false);
@@ -77,11 +85,12 @@ export function EditEmployeeForm({ employee, canEditCompany, canAssignSuperAdmin
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          name,
+          firstName,
+          lastName,
           email,
           phone,
           role: canEditRole ? role : undefined,
-          company: canEditCompany ? (company || null) : undefined,
+          company: canEditCompany ? company : undefined,
           jobTitle,
           hireDate: hireDate || null,
         }),
@@ -109,7 +118,8 @@ export function EditEmployeeForm({ employee, canEditCompany, canAssignSuperAdmin
           </Button>
         </CardHeader>
         <CardContent className="grid grid-cols-2 gap-3 text-sm">
-          <Field label="Name" value={employee.name} />
+          <Field label="First Name" value={employee.firstName} />
+          <Field label="Last Name" value={employee.lastName} />
           <Field
             label="Email"
             value={
@@ -120,7 +130,7 @@ export function EditEmployeeForm({ employee, canEditCompany, canAssignSuperAdmin
           />
           <Field label="Phone" value={employee.phone || "—"} />
           <Field label="Role" value={employee.role} />
-          <Field label="Company" value={employee.company ?? "— Cross-company —"} />
+          <Field label="Company" value={COMPANY_LABELS[employee.company]} />
           <Field label="Job Title" value={employee.jobTitle || "—"} />
           <Field
             label="Hire Date"
@@ -140,19 +150,26 @@ export function EditEmployeeForm({ employee, canEditCompany, canAssignSuperAdmin
         <form onSubmit={save} className="space-y-4">
           <div className="grid grid-cols-2 gap-4">
             <Input
-              label="Full Name"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
+              label="First Name"
+              value={firstName}
+              onChange={(e) => setFirstName(e.target.value)}
               required
             />
             <Input
-              label="Email (optional)"
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="jane@planetpooch.com"
+              label="Last Name"
+              value={lastName}
+              onChange={(e) => setLastName(e.target.value)}
+              required
             />
           </div>
+
+          <Input
+            label="Email (optional)"
+            type="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            placeholder="jane@planetpooch.com"
+          />
 
           <div className="grid grid-cols-2 gap-4">
             <div className="flex flex-col gap-1">
@@ -161,20 +178,20 @@ export function EditEmployeeForm({ employee, canEditCompany, canAssignSuperAdmin
                 <select
                   value={company}
                   onChange={(e) => {
-                    setCompany(e.target.value as Company | "");
+                    setCompany(e.target.value as Company);
                     setJobTitle("");
                     setCustomTitle(false);
                   }}
                   className="rounded-lg border border-gray-300 px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
                 >
-                  <option value="">— None (Cross-Company) —</option>
-                  <option value="MOBILE">Planet Pooch Mobile Inc</option>
-                  <option value="RESORT">Planet Pooch Pet Resort Inc</option>
+                  <option value="GROOMING">Planet Pooch Grooming</option>
+                  <option value="RESORT">Planet Pooch Resort</option>
+                  <option value="CORPORATE">Planet Pooch Corporate</option>
                 </select>
               ) : (
                 <input
                   readOnly
-                  value={company || "—"}
+                  value={COMPANY_LABELS[company]}
                   className="rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-500 cursor-not-allowed"
                 />
               )}

@@ -5,7 +5,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 
 type RoleVal = "SUPER_ADMIN" | "MANAGER" | "EMPLOYEE" | "ADMIN";
-type CompanyVal = "MOBILE" | "RESORT";
+type CompanyVal = "GROOMING" | "RESORT" | "CORPORATE";
 
 interface Position {
   id: string;
@@ -33,11 +33,12 @@ interface Props {
   isSuperAdmin: boolean;
 }
 
-type CompanyView = "BOTH" | "MOBILE" | "RESORT";
+type CompanyView = "BOTH" | "GROOMING" | "RESORT";
 
 const COMPANY_LABELS: Record<CompanyVal, string> = {
-  MOBILE: "Planet Pooch Mobile Inc",
-  RESORT: "Planet Pooch Pet Resort Inc",
+  GROOMING: "Planet Pooch Grooming",
+  RESORT: "Planet Pooch Resort",
+  CORPORATE: "Planet Pooch Corporate",
 };
 
 export function OrgChartClient({
@@ -85,10 +86,10 @@ export function OrgChartClient({
   }, [users]);
 
   const crossPositions = useMemo(() => positions.filter((p) => p.company === null), [positions]);
-  const mobilePositions = useMemo(() => positions.filter((p) => p.company === "MOBILE"), [positions]);
+  const groomingPositions = useMemo(() => positions.filter((p) => p.company === "GROOMING"), [positions]);
   const resortPositions = useMemo(() => positions.filter((p) => p.company === "RESORT"), [positions]);
 
-  const showMobile = view === "BOTH" || view === "MOBILE";
+  const showGrooming = view === "BOTH" || view === "GROOMING";
   const showResort = view === "BOTH" || view === "RESORT";
   const showCross = view === "BOTH";
 
@@ -244,7 +245,7 @@ export function OrgChartClient({
               <div className="flex items-center gap-2">
                 <span className="text-sm font-medium text-gray-700">View:</span>
                 <div className="inline-flex rounded-lg border border-gray-300 bg-white p-1">
-                  {(["BOTH", "MOBILE", "RESORT"] as CompanyView[]).map((v) => (
+                  {(["BOTH", "GROOMING", "RESORT"] as CompanyView[]).map((v) => (
                     <button
                       key={v}
                       type="button"
@@ -253,7 +254,7 @@ export function OrgChartClient({
                         view === v ? "bg-blue-600 text-white" : "text-gray-600 hover:bg-gray-100"
                       }`}
                     >
-                      {v === "BOTH" ? "Both" : v === "MOBILE" ? "Mobile" : "Resort"}
+                      {v === "BOTH" ? "Both" : v === "GROOMING" ? "Grooming" : "Resort"}
                     </button>
                   ))}
                 </div>
@@ -332,7 +333,7 @@ export function OrgChartClient({
       {view === "BOTH" ? (
         <CompanySection
           title="Planet Pooch Org Chart"
-          subtitle="CEO and DOS lead both companies. CMO serves both divisions. Mobile and Resort have dedicated operations leaders."
+          subtitle="CEO and DOS lead both companies. CMO serves both divisions. Grooming and Resort have dedicated operations leaders."
           company={null}
           positions={positions}
           userById={userById}
@@ -355,20 +356,20 @@ export function OrgChartClient({
           setZoom={setZoom}
           onAdd={() => setCreateModalCompany("CROSS")}
         />
-      ) : view === "MOBILE" ? (
+      ) : view === "GROOMING" ? (
         <CompanySection
-          title={COMPANY_LABELS.MOBILE}
-          subtitle="Mobile grooming division (includes shared cross-company leadership)"
-          company="MOBILE"
-          positions={[...crossPositions, ...mobilePositions]}
+          title={COMPANY_LABELS.GROOMING}
+          subtitle="Grooming division (includes shared cross-company leadership)"
+          company="GROOMING"
+          positions={[...crossPositions, ...groomingPositions]}
           userById={userById}
           usersByPositionKey={usersByPositionKey}
           showNames={showNames}
           draggingId={draggingId}
           dragOverId={dragOverId}
           setDragOverId={setDragOverId}
-          dragOverRoot={dragOverRoot === "MOBILE"}
-          setDragOverRoot={(b) => setDragOverRoot(b ? "MOBILE" : null)}
+          dragOverRoot={dragOverRoot === "GROOMING"}
+          setDragOverRoot={(b) => setDragOverRoot(b ? "GROOMING" : null)}
           onDragStart={handleDragStart}
           onDragEnd={handleDragEnd}
           onDropOnPosition={handleDropOnPosition}
@@ -379,7 +380,7 @@ export function OrgChartClient({
           layout={layout}
           zoom={zoom}
           setZoom={setZoom}
-          onAdd={() => setCreateModalCompany("MOBILE")}
+          onAdd={() => setCreateModalCompany("GROOMING")}
         />
       ) : (
         <CompanySection
@@ -1148,16 +1149,23 @@ function CompanyTag({ company }: { company: CompanyVal | null }) {
       </span>
     );
   }
-  if (company === "MOBILE") {
+  if (company === "GROOMING") {
     return (
       <span className="text-[10px] bg-sky-100 text-sky-700 px-1.5 py-0.5 rounded font-medium">
-        Mobile
+        Grooming
+      </span>
+    );
+  }
+  if (company === "RESORT") {
+    return (
+      <span className="text-[10px] bg-amber-100 text-amber-800 px-1.5 py-0.5 rounded font-medium">
+        Resort
       </span>
     );
   }
   return (
-    <span className="text-[10px] bg-amber-100 text-amber-800 px-1.5 py-0.5 rounded font-medium">
-      Resort
+    <span className="text-[10px] bg-indigo-100 text-indigo-800 px-1.5 py-0.5 rounded font-medium">
+      Corporate
     </span>
   );
 }

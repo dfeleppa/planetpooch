@@ -17,7 +17,16 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ empl
   // For MANAGERs, verify the employee belongs to their company
   const employee = await prisma.user.findUnique({
     where: { id: employeeId },
-    select: { id: true, email: true, name: true, role: true, company: true, createdAt: true },
+    select: {
+      id: true,
+      email: true,
+      name: true,
+      firstName: true,
+      lastName: true,
+      role: true,
+      company: true,
+      createdAt: true,
+    },
   });
 
   if (!employee || employee.role !== "EMPLOYEE") {
@@ -137,7 +146,34 @@ export async function PATCH(
     const body = await req.json();
     const data: Record<string, unknown> = {};
 
-    if (typeof body.name === "string" && body.name.trim()) {
+    // First/last name updates: either may be sent independently. Whenever one
+    // changes, recompose `name` server-side using the existing values for the
+    // other so all three columns stay consistent.
+    const incomingFirst =
+      typeof body.firstName === "string" ? body.firstName.trim() : null;
+    const incomingLast =
+      typeof body.lastName === "string" ? body.lastName.trim() : null;
+    if (incomingFirst !== null || incomingLast !== null) {
+      const current = await prisma.user.findUnique({
+        where: { id: employeeId },
+        select: { firstName: true, lastName: true },
+      });
+      if (!current) {
+        return NextResponse.json({ error: "Employee not found" }, { status: 404 });
+      }
+      const nextFirst = incomingFirst || current.firstName;
+      const nextLast = incomingLast || current.lastName;
+      if (!nextFirst || !nextLast) {
+        return NextResponse.json(
+          { error: "First name and last name cannot be empty" },
+          { status: 400 }
+        );
+      }
+      data.firstName = nextFirst;
+      data.lastName = nextLast;
+      data.name = `${nextFirst} ${nextLast}`;
+    } else if (typeof body.name === "string" && body.name.trim()) {
+      // Legacy callers that still send a single `name` field — keep working.
       data.name = body.name.trim();
     }
 
@@ -160,13 +196,17 @@ export async function PATCH(
     if ("department" in body) data.department = body.department?.trim() || null;
     if ("hireDate" in body) data.hireDate = body.hireDate ? new Date(body.hireDate) : null;
 
-    if ("company" in body) {
-      // MANAGERs cannot change company
-      if (sessionUser.role === "MANAGER") {
-        // ignore
-      } else {
-        data.company = (body.company as Company | null) ?? null;
+    if ("company" in body && sessionUser.role !== "MANAGER") {
+      // MANAGERs cannot change company. SUPER_ADMINs must pick one of the
+      // three valid Company values — null is no longer permitted.
+      const valid: Company[] = ["GROOMING", "RESORT", "CORPORATE"];
+      if (!valid.includes(body.company)) {
+        return NextResponse.json(
+          { error: "Company must be Grooming, Resort, or Corporate" },
+          { status: 400 }
+        );
       }
+      data.company = body.company;
     }
 
     if ("role" in body && body.role) {
@@ -188,6 +228,8 @@ export async function PATCH(
       select: {
         id: true,
         name: true,
+        firstName: true,
+        lastName: true,
         email: true,
         role: true,
         company: true,

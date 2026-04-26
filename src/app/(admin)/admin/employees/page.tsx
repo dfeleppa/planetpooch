@@ -11,12 +11,12 @@ import { DeleteEmployeeButton } from "./DeleteEmployeeButton";
 
 export default async function AdminEmployeesPage() {
   const session = await requireManager();
-  const sessionUser = session.user as { role: Role; company: Company | null };
+  const sessionUser = session.user as { role: Role; company: Company };
   const companyFilter = getCompanyFilter(sessionUser.role, sessionUser.company);
 
   const employees = await prisma.user.findMany({
     where: { role: "EMPLOYEE", ...companyFilter },
-    orderBy: { name: "asc" },
+    orderBy: [{ lastName: "asc" }, { firstName: "asc" }],
     select: { id: true, name: true, email: true, company: true, jobTitle: true, createdAt: true },
   });
 
@@ -33,8 +33,9 @@ export default async function AdminEmployeesPage() {
   }
 
   const COMPANY_LABELS: Record<Company, string> = {
-    MOBILE: "Planet Pooch Mobile Inc",
-    RESORT: "Planet Pooch Pet Resort Inc",
+    GROOMING: "Planet Pooch Grooming",
+    RESORT: "Planet Pooch Resort",
+    CORPORATE: "Planet Pooch Corporate",
   };
 
   return (
@@ -66,11 +67,9 @@ export default async function AdminEmployeesPage() {
                           {emp.jobTitle}
                         </span>
                       )}
-                      {emp.company && (
-                        <span className="text-xs bg-blue-50 text-blue-600 px-2 py-0.5 rounded-full">
-                          {COMPANY_LABELS[emp.company]}
-                        </span>
-                      )}
+                      <span className="text-xs bg-blue-50 text-blue-600 px-2 py-0.5 rounded-full">
+                        {COMPANY_LABELS[emp.company]}
+                      </span>
                     </div>
                     <p className="text-sm text-gray-500 mt-0.5">{emp.email}</p>
                     <p className="text-xs text-gray-400 mt-1">Joined {formatDate(emp.createdAt)}</p>

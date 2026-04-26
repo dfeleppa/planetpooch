@@ -13,8 +13,10 @@ async function main() {
       email: "admin@company.com",
       passwordHash: adminPassword,
       name: "Admin User",
+      firstName: "Admin",
+      lastName: "User",
       role: Role.SUPER_ADMIN,
-      company: null,
+      company: Company.CORPORATE,
     },
   });
 
@@ -27,8 +29,10 @@ async function main() {
       email: "employee@company.com",
       passwordHash: employeePassword,
       name: "Test Employee",
+      firstName: "Test",
+      lastName: "Employee",
       role: Role.EMPLOYEE,
-      company: Company.MOBILE,
+      company: Company.GROOMING,
     },
   });
 

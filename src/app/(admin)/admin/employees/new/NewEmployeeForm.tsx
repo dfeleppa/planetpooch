@@ -8,26 +8,23 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 
 type Role = "SUPER_ADMIN" | "MANAGER" | "EMPLOYEE" | "ADMIN";
-type Company = "MOBILE" | "RESORT";
+type Company = "GROOMING" | "RESORT" | "CORPORATE";
 
 interface Props {
   currentRole: Role;
-  currentCompany: Company | null;
+  currentCompany: Company;
 }
 
 const COMPANY_LABELS: Record<Company, string> = {
-  MOBILE: "Planet Pooch Mobile Inc",
-  RESORT: "Planet Pooch Pet Resort Inc",
+  GROOMING: "Planet Pooch Grooming",
+  RESORT: "Planet Pooch Resort",
+  CORPORATE: "Planet Pooch Corporate",
 };
 
-// Job titles grouped by company (null = cross-company / SUPER_ADMIN)
-const JOB_TITLES: Record<"NONE" | Company, { title: string; suggestedRole: Role }[]> = {
-  NONE: [
-    { title: "CEO", suggestedRole: "SUPER_ADMIN" },
-    { title: "DOS", suggestedRole: "SUPER_ADMIN" },
-    { title: "CMO", suggestedRole: "MANAGER" },
-  ],
-  MOBILE: [
+// Job titles grouped by company. CORPORATE is the home for cross-division
+// leadership (CEO, DOS, CMO) that previously had no company assignment.
+const JOB_TITLES: Record<Company, { title: string; suggestedRole: Role }[]> = {
+  GROOMING: [
     { title: "COO", suggestedRole: "MANAGER" },
     { title: "Groomer", suggestedRole: "EMPLOYEE" },
     { title: "Office Staff", suggestedRole: "EMPLOYEE" },
@@ -39,6 +36,11 @@ const JOB_TITLES: Record<"NONE" | Company, { title: string; suggestedRole: Role 
     { title: "In-house Groomer", suggestedRole: "EMPLOYEE" },
     { title: "Front Desk Staff", suggestedRole: "EMPLOYEE" },
     { title: "Floor Staff", suggestedRole: "EMPLOYEE" },
+  ],
+  CORPORATE: [
+    { title: "CEO", suggestedRole: "SUPER_ADMIN" },
+    { title: "DOS", suggestedRole: "SUPER_ADMIN" },
+    { title: "CMO", suggestedRole: "MANAGER" },
   ],
 };
 
@@ -78,10 +80,11 @@ export function NewEmployeeForm({ currentRole, currentCompany }: Props) {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
 
-  const [name, setName] = useState("");
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
   const [email, setEmail] = useState("");
   const [role, setRole] = useState<Role>("EMPLOYEE");
-  const [company, setCompany] = useState<Company | "">(currentCompany ?? "");
+  const [company, setCompany] = useState<Company>(currentCompany);
   const [jobTitle, setJobTitle] = useState("");
   const [customJobTitle, setCustomJobTitle] = useState("");
   const [phone, setPhone] = useState("");
@@ -90,13 +93,12 @@ export function NewEmployeeForm({ currentRole, currentCompany }: Props) {
   const isSuperAdmin = currentRole === "SUPER_ADMIN" || currentRole === "ADMIN";
   const isManager = currentRole === "MANAGER";
 
-  const companyKey: "NONE" | Company = company || "NONE";
-  const titleOptions = JOB_TITLES[companyKey];
+  const titleOptions = JOB_TITLES[company];
   const isCustomTitle = jobTitle === "__custom__";
   const effectiveJobTitle = isCustomTitle ? customJobTitle : jobTitle;
 
   function handleCompanyChange(val: string) {
-    setCompany(val as Company | "");
+    setCompany(val as Company);
     // Reset job title when company changes — options are different
     setJobTitle("");
     setCustomJobTitle("");
@@ -128,10 +130,11 @@ export function NewEmployeeForm({ currentRole, currentCompany }: Props) {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          name,
+          firstName,
+          lastName,
           email,
           role,
-          company: company || null,
+          company,
           jobTitle: effectiveJobTitle || null,
           phone,
           hireDate: hireDate || null,
@@ -159,10 +162,11 @@ export function NewEmployeeForm({ currentRole, currentCompany }: Props) {
 
   function resetForm() {
     setResult(null);
-    setName("");
+    setFirstName("");
+    setLastName("");
     setEmail("");
     setRole("EMPLOYEE");
-    setCompany(currentCompany ?? "");
+    setCompany(currentCompany);
     setJobTitle("");
     setCustomJobTitle("");
     setPhone("");
@@ -216,23 +220,32 @@ export function NewEmployeeForm({ currentRole, currentCompany }: Props) {
       <Card>
         <CardContent className="space-y-5">
 
-          {/* Name + Email */}
+          {/* Name */}
           <div className="grid grid-cols-2 gap-4">
             <Input
-              label="Full Name"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder="Jane Doe"
+              label="First Name"
+              value={firstName}
+              onChange={(e) => setFirstName(e.target.value)}
+              placeholder="Jane"
               required
             />
             <Input
-              label="Email (optional)"
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="jane@planetpooch.com"
+              label="Last Name"
+              value={lastName}
+              onChange={(e) => setLastName(e.target.value)}
+              placeholder="Doe"
+              required
             />
           </div>
+
+          {/* Email */}
+          <Input
+            label="Email (optional)"
+            type="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            placeholder="jane@planetpooch.com"
+          />
 
           {/* Company + Role */}
           <div className="grid grid-cols-2 gap-4">
@@ -242,7 +255,7 @@ export function NewEmployeeForm({ currentRole, currentCompany }: Props) {
               {isManager ? (
                 <input
                   readOnly
-                  value={currentCompany ? COMPANY_LABELS[currentCompany] : "—"}
+                  value={COMPANY_LABELS[currentCompany]}
                   className="rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-500 cursor-not-allowed"
                 />
               ) : (
@@ -251,9 +264,9 @@ export function NewEmployeeForm({ currentRole, currentCompany }: Props) {
                   onChange={(e) => handleCompanyChange(e.target.value)}
                   className="rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
                 >
-                  <option value="">— None (Super Admin) —</option>
-                  <option value="MOBILE">Planet Pooch Mobile Inc</option>
-                  <option value="RESORT">Planet Pooch Pet Resort Inc</option>
+                  <option value="GROOMING">Planet Pooch Grooming</option>
+                  <option value="RESORT">Planet Pooch Resort</option>
+                  <option value="CORPORATE">Planet Pooch Corporate</option>
                 </select>
               )}
             </div>
