@@ -119,7 +119,7 @@ export default async function InventoryItemPage({
                       <p className="text-sm font-medium text-gray-900">
                         {adj.quantityChange > 0 ? `+${adj.quantityChange}` : adj.quantityChange} {item.unit}
                       </p>
-                      <p className="text-xs text-gray-500">{adj.adjustedBy.name} — {adj.reason || "No reason given"}</p>
+                      <p className="text-xs text-gray-500">{adj.adjustedBy?.name ?? "(removed)"} — {adj.reason || "No reason given"}</p>
                     </div>
                     <span className="text-xs text-gray-400">{new Date(adj.createdAt).toLocaleDateString()}</span>
                   </div>
