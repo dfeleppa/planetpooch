@@ -11,7 +11,7 @@ import { EditEmployeeForm } from "./EditEmployeeForm";
 import { EsignRequestsCard } from "./EsignRequestsCard";
 import { DriveFolderCard } from "./DriveFolderCard";
 import { DAYS_OF_WEEK, formatTimeLabel } from "@/lib/availability";
-import { getFileWebLink } from "@/lib/drive";
+import { getFileWebLink, isDriveEnabled, isStubId } from "@/lib/drive";
 
 export default async function EmployeeDetailPage({ params }: { params: Promise<{ employeeId: string }> }) {
   const session = await requireManager();
@@ -135,6 +135,8 @@ export default async function EmployeeDetailPage({ params }: { params: Promise<{
           employeeId={employee.id}
           driveFolderId={employee.driveFolderId}
           webViewLink={driveFolderWebLink}
+          driveEnabled={isDriveEnabled()}
+          isStub={isStubId(employee.driveFolderId)}
         />
       </div>
 
