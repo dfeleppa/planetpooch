@@ -9,6 +9,7 @@ import { notFound } from "next/navigation";
 import { Company, Role } from "@prisma/client";
 import { EditEmployeeForm } from "./EditEmployeeForm";
 import { EsignRequestsCard } from "./EsignRequestsCard";
+import { DAYS_OF_WEEK, formatTimeLabel } from "@/lib/availability";
 
 export default async function EmployeeDetailPage({ params }: { params: Promise<{ employeeId: string }> }) {
   const session = await requireManager();
@@ -68,7 +69,7 @@ export default async function EmployeeDetailPage({ params }: { params: Promise<{
     include: { lesson: { select: { title: true } } },
   });
 
-  const [signableDocuments, esignRequests] = await Promise.all([
+  const [signableDocuments, esignRequests, availability] = await Promise.all([
     prisma.signableDocument.findMany({
       where: { isActive: true },
       orderBy: { name: "asc" },
@@ -82,7 +83,13 @@ export default async function EmployeeDetailPage({ params }: { params: Promise<{
         requestedBy: { select: { id: true, name: true } },
       },
     }),
+    prisma.employeeAvailability.findMany({
+      where: { userId: employeeId },
+      select: { dayOfWeek: true, startTime: true, endTime: true },
+    }),
   ]);
+
+  const availabilityByDay = new Map(availability.map((a) => [a.dayOfWeek, a]));
 
   return (
     <div>
@@ -116,6 +123,34 @@ export default async function EmployeeDetailPage({ params }: { params: Promise<{
           canEditRole={sessionUser.role === "SUPER_ADMIN"}
         />
       </div>
+
+      <Card className="mt-6">
+        <CardHeader>
+          <h2 className="font-semibold text-gray-900">Availability</h2>
+        </CardHeader>
+        <CardContent className="p-0">
+          <ul className="divide-y divide-gray-100">
+            {DAYS_OF_WEEK.map((day) => {
+              const entry = availabilityByDay.get(day.value);
+              return (
+                <li
+                  key={day.value}
+                  className="flex items-center justify-between px-6 py-2 text-sm"
+                >
+                  <span className="text-gray-900">{day.label}</span>
+                  {entry ? (
+                    <span className="text-gray-600">
+                      {formatTimeLabel(entry.startTime)} – {formatTimeLabel(entry.endTime)}
+                    </span>
+                  ) : (
+                    <span className="text-gray-400">Unavailable</span>
+                  )}
+                </li>
+              );
+            })}
+          </ul>
+        </CardContent>
+      </Card>
 
       <div className="mt-6">
         <EsignRequestsCard

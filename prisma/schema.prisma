@@ -73,6 +73,16 @@ enum EsignRequestStatus {
   CANCELLED
 }
 
+enum DayOfWeek {
+  SUNDAY
+  MONDAY
+  TUESDAY
+  WEDNESDAY
+  THURSDAY
+  FRIDAY
+  SATURDAY
+}
+
 model User {
   id                 String    @id @default(cuid())
   email              String    @unique
@@ -119,6 +129,9 @@ model User {
   // eSignature relations
   esignRequests          EsignRequest[] @relation("EsignSigner")
   esignRequestsRequested EsignRequest[] @relation("EsignRequester")
+
+  // Availability (recurring weekly schedule)
+  availability EmployeeAvailability[]
 
   // Org chart relation
   orgPosition OrgPosition? @relation("UserPosition")
@@ -556,4 +569,22 @@ model EsignRequest {
   @@index([userId])
   @@index([signableDocumentId])
   @@index([status])
+}
+
+/// One row per day-of-week the employee is available. Times are stored as
+/// "HH:MM" 24-hour strings on 30-minute boundaries (e.g. "09:00", "17:30").
+/// Days the employee is NOT available simply have no row — absence == off.
+model EmployeeAvailability {
+  id        String    @id @default(cuid())
+  userId    String
+  dayOfWeek DayOfWeek
+  startTime String    // "HH:MM" 24-hour, 30-min increments
+  endTime   String    // "HH:MM" 24-hour, 30-min increments
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, dayOfWeek])
+  @@index([userId])
 }

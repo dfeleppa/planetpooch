@@ -6,6 +6,7 @@ import Link from "next/link";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { AvailabilityEditor, type AvailabilityEntry } from "@/components/AvailabilityEditor";
 
 type Role = "SUPER_ADMIN" | "MANAGER" | "EMPLOYEE" | "ADMIN";
 type Company = "GROOMING" | "RESORT" | "CORPORATE";
@@ -89,6 +90,7 @@ export function NewEmployeeForm({ currentRole, currentCompany }: Props) {
   const [customJobTitle, setCustomJobTitle] = useState("");
   const [phone, setPhone] = useState("");
   const [hireDate, setHireDate] = useState("");
+  const [availability, setAvailability] = useState<AvailabilityEntry[]>([]);
 
   const isSuperAdmin = currentRole === "SUPER_ADMIN" || currentRole === "ADMIN";
   const isManager = currentRole === "MANAGER";
@@ -121,8 +123,16 @@ export function NewEmployeeForm({ currentRole, currentCompany }: Props) {
   } | null>(null);
   const [copied, setCopied] = useState(false);
 
+  const availabilityHasInvalidRange = availability.some(
+    (a) => a.endTime <= a.startTime
+  );
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (availabilityHasInvalidRange) {
+      setError("Each availability end time must be after its start time.");
+      return;
+    }
     setError("");
     setSaving(true);
     try {
@@ -138,6 +148,7 @@ export function NewEmployeeForm({ currentRole, currentCompany }: Props) {
           jobTitle: effectiveJobTitle || null,
           phone,
           hireDate: hireDate || null,
+          availability,
         }),
       });
       if (!res.ok) {
@@ -171,6 +182,7 @@ export function NewEmployeeForm({ currentRole, currentCompany }: Props) {
     setCustomJobTitle("");
     setPhone("");
     setHireDate("");
+    setAvailability([]);
   }
 
   if (result) {
@@ -325,6 +337,9 @@ export function NewEmployeeForm({ currentRole, currentCompany }: Props) {
               onChange={(e) => setHireDate(e.target.value)}
             />
           </div>
+
+          {/* Availability */}
+          <AvailabilityEditor value={availability} onChange={setAvailability} />
 
           {error && <p className="text-sm text-red-600">{error}</p>}
 
