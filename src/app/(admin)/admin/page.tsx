@@ -1,4 +1,4 @@
-import { requireAdmin } from "@/lib/auth-helpers";
+import { requireAdmin, activeUserWhere } from "@/lib/auth-helpers";
 import { prisma } from "@/lib/prisma";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -8,7 +8,7 @@ export default async function AdminDashboardPage() {
   await requireAdmin();
 
   const employees = await prisma.user.findMany({
-    where: { role: "EMPLOYEE" },
+    where: { role: "EMPLOYEE", ...activeUserWhere() },
     select: { id: true, name: true, email: true },
     orderBy: { name: "asc" },
   });

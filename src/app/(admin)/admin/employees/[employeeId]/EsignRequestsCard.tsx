@@ -29,6 +29,7 @@ interface Props {
   employeeId: string;
   employeeHasEmail: boolean;
   employeeHasDriveFolder: boolean;
+  isTerminated?: boolean;
   signableDocuments: SignableDocument[];
   initialRequests: EsignRequest[];
 }
@@ -37,6 +38,7 @@ export function EsignRequestsCard({
   employeeId,
   employeeHasEmail,
   employeeHasDriveFolder,
+  isTerminated = false,
   signableDocuments,
   initialRequests,
 }: Props) {
@@ -50,6 +52,7 @@ export function EsignRequestsCard({
   const [error, setError] = useState("");
 
   const canSend =
+    !isTerminated &&
     employeeHasEmail &&
     employeeHasDriveFolder &&
     signableDocuments.length > 0 &&
@@ -102,24 +105,30 @@ export function EsignRequestsCard({
         <h2 className="font-semibold text-gray-900">eSignature Requests</h2>
       </CardHeader>
       <CardContent className="space-y-4">
-        {!employeeHasEmail && (
+        {isTerminated && (
+          <p className="text-sm text-gray-600 bg-gray-50 border border-gray-200 rounded-lg px-3 py-2">
+            This employee is no longer active — new eSign requests are disabled.
+            History is preserved below.
+          </p>
+        )}
+        {!isTerminated && !employeeHasEmail && (
           <p className="text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
             Add a real email address to this employee before sending eSign requests.
           </p>
         )}
-        {employeeHasEmail && !employeeHasDriveFolder && (
+        {!isTerminated && employeeHasEmail && !employeeHasDriveFolder && (
           <p className="text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
             This employee has no Drive folder yet — eSign requests are disabled.
           </p>
         )}
-        {signableDocuments.length === 0 && (
+        {!isTerminated && signableDocuments.length === 0 && (
           <p className="text-sm text-gray-500">
             No signable documents configured yet. A super admin can register one
             via the Signable Documents API.
           </p>
         )}
 
-        {signableDocuments.length > 0 && (
+        {!isTerminated && signableDocuments.length > 0 && (
           <div className="flex items-end gap-2">
             <div className="flex-1">
               <label className="text-xs text-gray-500 uppercase tracking-wide">
@@ -176,7 +185,7 @@ export function EsignRequestsCard({
                   )}
                 </div>
               </div>
-              {r.status === "SENT" && (
+              {r.status === "SENT" && !isTerminated && (
                 <div className="flex items-center gap-2 shrink-0">
                   <Button
                     size="sm"
