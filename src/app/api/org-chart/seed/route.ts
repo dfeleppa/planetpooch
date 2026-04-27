@@ -135,7 +135,7 @@ export async function POST(req: Request) {
 
   // Best-effort: auto-assign existing users whose jobTitle matches a seeded position
   const users = await prisma.user.findMany({
-    where: { jobTitle: { not: null } },
+    where: { jobTitle: { not: null }, terminatedAt: null },
     select: { id: true, jobTitle: true, company: true, role: true },
   });
   for (const u of users) {

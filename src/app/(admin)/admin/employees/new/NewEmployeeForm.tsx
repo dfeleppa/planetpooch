@@ -122,6 +122,11 @@ export function NewEmployeeForm({ currentRole, currentCompany }: Props) {
     tempPassword: string;
   } | null>(null);
   const [copied, setCopied] = useState(false);
+  const [terminatedMatch, setTerminatedMatch] = useState<{
+    id: string;
+    name: string;
+  } | null>(null);
+  const [reactivating, setReactivating] = useState(false);
 
   const availabilityHasInvalidRange = availability.some(
     (a) => a.endTime <= a.startTime
@@ -134,6 +139,7 @@ export function NewEmployeeForm({ currentRole, currentCompany }: Props) {
       return;
     }
     setError("");
+    setTerminatedMatch(null);
     setSaving(true);
     try {
       const res = await fetch("/api/employees", {
@@ -153,6 +159,11 @@ export function NewEmployeeForm({ currentRole, currentCompany }: Props) {
       });
       if (!res.ok) {
         const data = await res.json();
+        if (data.terminatedMatch) {
+          setTerminatedMatch(data.terminatedMatch);
+          setError(data.error || "Email belongs to a past employee");
+          return;
+        }
         throw new Error(data.error || "Failed to create employee");
       }
       const data = await res.json();
@@ -163,6 +174,26 @@ export function NewEmployeeForm({ currentRole, currentCompany }: Props) {
       setSaving(false);
     }
   };
+
+  async function reactivateMatch() {
+    if (!terminatedMatch) return;
+    setReactivating(true);
+    setError("");
+    try {
+      const res = await fetch(
+        `/api/employees/${terminatedMatch.id}/reactivate`,
+        { method: "POST" }
+      );
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.error || "Failed to reactivate");
+      }
+      router.push(`/admin/employees/${terminatedMatch.id}`);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to reactivate");
+      setReactivating(false);
+    }
+  }
 
   const copyPassword = async () => {
     if (!result) return;
@@ -341,7 +372,34 @@ export function NewEmployeeForm({ currentRole, currentCompany }: Props) {
           {/* Availability */}
           <AvailabilityEditor value={availability} onChange={setAvailability} />
 
-          {error && <p className="text-sm text-red-600">{error}</p>}
+          {terminatedMatch ? (
+            <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 space-y-2">
+              <p className="text-sm text-amber-900">
+                <span className="font-medium">{terminatedMatch.name}</span> is a
+                past employee with this email. Reactivate that record instead of
+                creating a new one — their training history and Drive folder
+                will be restored.
+              </p>
+              <div className="flex gap-2">
+                <Button
+                  type="button"
+                  onClick={reactivateMatch}
+                  disabled={reactivating}
+                >
+                  {reactivating ? "Reactivating…" : `Reactivate ${terminatedMatch.name}`}
+                </Button>
+                <Button
+                  type="button"
+                  variant="secondary"
+                  onClick={() => setTerminatedMatch(null)}
+                >
+                  Use a different email
+                </Button>
+              </div>
+            </div>
+          ) : (
+            error && <p className="text-sm text-red-600">{error}</p>
+          )}
 
           <div className="flex gap-3 pt-1">
             <Button type="submit" disabled={saving}>

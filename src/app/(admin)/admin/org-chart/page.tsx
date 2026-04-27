@@ -27,7 +27,7 @@ export default async function OrgChartPage() {
       },
     }),
     prisma.user.findMany({
-      where: { ...companyFilter },
+      where: { ...companyFilter, terminatedAt: null },
       orderBy: [{ company: "asc" }, { name: "asc" }],
       select: {
         id: true,
