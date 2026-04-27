@@ -11,7 +11,6 @@ import { Company } from "@prisma/client";
 import {
   getDriveClient,
   getSharedDriveId,
-  getRootFolderId,
   isDriveEnabled,
 } from "./google";
 
@@ -24,76 +23,32 @@ function isStubId(id: string | null | undefined): boolean {
   return !!id && id.startsWith(STUB_PREFIX);
 }
 
-const COMPANY_SUBFOLDER: Record<Company, string> = {
-  GROOMING: "Grooming",
-  RESORT: "Resort",
-  CORPORATE: "Corporate",
+// Direct mapping from company to its Shared Drive folder ID. Each company has
+// its own dedicated subfolder; new employee folders are created as children of
+// the matching ID. Update here if a company's parent folder is moved or renamed.
+const COMPANY_FOLDER_ID: Record<Company, string> = {
+  GROOMING: "13jDVIp6W8Eg9s01wsN4FfYFmmQusQIh4",
+  RESORT: "1q7gZCjC8tzpA9dkExrqnMLqOYZawmcgK",
+  CORPORATE: "18AqhTNDuHUkWaM7kNiZqQzx2u-lY50EC",
 };
-
-// Cache resolved subfolder IDs for the lifetime of the function instance to
-// avoid one Drive lookup per employee creation.
-const subfolderIdCache = new Map<string, string>();
-
-/**
- * Find a child folder by name within `parentFolderId`. Returns the folder ID,
- * or null if no match. Used to route new employee folders into Grooming /
- * Resort / Corporate subfolders without requiring three additional env vars.
- */
-async function findSubfolderByName(
-  parentFolderId: string,
-  name: string
-): Promise<string | null> {
-  const cacheKey = `${parentFolderId}::${name}`;
-  const cached = subfolderIdCache.get(cacheKey);
-  if (cached) return cached;
-
-  const drive = getDriveClient();
-  const sharedDriveId = getSharedDriveId();
-  if (!drive || !sharedDriveId) return null;
-
-  const escaped = name.replace(/'/g, "\\'");
-  const res = await drive.files.list({
-    q: `'${parentFolderId}' in parents and name = '${escaped}' and mimeType = '${FOLDER_MIME}' and trashed = false`,
-    fields: "files(id)",
-    pageSize: 1,
-    supportsAllDrives: true,
-    includeItemsFromAllDrives: true,
-    driveId: sharedDriveId,
-    corpora: "drive",
-  });
-
-  const id = res.data.files?.[0]?.id ?? null;
-  if (id) subfolderIdCache.set(cacheKey, id);
-  return id;
-}
 
 /**
  * Create an employee folder named `folderName` (e.g. "Smith, Jane") inside the
- * company subfolder ("Grooming" / "Resort" / "Corporate") within the root.
- * Falls back to creating directly under the root folder if the expected
- * subfolder doesn't exist (logged warning) — admin can move it manually.
- * Returns the folder's Drive file ID. In stub mode, returns `stub-folder-<rand>`.
+ * company's dedicated parent folder in the Shared Drive. Returns the folder's
+ * Drive file ID. In stub mode, returns `stub-folder-<rand>`.
  */
 export async function createEmployeeFolder(
   folderName: string,
   company: Company
 ): Promise<string> {
   const drive = getDriveClient();
-  const rootFolderId = getRootFolderId();
   const sharedDriveId = getSharedDriveId();
 
-  if (!drive || !rootFolderId || !sharedDriveId) {
+  if (!drive || !sharedDriveId) {
     return `${STUB_PREFIX}folder-${Math.random().toString(36).slice(2, 10)}`;
   }
 
-  const subfolderName = COMPANY_SUBFOLDER[company];
-  let parentId = await findSubfolderByName(rootFolderId, subfolderName);
-  if (!parentId) {
-    console.warn(
-      `[drive] Subfolder "${subfolderName}" not found under root; creating "${folderName}" at root instead`
-    );
-    parentId = rootFolderId;
-  }
+  const parentId = COMPANY_FOLDER_ID[company];
 
   const res = await drive.files.create({
     requestBody: {
