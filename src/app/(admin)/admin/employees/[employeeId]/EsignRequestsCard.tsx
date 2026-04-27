@@ -21,8 +21,14 @@ interface EsignRequest {
   sentAt: string;
   signedAt: string | null;
   cancelledAt: string | null;
+  signedFileDriveId: string | null;
   signableDocument: { id: string; name: string };
   requestedBy: { id: string; name: string };
+}
+
+function driveFileUrl(fileId: string | null): string | null {
+  if (!fileId || fileId.startsWith("stub-")) return null;
+  return `https://drive.google.com/file/d/${fileId}/view`;
 }
 
 interface Props {
@@ -104,7 +110,7 @@ export function EsignRequestsCard({
       <CardContent className="space-y-4">
         {!employeeHasEmail && (
           <p className="text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
-            Add a real email address to this employee before sending eSign requests.
+            Add a real email address to this employee before preparing eSign requests.
           </p>
         )}
         {employeeHasEmail && !employeeHasDriveFolder && (
@@ -120,27 +126,35 @@ export function EsignRequestsCard({
         )}
 
         {signableDocuments.length > 0 && (
-          <div className="flex items-end gap-2">
-            <div className="flex-1">
-              <label className="text-xs text-gray-500 uppercase tracking-wide">
-                Send for signature
-              </label>
-              <select
-                value={selectedDocId}
-                onChange={(e) => setSelectedDocId(e.target.value)}
-                disabled={!canSend || sending}
-                className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-50 disabled:text-gray-500"
-              >
-                {signableDocuments.map((d) => (
-                  <option key={d.id} value={d.id}>
-                    {d.name}
-                  </option>
-                ))}
-              </select>
+          <div className="space-y-2">
+            <div className="flex items-end gap-2">
+              <div className="flex-1">
+                <label className="text-xs text-gray-500 uppercase tracking-wide">
+                  Prepare for signature
+                </label>
+                <select
+                  value={selectedDocId}
+                  onChange={(e) => setSelectedDocId(e.target.value)}
+                  disabled={!canSend || sending}
+                  className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-50 disabled:text-gray-500"
+                >
+                  {signableDocuments.map((d) => (
+                    <option key={d.id} value={d.id}>
+                      {d.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <Button onClick={send} disabled={!canSend || sending}>
+                {sending ? "Preparing…" : "Prepare Document"}
+              </Button>
             </div>
-            <Button onClick={send} disabled={!canSend || sending}>
-              {sending ? "Sending…" : "Send Request"}
-            </Button>
+            <p className="text-xs text-gray-500">
+              Copies the document into the employee&apos;s Drive folder. Open the
+              link below and use Drive&apos;s &ldquo;Request signature&rdquo; to
+              send it, then come back and click &ldquo;Mark signed&rdquo; once
+              they sign.
+            </p>
           </div>
         )}
 
@@ -154,49 +168,64 @@ export function EsignRequestsCard({
           {requests.length === 0 && (
             <li className="text-sm text-gray-400 py-3">No requests yet.</li>
           )}
-          {requests.map((r) => (
-            <li
-              key={r.id}
-              className="flex items-center justify-between py-3 gap-3"
-            >
-              <div className="min-w-0 flex-1">
-                <div className="flex items-center gap-2">
-                  <span className="text-sm font-medium text-gray-900 truncate">
-                    {r.signableDocument.name}
-                  </span>
-                  <StatusBadge status={r.status} />
+          {requests.map((r) => {
+            const fileUrl = driveFileUrl(r.signedFileDriveId);
+            return (
+              <li
+                key={r.id}
+                className="flex items-center justify-between py-3 gap-3"
+              >
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm font-medium text-gray-900 truncate">
+                      {r.signableDocument.name}
+                    </span>
+                    <StatusBadge status={r.status} />
+                  </div>
+                  <div className="text-xs text-gray-500 mt-0.5">
+                    Prepared by {r.requestedBy.name} on {formatDateTime(r.sentAt)}
+                    {r.status === "SIGNED" && r.signedAt && (
+                      <> · Signed {formatDateTime(r.signedAt)}</>
+                    )}
+                    {r.status === "CANCELLED" && r.cancelledAt && (
+                      <> · Cancelled {formatDateTime(r.cancelledAt)}</>
+                    )}
+                  </div>
                 </div>
-                <div className="text-xs text-gray-500 mt-0.5">
-                  Sent by {r.requestedBy.name} on {formatDateTime(r.sentAt)}
-                  {r.status === "SIGNED" && r.signedAt && (
-                    <> · Signed {formatDateTime(r.signedAt)}</>
-                  )}
-                  {r.status === "CANCELLED" && r.cancelledAt && (
-                    <> · Cancelled {formatDateTime(r.cancelledAt)}</>
-                  )}
-                </div>
-              </div>
-              {r.status === "SENT" && (
                 <div className="flex items-center gap-2 shrink-0">
-                  <Button
-                    size="sm"
-                    onClick={() => transition(r.id, "mark_signed")}
-                    disabled={busyId === r.id}
-                  >
-                    {busyId === r.id ? "Saving…" : "Mark signed"}
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    onClick={() => transition(r.id, "cancel")}
-                    disabled={busyId === r.id}
-                  >
-                    Cancel
-                  </Button>
+                  {fileUrl && (
+                    <a
+                      href={fileUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-sm text-blue-600 hover:underline"
+                    >
+                      Open in Drive
+                    </a>
+                  )}
+                  {r.status === "SENT" && (
+                    <>
+                      <Button
+                        size="sm"
+                        onClick={() => transition(r.id, "mark_signed")}
+                        disabled={busyId === r.id}
+                      >
+                        {busyId === r.id ? "Saving…" : "Mark signed"}
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => transition(r.id, "cancel")}
+                        disabled={busyId === r.id}
+                      >
+                        Cancel
+                      </Button>
+                    </>
+                  )}
                 </div>
-              )}
-            </li>
-          ))}
+              </li>
+            );
+          })}
         </ul>
       </CardContent>
     </Card>
