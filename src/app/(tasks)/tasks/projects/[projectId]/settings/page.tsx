@@ -30,6 +30,7 @@ export default async function ProjectSettingsPage({
   if (!isOwner && !isAdmin) redirect(`/tasks/projects/${projectId}`);
 
   const allUsers = await prisma.user.findMany({
+    where: { terminatedAt: null },
     select: { id: true, name: true, email: true },
     orderBy: { name: "asc" },
   });

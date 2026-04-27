@@ -7,7 +7,7 @@ import { createEmployeeFolder } from "@/lib/drive";
 import { isValidDayOfWeek, isValidTimeSlot } from "@/lib/availability";
 import { Company, DayOfWeek, Role } from "@prisma/client";
 
-export async function GET() {
+export async function GET(req: NextRequest) {
   const session = await getSession();
   if (!session?.user || !isManagerOrAbove(session.user.role)) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
@@ -16,8 +16,24 @@ export async function GET() {
   const user = session.user as { role: Role; company: Company | null };
   const companyFilter = getCompanyFilter(user.role, user.company);
 
+  // ?status=active|terminated|all (default: active). MANAGER can't request
+  // 'all' — that's a SUPER_ADMIN view of everyone including past employees.
+  const statusParam = req.nextUrl.searchParams.get("status") ?? "active";
+  let terminationFilter: { terminatedAt?: null | { not: null } } = { terminatedAt: null };
+  if (statusParam === "terminated") {
+    terminationFilter = { terminatedAt: { not: null } };
+  } else if (statusParam === "all") {
+    if (user.role === "MANAGER") {
+      return NextResponse.json(
+        { error: "Managers can request only active or terminated employees" },
+        { status: 403 }
+      );
+    }
+    terminationFilter = {};
+  }
+
   const employees = await prisma.user.findMany({
-    where: { role: "EMPLOYEE", ...companyFilter },
+    where: { role: "EMPLOYEE", ...companyFilter, ...terminationFilter },
     select: {
       id: true,
       email: true,
@@ -27,6 +43,7 @@ export async function GET() {
       company: true,
       jobTitle: true,
       createdAt: true,
+      terminatedAt: true,
     },
     orderBy: [{ lastName: "asc" }, { firstName: "asc" }],
   });
@@ -194,8 +211,23 @@ export async function POST(req: NextRequest) {
     let normalizedEmail: string;
     if (email?.trim()) {
       normalizedEmail = email.trim().toLowerCase();
-      const existing = await prisma.user.findUnique({ where: { email: normalizedEmail } });
+      const existing = await prisma.user.findUnique({
+        where: { email: normalizedEmail },
+        select: { id: true, name: true, terminatedAt: true },
+      });
       if (existing) {
+        // Terminated rehire path: tell the client this email belongs to a
+        // past employee so the form can offer to reactivate that record
+        // instead of trying to create a duplicate.
+        if (existing.terminatedAt) {
+          return NextResponse.json(
+            {
+              error: `${existing.name} is a past employee with this email. Reactivate that record instead.`,
+              terminatedMatch: { id: existing.id, name: existing.name },
+            },
+            { status: 409 }
+          );
+        }
         return NextResponse.json({ error: "A user with that email already exists" }, { status: 400 });
       }
     } else {

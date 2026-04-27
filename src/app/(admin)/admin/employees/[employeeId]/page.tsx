@@ -11,8 +11,10 @@ import { EditEmployeeForm } from "./EditEmployeeForm";
 import { EsignRequestsCard } from "./EsignRequestsCard";
 import { DriveFolderCard } from "./DriveFolderCard";
 import { DocumentsCard } from "./DocumentsCard";
+import { DangerZoneCard } from "./DangerZoneCard";
 import { DAYS_OF_WEEK, formatTimeLabel } from "@/lib/availability";
 import { getFileWebLink } from "@/lib/drive";
+import { formatDate } from "@/lib/utils";
 
 export default async function EmployeeDetailPage({ params }: { params: Promise<{ employeeId: string }> }) {
   const session = await requireManager();
@@ -36,6 +38,9 @@ export default async function EmployeeDetailPage({ params }: { params: Promise<{
       hireDate: true,
       driveFolderId: true,
       createdAt: true,
+      terminatedAt: true,
+      terminationReason: true,
+      terminatedBy: { select: { id: true, name: true } },
     },
   });
 
@@ -105,6 +110,8 @@ export default async function EmployeeDetailPage({ params }: { params: Promise<{
     ? await getFileWebLink(employee.driveFolderId)
     : null;
 
+  const isTerminated = !!employee.terminatedAt;
+
   return (
     <div>
       <div className="flex items-center gap-2 text-sm text-gray-500 mb-4">
@@ -113,10 +120,30 @@ export default async function EmployeeDetailPage({ params }: { params: Promise<{
         <span className="text-gray-900">{employee.name}</span>
       </div>
 
-      <h1 className="text-2xl font-bold text-gray-900">{employee.name}</h1>
+      <div className="flex items-center gap-2">
+        <h1 className="text-2xl font-bold text-gray-900">{employee.name}</h1>
+        {isTerminated && <Badge variant="default">Past employee</Badge>}
+      </div>
       <p className="text-gray-500">
         {employee.email.endsWith("@placeholder.local") ? "No email on file" : employee.email}
       </p>
+
+      {isTerminated && employee.terminatedAt && (
+        <div className="mt-4 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3">
+          <p className="text-sm text-amber-900">
+            <span className="font-medium">Past employee.</span> Terminated{" "}
+            {formatDate(employee.terminatedAt)}
+            {employee.terminatedBy && <> by {employee.terminatedBy.name}</>}.
+            {employee.terminationReason && (
+              <> Reason: {employee.terminationReason}.</>
+            )}
+          </p>
+          <p className="text-xs text-amber-800 mt-1">
+            Login is disabled and new eSign requests can&apos;t be sent. The Drive
+            folder and historical records are preserved.
+          </p>
+        </div>
+      )}
 
       <div className="mt-6">
         <EditEmployeeForm
@@ -150,6 +177,7 @@ export default async function EmployeeDetailPage({ params }: { params: Promise<{
         <DocumentsCard
           employeeId={employee.id}
           hasDriveFolder={!!employee.driveFolderId}
+          isTerminated={isTerminated}
           initialDocuments={employeeDocuments.map((d) => ({
             id: d.id,
             category: d.category,
@@ -197,6 +225,7 @@ export default async function EmployeeDetailPage({ params }: { params: Promise<{
           employeeId={employee.id}
           employeeHasEmail={!employee.email.endsWith("@placeholder.local")}
           employeeHasDriveFolder={!!employee.driveFolderId}
+          isTerminated={isTerminated}
           signableDocuments={signableDocuments}
           initialRequests={esignRequests.map((r) => ({
             id: r.id,
@@ -205,8 +234,17 @@ export default async function EmployeeDetailPage({ params }: { params: Promise<{
             signedAt: r.signedAt ? r.signedAt.toISOString() : null,
             cancelledAt: r.cancelledAt ? r.cancelledAt.toISOString() : null,
             signableDocument: r.signableDocument,
-            requestedBy: r.requestedBy,
+            requestedBy: r.requestedBy ?? { id: "", name: "(removed)" },
           }))}
+        />
+      </div>
+
+      <div className="mt-6">
+        <DangerZoneCard
+          employeeId={employee.id}
+          employeeName={employee.name}
+          isTerminated={isTerminated}
+          isSuperAdmin={sessionUser.role === "SUPER_ADMIN"}
         />
       </div>
 

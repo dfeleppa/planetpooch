@@ -107,11 +107,20 @@ model User {
   managerId          String?
   driveFolderId      String?   // Google Drive folder for this employee's signed docs
 
+  // Termination — null = active employee. When set, blocks login and excludes
+  // the user from active employee listings. Reactivation clears all three.
+  terminatedAt      DateTime?
+  terminationReason String?
+  terminatedById    String?
+
   createdAt          DateTime  @default(now())
   updatedAt          DateTime  @updatedAt
 
   manager  User?  @relation("UserManager", fields: [managerId], references: [id])
   reports  User[] @relation("UserManager")
+
+  terminatedBy        User?  @relation("UserTerminator", fields: [terminatedById], references: [id], onDelete: SetNull)
+  employeesTerminated User[] @relation("UserTerminator")
 
   completions LessonCompletion[]
   auditLogs   CompletionAuditLog[]
@@ -146,6 +155,8 @@ model User {
 
   // Org chart relation
   orgPosition OrgPosition? @relation("UserPosition")
+
+  @@index([terminatedAt])
 }
 
 model OrgPosition {
@@ -282,11 +293,11 @@ model MaintenanceSchedule {
   startDate          DateTime
   nextDueDate        DateTime
   isActive           Boolean            @default(true)
-  createdById        String
+  createdById        String?
   createdAt          DateTime           @default(now())
   updatedAt          DateTime           @updatedAt
 
-  createdBy    User                            @relation("MaintenanceCreator", fields: [createdById], references: [id])
+  createdBy    User?                           @relation("MaintenanceCreator", fields: [createdById], references: [id], onDelete: SetNull)
   tasks        MaintenanceTask[]
   requirements MaintenanceInventoryRequirement[]
 
@@ -309,8 +320,8 @@ model MaintenanceTask {
   updatedAt     DateTime              @updatedAt
 
   schedule    MaintenanceSchedule? @relation(fields: [scheduleId], references: [id], onDelete: SetNull)
-  assignedTo  User?                @relation("MaintenanceAssignee", fields: [assignedToId], references: [id])
-  completedBy User?                @relation("MaintenanceCompleter", fields: [completedById], references: [id])
+  assignedTo  User?                @relation("MaintenanceAssignee", fields: [assignedToId], references: [id], onDelete: SetNull)
+  completedBy User?                @relation("MaintenanceCompleter", fields: [completedById], references: [id], onDelete: SetNull)
   usages      InventoryUsage[]
 
   @@index([scheduleId])
@@ -380,11 +391,11 @@ model InventoryAdjustment {
   inventoryItemId String
   quantityChange  Int
   reason          String   @default("")
-  adjustedById    String
+  adjustedById    String?
   createdAt       DateTime @default(now())
 
   inventoryItem InventoryItem @relation(fields: [inventoryItemId], references: [id], onDelete: Cascade)
-  adjustedBy    User          @relation("InventoryAdjuster", fields: [adjustedById], references: [id])
+  adjustedBy    User?         @relation("InventoryAdjuster", fields: [adjustedById], references: [id], onDelete: SetNull)
 
   @@index([inventoryItemId])
 }
@@ -397,12 +408,12 @@ model Project {
   id          String   @id @default(cuid())
   name        String
   description String   @default("")
-  ownerId     String
+  ownerId     String?
   isArchived  Boolean  @default(false)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
-  owner       User            @relation("ProjectOwner", fields: [ownerId], references: [id])
+  owner       User?           @relation("ProjectOwner", fields: [ownerId], references: [id], onDelete: SetNull)
   members     ProjectMember[]
   subProjects SubProject[]
   tasks       Task[]
@@ -450,7 +461,7 @@ model Task {
   projectId    String
   subProjectId String?
   parentTaskId String?
-  createdById  String
+  createdById  String?
   createdAt    DateTime     @default(now())
   updatedAt    DateTime     @updatedAt
 
@@ -458,7 +469,7 @@ model Task {
   subProject SubProject?  @relation(fields: [subProjectId], references: [id], onDelete: SetNull)
   parentTask Task?        @relation("TaskSubtasks", fields: [parentTaskId], references: [id], onDelete: Cascade)
   subtasks   Task[]       @relation("TaskSubtasks")
-  createdBy  User         @relation("TaskCreator", fields: [createdById], references: [id])
+  createdBy  User?        @relation("TaskCreator", fields: [createdById], references: [id], onDelete: SetNull)
   assignees  TaskAssignee[]
   comments   TaskComment[]
 
@@ -505,11 +516,11 @@ model OnboardingTemplate {
   name        String
   description String   @default("")
   isActive    Boolean  @default(true)
-  createdById String
+  createdById String?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
-  createdBy User                     @relation("TemplateCreator", fields: [createdById], references: [id])
+  createdBy User?                    @relation("TemplateCreator", fields: [createdById], references: [id], onDelete: SetNull)
   tasks     OnboardingTemplateTask[]
 
   @@index([createdById])
@@ -564,7 +575,7 @@ model EsignRequest {
   id                 String             @id @default(cuid())
   userId             String             // The employee who needs to sign
   signableDocumentId String
-  requestedById      String             // Admin who initiated the request
+  requestedById      String?            // Admin who initiated the request
   signedFileDriveId  String?            // Copy in the employee's Drive folder
   status             EsignRequestStatus @default(SENT)
   sentAt             DateTime           @default(now())
@@ -575,7 +586,7 @@ model EsignRequest {
 
   user             User             @relation("EsignSigner", fields: [userId], references: [id], onDelete: Cascade)
   signableDocument SignableDocument @relation(fields: [signableDocumentId], references: [id], onDelete: Restrict)
-  requestedBy      User             @relation("EsignRequester", fields: [requestedById], references: [id], onDelete: Restrict)
+  requestedBy      User?            @relation("EsignRequester", fields: [requestedById], references: [id], onDelete: SetNull)
 
   @@index([userId])
   @@index([signableDocumentId])
@@ -594,13 +605,13 @@ model EmployeeDocument {
   driveFileId  String                   // Underlying file in Drive (employee's folder)
   mimeType     String
   fileSize     Int                      // bytes
-  uploadedById String
+  uploadedById String?
   uploadedAt   DateTime                 @default(now())
   createdAt    DateTime                 @default(now())
   updatedAt    DateTime                 @updatedAt
 
-  user       User @relation("DocumentSubject", fields: [userId], references: [id], onDelete: Cascade)
-  uploadedBy User @relation("DocumentUploader", fields: [uploadedById], references: [id], onDelete: Restrict)
+  user       User  @relation("DocumentSubject", fields: [userId], references: [id], onDelete: Cascade)
+  uploadedBy User? @relation("DocumentUploader", fields: [uploadedById], references: [id], onDelete: SetNull)
 
   @@index([userId])
   @@index([category])

@@ -22,6 +22,7 @@ async function loadEmployeeForCaller(
       role: true,
       company: true,
       driveFolderId: true,
+      terminatedAt: true,
     },
   });
   if (!employee) return null;
@@ -101,6 +102,12 @@ export async function POST(
   );
   if (!employee) {
     return NextResponse.json({ error: "Employee not found" }, { status: 404 });
+  }
+  if (employee.terminatedAt) {
+    return NextResponse.json(
+      { error: "Cannot upload documents for past employees" },
+      { status: 400 }
+    );
   }
   if (!employee.driveFolderId) {
     return NextResponse.json(

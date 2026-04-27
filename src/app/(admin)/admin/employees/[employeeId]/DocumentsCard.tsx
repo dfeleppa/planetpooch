@@ -18,12 +18,13 @@ interface DocumentRow {
   mimeType: string;
   fileSize: number;
   uploadedAt: string;
-  uploadedBy: { id: string; name: string };
+  uploadedBy: { id: string; name: string } | null;
 }
 
 interface Props {
   employeeId: string;
   hasDriveFolder: boolean;
+  isTerminated?: boolean;
   initialDocuments: DocumentRow[];
 }
 
@@ -34,7 +35,12 @@ const CATEGORY_OPTIONS: { value: EmployeeDocumentCategory; label: string }[] = [
   { value: "OTHER", label: DOCUMENT_CATEGORY_LABELS.OTHER },
 ];
 
-export function DocumentsCard({ employeeId, hasDriveFolder, initialDocuments }: Props) {
+export function DocumentsCard({
+  employeeId,
+  hasDriveFolder,
+  isTerminated = false,
+  initialDocuments,
+}: Props) {
   const router = useRouter();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [documents, setDocuments] = useState(initialDocuments);
@@ -46,6 +52,7 @@ export function DocumentsCard({ employeeId, hasDriveFolder, initialDocuments }: 
 
   const isOther = category === "OTHER";
   const canSubmit =
+    !isTerminated &&
     hasDriveFolder &&
     !!file &&
     (!isOther || customName.trim().length > 0) &&
@@ -88,12 +95,19 @@ export function DocumentsCard({ employeeId, hasDriveFolder, initialDocuments }: 
         <h2 className="font-semibold text-gray-900">Documents</h2>
       </CardHeader>
       <CardContent className="space-y-4">
-        {!hasDriveFolder && (
+        {isTerminated && (
+          <p className="text-sm text-gray-600 bg-gray-50 border border-gray-200 rounded-lg px-3 py-2">
+            This employee is no longer active — new uploads are disabled.
+            History is preserved below.
+          </p>
+        )}
+        {!isTerminated && !hasDriveFolder && (
           <p className="text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
             Create a Drive folder for this employee before uploading documents.
           </p>
         )}
 
+        {!isTerminated && (
         <form onSubmit={upload} className="space-y-3">
           <div className="grid grid-cols-2 gap-3">
             <div className="flex flex-col gap-1">
@@ -161,6 +175,7 @@ export function DocumentsCard({ employeeId, hasDriveFolder, initialDocuments }: 
             </Button>
           </div>
         </form>
+        )}
 
         <ul className="divide-y divide-gray-100 border-t border-gray-100">
           {documents.length === 0 && (
@@ -181,7 +196,7 @@ export function DocumentsCard({ employeeId, hasDriveFolder, initialDocuments }: 
                 </div>
                 <div className="text-xs text-gray-500 mt-0.5">
                   {doc.fileName} · {formatBytes(doc.fileSize)} · uploaded by{" "}
-                  {doc.uploadedBy.name} on {formatDateTime(doc.uploadedAt)}
+                  {doc.uploadedBy?.name ?? "(removed)"} on {formatDateTime(doc.uploadedAt)}
                 </div>
               </div>
               <a
