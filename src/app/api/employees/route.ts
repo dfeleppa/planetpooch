@@ -4,7 +4,8 @@ import { prisma } from "@/lib/prisma";
 import { getSession, getCompanyFilter, isManagerOrAbove } from "@/lib/auth-helpers";
 import { generateTempPassword } from "@/lib/onboarding";
 import { createEmployeeFolder } from "@/lib/drive";
-import { Company, Role } from "@prisma/client";
+import { isValidDayOfWeek, isValidTimeSlot } from "@/lib/availability";
+import { Company, DayOfWeek, Role } from "@prisma/client";
 
 export async function GET() {
   const session = await getSession();
@@ -103,7 +104,61 @@ export async function POST(req: NextRequest) {
       phone,
       hireDate,
       managerId,
+      availability,
     } = body;
+
+    // Validate availability up-front so we don't create the User if the
+    // payload is malformed. Each entry must have a valid day, valid 30-min
+    // slot for both times, and end > start. Days must be unique.
+    const availabilityRows: {
+      dayOfWeek: DayOfWeek;
+      startTime: string;
+      endTime: string;
+    }[] = [];
+    if (availability !== undefined && availability !== null) {
+      if (!Array.isArray(availability)) {
+        return NextResponse.json(
+          { error: "availability must be an array" },
+          { status: 400 }
+        );
+      }
+      const seenDays = new Set<DayOfWeek>();
+      for (const entry of availability) {
+        if (!entry || typeof entry !== "object") {
+          return NextResponse.json(
+            { error: "Invalid availability entry" },
+            { status: 400 }
+          );
+        }
+        const { dayOfWeek, startTime, endTime } = entry as Record<string, unknown>;
+        if (!isValidDayOfWeek(dayOfWeek)) {
+          return NextResponse.json(
+            { error: `Invalid day of week: ${String(dayOfWeek)}` },
+            { status: 400 }
+          );
+        }
+        if (!isValidTimeSlot(startTime) || !isValidTimeSlot(endTime)) {
+          return NextResponse.json(
+            { error: "Times must be in HH:MM 30-minute increments" },
+            { status: 400 }
+          );
+        }
+        if (endTime <= startTime) {
+          return NextResponse.json(
+            { error: `End time must be after start time for ${dayOfWeek}` },
+            { status: 400 }
+          );
+        }
+        if (seenDays.has(dayOfWeek)) {
+          return NextResponse.json(
+            { error: `Duplicate day in availability: ${dayOfWeek}` },
+            { status: 400 }
+          );
+        }
+        seenDays.add(dayOfWeek);
+        availabilityRows.push({ dayOfWeek, startTime, endTime });
+      }
+    }
 
     const trimmedFirst = typeof firstName === "string" ? firstName.trim() : "";
     const trimmedLast = typeof lastName === "string" ? lastName.trim() : "";
@@ -192,6 +247,12 @@ export async function POST(req: NextRequest) {
         department: true,
       },
     });
+
+    if (availabilityRows.length > 0) {
+      await prisma.employeeAvailability.createMany({
+        data: availabilityRows.map((row) => ({ userId: user.id, ...row })),
+      });
+    }
 
     // Best-effort Drive folder provisioning. In local dev (no WIF env) this
     // returns a stub ID; on Vercel it creates `<Company subfolder>/Last, First/`.

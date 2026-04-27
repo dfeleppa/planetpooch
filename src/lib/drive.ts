@@ -154,6 +154,64 @@ export async function getFileWebLink(fileId: string): Promise<string | null> {
 }
 
 /**
+ * Copy `sourceFileId` into `targetFolderId` with a new name. Used by the
+ * eSignature flow to drop a per-employee copy of a master document
+ * (e.g. handbook) into the employee's Drive folder. Returns the new file ID.
+ * In stub mode, returns a fake ID so the rest of the flow proceeds.
+ */
+export async function copyFileToFolder(
+  sourceFileId: string,
+  targetFolderId: string,
+  newName: string
+): Promise<string> {
+  const drive = getDriveClient();
+  if (!drive || isStubId(sourceFileId) || isStubId(targetFolderId)) {
+    return `${STUB_PREFIX}file-${Math.random().toString(36).slice(2, 10)}`;
+  }
+
+  const res = await drive.files.copy({
+    fileId: sourceFileId,
+    requestBody: { name: newName, parents: [targetFolderId] },
+    fields: "id",
+    supportsAllDrives: true,
+  });
+
+  const id = res.data.id;
+  if (!id) throw new Error("Drive returned no file ID for copy");
+  return id;
+}
+
+/**
+ * Grant `email` writer access to `fileId` and trigger Drive's built-in email
+ * notification. The recipient gets a "<doc> shared with you" email containing
+ * a link to open the file in Drive, where they can use the native "Request
+ * signature" / signing UI to sign. This is the v1 transport for eSign requests
+ * — when we wire the real eSignature API it will replace this call.
+ *
+ * No-ops in stub mode.
+ */
+export async function shareFileWithUser(
+  fileId: string,
+  email: string,
+  emailMessage?: string
+): Promise<void> {
+  const drive = getDriveClient();
+  if (!drive || isStubId(fileId)) return;
+
+  await drive.permissions.create({
+    fileId,
+    requestBody: {
+      type: "user",
+      role: "writer",
+      emailAddress: email,
+    },
+    sendNotificationEmail: true,
+    emailMessage,
+    supportsAllDrives: true,
+  });
+}
+
+/**
  * Best-effort delete. Swallows errors — we don't want a failed Drive call to
  * block a Prisma delete.
  */
