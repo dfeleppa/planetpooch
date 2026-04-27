@@ -100,6 +100,30 @@ async function main() {
     console.log("Seeded onboarding template: Standard New Hire");
   }
 
+  // Seed the Employee Handbook as a SignableDocument when its Drive file ID
+  // is configured. Skipped silently in environments that haven't set the env
+  // var (local dev, fresh staging) so seeding stays idempotent and unblocking.
+  const handbookFileId = process.env.GOOGLE_DRIVE_HANDBOOK_FILE_ID;
+  if (handbookFileId) {
+    const existingHandbook = await prisma.signableDocument.findFirst({
+      where: { name: "Employee Handbook" },
+    });
+    if (!existingHandbook) {
+      await prisma.signableDocument.create({
+        data: {
+          name: "Employee Handbook",
+          description: "Annual employee handbook — every new hire signs it.",
+          driveFileId: handbookFileId,
+        },
+      });
+      console.log("Seeded signable document: Employee Handbook");
+    }
+  } else {
+    console.log(
+      "Skipping Employee Handbook seed — set GOOGLE_DRIVE_HANDBOOK_FILE_ID to seed it"
+    );
+  }
+
   console.log("Seed complete: admin@company.com / admin123, employee@company.com / employee123");
 }
 

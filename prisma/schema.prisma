@@ -67,6 +67,12 @@ enum OnboardingTaskType {
   ADMIN_TASK          // Admin-only self-reported checkbox
 }
 
+enum EsignRequestStatus {
+  SENT
+  SIGNED
+  CANCELLED
+}
+
 model User {
   id                 String    @id @default(cuid())
   email              String    @unique
@@ -109,6 +115,10 @@ model User {
 
   // Onboarding relations
   onboardingTemplatesCreated OnboardingTemplate[] @relation("TemplateCreator")
+
+  // eSignature relations
+  esignRequests          EsignRequest[] @relation("EsignSigner")
+  esignRequestsRequested EsignRequest[] @relation("EsignRequester")
 
   // Org chart relation
   orgPosition OrgPosition? @relation("UserPosition")
@@ -498,4 +508,52 @@ model OnboardingTemplateTask {
   template OnboardingTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
 
   @@index([templateId])
+}
+
+// ============================================================
+// eSignature Models
+// ============================================================
+
+/// Library of master documents (in the Google Shared Drive) that can be sent
+/// to employees for signature. Admins register them once with their Drive file
+/// ID; per-employee requests copy the file into the employee's Drive folder.
+model SignableDocument {
+  id          String   @id @default(cuid())
+  name        String   // e.g. "Employee Handbook"
+  description String   @default("")
+  driveFileId String   // Source file in the shared drive
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  esignRequests EsignRequest[]
+
+  @@index([isActive])
+}
+
+/// One row per (employee, document) signing request. Status flips from SENT
+/// to SIGNED when the admin confirms the employee has signed (manual today;
+/// will be replaced by a Google eSignature webhook later). The actual signed
+/// file lives in the employee's Drive folder — `signedFileDriveId` points at
+/// it so the UI can render a "View signed copy" link.
+model EsignRequest {
+  id                 String             @id @default(cuid())
+  userId             String             // The employee who needs to sign
+  signableDocumentId String
+  requestedById      String             // Admin who initiated the request
+  signedFileDriveId  String?            // Copy in the employee's Drive folder
+  status             EsignRequestStatus @default(SENT)
+  sentAt             DateTime           @default(now())
+  signedAt           DateTime?
+  cancelledAt        DateTime?
+  createdAt          DateTime           @default(now())
+  updatedAt          DateTime           @updatedAt
+
+  user             User             @relation("EsignSigner", fields: [userId], references: [id], onDelete: Cascade)
+  signableDocument SignableDocument @relation(fields: [signableDocumentId], references: [id], onDelete: Restrict)
+  requestedBy      User             @relation("EsignRequester", fields: [requestedById], references: [id], onDelete: Restrict)
+
+  @@index([userId])
+  @@index([signableDocumentId])
+  @@index([status])
 }

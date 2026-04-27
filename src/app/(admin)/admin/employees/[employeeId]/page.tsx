@@ -8,6 +8,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Company, Role } from "@prisma/client";
 import { EditEmployeeForm } from "./EditEmployeeForm";
+import { EsignRequestsCard } from "./EsignRequestsCard";
 
 export default async function EmployeeDetailPage({ params }: { params: Promise<{ employeeId: string }> }) {
   const session = await requireManager();
@@ -29,6 +30,7 @@ export default async function EmployeeDetailPage({ params }: { params: Promise<{
       department: true,
       phone: true,
       hireDate: true,
+      driveFolderId: true,
       createdAt: true,
     },
   });
@@ -66,6 +68,22 @@ export default async function EmployeeDetailPage({ params }: { params: Promise<{
     include: { lesson: { select: { title: true } } },
   });
 
+  const [signableDocuments, esignRequests] = await Promise.all([
+    prisma.signableDocument.findMany({
+      where: { isActive: true },
+      orderBy: { name: "asc" },
+      select: { id: true, name: true, description: true },
+    }),
+    prisma.esignRequest.findMany({
+      where: { userId: employeeId },
+      orderBy: { createdAt: "desc" },
+      include: {
+        signableDocument: { select: { id: true, name: true } },
+        requestedBy: { select: { id: true, name: true } },
+      },
+    }),
+  ]);
+
   return (
     <div>
       <div className="flex items-center gap-2 text-sm text-gray-500 mb-4">
@@ -96,6 +114,24 @@ export default async function EmployeeDetailPage({ params }: { params: Promise<{
           canEditCompany={sessionUser.role !== "MANAGER"}
           canAssignSuperAdmin={sessionUser.role === "SUPER_ADMIN"}
           canEditRole={sessionUser.role === "SUPER_ADMIN"}
+        />
+      </div>
+
+      <div className="mt-6">
+        <EsignRequestsCard
+          employeeId={employee.id}
+          employeeHasEmail={!employee.email.endsWith("@placeholder.local")}
+          employeeHasDriveFolder={!!employee.driveFolderId}
+          signableDocuments={signableDocuments}
+          initialRequests={esignRequests.map((r) => ({
+            id: r.id,
+            status: r.status,
+            sentAt: r.sentAt.toISOString(),
+            signedAt: r.signedAt ? r.signedAt.toISOString() : null,
+            cancelledAt: r.cancelledAt ? r.cancelledAt.toISOString() : null,
+            signableDocument: r.signableDocument,
+            requestedBy: r.requestedBy,
+          }))}
         />
       </div>
 
