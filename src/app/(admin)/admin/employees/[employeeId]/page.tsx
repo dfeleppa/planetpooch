@@ -12,7 +12,7 @@ import { EsignRequestsCard } from "./EsignRequestsCard";
 import { DriveFolderCard } from "./DriveFolderCard";
 import { DangerZoneCard } from "./DangerZoneCard";
 import { DAYS_OF_WEEK, formatTimeLabel } from "@/lib/availability";
-import { getFileWebLink } from "@/lib/drive";
+import { getFileWebLink, isDriveEnabled, isStubId } from "@/lib/drive";
 import { formatDate } from "@/lib/utils";
 
 export default async function EmployeeDetailPage({ params }: { params: Promise<{ employeeId: string }> }) {
@@ -162,6 +162,8 @@ export default async function EmployeeDetailPage({ params }: { params: Promise<{
           employeeId={employee.id}
           driveFolderId={employee.driveFolderId}
           webViewLink={driveFolderWebLink}
+          driveEnabled={isDriveEnabled()}
+          isStub={isStubId(employee.driveFolderId)}
         />
       </div>
 

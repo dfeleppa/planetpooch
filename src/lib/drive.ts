@@ -19,7 +19,7 @@ export { isDriveEnabled };
 const FOLDER_MIME = "application/vnd.google-apps.folder";
 const STUB_PREFIX = "stub-";
 
-function isStubId(id: string | null | undefined): boolean {
+export function isStubId(id: string | null | undefined): boolean {
   return !!id && id.startsWith(STUB_PREFIX);
 }
 
