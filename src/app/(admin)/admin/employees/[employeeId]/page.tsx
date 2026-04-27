@@ -10,6 +10,7 @@ import { Company, Role } from "@prisma/client";
 import { EditEmployeeForm } from "./EditEmployeeForm";
 import { EsignRequestsCard } from "./EsignRequestsCard";
 import { DriveFolderCard } from "./DriveFolderCard";
+import { DocumentsCard } from "./DocumentsCard";
 import { DAYS_OF_WEEK, formatTimeLabel } from "@/lib/availability";
 import { getFileWebLink } from "@/lib/drive";
 
@@ -71,7 +72,7 @@ export default async function EmployeeDetailPage({ params }: { params: Promise<{
     include: { lesson: { select: { title: true } } },
   });
 
-  const [signableDocuments, esignRequests, availability] = await Promise.all([
+  const [signableDocuments, esignRequests, availability, employeeDocuments] = await Promise.all([
     prisma.signableDocument.findMany({
       where: { isActive: true },
       orderBy: { name: "asc" },
@@ -88,6 +89,13 @@ export default async function EmployeeDetailPage({ params }: { params: Promise<{
     prisma.employeeAvailability.findMany({
       where: { userId: employeeId },
       select: { dayOfWeek: true, startTime: true, endTime: true },
+    }),
+    prisma.employeeDocument.findMany({
+      where: { userId: employeeId },
+      orderBy: { uploadedAt: "desc" },
+      include: {
+        uploadedBy: { select: { id: true, name: true } },
+      },
     }),
   ]);
 
@@ -135,6 +143,24 @@ export default async function EmployeeDetailPage({ params }: { params: Promise<{
           employeeId={employee.id}
           driveFolderId={employee.driveFolderId}
           webViewLink={driveFolderWebLink}
+        />
+      </div>
+
+      <div className="mt-6">
+        <DocumentsCard
+          employeeId={employee.id}
+          hasDriveFolder={!!employee.driveFolderId}
+          initialDocuments={employeeDocuments.map((d) => ({
+            id: d.id,
+            category: d.category,
+            customName: d.customName,
+            fileName: d.fileName,
+            driveFileId: d.driveFileId,
+            mimeType: d.mimeType,
+            fileSize: d.fileSize,
+            uploadedAt: d.uploadedAt.toISOString(),
+            uploadedBy: d.uploadedBy,
+          }))}
         />
       </div>
 
