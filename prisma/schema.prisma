@@ -83,6 +83,13 @@ enum DayOfWeek {
   SATURDAY
 }
 
+enum EmployeeDocumentCategory {
+  I9
+  ID_CARD
+  SS_CARD
+  OTHER
+}
+
 model User {
   id                 String    @id @default(cuid())
   email              String    @unique
@@ -141,6 +148,10 @@ model User {
 
   // Availability (recurring weekly schedule)
   availability EmployeeAvailability[]
+
+  // Document uploads
+  employeeDocuments EmployeeDocument[] @relation("DocumentSubject")
+  documentsUploaded EmployeeDocument[] @relation("DocumentUploader")
 
   // Org chart relation
   orgPosition OrgPosition? @relation("UserPosition")
@@ -580,6 +591,30 @@ model EsignRequest {
   @@index([userId])
   @@index([signableDocumentId])
   @@index([status])
+}
+
+/// One file uploaded to the employee's Drive folder. Categories like I-9 /
+/// ID Card / SS Card are common enough to enumerate; everything else lives
+/// under OTHER and uses `customName` as the human label.
+model EmployeeDocument {
+  id           String                   @id @default(cuid())
+  userId       String
+  category     EmployeeDocumentCategory
+  customName   String?                  // Required when category=OTHER, null otherwise
+  fileName     String                   // Original filename from upload
+  driveFileId  String                   // Underlying file in Drive (employee's folder)
+  mimeType     String
+  fileSize     Int                      // bytes
+  uploadedById String?
+  uploadedAt   DateTime                 @default(now())
+  createdAt    DateTime                 @default(now())
+  updatedAt    DateTime                 @updatedAt
+
+  user       User  @relation("DocumentSubject", fields: [userId], references: [id], onDelete: Cascade)
+  uploadedBy User? @relation("DocumentUploader", fields: [uploadedById], references: [id], onDelete: SetNull)
+
+  @@index([userId])
+  @@index([category])
 }
 
 /// One row per day-of-week the employee is available. Times are stored as
