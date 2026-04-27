@@ -87,8 +87,10 @@ export const authOptions: NextAuthOptions = {
             : null;
           token.lastChecked = Date.now();
         } else {
-          // User row no longer exists — invalidate by clearing identity.
-          token.id = undefined;
+          // User row no longer exists — invalidate by removing identity. Cast
+          // away the strict string type so we can drop the property; the
+          // session callback returns an empty session when this is missing.
+          delete (token as { id?: string }).id;
         }
       }
 
