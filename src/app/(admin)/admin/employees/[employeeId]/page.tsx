@@ -9,7 +9,9 @@ import { notFound } from "next/navigation";
 import { Company, Role } from "@prisma/client";
 import { EditEmployeeForm } from "./EditEmployeeForm";
 import { EsignRequestsCard } from "./EsignRequestsCard";
+import { DriveFolderCard } from "./DriveFolderCard";
 import { DAYS_OF_WEEK, formatTimeLabel } from "@/lib/availability";
+import { getFileWebLink } from "@/lib/drive";
 
 export default async function EmployeeDetailPage({ params }: { params: Promise<{ employeeId: string }> }) {
   const session = await requireManager();
@@ -91,6 +93,10 @@ export default async function EmployeeDetailPage({ params }: { params: Promise<{
 
   const availabilityByDay = new Map(availability.map((a) => [a.dayOfWeek, a]));
 
+  const driveFolderWebLink = employee.driveFolderId
+    ? await getFileWebLink(employee.driveFolderId)
+    : null;
+
   return (
     <div>
       <div className="flex items-center gap-2 text-sm text-gray-500 mb-4">
@@ -121,6 +127,14 @@ export default async function EmployeeDetailPage({ params }: { params: Promise<{
           canEditCompany={sessionUser.role !== "MANAGER"}
           canAssignSuperAdmin={sessionUser.role === "SUPER_ADMIN"}
           canEditRole={sessionUser.role === "SUPER_ADMIN"}
+        />
+      </div>
+
+      <div className="mt-6">
+        <DriveFolderCard
+          employeeId={employee.id}
+          driveFolderId={employee.driveFolderId}
+          webViewLink={driveFolderWebLink}
         />
       </div>
 
