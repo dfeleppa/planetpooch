@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getSession, getCompanyFilter, isManagerOrAbove } from "@/lib/auth-helpers";
-import { copyFileToFolder, shareFileWithUser } from "@/lib/drive";
+import { copyFileToFolder } from "@/lib/drive";
 import { Company, Role } from "@prisma/client";
 
 /**
@@ -70,18 +70,16 @@ export async function GET(
 }
 
 /**
- * POST — send an eSign request. Body: { signableDocumentId }.
+ * POST — prepare an eSign request. Body: { signableDocumentId }.
  *
  * Pipeline:
  *   1. Validate document + employee
  *   2. Copy master file → employee Drive folder
- *   3. Share copy with employee (writer access + email notification)
- *   4. Insert EsignRequest row with status=SENT
+ *   3. Insert EsignRequest row with status=SENT
  *
- * If step 2 or 3 fails, we surface the error and do NOT create the row, so the
- * UI doesn't show a phantom "Sent" status. If the row creation fails after the
- * Drive copy succeeds we leave the file in place (admin can re-send; the copy
- * is harmless).
+ * The actual signature request is triggered by the admin in the Drive UI
+ * (open the file → "Request signature"). The portal tracks the request row;
+ * admin clicks "Mark signed" once the signed PDF lands.
  */
 export async function POST(
   req: NextRequest,
@@ -121,7 +119,7 @@ export async function POST(
   }
   if (employee.email.endsWith("@placeholder.local")) {
     return NextResponse.json(
-      { error: "Employee has no real email on file — add one before sending an eSign request" },
+      { error: "Employee has no real email on file — add one before preparing an eSign request" },
       { status: 400 }
     );
   }
@@ -164,20 +162,6 @@ export async function POST(
     console.error("[esign-requests.POST] copy failed:", err);
     return NextResponse.json(
       { error: "Failed to copy document to employee folder" },
-      { status: 502 }
-    );
-  }
-
-  try {
-    await shareFileWithUser(
-      copiedFileId,
-      employee.email,
-      `Please review and sign: ${doc.name}. Open in Google Drive and use the "Request signature" / signing tools to sign.`
-    );
-  } catch (err) {
-    console.error("[esign-requests.POST] share failed:", err);
-    return NextResponse.json(
-      { error: "Failed to share file with employee" },
       { status: 502 }
     );
   }

@@ -235,6 +235,7 @@ export default async function EmployeeDetailPage({ params }: { params: Promise<{
             sentAt: r.sentAt.toISOString(),
             signedAt: r.signedAt ? r.signedAt.toISOString() : null,
             cancelledAt: r.cancelledAt ? r.cancelledAt.toISOString() : null,
+            signedFileDriveId: r.signedFileDriveId,
             signableDocument: r.signableDocument,
             requestedBy: r.requestedBy ?? { id: "", name: "(removed)" },
           }))}

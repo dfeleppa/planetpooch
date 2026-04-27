@@ -137,36 +137,6 @@ export async function copyFileToFolder(
 }
 
 /**
- * Grant `email` writer access to `fileId` and trigger Drive's built-in email
- * notification. The recipient gets a "<doc> shared with you" email containing
- * a link to open the file in Drive, where they can use the native "Request
- * signature" / signing UI to sign. This is the v1 transport for eSign requests
- * — when we wire the real eSignature API it will replace this call.
- *
- * No-ops in stub mode.
- */
-export async function shareFileWithUser(
-  fileId: string,
-  email: string,
-  emailMessage?: string
-): Promise<void> {
-  const drive = getDriveClient();
-  if (!drive || isStubId(fileId)) return;
-
-  await drive.permissions.create({
-    fileId,
-    requestBody: {
-      type: "user",
-      role: "writer",
-      emailAddress: email,
-    },
-    sendNotificationEmail: true,
-    emailMessage,
-    supportsAllDrives: true,
-  });
-}
-
-/**
  * Best-effort delete. Swallows errors — we don't want a failed Drive call to
  * block a Prisma delete.
  */
