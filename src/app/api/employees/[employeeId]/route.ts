@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
+import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
-import { getSession, getCompanyFilter, isManagerOrAbove } from "@/lib/auth-helpers";
+import { getSession, getCompanyFilter, isManagerOrAbove, isSuperAdmin } from "@/lib/auth-helpers";
 import { Company, Role } from "@prisma/client";
 
 export async function GET(req: NextRequest, { params }: { params: Promise<{ employeeId: string }> }) {
@@ -248,26 +249,31 @@ export async function PATCH(
 }
 
 /**
- * DELETE — hard-delete an employee. Related records cascade via schema.
- * Any org position the user held becomes vacant (assignedUserId → null).
- * A user cannot delete themselves.
+ * DELETE — permanently remove an employee row.
+ *
+ * This is the rare-escape-hatch path. Normal offboarding goes through
+ * `POST /api/employees/[id]/end-employment`, which preserves the row and all
+ * historical data. Hard delete is now restricted to:
+ *   1. SUPER_ADMIN role (was MANAGER+ — behavior change).
+ *   2. Targets that are already terminated (`terminatedAt != null`).
+ *
+ * The user's Drive folder is intentionally NOT deleted here. Folders are
+ * preserved as part of the offboarding policy regardless of whether the DB
+ * row stays. Do not "fix" this by adding a Drive cleanup call.
  */
 export async function DELETE(
   _req: NextRequest,
   { params }: { params: Promise<{ employeeId: string }> }
 ) {
   const session = await getSession();
-  if (!session?.user || !isManagerOrAbove(session.user.role)) {
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  if (!session?.user || !isSuperAdmin(session.user.role)) {
+    return NextResponse.json(
+      { error: "Only Super Admins can permanently delete employees" },
+      { status: 403 }
+    );
   }
 
-  const sessionUser = session.user as {
-    id: string;
-    role: Role;
-    company: Company | null;
-  };
-  const companyFilter = getCompanyFilter(sessionUser.role, sessionUser.company);
-
+  const sessionUser = session.user as { id: string; role: Role };
   const { employeeId } = await params;
 
   if (employeeId === sessionUser.id) {
@@ -276,22 +282,15 @@ export async function DELETE(
 
   const target = await prisma.user.findUnique({
     where: { id: employeeId },
-    select: { id: true, role: true, company: true },
+    select: { id: true, role: true, company: true, terminatedAt: true },
   });
   if (!target) {
     return NextResponse.json({ error: "Employee not found" }, { status: 404 });
   }
-
-  // Company-scope check for MANAGERs
-  if (companyFilter.company && target.company !== companyFilter.company) {
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-  }
-
-  // Only SUPER_ADMIN can delete other admins/managers; MANAGER can only delete EMPLOYEEs
-  if (sessionUser.role === "MANAGER" && target.role !== "EMPLOYEE") {
+  if (!target.terminatedAt) {
     return NextResponse.json(
-      { error: "Managers can only delete employees" },
-      { status: 403 }
+      { error: "End this employee's employment before permanently deleting the record" },
+      { status: 400 }
     );
   }
 
@@ -299,6 +298,18 @@ export async function DELETE(
     await prisma.user.delete({ where: { id: employeeId } });
     return NextResponse.json({ success: true });
   } catch (err) {
+    // P2003 = foreign-key constraint violation. With the SetNull cleanup on
+    // actor pointers (uploadedBy, createdBy, ownerId, etc.) this should be
+    // rare, but surface a readable message instead of leaking the raw error.
+    if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2003") {
+      return NextResponse.json(
+        {
+          error:
+            "Cannot delete: this employee is still referenced by data that doesn't allow it (e.g. an unreassigned project or maintenance schedule). Reassign those records first.",
+        },
+        { status: 409 }
+      );
+    }
     const message = err instanceof Error ? err.message : "Failed to delete employee";
     return NextResponse.json({ error: message }, { status: 500 });
   }

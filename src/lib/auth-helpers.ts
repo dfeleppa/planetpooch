@@ -67,3 +67,16 @@ export function isSuperAdmin(role: string | undefined | null): boolean {
 
 // Keep requireAdmin as an alias for backward compatibility during migration
 export const requireAdmin = requireManager;
+
+/**
+ * Prisma `where` filter snippet for "active" users (i.e. not terminated).
+ * Use this anywhere the app lists employees who should currently appear in
+ * pickers, dashboards, or the active employees view. For the Past Employees
+ * view, swap it for `{ terminatedAt: { not: null } }`.
+ *
+ * Spread it into your existing where clause:
+ *   prisma.user.findMany({ where: { role: "EMPLOYEE", ...activeUserWhere() } })
+ */
+export function activeUserWhere(): { terminatedAt: null } {
+  return { terminatedAt: null };
+}

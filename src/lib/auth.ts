@@ -27,6 +27,10 @@ export const authOptions: NextAuthOptions = {
         const isValid = await bcrypt.compare(credentials.password, user.passwordHash);
         if (!isValid) return null;
 
+        // Terminated employees cannot log in. We return the same null as a
+        // wrong-password failure so we don't leak account state to attackers.
+        if (user.terminatedAt) return null;
+
         return {
           id: user.id,
           email: user.email,
@@ -51,22 +55,53 @@ export const authOptions: NextAuthOptions = {
         token.role = (user as { role: Role }).role;
         token.company = (user as { company?: Company | null }).company ?? null;
         token.mustChangePassword = (user as { mustChangePassword?: boolean }).mustChangePassword ?? false;
+        token.terminatedAt = null;
+        token.lastChecked = Date.now();
       }
-      // After the /change-password API calls update(), refresh the flag from DB.
-      if (trigger === "update" && token.id) {
+
+      // Refresh from DB when:
+      //   1. The client called update() (e.g. after /change-password), OR
+      //   2. The token hasn't been checked in 60s — needed because terminated
+      //      users would otherwise keep an active session until JWT expiry.
+      const STALENESS_MS = 60_000;
+      const lastChecked = (token.lastChecked as number | undefined) ?? 0;
+      const isStale = Date.now() - lastChecked > STALENESS_MS;
+      const shouldRefresh = !!token.id && (trigger === "update" || isStale);
+
+      if (shouldRefresh) {
         const fresh = await prisma.user.findUnique({
           where: { id: token.id as string },
-          select: { mustChangePassword: true, role: true, company: true },
+          select: {
+            mustChangePassword: true,
+            role: true,
+            company: true,
+            terminatedAt: true,
+          },
         });
         if (fresh) {
           token.mustChangePassword = fresh.mustChangePassword;
           token.role = fresh.role;
           token.company = fresh.company;
+          token.terminatedAt = fresh.terminatedAt
+            ? fresh.terminatedAt.toISOString()
+            : null;
+          token.lastChecked = Date.now();
+        } else {
+          // User row no longer exists — invalidate by clearing identity.
+          token.id = undefined;
         }
       }
+
       return token;
     },
     async session({ session, token }) {
+      // Terminated tokens produce an empty session — middleware / page guards
+      // will redirect to /login. We don't throw here because NextAuth's session
+      // contract expects a session object.
+      if (token.terminatedAt) {
+        return { ...session, user: undefined as unknown as typeof session.user };
+      }
+
       if (session.user) {
         const u = session.user as {
           id: string;
