@@ -74,7 +74,7 @@ export default async function OnboardingTemplatesPage() {
                     <div className="flex items-center gap-3 mt-2 text-xs text-gray-500">
                       <span>{t._count.tasks} task{t._count.tasks === 1 ? "" : "s"}</span>
                       <span>·</span>
-                      <span>Created {formatDate(t.createdAt)} by {t.createdBy.name}</span>
+                      <span>Created {formatDate(t.createdAt)} by {t.createdBy?.name ?? "(removed)"}</span>
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
