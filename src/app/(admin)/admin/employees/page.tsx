@@ -15,6 +15,13 @@ const COMPANY_LABELS: Record<Company, string> = {
   CORPORATE: "Planet Pooch Corporate",
 };
 
+const ROLE_LABELS: Partial<Record<Role, string>> = {
+  SUPER_ADMIN: "Super Admin",
+  DOS: "DOS",
+  MANAGER: "Manager",
+  ADMIN: "Admin",
+};
+
 type Tab = "active" | "terminated";
 
 type SortKey =
@@ -101,7 +108,6 @@ export default async function AdminEmployeesPage({
     isSuperAdmin && companyParam ? { company: companyParam } : companyFilter;
 
   const where: Prisma.UserWhereInput = {
-    role: "EMPLOYEE",
     ...companyWhere,
     ...terminationFilter,
     ...(jobTitleParam ? { jobTitle: jobTitleParam } : {}),
@@ -126,6 +132,7 @@ export default async function AdminEmployeesPage({
       lastName: true,
       name: true,
       email: true,
+      role: true,
       company: true,
       jobTitle: true,
       createdAt: true,
@@ -162,7 +169,6 @@ export default async function AdminEmployeesPage({
   // list only shows titles that can actually return results.
   const jobTitleRows = await prisma.user.findMany({
     where: {
-      role: "EMPLOYEE",
       ...companyWhere,
       ...terminationFilter,
       jobTitle: { not: null },
@@ -262,6 +268,11 @@ export default async function AdminEmployeesPage({
                       <span className="text-xs bg-blue-50 text-blue-600 px-2 py-0.5 rounded-full">
                         {COMPANY_LABELS[emp.company]}
                       </span>
+                      {emp.role !== "EMPLOYEE" && ROLE_LABELS[emp.role] && (
+                        <span className="text-xs bg-purple-50 text-purple-700 px-2 py-0.5 rounded-full">
+                          {ROLE_LABELS[emp.role]}
+                        </span>
+                      )}
                       {isTerminated && (
                         <Badge variant="default">Past employee</Badge>
                       )}
@@ -277,7 +288,7 @@ export default async function AdminEmployeesPage({
                         Joined {formatDate(emp.createdAt)}
                       </p>
                     )}
-                    {!isTerminated && (
+                    {!isTerminated && emp.role === "EMPLOYEE" && (
                       <ProgressBar
                         value={completed}
                         max={totalLessons}
