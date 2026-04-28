@@ -93,6 +93,56 @@ export async function uploadToFolder(
 }
 
 /**
+ * Extract a Drive file ID from either a raw ID or a Google URL.
+ *
+ * Accepts:
+ *   - Raw ID: "1AbC...xyz"
+ *   - drive.google.com/file/d/{ID}/...
+ *   - drive.google.com/open?id={ID}
+ *   - docs.google.com/{document,spreadsheets,presentation}/d/{ID}/...
+ *
+ * Returns null when the input doesn't match any of those shapes — caller is
+ * expected to surface a 400.
+ */
+export function parseDriveFileId(input: string): string | null {
+  const trimmed = input.trim();
+  if (!trimmed) return null;
+
+  const dMatch = trimmed.match(/\/d\/([A-Za-z0-9_-]+)/);
+  if (dMatch) return dMatch[1];
+
+  const idMatch = trimmed.match(/[?&]id=([A-Za-z0-9_-]+)/);
+  if (idMatch) return idMatch[1];
+
+  if (/^[A-Za-z0-9_-]{10,}$/.test(trimmed)) return trimmed;
+
+  return null;
+}
+
+/**
+ * Verify a Drive file exists and is accessible to the service account. Used
+ * when the admin pastes a link that we want to validate before persisting.
+ *
+ * Returns true on success, false if the file doesn't exist / isn't shared.
+ * In stub mode (no real Drive) returns true so local dev keeps working.
+ */
+export async function fileExists(fileId: string): Promise<boolean> {
+  const drive = getDriveClient();
+  if (!drive || isStubId(fileId)) return true;
+
+  try {
+    await drive.files.get({
+      fileId,
+      fields: "id",
+      supportsAllDrives: true,
+    });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/**
  * Returns a `webViewLink` (browser-openable Drive URL). Null in stub mode so
  * callers can hide the link.
  */

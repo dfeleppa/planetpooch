@@ -54,6 +54,7 @@ export function EsignRequestsCard({
   const [selectedDocId, setSelectedDocId] = useState<string>(
     signableDocuments[0]?.id ?? ""
   );
+  const [driveFileRef, setDriveFileRef] = useState("");
   const [sending, setSending] = useState(false);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [busyAction, setBusyAction] = useState<TransitionAction | null>(null);
@@ -63,26 +64,31 @@ export function EsignRequestsCard({
   const canSend =
     !isTerminated &&
     employeeHasEmail &&
-    employeeHasDriveFolder &&
     signableDocuments.length > 0 &&
-    !!selectedDocId;
+    !!selectedDocId &&
+    driveFileRef.trim().length > 0;
 
   async function send() {
     if (!canSend) return;
     setSending(true);
     setError("");
+    setInfo("");
     try {
       const res = await fetch(`/api/employees/${employeeId}/esign-requests`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ signableDocumentId: selectedDocId }),
+        body: JSON.stringify({
+          signableDocumentId: selectedDocId,
+          driveFileRef: driveFileRef.trim(),
+        }),
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Failed to send");
+      if (!res.ok) throw new Error(data.error || "Failed to register");
       setRequests([data, ...requests]);
+      setDriveFileRef("");
       router.refresh();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to send");
+      setError(err instanceof Error ? err.message : "Failed to register");
     } finally {
       setSending(false);
     }
@@ -142,7 +148,9 @@ export function EsignRequestsCard({
         )}
         {!isTerminated && employeeHasEmail && !employeeHasDriveFolder && (
           <p className="text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
-            This employee has no Drive folder yet — eSign requests are disabled.
+            Heads up: this employee has no Drive folder yet. You can still
+            register eSign requests, but the file must already exist somewhere
+            the service account can read.
           </p>
         )}
         {!isTerminated && signableDocuments.length === 0 && (
@@ -154,15 +162,15 @@ export function EsignRequestsCard({
 
         {!isTerminated && signableDocuments.length > 0 && (
           <div className="space-y-2">
-            <div className="flex items-end gap-2">
-              <div className="flex-1">
+            <div className="grid grid-cols-1 sm:grid-cols-[1fr_2fr_auto] gap-2 items-end">
+              <div>
                 <label className="text-xs text-gray-500 uppercase tracking-wide">
-                  Prepare for signature
+                  Document type
                 </label>
                 <select
                   value={selectedDocId}
                   onChange={(e) => setSelectedDocId(e.target.value)}
-                  disabled={!canSend || sending}
+                  disabled={sending}
                   className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-50 disabled:text-gray-500"
                 >
                   {signableDocuments.map((d) => (
@@ -172,15 +180,28 @@ export function EsignRequestsCard({
                   ))}
                 </select>
               </div>
+              <div>
+                <label className="text-xs text-gray-500 uppercase tracking-wide">
+                  Drive file URL or ID
+                </label>
+                <input
+                  type="text"
+                  value={driveFileRef}
+                  onChange={(e) => setDriveFileRef(e.target.value)}
+                  disabled={sending}
+                  placeholder="https://drive.google.com/file/d/…"
+                  className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-50 disabled:text-gray-500"
+                />
+              </div>
               <Button onClick={send} disabled={!canSend || sending}>
-                {sending ? "Preparing…" : "Prepare Document"}
+                {sending ? "Registering…" : "Register eSign request"}
               </Button>
             </div>
             <p className="text-xs text-gray-500">
-              Copies the document into the employee&apos;s Drive folder. Open the
-              link below and use Drive&apos;s &ldquo;Request signature&rdquo; to
-              send it, then come back and click &ldquo;Mark signed&rdquo; once
-              they sign.
+              Create the document in Drive and start the signature request
+              there, then paste the file&apos;s share URL or ID here. Use
+              &ldquo;Check signature&rdquo; once they sign — or
+              &ldquo;Mark signed&rdquo; as a manual override.
             </p>
           </div>
         )}

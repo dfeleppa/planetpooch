@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getSession, getCompanyFilter, isManagerOrAbove } from "@/lib/auth-helpers";
-import { copyFileToFolder } from "@/lib/drive";
+import { fileExists, parseDriveFileId } from "@/lib/drive";
 import { Company, Role } from "@prisma/client";
 
 /**
@@ -70,16 +70,13 @@ export async function GET(
 }
 
 /**
- * POST — prepare an eSign request. Body: { signableDocumentId }.
+ * POST — register an eSign request for a Drive file the admin has already
+ * created. Body: { signableDocumentId, driveFileRef }.
  *
- * Pipeline:
- *   1. Validate document + employee
- *   2. Copy master file → employee Drive folder
- *   3. Insert EsignRequest row with status=SENT
- *
- * The actual signature request is triggered by the admin in the Drive UI
- * (open the file → "Request signature"). The portal tracks the request row;
- * admin clicks "Mark signed" once the signed PDF lands.
+ * `driveFileRef` may be a raw Drive file ID or any Drive/Docs URL containing
+ * one — `parseDriveFileId` normalizes both. We verify the file is reachable
+ * by the service account before persisting so a typo or unshared file fails
+ * fast at registration instead of silently never confirming.
  */
 export async function POST(
   req: NextRequest,
@@ -111,24 +108,21 @@ export async function POST(
       { status: 400 }
     );
   }
-  if (!employee.driveFolderId) {
-    return NextResponse.json(
-      { error: "Employee has no Drive folder yet — re-create the employee record to provision one" },
-      { status: 400 }
-    );
-  }
   if (employee.email.endsWith("@placeholder.local")) {
     return NextResponse.json(
-      { error: "Employee has no real email on file — add one before preparing an eSign request" },
+      { error: "Employee has no real email on file — add one before registering an eSign request" },
       { status: 400 }
     );
   }
 
   let signableDocumentId: string;
+  let driveFileRef: string;
   try {
     const body = await req.json();
     signableDocumentId =
       typeof body.signableDocumentId === "string" ? body.signableDocumentId : "";
+    driveFileRef =
+      typeof body.driveFileRef === "string" ? body.driveFileRef : "";
   } catch {
     return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
   }
@@ -138,10 +132,24 @@ export async function POST(
       { status: 400 }
     );
   }
+  if (!driveFileRef.trim()) {
+    return NextResponse.json(
+      { error: "driveFileRef is required — paste the Drive file URL or ID" },
+      { status: 400 }
+    );
+  }
+
+  const driveFileId = parseDriveFileId(driveFileRef);
+  if (!driveFileId) {
+    return NextResponse.json(
+      { error: "Couldn't parse a Drive file ID from that input" },
+      { status: 400 }
+    );
+  }
 
   const doc = await prisma.signableDocument.findUnique({
     where: { id: signableDocumentId },
-    select: { id: true, name: true, driveFileId: true, isActive: true },
+    select: { id: true, isActive: true },
   });
   if (!doc || !doc.isActive) {
     return NextResponse.json(
@@ -150,19 +158,11 @@ export async function POST(
     );
   }
 
-  const fileName = `${doc.name} — ${employee.lastName}, ${employee.firstName}`;
-  let copiedFileId: string;
-  try {
-    copiedFileId = await copyFileToFolder(
-      doc.driveFileId,
-      employee.driveFolderId,
-      fileName
-    );
-  } catch (err) {
-    console.error("[esign-requests.POST] copy failed:", err);
+  const exists = await fileExists(driveFileId);
+  if (!exists) {
     return NextResponse.json(
-      { error: "Failed to copy document to employee folder" },
-      { status: 502 }
+      { error: "Drive file not found, or not shared with the service account" },
+      { status: 400 }
     );
   }
 
@@ -171,7 +171,7 @@ export async function POST(
       userId: employee.id,
       signableDocumentId: doc.id,
       requestedById: sessionUser.id,
-      signedFileDriveId: copiedFileId,
+      signedFileDriveId: driveFileId,
       status: "SENT",
     },
     include: {
