@@ -189,14 +189,19 @@ export async function copyFileToFolder(
 /**
  * Check whether a Drive file has been finalized by Google Workspace eSignature.
  *
- * Drive applies a `contentRestrictions` entry with `readOnly: true` BOTH when
- * an eSignature request is sent (to prevent edits while signers review) AND
- * when all signers complete it. We can't use `readOnly` alone — that flips
- * true the moment the request is sent. The reliable signal is the `reason`
- * text, which Workspace populates with completion language only after all
- * signers sign.
+ * Drive applies `contentRestrictions[].readOnly: true` BOTH when an eSignature
+ * request is sent (locking the file while signers review) AND when all
+ * signers complete it. The two states differ only in the `reason` text.
  *
- * Returns false in stub mode and rethrows on API errors so callers can surface them.
+ * Strategy: the file is signed if it's read-only AND the reason text does NOT
+ * match a known in-progress phrase. This is permissive (anything read-only
+ * that isn't explicitly mid-signing counts as final), but it matches reality:
+ * almost every read-only state on a Drive file IS terminal (signed, "marked
+ * as final", approved). The one common transient state is eSignature's
+ * "currently being signed" lock, which we explicitly reject.
+ *
+ * Every check logs the reason so we can broaden IN_PROGRESS_PATTERN if a new
+ * in-progress phrase appears. Returns false in stub mode; rethrows on API errors.
  */
 type DriveRestriction = {
   readOnly?: boolean | null;
@@ -207,15 +212,19 @@ type DriveRestriction = {
   } | null;
 };
 
-const IN_PROGRESS_PATTERN = /being signed|in progress|currently|awaiting|pending|sent for/i;
-const COMPLETED_PATTERN = /signed by|signed and|signing complet|all signers|signature complet|fully signed|finalized.*sign/i;
+// Phrases Drive uses while an eSignature request is sent but not yet finished.
+// Anything matched here is treated as NOT signed.
+const IN_PROGRESS_PATTERN =
+  /being signed|in progress|currently being|awaiting signature|awaiting signer|pending signature|sent for signature|in review|waiting for signer/i;
 
 function isFinalizedSignatureRestriction(r: DriveRestriction): boolean {
   if (r.readOnly !== true) return false;
   const reason = r.reason ?? "";
-  if (!reason) return false; // No reason text → can't confirm; err on the side of NOT signed.
+  // No reason at all → assume terminal lock (signed / mark-as-final). We treat
+  // the absence of an in-progress phrase as the positive signal because Drive
+  // doesn't always populate `reason` with completion text.
   if (IN_PROGRESS_PATTERN.test(reason)) return false;
-  return COMPLETED_PATTERN.test(reason);
+  return true;
 }
 
 export async function isFileSigned(fileId: string): Promise<boolean> {
@@ -232,14 +241,14 @@ export async function isFileSigned(fileId: string): Promise<boolean> {
   const restrictions = (res.data.contentRestrictions ?? []) as DriveRestriction[];
   const finalized = restrictions.some(isFinalizedSignatureRestriction);
 
-  // When a file is read-only but doesn't match either pattern, log the raw
-  // restriction so we can refine the matchers — false negatives (truly signed
-  // but our regex missed) need a real sample to fix.
-  if (!finalized && restrictions.some((r) => r.readOnly === true)) {
-    console.info(
-      "[drive.isFileSigned] file is read-only but reason did not match completion pattern",
-      { fileId, restrictions }
-    );
+  // Always log the raw restriction data when readOnly is set — invaluable for
+  // tuning IN_PROGRESS_PATTERN against real Drive responses.
+  if (restrictions.some((r) => r.readOnly === true)) {
+    console.info("[drive.isFileSigned]", {
+      fileId,
+      finalized,
+      restrictions,
+    });
   }
 
   return finalized;
