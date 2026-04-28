@@ -8,6 +8,7 @@ import Link from "next/link";
 import { formatDate } from "@/lib/utils";
 import { Company, Prisma, Role } from "@prisma/client";
 import { EmployeeFilters } from "./EmployeeFilters";
+import { CheckPendingEsignaturesButton } from "./CheckPendingEsignaturesButton";
 
 const COMPANY_LABELS: Record<Company, string> = {
   GROOMING: "Planet Pooch Grooming",
@@ -143,6 +144,20 @@ export default async function AdminEmployeesPage({
 
   const totalLessons = await prisma.lesson.count();
 
+  // Pending eSign requests in scope (manager → own company; admin → all).
+  // Only relevant on the active tab; past-employee view stays clean.
+  const pendingEsignCount =
+    tab === "active"
+      ? await prisma.esignRequest.count({
+          where: {
+            status: "SENT",
+            ...(companyFilter.company
+              ? { user: { company: companyFilter.company } }
+              : {}),
+          },
+        })
+      : 0;
+
   const completions = await prisma.lessonCompletion.findMany({
     where: { isCompleted: true, userId: { in: employees.map((e) => e.id) } },
     select: { userId: true },
@@ -195,9 +210,12 @@ export default async function AdminEmployeesPage({
           </p>
         </div>
         {tab === "active" && (
-          <Link href="/admin/employees/new">
-            <Button>+ Add Employee</Button>
-          </Link>
+          <div className="flex items-start gap-3">
+            <CheckPendingEsignaturesButton pendingCount={pendingEsignCount} />
+            <Link href="/admin/employees/new">
+              <Button>+ Add Employee</Button>
+            </Link>
+          </div>
         )}
       </div>
 

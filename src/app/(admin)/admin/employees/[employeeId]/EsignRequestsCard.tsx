@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { formatDateTime } from "@/lib/utils";
 
 type EsignStatus = "SENT" | "SIGNED" | "CANCELLED";
+type TransitionAction = "mark_signed" | "cancel" | "check_signature";
 
 interface SignableDocument {
   id: string;
@@ -55,7 +56,9 @@ export function EsignRequestsCard({
   );
   const [sending, setSending] = useState(false);
   const [busyId, setBusyId] = useState<string | null>(null);
+  const [busyAction, setBusyAction] = useState<TransitionAction | null>(null);
   const [error, setError] = useState("");
+  const [info, setInfo] = useState("");
 
   const canSend =
     !isTerminated &&
@@ -85,9 +88,11 @@ export function EsignRequestsCard({
     }
   }
 
-  async function transition(requestId: string, action: "mark_signed" | "cancel") {
+  async function transition(requestId: string, action: TransitionAction) {
     setBusyId(requestId);
+    setBusyAction(action);
     setError("");
+    setInfo("");
     try {
       const res = await fetch(`/api/esign-requests/${requestId}`, {
         method: "PATCH",
@@ -96,12 +101,25 @@ export function EsignRequestsCard({
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Failed to update");
-      setRequests(requests.map((r) => (r.id === requestId ? data : r)));
+
+      const updated: EsignRequest =
+        action === "check_signature" ? data.request : data;
+      setRequests(requests.map((r) => (r.id === requestId ? updated : r)));
+
+      if (action === "check_signature") {
+        setInfo(
+          data.signatureDetected
+            ? "Signature confirmed in Drive — request marked signed."
+            : "Not signed in Drive yet. Try again once the employee signs."
+        );
+      }
+
       router.refresh();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to update");
     } finally {
       setBusyId(null);
+      setBusyAction(null);
     }
   }
 
@@ -172,6 +190,11 @@ export function EsignRequestsCard({
             {error}
           </p>
         )}
+        {info && (
+          <p className="text-sm text-blue-700 bg-blue-50 border border-blue-200 rounded-lg px-3 py-2">
+            {info}
+          </p>
+        )}
 
         <ul className="divide-y divide-gray-100">
           {requests.length === 0 && (
@@ -216,10 +239,22 @@ export function EsignRequestsCard({
                     <>
                       <Button
                         size="sm"
+                        variant="secondary"
+                        onClick={() => transition(r.id, "check_signature")}
+                        disabled={busyId === r.id}
+                      >
+                        {busyId === r.id && busyAction === "check_signature"
+                          ? "Checking…"
+                          : "Check signature"}
+                      </Button>
+                      <Button
+                        size="sm"
                         onClick={() => transition(r.id, "mark_signed")}
                         disabled={busyId === r.id}
                       >
-                        {busyId === r.id ? "Saving…" : "Mark signed"}
+                        {busyId === r.id && busyAction === "mark_signed"
+                          ? "Saving…"
+                          : "Mark signed"}
                       </Button>
                       <Button
                         size="sm"

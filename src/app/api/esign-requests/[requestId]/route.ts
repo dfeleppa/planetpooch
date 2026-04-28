@@ -1,14 +1,16 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getSession, getCompanyFilter, isManagerOrAbove } from "@/lib/auth-helpers";
+import { isFileSigned, isStubId } from "@/lib/drive";
 import { Company, Role } from "@prisma/client";
 
 /**
- * PATCH — transition an eSign request. Body: { action: "mark_signed" | "cancel" }.
+ * PATCH — transition an eSign request.
+ * Body: { action: "mark_signed" | "cancel" | "check_signature" }.
  *
- * `mark_signed` is the manual confirmation today; once we wire the real
- * Google eSignature webhook, that endpoint will perform the same status flip
- * and this action can be retired (or kept as an override).
+ * `check_signature` polls Drive on demand: if Workspace eSignature has
+ * finalized (and locked) the file, we flip the row to SIGNED. Otherwise we
+ * leave it as SENT and the client surfaces a "not signed yet" hint.
  */
 export async function PATCH(
   req: NextRequest,
@@ -65,6 +67,52 @@ export async function PATCH(
     return NextResponse.json(updated);
   }
 
+  if (action === "check_signature") {
+    if (request.status !== "SENT") {
+      return NextResponse.json(
+        { error: `Cannot check a ${request.status.toLowerCase()} request` },
+        { status: 400 }
+      );
+    }
+    if (!request.signedFileDriveId || isStubId(request.signedFileDriveId)) {
+      return NextResponse.json(
+        { error: "Request has no real Drive file to check" },
+        { status: 400 }
+      );
+    }
+
+    let signed: boolean;
+    try {
+      signed = await isFileSigned(request.signedFileDriveId);
+    } catch (err) {
+      console.error("[esign-requests.PATCH] check_signature failed:", err);
+      return NextResponse.json(
+        { error: "Failed to check signature status in Drive" },
+        { status: 502 }
+      );
+    }
+
+    const include = {
+      signableDocument: { select: { id: true, name: true } },
+      requestedBy: { select: { id: true, name: true } },
+    };
+
+    if (!signed) {
+      const current = await prisma.esignRequest.findUnique({
+        where: { id: requestId },
+        include,
+      });
+      return NextResponse.json({ request: current, signatureDetected: false });
+    }
+
+    const updated = await prisma.esignRequest.update({
+      where: { id: requestId },
+      data: { status: "SIGNED", signedAt: new Date() },
+      include,
+    });
+    return NextResponse.json({ request: updated, signatureDetected: true });
+  }
+
   if (action === "cancel") {
     if (request.status !== "SENT") {
       return NextResponse.json(
@@ -84,7 +132,7 @@ export async function PATCH(
   }
 
   return NextResponse.json(
-    { error: "Unknown action — expected 'mark_signed' or 'cancel'" },
+    { error: "Unknown action — expected 'mark_signed', 'cancel', or 'check_signature'" },
     { status: 400 }
   );
 }

@@ -137,6 +137,33 @@ export async function copyFileToFolder(
 }
 
 /**
+ * Check whether a Drive file has been finalized by Google Workspace eSignature.
+ *
+ * When all signers complete a Workspace eSignature request, Drive applies a
+ * `contentRestrictions` entry with `readOnly: true` to lock the file. We treat
+ * any read-only restriction as "signed" — the only way a copied employee
+ * document acquires one is via the eSignature flow.
+ *
+ * Returns false in stub mode (no real Drive) and rethrows on API errors so
+ * callers can surface them.
+ */
+export async function isFileSigned(fileId: string): Promise<boolean> {
+  const drive = getDriveClient();
+  if (!drive || isStubId(fileId)) return false;
+
+  const res = await drive.files.get({
+    fileId,
+    fields: "contentRestrictions(readOnly,reason)",
+    supportsAllDrives: true,
+  });
+
+  const restrictions = res.data.contentRestrictions ?? [];
+  return restrictions.some(
+    (r: { readOnly?: boolean | null }) => r.readOnly === true
+  );
+}
+
+/**
  * Best-effort delete. Swallows errors — we don't want a failed Drive call to
  * block a Prisma delete.
  */
