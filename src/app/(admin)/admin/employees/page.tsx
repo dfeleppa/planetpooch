@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { formatDate } from "@/lib/utils";
 import { Company, Prisma, Role } from "@prisma/client";
+import { EmployeeFilters } from "./EmployeeFilters";
 
 const COMPANY_LABELS: Record<Company, string> = {
   GROOMING: "Planet Pooch Grooming",
@@ -121,6 +122,8 @@ export default async function AdminEmployeesPage({
     ...(orderBy ? { orderBy } : {}),
     select: {
       id: true,
+      firstName: true,
+      lastName: true,
       name: true,
       email: true,
       company: true,
@@ -216,95 +219,19 @@ export default async function AdminEmployeesPage({
         </Link>
       </div>
 
-      {/* Filters — native GET form so URLs are bookmarkable. Submitting any
-          field reloads the page with the new params. */}
-      <form
-        method="GET"
-        action="/admin/employees"
-        className="mt-4 flex flex-wrap items-end gap-3"
-      >
-        <input type="hidden" name="status" value={tab} />
-
-        <div className="flex-1 min-w-[200px]">
-          <label className="text-xs text-gray-500 uppercase tracking-wide">
-            Search
-          </label>
-          <input
-            type="text"
-            name="q"
-            defaultValue={q}
-            placeholder="Name or email"
-            className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-          />
-        </div>
-
-        {isSuperAdmin && (
-          <div>
-            <label className="text-xs text-gray-500 uppercase tracking-wide">
-              Company
-            </label>
-            <select
-              name="company"
-              defaultValue={companyParam ?? ""}
-              className="mt-1 rounded-lg border border-gray-300 px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-            >
-              <option value="">All</option>
-              {(Object.keys(COMPANY_LABELS) as Company[]).map((c) => (
-                <option key={c} value={c}>
-                  {COMPANY_LABELS[c]}
-                </option>
-              ))}
-            </select>
-          </div>
-        )}
-
-        <div>
-          <label className="text-xs text-gray-500 uppercase tracking-wide">
-            Job title
-          </label>
-          <select
-            name="jobTitle"
-            defaultValue={jobTitleParam}
-            className="mt-1 rounded-lg border border-gray-300 px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-          >
-            <option value="">All</option>
-            {jobTitleOptions.map((t) => (
-              <option key={t} value={t}>
-                {t}
-              </option>
-            ))}
-          </select>
-        </div>
-
-        <div>
-          <label className="text-xs text-gray-500 uppercase tracking-wide">
-            Sort
-          </label>
-          <select
-            name="sort"
-            defaultValue={sort}
-            className="mt-1 rounded-lg border border-gray-300 px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-          >
-            {sortOptions.map((o) => (
-              <option key={o.key} value={o.key}>
-                {o.label}
-              </option>
-            ))}
-          </select>
-        </div>
-
-        <div className="flex items-center gap-2">
-          <Button type="submit">Apply</Button>
-          {(q || companyParam || jobTitleParam || sp.sort) && (
-            <Link
-              href={tab === "terminated" ? "/admin/employees?status=terminated" : "/admin/employees"}
-              className="text-sm text-gray-500 hover:text-gray-700"
-            >
-              Reset
-            </Link>
-          )}
-        </div>
-      </form>
+      <EmployeeFilters
+        tab={tab}
+        isSuperAdmin={isSuperAdmin}
+        q={q}
+        company={companyParam ?? ""}
+        jobTitle={jobTitleParam}
+        sort={sort}
+        defaultSort={tab === "terminated" ? "terminated-new" : "name"}
+        jobTitleOptions={jobTitleOptions}
+        sortOptions={sortOptions.map((o) => ({ key: o.key, label: o.label }))}
+        companyLabels={COMPANY_LABELS}
+        hasActiveFilters={!!(q || companyParam || jobTitleParam || sp.sort)}
+      />
 
       <div className="grid gap-4 mt-4">
         {sortedEmployees.map((emp) => {
@@ -325,7 +252,7 @@ export default async function AdminEmployeesPage({
                         href={`/admin/employees/${emp.id}`}
                         className="font-medium text-gray-900 hover:text-blue-600"
                       >
-                        {emp.name}
+                        {emp.lastName}, {emp.firstName}
                       </Link>
                       {emp.jobTitle && (
                         <span className="text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full">
