@@ -214,16 +214,13 @@ export async function isFileSigned(fileId: string): Promise<boolean> {
 }
 
 /**
- * Best-effort delete. Swallows errors — we don't want a failed Drive call to
- * block a Prisma delete.
+ * Delete a Drive file. No-op in stub mode (no real Drive). Errors propagate
+ * so user-initiated deletions can surface failures — wrap with try/catch in
+ * cleanup paths where you want best-effort behavior.
  */
 export async function deleteFile(fileId: string): Promise<void> {
   const drive = getDriveClient();
   if (!drive || isStubId(fileId)) return;
 
-  try {
-    await drive.files.delete({ fileId, supportsAllDrives: true });
-  } catch (err) {
-    console.warn("[drive] deleteFile failed for", fileId, err);
-  }
+  await drive.files.delete({ fileId, supportsAllDrives: true });
 }

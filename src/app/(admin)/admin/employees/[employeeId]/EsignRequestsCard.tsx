@@ -8,7 +8,11 @@ import { Badge } from "@/components/ui/badge";
 import { formatDateTime } from "@/lib/utils";
 
 type EsignStatus = "SENT" | "SIGNED" | "CANCELLED";
-type TransitionAction = "mark_signed" | "cancel" | "check_signature";
+type TransitionAction =
+  | "mark_signed"
+  | "cancel"
+  | "check_signature"
+  | "delete_file";
 
 interface SignableDocument {
   id: string;
@@ -95,6 +99,13 @@ export function EsignRequestsCard({
   }
 
   async function transition(requestId: string, action: TransitionAction) {
+    if (action === "delete_file") {
+      const ok = window.confirm(
+        "Delete this file from Drive? This can't be undone."
+      );
+      if (!ok) return;
+    }
+
     setBusyId(requestId);
     setBusyAction(action);
     setError("");
@@ -118,6 +129,8 @@ export function EsignRequestsCard({
             ? "Signature confirmed in Drive — request marked signed."
             : "Not signed in Drive yet. Try again once the employee signs."
         );
+      } else if (action === "delete_file") {
+        setInfo("Drive file deleted.");
       }
 
       router.refresh();
@@ -286,6 +299,18 @@ export function EsignRequestsCard({
                         Cancel
                       </Button>
                     </>
+                  )}
+                  {r.status === "CANCELLED" && r.signedFileDriveId && (
+                    <Button
+                      size="sm"
+                      variant="danger"
+                      onClick={() => transition(r.id, "delete_file")}
+                      disabled={busyId === r.id}
+                    >
+                      {busyId === r.id && busyAction === "delete_file"
+                        ? "Deleting…"
+                        : "Delete file"}
+                    </Button>
                   )}
                 </div>
               </li>
