@@ -104,7 +104,7 @@ export function Sidebar() {
           <div>
             <div className="flex items-center gap-2">
               <span className="inline-block h-3.5 w-3.5 rounded-[3px] bg-pp-accent" />
-              <span className="text-[15px] font-semibold tracking-tight text-pp-ink">Portal</span>
+              <span className="text-[15px] font-semibold tracking-tight text-pp-ink">Planet Pooch</span>
             </div>
             <div className="mt-1 text-[11px] tracking-wide text-pp-ink-4">Company Portal</div>
           </div>

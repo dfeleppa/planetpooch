@@ -29,6 +29,20 @@
   --color-pp-ok: #4a6b3f;
   --color-pp-ok-bg: #eef4ea;
   --color-pp-ok-line: #cfdec5;
+
+  /* Remap the default blue palette to the company teal-slate (#4e6b74)
+     so existing `bg-blue-*` / `text-blue-*` usages pick up the accent. */
+  --color-blue-50: #f1f5f6;
+  --color-blue-100: #e3eaec;
+  --color-blue-200: #c5d3d6;
+  --color-blue-300: #a3b8be;
+  --color-blue-400: #78959e;
+  --color-blue-500: #5d7d87;
+  --color-blue-600: #4e6b74;
+  --color-blue-700: #3d555c;
+  --color-blue-800: #314449;
+  --color-blue-900: #243336;
+  --color-blue-950: #141d1f;
 }
 
 body {
