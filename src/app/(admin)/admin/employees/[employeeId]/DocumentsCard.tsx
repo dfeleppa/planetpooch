@@ -35,6 +35,8 @@ const CATEGORY_OPTIONS: { value: EmployeeDocumentCategory; label: string }[] = [
   { value: "OTHER", label: DOCUMENT_CATEGORY_LABELS.OTHER },
 ];
 
+const REQUIRED_CATEGORIES: EmployeeDocumentCategory[] = ["I9", "ID_CARD", "SS_CARD"];
+
 export function DocumentsCard({
   employeeId,
   hasDriveFolder,
@@ -57,6 +59,14 @@ export function DocumentsCard({
     !!file &&
     (!isOther || customName.trim().length > 0) &&
     !uploading;
+
+  const uploadedCategories = new Set(documents.map((d) => d.category));
+  const requiredStatus = REQUIRED_CATEGORIES.map((cat) => ({
+    category: cat,
+    label: DOCUMENT_CATEGORY_LABELS[cat],
+    uploaded: uploadedCategories.has(cat),
+  }));
+  const missingCount = requiredStatus.filter((r) => !r.uploaded).length;
 
   async function upload(e: React.FormEvent) {
     e.preventDefault();
@@ -95,6 +105,39 @@ export function DocumentsCard({
         <h2 className="font-semibold text-gray-900">Documents</h2>
       </CardHeader>
       <CardContent className="space-y-4">
+        <div className="rounded-lg border border-gray-200 bg-gray-50 px-3 py-2">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-sm font-medium text-gray-700">Required documents</span>
+            <span className="text-xs text-gray-500">
+              {missingCount === 0
+                ? "All uploaded"
+                : `${missingCount} missing`}
+            </span>
+          </div>
+          <ul className="space-y-1">
+            {requiredStatus.map((item) => (
+              <li key={item.category} className="flex items-center gap-2 text-sm">
+                <span
+                  aria-hidden
+                  className={
+                    item.uploaded
+                      ? "inline-flex h-4 w-4 items-center justify-center rounded-full bg-green-100 text-green-700 text-xs"
+                      : "inline-flex h-4 w-4 items-center justify-center rounded-full bg-gray-200 text-gray-500 text-xs"
+                  }
+                >
+                  {item.uploaded ? "✓" : "·"}
+                </span>
+                <span className={item.uploaded ? "text-gray-900" : "text-gray-600"}>
+                  {item.label}
+                </span>
+                <span className={item.uploaded ? "text-xs text-green-700" : "text-xs text-gray-400"}>
+                  {item.uploaded ? "Uploaded" : "Not uploaded"}
+                </span>
+              </li>
+            ))}
+          </ul>
+        </div>
+
         {isTerminated && (
           <p className="text-sm text-gray-600 bg-gray-50 border border-gray-200 rounded-lg px-3 py-2">
             This employee is no longer active — new uploads are disabled.
