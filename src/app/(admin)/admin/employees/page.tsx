@@ -7,7 +7,6 @@ import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { formatDate } from "@/lib/utils";
 import { Company, Role } from "@prisma/client";
-import { EndEmploymentDialog } from "./EndEmploymentDialog";
 
 const COMPANY_LABELS: Record<Company, string> = {
   GROOMING: "Planet Pooch Grooming",
@@ -159,12 +158,6 @@ export default async function AdminEmployeesPage({
                     <Link href={`/admin/employees/${emp.id}`}>
                       <Badge variant="info">View Details</Badge>
                     </Link>
-                    {!isTerminated && (
-                      <EndEmploymentDialog
-                        employeeId={emp.id}
-                        employeeName={emp.name}
-                      />
-                    )}
                   </div>
                 </div>
               </CardContent>
