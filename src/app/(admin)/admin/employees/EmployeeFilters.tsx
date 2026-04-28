@@ -4,10 +4,20 @@ import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Company } from "@prisma/client";
+import { cn } from "@/lib/utils";
 
 type Tab = "active" | "terminated";
 
 type SortOption = { key: string; label: string };
+
+type ProgressFilter = "all" | "atrisk" | "notstarted" | "done";
+
+interface ProgressCounts {
+  all: number;
+  atrisk: number;
+  notstarted: number;
+  done: number;
+}
 
 interface Props {
   tab: Tab;
@@ -16,12 +26,21 @@ interface Props {
   company: Company | "";
   jobTitle: string;
   sort: string;
+  progress: ProgressFilter;
   defaultSort: string;
   jobTitleOptions: string[];
   sortOptions: SortOption[];
   companyLabels: Record<Company, string>;
+  progressCounts: ProgressCounts;
   hasActiveFilters: boolean;
 }
+
+const PROGRESS_CHIPS: { key: ProgressFilter; label: string }[] = [
+  { key: "all", label: "All" },
+  { key: "atrisk", label: "At risk" },
+  { key: "notstarted", label: "Not started" },
+  { key: "done", label: "Complete" },
+];
 
 export function EmployeeFilters(props: Props) {
   const router = useRouter();
@@ -36,6 +55,7 @@ export function EmployeeFilters(props: Props) {
     company: Company | "";
     jobTitle: string;
     sort: string;
+    progress: ProgressFilter;
   }) {
     const params = new URLSearchParams();
     params.set("status", props.tab);
@@ -43,6 +63,7 @@ export function EmployeeFilters(props: Props) {
     if (next.company) params.set("company", String(next.company));
     if (next.jobTitle) params.set("jobTitle", next.jobTitle);
     if (next.sort && next.sort !== props.defaultSort) params.set("sort", next.sort);
+    if (next.progress !== "all") params.set("progress", next.progress);
     startTransition(() => {
       router.push(`/admin/employees?${params.toString()}`);
     });
@@ -55,6 +76,7 @@ export function EmployeeFilters(props: Props) {
       company: props.company,
       jobTitle: props.jobTitle,
       sort: props.sort,
+      progress: props.progress,
     });
   }
 
@@ -64,6 +86,7 @@ export function EmployeeFilters(props: Props) {
       company: (e.target.value || "") as Company | "",
       jobTitle: props.jobTitle,
       sort: props.sort,
+      progress: props.progress,
     });
   }
 
@@ -73,6 +96,7 @@ export function EmployeeFilters(props: Props) {
       company: props.company,
       jobTitle: e.target.value,
       sort: props.sort,
+      progress: props.progress,
     });
   }
 
@@ -82,41 +106,64 @@ export function EmployeeFilters(props: Props) {
       company: props.company,
       jobTitle: props.jobTitle,
       sort: e.target.value,
+      progress: props.progress,
+    });
+  }
+
+  function onProgressChip(next: ProgressFilter) {
+    navigate({
+      q: search,
+      company: props.company,
+      jobTitle: props.jobTitle,
+      sort: props.sort,
+      progress: next,
     });
   }
 
   const resetHref =
     props.tab === "terminated" ? "/admin/employees?status=terminated" : "/admin/employees";
 
+  const showProgressChips = props.tab === "active";
+
   return (
-    <form
-      onSubmit={onSearchSubmit}
-      className="mt-4 flex flex-wrap items-end gap-3"
-    >
-      <div className="flex-1 min-w-[200px]">
-        <label className="text-xs text-gray-500 uppercase tracking-wide">
-          Search
-        </label>
+    <form onSubmit={onSearchSubmit} className="pp-toolbar">
+      <div className="pp-search">
+        <span className="pp-search-icon" aria-hidden>⌕</span>
         <input
           type="text"
           name="q"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          placeholder="Name or email — press Enter"
-          className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+          placeholder="Search name or email"
         />
+        <kbd className="pp-kbd">↵</kbd>
       </div>
 
+      {showProgressChips && (
+        <div className="pp-chips">
+          {PROGRESS_CHIPS.map((chip) => {
+            const count = props.progressCounts[chip.key];
+            return (
+              <button
+                key={chip.key}
+                type="button"
+                onClick={() => onProgressChip(chip.key)}
+                className={cn("pp-chip", props.progress === chip.key && "is-on")}
+              >
+                {chip.label}
+                <span className="pp-chip-count">{count}</span>
+              </button>
+            );
+          })}
+        </div>
+      )}
+
+      <div className="pp-spacer" />
+
       {props.isSuperAdmin && (
-        <div>
-          <label className="text-xs text-gray-500 uppercase tracking-wide">
-            Company
-          </label>
-          <select
-            value={props.company}
-            onChange={onCompanyChange}
-            className="mt-1 rounded-lg border border-gray-300 px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-          >
+        <div className="pp-select-group">
+          <label htmlFor="company-select">Company</label>
+          <select id="company-select" value={props.company} onChange={onCompanyChange}>
             <option value="">All</option>
             {(Object.keys(props.companyLabels) as Company[]).map((c) => (
               <option key={c} value={c}>
@@ -127,33 +174,23 @@ export function EmployeeFilters(props: Props) {
         </div>
       )}
 
-      <div>
-        <label className="text-xs text-gray-500 uppercase tracking-wide">
-          Job title
-        </label>
-        <select
-          value={props.jobTitle}
-          onChange={onJobTitleChange}
-          className="mt-1 rounded-lg border border-gray-300 px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-        >
-          <option value="">All</option>
-          {props.jobTitleOptions.map((t) => (
-            <option key={t} value={t}>
-              {t}
-            </option>
-          ))}
-        </select>
-      </div>
+      {props.jobTitleOptions.length > 0 && (
+        <div className="pp-select-group">
+          <label htmlFor="jobtitle-select">Job title</label>
+          <select id="jobtitle-select" value={props.jobTitle} onChange={onJobTitleChange}>
+            <option value="">All</option>
+            {props.jobTitleOptions.map((t) => (
+              <option key={t} value={t}>
+                {t}
+              </option>
+            ))}
+          </select>
+        </div>
+      )}
 
-      <div>
-        <label className="text-xs text-gray-500 uppercase tracking-wide">
-          Sort
-        </label>
-        <select
-          value={props.sort}
-          onChange={onSortChange}
-          className="mt-1 rounded-lg border border-gray-300 px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-        >
+      <div className="pp-select-group">
+        <label htmlFor="sort-select">Sort</label>
+        <select id="sort-select" value={props.sort} onChange={onSortChange}>
           {props.sortOptions.map((o) => (
             <option key={o.key} value={o.key}>
               {o.label}
@@ -163,10 +200,7 @@ export function EmployeeFilters(props: Props) {
       </div>
 
       {props.hasActiveFilters && (
-        <Link
-          href={resetHref}
-          className="text-sm text-gray-500 hover:text-gray-700 pb-2"
-        >
+        <Link href={resetHref} className="text-[12px] text-pp-ink-4 hover:text-pp-ink-2">
           Reset
         </Link>
       )}

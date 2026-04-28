@@ -13,34 +13,34 @@ interface NavItem {
 }
 
 const employeeNav: NavItem[] = [
-  { href: "/dashboard", label: "Dashboard", icon: "📊" },
-  { href: "/modules", label: "Modules", icon: "📚" },
-  { href: "/search", label: "Search", icon: "🔍" },
+  { href: "/dashboard", label: "Dashboard", icon: "▣" },
+  { href: "/modules", label: "Modules", icon: "❏" },
+  { href: "/search", label: "Search", icon: "⌕" },
 ];
 
 // Full admin nav — SUPER_ADMIN only (includes module management)
 const superAdminNav: NavItem[] = [
-  { href: "/admin", label: "Dashboard", icon: "📊" },
-  { href: "/admin/modules", label: "Manage Modules", icon: "📚" },
-  { href: "/admin/employees", label: "Employees", icon: "👥" },
-  { href: "/admin/org-chart", label: "Org Chart", icon: "🗂️" },
-  { href: "/admin/onboarding", label: "Onboarding", icon: "🎯" },
-  { href: "/admin/audit-log", label: "Audit Log", icon: "📋" },
+  { href: "/admin", label: "Dashboard", icon: "▣" },
+  { href: "/admin/modules", label: "Manage Modules", icon: "❏" },
+  { href: "/admin/employees", label: "Employees", icon: "◉" },
+  { href: "/admin/org-chart", label: "Org Chart", icon: "⌬" },
+  { href: "/admin/onboarding", label: "Onboarding", icon: "↗" },
+  { href: "/admin/audit-log", label: "Audit Log", icon: "≡" },
 ];
 
 // Manager nav — no module management
 const managerNav: NavItem[] = [
-  { href: "/admin", label: "Dashboard", icon: "📊" },
-  { href: "/admin/employees", label: "Employees", icon: "👥" },
-  { href: "/admin/org-chart", label: "Org Chart", icon: "🗂️" },
-  { href: "/admin/onboarding", label: "Onboarding", icon: "🎯" },
-  { href: "/admin/audit-log", label: "Audit Log", icon: "📋" },
+  { href: "/admin", label: "Dashboard", icon: "▣" },
+  { href: "/admin/employees", label: "Employees", icon: "◉" },
+  { href: "/admin/org-chart", label: "Org Chart", icon: "⌬" },
+  { href: "/admin/onboarding", label: "Onboarding", icon: "↗" },
+  { href: "/admin/audit-log", label: "Audit Log", icon: "≡" },
 ];
 
 const sharedNav: NavItem[] = [
-  { href: "/maintenance", label: "Maintenance", icon: "🔧" },
-  { href: "/maintenance/inventory", label: "Inventory", icon: "📦" },
-  { href: "/tasks", label: "Tasks", icon: "✅" },
+  { href: "/maintenance", label: "Maintenance", icon: "⚙" },
+  { href: "/maintenance/inventory", label: "Inventory", icon: "▦" },
+  { href: "/tasks", label: "Tasks", icon: "✓" },
 ];
 
 export function Sidebar() {
@@ -71,128 +71,148 @@ export function Sidebar() {
     return pathname.startsWith(href);
   }
 
+  const navItemClass = (active: boolean) =>
+    cn(
+      "relative flex items-center gap-3 rounded-md px-2.5 py-1.5 text-[13px] transition-colors",
+      collapsed ? "justify-center px-2" : "",
+      active
+        ? "bg-pp-surface text-pp-ink font-medium shadow-[inset_0_0_0_1px_var(--color-pp-line)]"
+        : "text-pp-ink-2 hover:bg-black/[0.04]"
+    );
+
+  // Vertical accent rail on the active item, only when expanded
+  const activeRail = (active: boolean) =>
+    active && !collapsed ? (
+      <span className="absolute -left-[14px] top-1.5 bottom-1.5 w-[2px] rounded bg-pp-accent" />
+    ) : null;
+
   return (
     <aside
       className={cn(
-        "bg-white border-r border-gray-200 flex flex-col min-h-screen transition-all duration-300 flex-shrink-0",
-        collapsed ? "w-16" : "w-64"
+        "flex flex-col min-h-screen flex-shrink-0 transition-all duration-300 bg-pp-bg-2 border-r border-pp-line",
+        collapsed ? "w-[60px] px-2 py-4" : "w-[232px] px-[14px] py-[18px]"
       )}
     >
-      {/* Header */}
-      <div className={cn("p-4 border-b border-gray-100 flex items-center", collapsed ? "justify-center" : "justify-between")}>
-        {!collapsed && (
-          <div>
-            <h1 className="text-xl font-bold text-gray-900">Portal</h1>
-            <p className="text-xs text-gray-500 mt-1">Company Portal</p>
-          </div>
+      {/* Brand */}
+      <div
+        className={cn(
+          "flex items-center border-b border-pp-line pb-3",
+          collapsed ? "justify-center" : "justify-between px-2"
         )}
+      >
+        {!collapsed ? (
+          <div>
+            <div className="flex items-center gap-2">
+              <span className="inline-block h-3.5 w-3.5 rounded-[3px] bg-pp-accent" />
+              <span className="text-[15px] font-semibold tracking-tight text-pp-ink">Portal</span>
+            </div>
+            <div className="mt-1 text-[11px] tracking-wide text-pp-ink-4">Company Portal</div>
+          </div>
+        ) : (
+          <span className="inline-block h-3.5 w-3.5 rounded-[3px] bg-pp-accent" />
+        )}
+        {!collapsed && (
+          <button
+            onClick={toggleCollapsed}
+            className="rounded-md p-1.5 text-pp-ink-4 transition-colors hover:bg-black/[0.04] hover:text-pp-ink-2"
+            title="Collapse sidebar"
+          >
+            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M11 19l-7-7 7-7m8 14l-7-7 7-7" />
+            </svg>
+          </button>
+        )}
+      </div>
+
+      {collapsed && (
         <button
           onClick={toggleCollapsed}
-          className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-500 transition-colors flex-shrink-0"
-          title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+          className="mt-3 self-center rounded-md p-1.5 text-pp-ink-4 transition-colors hover:bg-black/[0.04] hover:text-pp-ink-2"
+          title="Expand sidebar"
         >
-          <svg
-            className={cn("w-4 h-4 transition-transform duration-300", collapsed ? "rotate-180" : "")}
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke="currentColor"
-            strokeWidth={2}
-          >
+          <svg className="h-4 w-4 rotate-180" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M11 19l-7-7 7-7m8 14l-7-7 7-7" />
           </svg>
         </button>
-      </div>
+      )}
 
-      <nav className="flex-1 p-2 space-y-0.5 overflow-y-auto">
-        {nav.map((item) => (
-          <Link
-            key={item.href}
-            href={item.href}
-            title={collapsed ? item.label : undefined}
-            className={cn(
-              "flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors",
-              collapsed ? "justify-center" : "",
-              isActive(item.href)
-                ? "bg-blue-50 text-blue-700"
-                : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
-            )}
-          >
-            <span className="text-base flex-shrink-0">{item.icon}</span>
-            {!collapsed && item.label}
-          </Link>
-        ))}
+      <nav className="mt-4 flex flex-1 flex-col gap-4 overflow-y-auto">
+        {/* Primary nav */}
+        <div className="flex flex-col gap-px">
+          {nav.map((item) => {
+            const active = isActive(item.href);
+            return (
+              <Link key={item.href} href={item.href} title={collapsed ? item.label : undefined} className={navItemClass(active)}>
+                {activeRail(active)}
+                <span className={cn("text-[14px] w-4 text-center flex-shrink-0", active ? "text-pp-accent" : "text-pp-ink-3")}>
+                  {item.icon}
+                </span>
+                {!collapsed && <span className="truncate">{item.label}</span>}
+              </Link>
+            );
+          })}
+        </div>
 
-        {/* Tools section */}
-        {!collapsed && (
-          <div className="pt-4 pb-1">
-            <p className="px-3 text-xs font-semibold text-gray-400 uppercase tracking-wider">Tools</p>
-          </div>
+        {/* Tools */}
+        {!collapsed ? (
+          <div className="px-2.5 pt-1 text-[10px] font-medium uppercase tracking-[0.08em] text-pp-ink-4">Tools</div>
+        ) : (
+          <div className="mx-1.5 h-px bg-pp-line" />
         )}
-        {collapsed && <div className="pt-2 pb-1 border-t border-gray-100 mx-2" />}
-        {sharedNav.map((item) => (
-          <Link
-            key={item.href}
-            href={item.href}
-            title={collapsed ? item.label : undefined}
-            className={cn(
-              "flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors",
-              collapsed ? "justify-center" : "",
-              isActive(item.href)
-                ? "bg-blue-50 text-blue-700"
-                : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
-            )}
-          >
-            <span className="text-base flex-shrink-0">{item.icon}</span>
-            {!collapsed && item.label}
-          </Link>
-        ))}
+        <div className="-mt-2 flex flex-col gap-px">
+          {sharedNav.map((item) => {
+            const active = isActive(item.href);
+            return (
+              <Link key={item.href} href={item.href} title={collapsed ? item.label : undefined} className={navItemClass(active)}>
+                {activeRail(active)}
+                <span className={cn("text-[14px] w-4 text-center flex-shrink-0", active ? "text-pp-accent" : "text-pp-ink-3")}>
+                  {item.icon}
+                </span>
+                {!collapsed && <span className="truncate">{item.label}</span>}
+              </Link>
+            );
+          })}
+        </div>
 
         {/* Manager/Admin: Employee View section */}
         {isManagerOrAbove && (
           <>
-            {!collapsed && (
-              <div className="pt-4 pb-1">
-                <p className="px-3 text-xs font-semibold text-gray-400 uppercase tracking-wider">Employee View</p>
+            {!collapsed ? (
+              <div className="px-2.5 pt-1 text-[10px] font-medium uppercase tracking-[0.08em] text-pp-ink-4">
+                Employee View
               </div>
+            ) : (
+              <div className="mx-1.5 h-px bg-pp-line" />
             )}
-            {collapsed && <div className="pt-2 pb-1 border-t border-gray-100 mx-2" />}
-            {employeeNav.map((item) => (
-              <Link
-                key={item.href}
-                href={item.href}
-                title={collapsed ? item.label : undefined}
-                className={cn(
-                  "flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors",
-                  collapsed ? "justify-center" : "",
-                  pathname === item.href
-                    ? "bg-blue-50 text-blue-700"
-                    : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
-                )}
-              >
-                <span className="text-base flex-shrink-0">{item.icon}</span>
-                {!collapsed && item.label}
-              </Link>
-            ))}
+            <div className="-mt-2 flex flex-col gap-px">
+              {employeeNav.map((item) => {
+                const active = pathname === item.href;
+                return (
+                  <Link key={item.href} href={item.href} title={collapsed ? item.label : undefined} className={navItemClass(active)}>
+                    {activeRail(active)}
+                    <span className={cn("text-[14px] w-4 text-center flex-shrink-0", active ? "text-pp-accent" : "text-pp-ink-3")}>
+                      {item.icon}
+                    </span>
+                    {!collapsed && <span className="truncate">{item.label}</span>}
+                  </Link>
+                );
+              })}
+            </div>
           </>
         )}
       </nav>
 
       {/* User section */}
-      <div className="p-3 border-t border-gray-100">
+      <div className="mt-3 border-t border-pp-line pt-3">
         {!collapsed ? (
           <>
-            <div className="flex items-center gap-3 px-2 py-2">
-              <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center text-sm font-medium text-blue-700 flex-shrink-0">
-                {session?.user?.name?.charAt(0) || "?"}
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-gray-900 truncate">{session?.user?.name}</p>
-                <p className="text-xs text-gray-500 truncate">{session?.user?.email}</p>
-              </div>
+            <div className="px-2 py-1">
+              <p className="truncate text-[13px] font-medium text-pp-ink">{session?.user?.name}</p>
+              <p className="truncate text-[11px] text-pp-ink-4">{session?.user?.email}</p>
             </div>
             <button
               onClick={() => signOut({ callbackUrl: "/login" })}
-              className="mt-1 w-full px-3 py-2 text-sm text-gray-600 hover:bg-gray-50 rounded-lg text-left transition-colors"
+              className="mt-1 w-full rounded-md px-3 py-1.5 text-left text-[12px] text-pp-ink-3 transition-colors hover:bg-black/[0.04] hover:text-pp-ink"
             >
               Sign out
             </button>
@@ -200,7 +220,7 @@ export function Sidebar() {
         ) : (
           <div className="flex flex-col items-center gap-2">
             <div
-              className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center text-sm font-medium text-blue-700 cursor-pointer"
+              className="grid h-[30px] w-[30px] place-items-center rounded-md bg-pp-accent text-[11px] font-semibold tracking-wide text-white"
               title={session?.user?.name || ""}
             >
               {session?.user?.name?.charAt(0) || "?"}
@@ -208,10 +228,14 @@ export function Sidebar() {
             <button
               onClick={() => signOut({ callbackUrl: "/login" })}
               title="Sign out"
-              className="p-1.5 text-gray-500 hover:bg-gray-100 rounded-lg transition-colors"
+              className="rounded-md p-1.5 text-pp-ink-4 transition-colors hover:bg-black/[0.04]"
             >
-              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+              <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"
+                />
               </svg>
             </button>
           </div>
