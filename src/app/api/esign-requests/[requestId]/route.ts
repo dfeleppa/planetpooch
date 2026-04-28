@@ -1,16 +1,20 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getSession, getCompanyFilter, isManagerOrAbove } from "@/lib/auth-helpers";
-import { isFileSigned, isStubId } from "@/lib/drive";
+import { deleteFile, isFileSigned, isStubId } from "@/lib/drive";
 import { Company, Role } from "@prisma/client";
 
 /**
  * PATCH — transition an eSign request.
- * Body: { action: "mark_signed" | "cancel" | "check_signature" }.
+ * Body: { action: "mark_signed" | "cancel" | "check_signature" | "delete_file" }.
  *
  * `check_signature` polls Drive on demand: if Workspace eSignature has
  * finalized (and locked) the file, we flip the row to SIGNED. Otherwise we
  * leave it as SENT and the client surfaces a "not signed yet" hint.
+ *
+ * `delete_file` is a follow-up to `cancel` — only valid on CANCELLED rows
+ * with a tracked Drive file. Deletes the file from Drive and nulls the
+ * `signedFileDriveId` so the row stops offering an "Open in Drive" link.
  */
 export async function PATCH(
   req: NextRequest,
@@ -131,8 +135,50 @@ export async function PATCH(
     return NextResponse.json(updated);
   }
 
+  if (action === "delete_file") {
+    if (request.status !== "CANCELLED") {
+      return NextResponse.json(
+        { error: "Can only delete the Drive file from a cancelled request" },
+        { status: 400 }
+      );
+    }
+    if (!request.signedFileDriveId) {
+      return NextResponse.json(
+        { error: "This request has no Drive file to delete" },
+        { status: 400 }
+      );
+    }
+
+    // Skip the Drive call for stub IDs (local dev) but still null the column
+    // so the UI converges on the same final state.
+    if (!isStubId(request.signedFileDriveId)) {
+      try {
+        await deleteFile(request.signedFileDriveId);
+      } catch (err) {
+        console.error("[esign-requests.PATCH] delete_file failed:", err);
+        return NextResponse.json(
+          { error: "Failed to delete the Drive file" },
+          { status: 502 }
+        );
+      }
+    }
+
+    const updated = await prisma.esignRequest.update({
+      where: { id: requestId },
+      data: { signedFileDriveId: null },
+      include: {
+        signableDocument: { select: { id: true, name: true } },
+        requestedBy: { select: { id: true, name: true } },
+      },
+    });
+    return NextResponse.json(updated);
+  }
+
   return NextResponse.json(
-    { error: "Unknown action — expected 'mark_signed', 'cancel', or 'check_signature'" },
+    {
+      error:
+        "Unknown action — expected 'mark_signed', 'cancel', 'check_signature', or 'delete_file'",
+    },
     { status: 400 }
   );
 }
