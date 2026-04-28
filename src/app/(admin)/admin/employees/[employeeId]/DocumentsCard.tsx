@@ -6,7 +6,10 @@ import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { formatDateTime } from "@/lib/utils";
-import { DOCUMENT_CATEGORY_LABELS } from "@/lib/employee-documents";
+import {
+  DOCUMENT_CATEGORY_LABELS,
+  REQUIRED_DOCUMENT_CATEGORIES,
+} from "@/lib/employee-documents";
 import type { EmployeeDocumentCategory } from "@prisma/client";
 
 interface DocumentRow {
@@ -35,7 +38,7 @@ const CATEGORY_OPTIONS: { value: EmployeeDocumentCategory; label: string }[] = [
   { value: "OTHER", label: DOCUMENT_CATEGORY_LABELS.OTHER },
 ];
 
-const REQUIRED_CATEGORIES: EmployeeDocumentCategory[] = ["I9", "ID_CARD", "SS_CARD"];
+const REQUIRED_CATEGORIES = REQUIRED_DOCUMENT_CATEGORIES;
 
 export function DocumentsCard({
   employeeId,

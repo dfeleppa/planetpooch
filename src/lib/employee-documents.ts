@@ -16,6 +16,18 @@ export const DOCUMENT_CATEGORIES: EmployeeDocumentCategory[] = [
   "OTHER",
 ];
 
+/**
+ * Categories an employee is expected to have on file. Used by both the
+ * employee detail page (DocumentsCard "X missing" state) and the roster
+ * column on /admin/employees ("X/3"). OTHER is intentionally excluded —
+ * it's a catch-all, not a checklist item.
+ */
+export const REQUIRED_DOCUMENT_CATEGORIES: EmployeeDocumentCategory[] = [
+  "I9",
+  "ID_CARD",
+  "SS_CARD",
+];
+
 export function isValidCategory(value: unknown): value is EmployeeDocumentCategory {
   return typeof value === "string" && (DOCUMENT_CATEGORIES as string[]).includes(value);
 }

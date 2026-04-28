@@ -5,6 +5,7 @@ import { formatDate } from "@/lib/utils";
 import { Company, Prisma, Role } from "@prisma/client";
 import { EmployeeFilters } from "./EmployeeFilters";
 import { CheckPendingEsignaturesButton } from "./CheckPendingEsignaturesButton";
+import { REQUIRED_DOCUMENT_CATEGORIES } from "@/lib/employee-documents";
 
 const COMPANY_LABELS: Record<Company, string> = {
   GROOMING: "Planet Pooch Grooming",
@@ -197,6 +198,24 @@ export default async function AdminEmployeesPage({
     completionCounts.set(c.userId, (completionCounts.get(c.userId) || 0) + 1);
   }
 
+  // Required-doc tracker: count how many distinct REQUIRED categories each
+  // employee has at least one upload for. Multiple uploads in the same
+  // category still count as one — we care about coverage, not file count.
+  const requiredDocs = await prisma.employeeDocument.findMany({
+    where: {
+      userId: { in: employees.map((e) => e.id) },
+      category: { in: REQUIRED_DOCUMENT_CATEGORIES },
+    },
+    select: { userId: true, category: true },
+  });
+  const requiredDocCategories = new Map<string, Set<string>>();
+  for (const d of requiredDocs) {
+    if (!requiredDocCategories.has(d.userId)) {
+      requiredDocCategories.set(d.userId, new Set());
+    }
+    requiredDocCategories.get(d.userId)!.add(d.category);
+  }
+
   // Decorate each employee with progress state for filtering, KPIs, and the
   // roster row. Only EMPLOYEE-role users have meaningful training progress;
   // managers/admins are excluded from the at-risk/done aggregate.
@@ -207,6 +226,7 @@ export default async function AdminEmployeesPage({
     isDone: boolean;
     isNotStarted: boolean;
     hasTraining: boolean;
+    requiredDocsUploaded: number;
   };
 
   const decorated: Decorated[] = employees.map((emp) => {
@@ -217,7 +237,17 @@ export default async function AdminEmployeesPage({
     const atRisk = hasTraining && pct < 50 && tenure > 21;
     const isDone = hasTraining && pct === 100;
     const isNotStarted = hasTraining && completed === 0;
-    return { ...emp, completed, pct, atRisk, isDone, isNotStarted, hasTraining };
+    const requiredDocsUploaded = requiredDocCategories.get(emp.id)?.size ?? 0;
+    return {
+      ...emp,
+      completed,
+      pct,
+      atRisk,
+      isDone,
+      isNotStarted,
+      hasTraining,
+      requiredDocsUploaded,
+    };
   });
 
   // KPI counts use the decorated set BEFORE the chip filter is applied.
@@ -391,6 +421,7 @@ export default async function AdminEmployeesPage({
           <div className="pp-rcol">Role</div>
           <div className="pp-rcol">Company</div>
           <div className="pp-rcol">Modules</div>
+          <div className="pp-rcol" title="Required documents uploaded">Docs</div>
           <div className="pp-rcol">Training progress</div>
           <div className="pp-rcol">Joined</div>
           <div className="pp-rcol" />
@@ -446,6 +477,23 @@ export default async function AdminEmployeesPage({
                 ) : (
                   <span className="pp-mono pp-mono-dim">—</span>
                 )}
+              </div>
+              <div className="pp-rcol">
+                <span
+                  className={`pp-mono ${
+                    emp.requiredDocsUploaded === REQUIRED_DOCUMENT_CATEGORIES.length
+                      ? ""
+                      : emp.requiredDocsUploaded === 0
+                      ? "pp-mono-dim"
+                      : ""
+                  }`}
+                  title={`${emp.requiredDocsUploaded} of ${REQUIRED_DOCUMENT_CATEGORIES.length} required documents uploaded`}
+                >
+                  {emp.requiredDocsUploaded}
+                  <span className="pp-mono-dim">
+                    /{REQUIRED_DOCUMENT_CATEGORIES.length}
+                  </span>
+                </span>
               </div>
               <div className="pp-rcol">
                 {emp.hasTraining ? (
