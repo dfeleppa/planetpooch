@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { signOut, useSession } from "next-auth/react";
 import { cn } from "@/lib/utils";
@@ -97,19 +98,32 @@ export function Sidebar() {
       <div
         className={cn(
           "flex items-center border-b border-pp-line pb-3",
-          collapsed ? "justify-center" : "justify-between px-2"
+          collapsed ? "justify-center" : "justify-between gap-2 px-1"
         )}
       >
         {!collapsed ? (
-          <div>
-            <div className="flex items-center gap-2">
-              <span className="inline-block h-3.5 w-3.5 rounded-[3px] bg-pp-accent" />
-              <span className="text-[15px] font-semibold tracking-tight text-pp-ink">Planet Pooch</span>
-            </div>
-            <div className="mt-1 text-[11px] tracking-wide text-pp-ink-4">Company Portal</div>
-          </div>
+          <Image
+            src="/planet-pooch-logo.png"
+            alt="Planet Pooch"
+            width={1250}
+            height={392}
+            priority
+            className="h-auto w-[160px] flex-shrink-0"
+          />
         ) : (
-          <span className="inline-block h-3.5 w-3.5 rounded-[3px] bg-pp-accent" />
+          // Collapsed: clip the wide logo to show only the left icon portion
+          // (paw + planet). The image is scaled by height; overflow-hidden on
+          // the container drops the wordmark to the right.
+          <div className="h-[36px] w-[36px] overflow-hidden flex-shrink-0" title="Planet Pooch">
+            <Image
+              src="/planet-pooch-logo.png"
+              alt="Planet Pooch"
+              width={1898}
+              height={901}
+              priority
+              className="h-full w-auto max-w-none"
+            />
+          </div>
         )}
         {!collapsed && (
           <button
