@@ -3,6 +3,7 @@
 import { signIn } from "next-auth/react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useState, Suspense } from "react";
+import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
@@ -70,11 +71,18 @@ function LoginForm() {
 
 export default function LoginPage() {
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
+    <div className="min-h-screen flex items-center justify-center bg-pp-bg px-4">
       <div className="w-full max-w-sm">
-        <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-gray-900">Planet Pooch</h1>
-          <p className="text-gray-500 mt-2">Sign in to your account</p>
+        <div className="flex flex-col items-center mb-8">
+          <Image
+            src="/planet-pooch-logo.png"
+            alt="Planet Pooch"
+            width={1250}
+            height={392}
+            priority
+            className="h-auto w-[240px]"
+          />
+          <p className="text-pp-ink-3 mt-3 text-sm">Sign in to your account</p>
         </div>
 
         <Card>
