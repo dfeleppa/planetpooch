@@ -189,28 +189,60 @@ export async function copyFileToFolder(
 /**
  * Check whether a Drive file has been finalized by Google Workspace eSignature.
  *
- * When all signers complete a Workspace eSignature request, Drive applies a
- * `contentRestrictions` entry with `readOnly: true` to lock the file. We treat
- * any read-only restriction as "signed" — the only way a copied employee
- * document acquires one is via the eSignature flow.
+ * Drive applies a `contentRestrictions` entry with `readOnly: true` BOTH when
+ * an eSignature request is sent (to prevent edits while signers review) AND
+ * when all signers complete it. We can't use `readOnly` alone — that flips
+ * true the moment the request is sent. The reliable signal is the `reason`
+ * text, which Workspace populates with completion language only after all
+ * signers sign.
  *
- * Returns false in stub mode (no real Drive) and rethrows on API errors so
- * callers can surface them.
+ * Returns false in stub mode and rethrows on API errors so callers can surface them.
  */
+type DriveRestriction = {
+  readOnly?: boolean | null;
+  reason?: string | null;
+  restrictingUser?: {
+    displayName?: string | null;
+    emailAddress?: string | null;
+  } | null;
+};
+
+const IN_PROGRESS_PATTERN = /being signed|in progress|currently|awaiting|pending|sent for/i;
+const COMPLETED_PATTERN = /signed by|signed and|signing complet|all signers|signature complet|fully signed|finalized.*sign/i;
+
+function isFinalizedSignatureRestriction(r: DriveRestriction): boolean {
+  if (r.readOnly !== true) return false;
+  const reason = r.reason ?? "";
+  if (!reason) return false; // No reason text → can't confirm; err on the side of NOT signed.
+  if (IN_PROGRESS_PATTERN.test(reason)) return false;
+  return COMPLETED_PATTERN.test(reason);
+}
+
 export async function isFileSigned(fileId: string): Promise<boolean> {
   const drive = getDriveClient();
   if (!drive || isStubId(fileId)) return false;
 
   const res = await drive.files.get({
     fileId,
-    fields: "contentRestrictions(readOnly,reason)",
+    fields:
+      "contentRestrictions(readOnly,reason,restrictingUser(displayName,emailAddress))",
     supportsAllDrives: true,
   });
 
-  const restrictions = res.data.contentRestrictions ?? [];
-  return restrictions.some(
-    (r: { readOnly?: boolean | null }) => r.readOnly === true
-  );
+  const restrictions = (res.data.contentRestrictions ?? []) as DriveRestriction[];
+  const finalized = restrictions.some(isFinalizedSignatureRestriction);
+
+  // When a file is read-only but doesn't match either pattern, log the raw
+  // restriction so we can refine the matchers — false negatives (truly signed
+  // but our regex missed) need a real sample to fix.
+  if (!finalized && restrictions.some((r) => r.readOnly === true)) {
+    console.info(
+      "[drive.isFileSigned] file is read-only but reason did not match completion pattern",
+      { fileId, restrictions }
+    );
+  }
+
+  return finalized;
 }
 
 /**
