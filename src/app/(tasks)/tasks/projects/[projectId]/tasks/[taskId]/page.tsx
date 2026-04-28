@@ -154,7 +154,7 @@ export default async function TaskDetailPage({
             <CardContent className="pt-0 space-y-3 text-sm">
               <div className="flex justify-between">
                 <span className="text-gray-500">Created by</span>
-                <span className="text-gray-900">{task.createdBy.name}</span>
+                <span className="text-gray-900">{task.createdBy?.name ?? "(removed)"}</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-gray-500">Assignees</span>

@@ -20,7 +20,9 @@ declare module "next-auth" {
 
 declare module "next-auth/jwt" {
   interface JWT {
-    id: string;
+    // Optional because the jwt() callback clears it when the underlying user
+    // row is deleted, signalling "invalid session" to the session callback.
+    id?: string;
     role: Role;
     company?: Company | null;
     mustChangePassword?: boolean;

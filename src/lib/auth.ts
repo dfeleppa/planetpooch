@@ -95,10 +95,11 @@ export const authOptions: NextAuthOptions = {
       return token;
     },
     async session({ session, token }) {
-      // Terminated tokens produce an empty session — middleware / page guards
-      // will redirect to /login. We don't throw here because NextAuth's session
-      // contract expects a session object.
-      if (token.terminatedAt) {
+      // Terminated tokens or tokens whose user row has been deleted produce
+      // an empty session — middleware / page guards will redirect to /login.
+      // We don't throw here because NextAuth's session contract expects a
+      // session object.
+      if (token.terminatedAt || !token.id) {
         return { ...session, user: undefined as unknown as typeof session.user };
       }
 

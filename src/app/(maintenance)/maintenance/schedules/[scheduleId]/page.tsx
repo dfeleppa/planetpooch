@@ -60,7 +60,7 @@ export default async function ScheduleDetailPage({
           {schedule.description && (
             <p className="text-gray-500 mt-1">{schedule.description}</p>
           )}
-          <p className="text-xs text-gray-400 mt-1">Created by {schedule.createdBy.name}</p>
+          <p className="text-xs text-gray-400 mt-1">Created by {schedule.createdBy?.name ?? "(removed)"}</p>
         </div>
         {isAdmin && (
           <ScheduleActions
