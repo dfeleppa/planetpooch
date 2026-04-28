@@ -69,15 +69,20 @@ export async function POST(
     );
   }
 
-  // Last super admin guard — never let the last admin terminate themselves
-  // (already blocked above) nor get terminated as part of a chain.
-  if (target.role === "SUPER_ADMIN") {
+  // Last top-tier admin guard — SUPER_ADMIN and DOS share the top tier, so
+  // either one counts as "still admin" for the purpose of preventing lockout.
+  // Never let the last top-tier user be terminated.
+  if (target.role === "SUPER_ADMIN" || target.role === "DOS") {
     const remaining = await prisma.user.count({
-      where: { role: "SUPER_ADMIN", terminatedAt: null, id: { not: target.id } },
+      where: {
+        role: { in: ["SUPER_ADMIN", "DOS"] },
+        terminatedAt: null,
+        id: { not: target.id },
+      },
     });
     if (remaining === 0) {
       return NextResponse.json(
-        { error: "Cannot terminate the last active Super Admin" },
+        { error: "Cannot terminate the last active Super Admin or DOS" },
         { status: 400 }
       );
     }

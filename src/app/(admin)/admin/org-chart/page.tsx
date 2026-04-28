@@ -42,7 +42,9 @@ export default async function OrgChartPage() {
 
   const canViewBothCompanies = !companyFilter.company;
   const isSuperAdmin =
-    sessionUser.role === "SUPER_ADMIN" || (sessionUser.role as string) === "ADMIN";
+    sessionUser.role === "SUPER_ADMIN" ||
+    (sessionUser.role as string) === "DOS" ||
+    (sessionUser.role as string) === "ADMIN";
 
   return (
     <div>

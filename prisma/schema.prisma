@@ -9,6 +9,7 @@ datasource db {
 
 enum Role {
   SUPER_ADMIN
+  DOS
   MANAGER
   EMPLOYEE
   ADMIN // legacy — existing rows only, use SUPER_ADMIN for new admins

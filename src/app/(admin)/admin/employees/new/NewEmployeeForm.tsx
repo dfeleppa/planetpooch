@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { AvailabilityEditor, type AvailabilityEntry } from "@/components/AvailabilityEditor";
 
-type Role = "SUPER_ADMIN" | "MANAGER" | "EMPLOYEE" | "ADMIN";
+type Role = "SUPER_ADMIN" | "DOS" | "MANAGER" | "EMPLOYEE" | "ADMIN";
 type Company = "GROOMING" | "RESORT" | "CORPORATE";
 
 interface Props {
@@ -40,7 +40,7 @@ const JOB_TITLES: Record<Company, { title: string; suggestedRole: Role }[]> = {
   ],
   CORPORATE: [
     { title: "CEO", suggestedRole: "SUPER_ADMIN" },
-    { title: "DOS", suggestedRole: "SUPER_ADMIN" },
+    { title: "DOS", suggestedRole: "DOS" },
     { title: "CMO", suggestedRole: "MANAGER" },
   ],
 };
@@ -92,7 +92,8 @@ export function NewEmployeeForm({ currentRole, currentCompany }: Props) {
   const [hireDate, setHireDate] = useState("");
   const [availability, setAvailability] = useState<AvailabilityEntry[]>([]);
 
-  const isSuperAdmin = currentRole === "SUPER_ADMIN" || currentRole === "ADMIN";
+  const isSuperAdmin =
+    currentRole === "SUPER_ADMIN" || currentRole === "DOS" || currentRole === "ADMIN";
   const isManager = currentRole === "MANAGER";
 
   const titleOptions = JOB_TITLES[company];
@@ -318,6 +319,7 @@ export function NewEmployeeForm({ currentRole, currentCompany }: Props) {
             <SelectField label="Role" value={role} onChange={(v) => setRole(v as Role)}>
               <option value="EMPLOYEE">Employee</option>
               <option value="MANAGER">Manager</option>
+              {isSuperAdmin && <option value="DOS">DOS</option>}
               {isSuperAdmin && <option value="SUPER_ADMIN">Super Admin</option>}
             </SelectField>
           </div>
