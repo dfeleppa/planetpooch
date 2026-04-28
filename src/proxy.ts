@@ -28,10 +28,15 @@ export async function proxy(req: NextRequest) {
   }
 
   const role = token.role as string;
-  const isManagerOrAbove = role === "MANAGER" || role === "SUPER_ADMIN" || role === "ADMIN";
+  const isManagerOrAbove =
+    role === "MANAGER" ||
+    role === "SUPER_ADMIN" ||
+    role === "DOS" ||
+    role === "ADMIN";
+  const isTopTier = role === "SUPER_ADMIN" || role === "DOS" || role === "ADMIN";
 
-  // Only SUPER_ADMIN can manage modules/lessons
-  if (pathname.startsWith("/admin/modules") && role !== "SUPER_ADMIN" && role !== "ADMIN") {
+  // Only top-tier roles can manage modules/lessons
+  if (pathname.startsWith("/admin/modules") && !isTopTier) {
     return NextResponse.redirect(new URL("/admin", req.url));
   }
 
