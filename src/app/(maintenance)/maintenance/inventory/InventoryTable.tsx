@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
@@ -25,6 +25,19 @@ export function InventoryTable({ items }: { items: InventoryRow[] }) {
   );
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
+  const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
+
+  const focusInput = (index: number) => {
+    const el = inputRefs.current[index];
+    if (el) {
+      el.focus();
+      el.select();
+    }
+  };
+
+  useEffect(() => {
+    if (editing) focusInput(0);
+  }, [editing]);
 
   const startEditing = () => {
     setQuantities(Object.fromEntries(items.map((i) => [i.id, String(i.currentQuantity)])));
@@ -109,11 +122,12 @@ export function InventoryTable({ items }: { items: InventoryRow[] }) {
           </tr>
         </TableHead>
         <TableBody>
-          {items.map((item) => {
+          {items.map((item, index) => {
             const editedQty = Number(quantities[item.id] ?? item.currentQuantity);
             const displayQty = editing && Number.isFinite(editedQty) ? editedQty : item.currentQuantity;
             const isLow = item.minimumThreshold > 0 && displayQty <= item.minimumThreshold;
             const isOut = displayQty === 0;
+            const isLast = index === items.length - 1;
             return (
               <TableRow key={item.id}>
                 <TableCell>
@@ -131,12 +145,28 @@ export function InventoryTable({ items }: { items: InventoryRow[] }) {
                 <TableCell className="font-semibold text-gray-900">
                   {editing ? (
                     <input
+                      ref={(el) => {
+                        inputRefs.current[index] = el;
+                      }}
                       type="number"
+                      inputMode="numeric"
                       min={0}
+                      enterKeyHint={isLast ? "done" : "next"}
                       value={quantities[item.id] ?? ""}
                       onChange={(e) =>
                         setQuantities((prev) => ({ ...prev, [item.id]: e.target.value }))
                       }
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") {
+                          e.preventDefault();
+                          if (isLast) {
+                            e.currentTarget.blur();
+                            handleSave();
+                          } else {
+                            focusInput(index + 1);
+                          }
+                        }
+                      }}
                       className="w-24 rounded-md border border-gray-300 px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                     />
                   ) : (
