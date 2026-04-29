@@ -1,4 +1,4 @@
-import { requireAuth } from "@/lib/auth-helpers";
+import { requireAuth, isManagerOrAbove } from "@/lib/auth-helpers";
 import { prisma } from "@/lib/prisma";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
@@ -22,13 +22,14 @@ export default async function SchedulesPage({
   await requireAuth();
   const session = await getServerSession(authOptions);
   const user = session?.user as { role?: string; company?: Company | null } | undefined;
-  const isAdmin = user?.role === "ADMIN";
+  const canManage = isManagerOrAbove(user?.role);
 
   const { company: companyParam } = await searchParams;
-  const active = resolveCompanyParam(companyParam, defaultCompany(user?.company));
+  const resolved = resolveCompanyParam(companyParam, defaultCompany(user?.company));
+  const active: Company = resolved === "ALL" ? defaultCompany(user?.company) : resolved;
 
   const schedules = await prisma.maintenanceSchedule.findMany({
-    where: active === "ALL" ? {} : { company: active },
+    where: { company: active },
     orderBy: { nextDueDate: "asc" },
     include: {
       requirements: { include: { inventoryItem: true } },
@@ -44,7 +45,7 @@ export default async function SchedulesPage({
   });
 
   const now = new Date();
-  const newHref = `/maintenance/schedules/new${active !== "ALL" ? `?company=${active}` : ""}`;
+  const newHref = `/maintenance/schedules/new?company=${active}`;
 
   return (
     <div>
@@ -53,7 +54,7 @@ export default async function SchedulesPage({
           <h1 className="text-2xl font-bold text-gray-900">Maintenance Schedules</h1>
           <p className="text-gray-500 mt-1">Recurring maintenance tasks and their inventory needs</p>
         </div>
-        {isAdmin && (
+        {canManage && (
           <Link href={newHref}>
             <Button>+ New Schedule</Button>
           </Link>
@@ -61,7 +62,7 @@ export default async function SchedulesPage({
       </div>
 
       <div className="mb-4">
-        <CompanyFilterTabs basePath="/maintenance/schedules" active={active} />
+        <CompanyFilterTabs basePath="/maintenance/schedules" active={active} hideAll />
       </div>
 
       {schedules.length === 0 ? (
@@ -69,10 +70,10 @@ export default async function SchedulesPage({
           <CardContent className="py-16 text-center">
             <div className="text-4xl mb-4">🔧</div>
             <h3 className="text-base font-semibold text-gray-900 mb-1">No schedules yet</h3>
-            {isAdmin && (
+            {canManage && (
               <p className="text-sm text-gray-500 mb-6">Create your first maintenance schedule to get started.</p>
             )}
-            {isAdmin && (
+            {canManage && (
               <Link href={newHref}>
                 <Button>+ New Schedule</Button>
               </Link>
@@ -96,11 +97,6 @@ export default async function SchedulesPage({
                         <div className="flex items-center gap-2 mb-1">
                           <h3 className="text-sm font-semibold text-gray-900">{schedule.title}</h3>
                           {!schedule.isActive && <Badge variant="default">Inactive</Badge>}
-                          {active === "ALL" && (
-                            <Badge variant="info">
-                              {schedule.company === "RESORT" ? "Pet Resort" : "Mobile Grooming"}
-                            </Badge>
-                          )}
                         </div>
                         {schedule.description && (
                           <p className="text-xs text-gray-500 mb-2">{schedule.description}</p>

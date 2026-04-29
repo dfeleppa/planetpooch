@@ -1,11 +1,29 @@
 import { requireAuth } from "@/lib/auth-helpers";
 import { prisma } from "@/lib/prisma";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { CompanyFilterTabs, resolveCompanyParam } from "@/components/ui/CompanyFilterTabs";
+import { Company } from "@prisma/client";
 import Link from "next/link";
 
-export default async function MaintenanceDashboardPage() {
+function defaultCompany(userCompany: Company | null | undefined): Company {
+  return userCompany === "RESORT" ? "RESORT" : "GROOMING";
+}
+
+export default async function MaintenanceDashboardPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ company?: string }>;
+}) {
   await requireAuth();
+  const session = await getServerSession(authOptions);
+  const user = session?.user as { company?: Company | null } | undefined;
+
+  const { company: companyParam } = await searchParams;
+  const resolved = resolveCompanyParam(companyParam, defaultCompany(user?.company));
+  const active: Company = resolved === "ALL" ? defaultCompany(user?.company) : resolved;
 
   const now = new Date();
   const sevenDaysFromNow = new Date(now);
@@ -13,7 +31,7 @@ export default async function MaintenanceDashboardPage() {
 
   const [overdueTasks, upcomingTasks, lowInventory] = await Promise.all([
     prisma.maintenanceTask.findMany({
-      where: { dueDate: { lt: now }, status: { in: ["PENDING", "IN_PROGRESS"] } },
+      where: { company: active, dueDate: { lt: now }, status: { in: ["PENDING", "IN_PROGRESS"] } },
       orderBy: { dueDate: "asc" },
       include: {
         schedule: { select: { id: true, title: true } },
@@ -23,6 +41,7 @@ export default async function MaintenanceDashboardPage() {
     }),
     prisma.maintenanceTask.findMany({
       where: {
+        company: active,
         dueDate: { gte: now, lte: sevenDaysFromNow },
         status: { in: ["PENDING", "IN_PROGRESS"] },
       },
@@ -33,12 +52,14 @@ export default async function MaintenanceDashboardPage() {
       },
       take: 10,
     }),
-    prisma.inventoryItem.findMany({ orderBy: { name: "asc" } })
+    prisma.inventoryItem.findMany({ where: { company: active }, orderBy: { name: "asc" } })
       .then((items) => items.filter((i) => i.minimumThreshold > 0 && i.currentQuantity <= i.minimumThreshold)),
   ]);
 
-  const totalSchedules = await prisma.maintenanceSchedule.count({ where: { isActive: true } });
-  const totalInventoryItems = await prisma.inventoryItem.count();
+  const totalSchedules = await prisma.maintenanceSchedule.count({ where: { company: active, isActive: true } });
+  const totalInventoryItems = await prisma.inventoryItem.count({ where: { company: active } });
+
+  const qs = `?company=${active}`;
 
   return (
     <div>
@@ -48,13 +69,17 @@ export default async function MaintenanceDashboardPage() {
           <p className="text-gray-500 mt-1">Facility maintenance schedules and inventory</p>
         </div>
         <div className="flex gap-3">
-          <Link href="/maintenance/schedules" className="text-sm text-blue-600 hover:text-blue-700 font-medium">
+          <Link href={`/maintenance/schedules${qs}`} className="text-sm text-blue-600 hover:text-blue-700 font-medium">
             View Schedules
           </Link>
-          <Link href="/maintenance/inventory" className="text-sm text-blue-600 hover:text-blue-700 font-medium">
+          <Link href={`/maintenance/inventory${qs}`} className="text-sm text-blue-600 hover:text-blue-700 font-medium">
             View Inventory
           </Link>
         </div>
+      </div>
+
+      <div className="mb-6">
+        <CompanyFilterTabs basePath="/maintenance" active={active} hideAll />
       </div>
 
       <div className="grid grid-cols-4 gap-4 mb-8">
@@ -89,7 +114,7 @@ export default async function MaintenanceDashboardPage() {
           <CardHeader>
             <div className="flex items-center justify-between">
               <h2 className="text-base font-semibold text-gray-900">Overdue Tasks</h2>
-              <Link href="/maintenance/tasks?status=PENDING" className="text-xs text-blue-600 hover:underline">
+              <Link href={`/maintenance/tasks?status=PENDING&company=${active}`} className="text-xs text-blue-600 hover:underline">
                 View all
               </Link>
             </div>
@@ -127,7 +152,7 @@ export default async function MaintenanceDashboardPage() {
           <CardHeader>
             <div className="flex items-center justify-between">
               <h2 className="text-base font-semibold text-gray-900">Upcoming This Week</h2>
-              <Link href="/maintenance/tasks" className="text-xs text-blue-600 hover:underline">
+              <Link href={`/maintenance/tasks${qs}`} className="text-xs text-blue-600 hover:underline">
                 View all
               </Link>
             </div>
@@ -165,7 +190,7 @@ export default async function MaintenanceDashboardPage() {
           <CardHeader>
             <div className="flex items-center justify-between">
               <h2 className="text-base font-semibold text-gray-900">Low Inventory Alerts</h2>
-              <Link href="/maintenance/inventory" className="text-xs text-blue-600 hover:underline">
+              <Link href={`/maintenance/inventory${qs}`} className="text-xs text-blue-600 hover:underline">
                 View all
               </Link>
             </div>
@@ -201,28 +226,28 @@ export default async function MaintenanceDashboardPage() {
           <CardContent className="pt-0">
             <div className="space-y-2">
               <Link
-                href="/maintenance/schedules/new"
+                href={`/maintenance/schedules/new${qs}`}
                 className="block p-3 rounded-lg border border-gray-200 hover:bg-gray-50 transition-colors"
               >
                 <p className="text-sm font-medium text-gray-900">+ New Schedule</p>
                 <p className="text-xs text-gray-500">Create a recurring maintenance schedule</p>
               </Link>
               <Link
-                href="/maintenance/inventory/new"
+                href={`/maintenance/inventory/new${qs}`}
                 className="block p-3 rounded-lg border border-gray-200 hover:bg-gray-50 transition-colors"
               >
                 <p className="text-sm font-medium text-gray-900">+ Add Inventory Item</p>
                 <p className="text-xs text-gray-500">Track a new supply or material</p>
               </Link>
               <Link
-                href="/maintenance/tasks"
+                href={`/maintenance/tasks${qs}`}
                 className="block p-3 rounded-lg border border-gray-200 hover:bg-gray-50 transition-colors"
               >
                 <p className="text-sm font-medium text-gray-900">All Maintenance Tasks</p>
                 <p className="text-xs text-gray-500">View and filter task history</p>
               </Link>
               <Link
-                href="/maintenance/inventory"
+                href={`/maintenance/inventory${qs}`}
                 className="block p-3 rounded-lg border border-gray-200 hover:bg-gray-50 transition-colors"
               >
                 <p className="text-sm font-medium text-gray-900">Inventory ({totalInventoryItems} items)</p>
