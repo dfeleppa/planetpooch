@@ -43,7 +43,19 @@ export async function PUT(
 
   const { itemId } = await params;
   const body = await req.json();
-  const { name, description, unit, minimumThreshold } = body;
+  const { name, description, unit, minimumThreshold, categoryId } = body;
+
+  if (categoryId !== undefined) {
+    const item = await prisma.inventoryItem.findUnique({ where: { id: itemId } });
+    if (!item) return NextResponse.json({ error: "Not found" }, { status: 404 });
+    const category = await prisma.inventoryCategory.findUnique({ where: { id: categoryId } });
+    if (!category || category.company !== item.company) {
+      return NextResponse.json(
+        { error: "Category does not belong to the item's company" },
+        { status: 400 }
+      );
+    }
+  }
 
   const item = await prisma.inventoryItem.update({
     where: { id: itemId },
@@ -52,6 +64,7 @@ export async function PUT(
       ...(description !== undefined && { description }),
       ...(unit !== undefined && { unit }),
       ...(minimumThreshold !== undefined && { minimumThreshold }),
+      ...(categoryId !== undefined && { categoryId }),
     },
   });
 

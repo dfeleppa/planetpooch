@@ -1,4 +1,4 @@
-import { requireAuth } from "@/lib/auth-helpers";
+import { requireAuth, isManagerOrAbove } from "@/lib/auth-helpers";
 import { prisma } from "@/lib/prisma";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
@@ -33,7 +33,7 @@ export default async function InventoryItemPage({
 }) {
   await requireAuth();
   const session = await getServerSession(authOptions);
-  const isAdmin = (session?.user as { role?: string })?.role === "ADMIN";
+  const canManage = isManagerOrAbove((session?.user as { role?: string })?.role);
 
   const { itemId } = await params;
 
@@ -84,7 +84,19 @@ export default async function InventoryItemPage({
           </div>
           {item.description && <p className="text-gray-500">{item.description}</p>}
         </div>
-        {isAdmin && <InventoryItemActions itemId={itemId} />}
+        {canManage && (
+          <InventoryItemActions
+            itemId={itemId}
+            company={item.company}
+            initial={{
+              name: item.name,
+              description: item.description,
+              categoryId: item.categoryId,
+              unit: item.unit,
+              minimumThreshold: item.minimumThreshold,
+            }}
+          />
+        )}
       </div>
 
       <div className="grid grid-cols-3 gap-4 mb-6">
