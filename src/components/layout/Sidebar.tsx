@@ -76,7 +76,14 @@ export function Sidebar() {
 
   function isActive(href: string) {
     if (href === "/dashboard" || href === "/admin") return pathname === href;
-    return pathname.startsWith(href);
+    if (pathname !== href && !pathname.startsWith(href + "/")) return false;
+    // Longest-prefix wins: don't highlight /maintenance when on /maintenance/inventory.
+    const candidates = [...nav, ...sharedNav]
+      .map((n) => n.href)
+      .filter((h) => h !== "/dashboard" && h !== "/admin")
+      .filter((h) => pathname === h || pathname.startsWith(h + "/"));
+    const longest = candidates.reduce((acc, h) => (h.length > acc.length ? h : acc), "");
+    return longest === href;
   }
 
   const navItemClass = (active: boolean) =>

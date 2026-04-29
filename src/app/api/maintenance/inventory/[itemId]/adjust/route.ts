@@ -1,14 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { getSession, isManagerOrAbove } from "@/lib/auth-helpers";
+import { getSession } from "@/lib/auth-helpers";
 
 export async function POST(
   req: NextRequest,
   { params }: { params: Promise<{ itemId: string }> }
 ) {
   const session = await getSession();
-  if (!session?.user || !isManagerOrAbove(session.user.role)) {
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  if (!session?.user) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
   const { itemId } = await params;
