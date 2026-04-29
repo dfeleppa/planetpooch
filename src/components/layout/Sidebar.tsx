@@ -44,6 +44,14 @@ const sharedNav: NavItem[] = [
   { href: "/tasks", label: "Tasks", icon: "✓" },
 ];
 
+const ROLE_LABELS: Record<string, string> = {
+  SUPER_ADMIN: "Super Admin",
+  DOS: "DOS",
+  MANAGER: "Manager",
+  EMPLOYEE: "Employee",
+  ADMIN: "Admin",
+};
+
 export function Sidebar() {
   const pathname = usePathname();
   const { data: session } = useSession();
@@ -222,6 +230,9 @@ export function Sidebar() {
           <>
             <div className="px-2 py-1">
               <p className="truncate text-[13px] font-medium text-pp-ink">{session?.user?.name}</p>
+              {role && (
+                <p className="truncate text-[11px] text-pp-ink-3">{ROLE_LABELS[role] ?? role}</p>
+              )}
               <p className="truncate text-[11px] text-pp-ink-4">{session?.user?.email}</p>
             </div>
             <button
