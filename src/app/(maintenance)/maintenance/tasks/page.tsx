@@ -39,12 +39,13 @@ export default async function MaintenanceTasksPage({
   const session = await getServerSession(authOptions);
   const user = session?.user as { company?: Company | null } | undefined;
   const { status, company: companyParam } = await searchParams;
-  const active = resolveCompanyParam(companyParam, defaultCompany(user?.company));
+  const resolved = resolveCompanyParam(companyParam, defaultCompany(user?.company));
+  const active: Company = resolved === "ALL" ? defaultCompany(user?.company) : resolved;
 
   const tasks = await prisma.maintenanceTask.findMany({
     where: {
       ...(status && { status: status as never }),
-      ...(active !== "ALL" && { company: active }),
+      company: active,
     },
     orderBy: { dueDate: "asc" },
     include: {
@@ -56,9 +57,8 @@ export default async function MaintenanceTasksPage({
   const statusHref = (s: string) => {
     const params = new URLSearchParams();
     if (s) params.set("status", s);
-    if (active !== "ALL") params.set("company", active);
-    const qs = params.toString();
-    return qs ? `/maintenance/tasks?${qs}` : "/maintenance/tasks";
+    params.set("company", active);
+    return `/maintenance/tasks?${params.toString()}`;
   };
 
   return (
@@ -90,6 +90,7 @@ export default async function MaintenanceTasksPage({
           basePath="/maintenance/tasks"
           active={active}
           extraParams={{ status }}
+          hideAll
         />
       </div>
 
@@ -105,7 +106,6 @@ export default async function MaintenanceTasksPage({
             <tr>
               <TableHeader>Task</TableHeader>
               <TableHeader>Schedule</TableHeader>
-              {active === "ALL" && <TableHeader>Company</TableHeader>}
               <TableHeader>Due Date</TableHeader>
               <TableHeader>Assigned To</TableHeader>
               <TableHeader>Status</TableHeader>
@@ -128,11 +128,6 @@ export default async function MaintenanceTasksPage({
                     <span className="text-gray-400">Ad-hoc</span>
                   )}
                 </TableCell>
-                {active === "ALL" && (
-                  <TableCell className="text-gray-600 text-xs">
-                    {task.company === "RESORT" ? "Pet Resort" : "Mobile Grooming"}
-                  </TableCell>
-                )}
                 <TableCell className="text-gray-600">
                   {new Date(task.dueDate).toLocaleDateString()}
                 </TableCell>
