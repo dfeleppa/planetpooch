@@ -1,4 +1,4 @@
-import { requireAuth } from "@/lib/auth-helpers";
+import { requireAuth, isManagerOrAbove } from "@/lib/auth-helpers";
 import { prisma } from "@/lib/prisma";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
@@ -23,7 +23,7 @@ export default async function InventoryPage({
   await requireAuth();
   const session = await getServerSession(authOptions);
   const user = session?.user as { role?: string; company?: Company | null } | undefined;
-  const isAdmin = user?.role === "ADMIN";
+  const canManage = isManagerOrAbove(user?.role);
 
   const { company: companyParam } = await searchParams;
   const active = resolveCompanyParam(companyParam, defaultCompany(user?.company));
@@ -41,7 +41,7 @@ export default async function InventoryPage({
           <h1 className="text-2xl font-bold text-gray-900">Inventory</h1>
           <p className="text-gray-500 mt-1">Supplies and materials tracked for maintenance</p>
         </div>
-        {isAdmin && (
+        {canManage && (
           <Link
             href={`/maintenance/inventory/new${active !== "ALL" ? `?company=${active}` : ""}`}
           >
@@ -62,7 +62,7 @@ export default async function InventoryPage({
               title="No inventory items"
               description="Add items to track supplies needed for maintenance tasks."
               action={
-                isAdmin ? (
+                canManage ? (
                   <Link
                     href={`/maintenance/inventory/new${active !== "ALL" ? `?company=${active}` : ""}`}
                   >
