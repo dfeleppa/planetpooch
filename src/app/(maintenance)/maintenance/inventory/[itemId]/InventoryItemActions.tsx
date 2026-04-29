@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 
-type Company = "RESORT" | "GROOMING";
+type Company = "RESORT" | "GROOMING" | "CORPORATE";
 
 interface Category {
   id: string;

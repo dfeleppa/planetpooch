@@ -6,7 +6,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 
-type Company = "RESORT" | "GROOMING";
+type Company = "RESORT" | "GROOMING" | "CORPORATE";
 
 interface Category {
   id: string;
