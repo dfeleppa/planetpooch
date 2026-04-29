@@ -1,9 +1,13 @@
 import { requireAuth } from "@/lib/auth-helpers";
 import { prisma } from "@/lib/prisma";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/Table";
+import { CompanyFilterTabs, resolveCompanyParam } from "@/components/ui/CompanyFilterTabs";
+import { Company } from "@prisma/client";
 import Link from "next/link";
 
 const STATUS_LABELS: Record<string, string> = {
@@ -22,17 +26,25 @@ const STATUS_VARIANT: Record<string, "default" | "info" | "success" | "danger" |
   SKIPPED: "warning",
 };
 
+function defaultCompany(userCompany: Company | null | undefined): Company {
+  return userCompany === "RESORT" ? "RESORT" : "GROOMING";
+}
+
 export default async function MaintenanceTasksPage({
   searchParams,
 }: {
-  searchParams: Promise<{ status?: string }>;
+  searchParams: Promise<{ status?: string; company?: string }>;
 }) {
   await requireAuth();
-  const { status } = await searchParams;
+  const session = await getServerSession(authOptions);
+  const user = session?.user as { company?: Company | null } | undefined;
+  const { status, company: companyParam } = await searchParams;
+  const active = resolveCompanyParam(companyParam, defaultCompany(user?.company));
 
   const tasks = await prisma.maintenanceTask.findMany({
     where: {
       ...(status && { status: status as never }),
+      ...(active !== "ALL" && { company: active }),
     },
     orderBy: { dueDate: "asc" },
     include: {
@@ -40,6 +52,14 @@ export default async function MaintenanceTasksPage({
       assignedTo: { select: { id: true, name: true } },
     },
   });
+
+  const statusHref = (s: string) => {
+    const params = new URLSearchParams();
+    if (s) params.set("status", s);
+    if (active !== "ALL") params.set("company", active);
+    const qs = params.toString();
+    return qs ? `/maintenance/tasks?${qs}` : "/maintenance/tasks";
+  };
 
   return (
     <div>
@@ -52,7 +72,7 @@ export default async function MaintenanceTasksPage({
           {["", "PENDING", "IN_PROGRESS", "COMPLETED", "OVERDUE"].map((s) => (
             <Link
               key={s}
-              href={s ? `/maintenance/tasks?status=${s}` : "/maintenance/tasks"}
+              href={statusHref(s)}
               className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors ${
                 (s === "" && !status) || s === status
                   ? "bg-blue-600 text-white border-blue-600"
@@ -63,6 +83,14 @@ export default async function MaintenanceTasksPage({
             </Link>
           ))}
         </div>
+      </div>
+
+      <div className="mb-4">
+        <CompanyFilterTabs
+          basePath="/maintenance/tasks"
+          active={active}
+          extraParams={{ status }}
+        />
       </div>
 
       {tasks.length === 0 ? (
@@ -77,6 +105,7 @@ export default async function MaintenanceTasksPage({
             <tr>
               <TableHeader>Task</TableHeader>
               <TableHeader>Schedule</TableHeader>
+              {active === "ALL" && <TableHeader>Company</TableHeader>}
               <TableHeader>Due Date</TableHeader>
               <TableHeader>Assigned To</TableHeader>
               <TableHeader>Status</TableHeader>
@@ -99,6 +128,11 @@ export default async function MaintenanceTasksPage({
                     <span className="text-gray-400">Ad-hoc</span>
                   )}
                 </TableCell>
+                {active === "ALL" && (
+                  <TableCell className="text-gray-600 text-xs">
+                    {task.company === "RESORT" ? "Pet Resort" : "Mobile Grooming"}
+                  </TableCell>
+                )}
                 <TableCell className="text-gray-600">
                   {new Date(task.dueDate).toLocaleDateString()}
                 </TableCell>

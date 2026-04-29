@@ -51,6 +51,16 @@ export async function PUT(
     });
 
     if (requirements !== undefined) {
+      if (requirements.length > 0) {
+        const ids = requirements.map((r: { inventoryItemId: string }) => r.inventoryItemId);
+        const items = await tx.inventoryItem.findMany({
+          where: { id: { in: ids } },
+          select: { id: true, company: true },
+        });
+        if (items.some((i) => i.company !== updated.company)) {
+          throw new Error("Inventory item does not belong to this schedule's company");
+        }
+      }
       await tx.maintenanceInventoryRequirement.deleteMany({ where: { scheduleId } });
       if (requirements.length > 0) {
         await tx.maintenanceInventoryRequirement.createMany({

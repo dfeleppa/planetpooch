@@ -303,8 +303,11 @@ model MaintenanceSchedule {
   tasks        MaintenanceTask[]
   requirements MaintenanceInventoryRequirement[]
 
+  company Company @default(GROOMING)
+
   @@index([nextDueDate])
   @@index([createdById])
+  @@index([company])
 }
 
 model MaintenanceTask {
@@ -326,20 +329,27 @@ model MaintenanceTask {
   completedBy User?                @relation("MaintenanceCompleter", fields: [completedById], references: [id], onDelete: SetNull)
   usages      InventoryUsage[]
 
+  company Company @default(GROOMING)
+
   @@index([scheduleId])
   @@index([assignedToId])
   @@index([dueDate])
   @@index([status])
+  @@index([company])
 }
 
 model InventoryCategory {
   id        String   @id @default(cuid())
-  name      String   @unique
+  name      String
   color     String   @default("bg-gray-100 text-gray-800")
+  company   Company  @default(GROOMING)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   items InventoryItem[]
+
+  @@unique([name, company])
+  @@index([company])
 }
 
 model InventoryItem {
@@ -358,7 +368,10 @@ model InventoryItem {
   usages       InventoryUsage[]
   adjustments  InventoryAdjustment[]
 
+  company Company @default(GROOMING)
+
   @@index([categoryId])
+  @@index([company])
 }
 
 model MaintenanceInventoryRequirement {

@@ -32,7 +32,11 @@ export default async function ScheduleDetailPage({
   if (!schedule) notFound();
 
   const inventoryItems = isAdmin
-    ? await prisma.inventoryItem.findMany({ orderBy: { name: "asc" }, select: { id: true, name: true, unit: true } })
+    ? await prisma.inventoryItem.findMany({
+        where: { company: schedule.company },
+        orderBy: { name: "asc" },
+        select: { id: true, name: true, unit: true },
+      })
     : [];
 
   const now = new Date();
@@ -56,6 +60,9 @@ export default async function ScheduleDetailPage({
           <div className="flex items-center gap-3">
             <h1 className="text-2xl font-bold text-gray-900">{schedule.title}</h1>
             {!schedule.isActive && <Badge variant="default">Inactive</Badge>}
+            <Badge variant="info">
+              {schedule.company === "RESORT" ? "Pet Resort" : "Mobile Grooming"}
+            </Badge>
           </div>
           {schedule.description && (
             <p className="text-gray-500 mt-1">{schedule.description}</p>

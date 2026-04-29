@@ -2,18 +2,33 @@ import { requireAuth } from "@/lib/auth-helpers";
 import { prisma } from "@/lib/prisma";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
-import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { CompanyFilterTabs, resolveCompanyParam } from "@/components/ui/CompanyFilterTabs";
 import { formatRecurrenceInterval } from "@/lib/maintenance";
+import { Company } from "@prisma/client";
 import Link from "next/link";
 
-export default async function SchedulesPage() {
+function defaultCompany(userCompany: Company | null | undefined): Company {
+  return userCompany === "RESORT" ? "RESORT" : "GROOMING";
+}
+
+export default async function SchedulesPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ company?: string }>;
+}) {
   await requireAuth();
   const session = await getServerSession(authOptions);
-  const isAdmin = (session?.user as { role?: string })?.role === "ADMIN";
+  const user = session?.user as { role?: string; company?: Company | null } | undefined;
+  const isAdmin = user?.role === "ADMIN";
+
+  const { company: companyParam } = await searchParams;
+  const active = resolveCompanyParam(companyParam, defaultCompany(user?.company));
 
   const schedules = await prisma.maintenanceSchedule.findMany({
+    where: active === "ALL" ? {} : { company: active },
     orderBy: { nextDueDate: "asc" },
     include: {
       requirements: { include: { inventoryItem: true } },
@@ -21,7 +36,6 @@ export default async function SchedulesPage() {
     },
   });
 
-  // Check sufficiency in memory
   const schedulesWithSufficiency = schedules.map((s) => {
     const allSufficient = s.requirements.every(
       (r) => r.inventoryItem.currentQuantity >= r.quantityRequired
@@ -30,6 +44,7 @@ export default async function SchedulesPage() {
   });
 
   const now = new Date();
+  const newHref = `/maintenance/schedules/new${active !== "ALL" ? `?company=${active}` : ""}`;
 
   return (
     <div>
@@ -39,10 +54,14 @@ export default async function SchedulesPage() {
           <p className="text-gray-500 mt-1">Recurring maintenance tasks and their inventory needs</p>
         </div>
         {isAdmin && (
-          <Link href="/maintenance/schedules/new">
+          <Link href={newHref}>
             <Button>+ New Schedule</Button>
           </Link>
         )}
+      </div>
+
+      <div className="mb-4">
+        <CompanyFilterTabs basePath="/maintenance/schedules" active={active} />
       </div>
 
       {schedules.length === 0 ? (
@@ -54,7 +73,7 @@ export default async function SchedulesPage() {
               <p className="text-sm text-gray-500 mb-6">Create your first maintenance schedule to get started.</p>
             )}
             {isAdmin && (
-              <Link href="/maintenance/schedules/new">
+              <Link href={newHref}>
                 <Button>+ New Schedule</Button>
               </Link>
             )}
@@ -77,6 +96,11 @@ export default async function SchedulesPage() {
                         <div className="flex items-center gap-2 mb-1">
                           <h3 className="text-sm font-semibold text-gray-900">{schedule.title}</h3>
                           {!schedule.isActive && <Badge variant="default">Inactive</Badge>}
+                          {active === "ALL" && (
+                            <Badge variant="info">
+                              {schedule.company === "RESORT" ? "Pet Resort" : "Mobile Grooming"}
+                            </Badge>
+                          )}
                         </div>
                         {schedule.description && (
                           <p className="text-xs text-gray-500 mb-2">{schedule.description}</p>

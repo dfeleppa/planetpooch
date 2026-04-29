@@ -7,32 +7,29 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/Table";
+import { CompanyFilterTabs, resolveCompanyParam } from "@/components/ui/CompanyFilterTabs";
+import { Company } from "@prisma/client";
 import Link from "next/link";
 
-const categoryLabels: Record<string, string> = {
-  TOOLS: "Tools",
-  MATERIALS: "Materials",
-  EQUIPMENT: "Equipment",
-  PARTS: "Parts",
-  SUPPLIES: "Supplies",
-  OTHER: "Other",
-};
+function defaultCompany(userCompany: Company | null | undefined): Company {
+  return userCompany === "RESORT" ? "RESORT" : "GROOMING";
+}
 
-const categoryColors: Record<string, string> = {
-  TOOLS: "bg-purple-100 text-purple-800",
-  MATERIALS: "bg-blue-100 text-blue-800",
-  EQUIPMENT: "bg-green-100 text-green-800",
-  PARTS: "bg-orange-100 text-orange-800",
-  SUPPLIES: "bg-gray-100 text-gray-800",
-  OTHER: "bg-slate-100 text-slate-800",
-};
-
-export default async function InventoryPage() {
+export default async function InventoryPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ company?: string }>;
+}) {
   await requireAuth();
   const session = await getServerSession(authOptions);
-  const isAdmin = (session?.user as { role?: string })?.role === "ADMIN";
+  const user = session?.user as { role?: string; company?: Company | null } | undefined;
+  const isAdmin = user?.role === "ADMIN";
+
+  const { company: companyParam } = await searchParams;
+  const active = resolveCompanyParam(companyParam, defaultCompany(user?.company));
 
   const items = await prisma.inventoryItem.findMany({
+    where: active === "ALL" ? {} : { company: active },
     orderBy: { name: "asc" },
     include: { category: true },
   });
@@ -45,10 +42,16 @@ export default async function InventoryPage() {
           <p className="text-gray-500 mt-1">Supplies and materials tracked for maintenance</p>
         </div>
         {isAdmin && (
-          <Link href="/maintenance/inventory/new">
+          <Link
+            href={`/maintenance/inventory/new${active !== "ALL" ? `?company=${active}` : ""}`}
+          >
             <Button>+ Add Item</Button>
           </Link>
         )}
+      </div>
+
+      <div className="mb-4">
+        <CompanyFilterTabs basePath="/maintenance/inventory" active={active} />
       </div>
 
       {items.length === 0 ? (
@@ -60,7 +63,9 @@ export default async function InventoryPage() {
               description="Add items to track supplies needed for maintenance tasks."
               action={
                 isAdmin ? (
-                  <Link href="/maintenance/inventory/new">
+                  <Link
+                    href={`/maintenance/inventory/new${active !== "ALL" ? `?company=${active}` : ""}`}
+                  >
                     <Button>+ Add Item</Button>
                   </Link>
                 ) : undefined
@@ -74,6 +79,7 @@ export default async function InventoryPage() {
             <tr>
               <TableHeader>Name</TableHeader>
               <TableHeader>Category</TableHeader>
+              {active === "ALL" && <TableHeader>Company</TableHeader>}
               <TableHeader>Unit</TableHeader>
               <TableHeader>On Hand</TableHeader>
               <TableHeader>Min. Threshold</TableHeader>
@@ -97,6 +103,11 @@ export default async function InventoryPage() {
                       {item.category.name}
                     </span>
                   </TableCell>
+                  {active === "ALL" && (
+                    <TableCell className="text-gray-600 text-xs">
+                      {item.company === "RESORT" ? "Pet Resort" : "Mobile Grooming"}
+                    </TableCell>
+                  )}
                   <TableCell className="text-gray-600">{item.unit}</TableCell>
                   <TableCell className="font-semibold text-gray-900">{item.currentQuantity}</TableCell>
                   <TableCell className="text-gray-600">{item.minimumThreshold || "—"}</TableCell>

@@ -8,10 +8,13 @@ import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/Select";
 import { DateInput } from "@/components/ui/DateInput";
 
+type Company = "RESORT" | "GROOMING";
+
 interface InventoryItem {
   id: string;
   name: string;
   unit: string;
+  company: Company;
 }
 
 interface Requirement {
@@ -19,11 +22,18 @@ interface Requirement {
   quantityRequired: number;
 }
 
-export function NewScheduleForm({ inventoryItems }: { inventoryItems: InventoryItem[] }) {
+export function NewScheduleForm({
+  inventoryItems,
+  initialCompany,
+}: {
+  inventoryItems: InventoryItem[];
+  initialCompany: Company;
+}) {
   const router = useRouter();
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
 
+  const [company, setCompany] = useState<Company>(initialCompany);
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [recurrenceInterval, setRecurrenceInterval] = useState("YEARLY");
@@ -31,11 +41,13 @@ export function NewScheduleForm({ inventoryItems }: { inventoryItems: InventoryI
   const [startDate, setStartDate] = useState("");
   const [requirements, setRequirements] = useState<Requirement[]>([]);
 
+  const filteredItems = inventoryItems.filter((i) => i.company === company);
+
   const addRequirement = () => {
-    if (inventoryItems.length === 0) return;
+    if (filteredItems.length === 0) return;
     setRequirements((prev) => [
       ...prev,
-      { inventoryItemId: inventoryItems[0].id, quantityRequired: 1 },
+      { inventoryItemId: filteredItems[0].id, quantityRequired: 1 },
     ]);
   };
 
@@ -64,6 +76,7 @@ export function NewScheduleForm({ inventoryItems }: { inventoryItems: InventoryI
           recurrenceInterval,
           customIntervalDays: recurrenceInterval === "CUSTOM" ? Number(customIntervalDays) : null,
           startDate,
+          company,
         }),
       });
 
@@ -95,6 +108,20 @@ export function NewScheduleForm({ inventoryItems }: { inventoryItems: InventoryI
     <form onSubmit={handleSubmit} className="space-y-6">
       <Card>
         <CardContent className="space-y-4">
+          <div className="flex flex-col gap-1">
+            <label className="text-sm font-medium text-gray-700">Company</label>
+            <select
+              value={company}
+              onChange={(e) => {
+                setCompany(e.target.value as Company);
+                setRequirements([]);
+              }}
+              className="rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              <option value="GROOMING">Planet Pooch Mobile Grooming</option>
+              <option value="RESORT">Planet Pooch Pet Resort</option>
+            </select>
+          </div>
           <Input
             label="Title"
             value={title}
@@ -148,25 +175,25 @@ export function NewScheduleForm({ inventoryItems }: { inventoryItems: InventoryI
         <CardContent>
           <div className="flex items-center justify-between mb-3">
             <h3 className="text-sm font-semibold text-gray-900">Inventory Requirements</h3>
-            <Button type="button" variant="secondary" size="sm" onClick={addRequirement} disabled={inventoryItems.length === 0}>
+            <Button type="button" variant="secondary" size="sm" onClick={addRequirement} disabled={filteredItems.length === 0}>
               + Add Item
             </Button>
           </div>
-          {inventoryItems.length === 0 && (
+          {filteredItems.length === 0 && (
             <p className="text-xs text-gray-500">
-              No inventory items yet.{" "}
-              <a href="/maintenance/inventory/new" className="text-blue-600 hover:underline">
+              No inventory items for this company yet.{" "}
+              <a href={`/maintenance/inventory/new?company=${company}`} className="text-blue-600 hover:underline">
                 Add inventory items
               </a>{" "}
               first.
             </p>
           )}
-          {requirements.length === 0 && inventoryItems.length > 0 && (
+          {requirements.length === 0 && filteredItems.length > 0 && (
             <p className="text-xs text-gray-500">No requirements added. Click "+ Add Item" to require inventory for this schedule.</p>
           )}
           <div className="space-y-2">
             {requirements.map((req, i) => {
-              const item = inventoryItems.find((x) => x.id === req.inventoryItemId);
+              const item = filteredItems.find((x) => x.id === req.inventoryItemId);
               return (
                 <div key={i} className="flex items-center gap-3">
                   <select
@@ -174,7 +201,7 @@ export function NewScheduleForm({ inventoryItems }: { inventoryItems: InventoryI
                     value={req.inventoryItemId}
                     onChange={(e) => updateRequirement(i, "inventoryItemId", e.target.value)}
                   >
-                    {inventoryItems.map((item) => (
+                    {filteredItems.map((item) => (
                       <option key={item.id} value={item.id}>{item.name}</option>
                     ))}
                   </select>

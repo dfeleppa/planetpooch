@@ -2,18 +2,23 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getSession, isManagerOrAbove } from "@/lib/auth-helpers";
 import { calculateNextDueDate } from "@/lib/maintenance";
-import { RecurrenceInterval } from "@prisma/client";
+import { Company, RecurrenceInterval } from "@prisma/client";
 
-export async function GET() {
+const COMPANIES: Company[] = ["RESORT", "GROOMING"];
+
+export async function GET(req: NextRequest) {
   const session = await getSession();
   if (!session?.user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  // TODO(phase-2+): add `company` column to MaintenanceSchedule + apply
-  // getCompanyFilter so MANAGERs only see their own company's schedules.
-  // Blocked by schema migration — see codebase review notes.
+  const companyParam = req.nextUrl.searchParams.get("company");
+  const company = COMPANIES.includes(companyParam as Company)
+    ? (companyParam as Company)
+    : null;
+
   const schedules = await prisma.maintenanceSchedule.findMany({
+    where: company ? { company } : {},
     orderBy: { nextDueDate: "asc" },
     include: {
       requirements: {
@@ -33,10 +38,14 @@ export async function POST(req: NextRequest) {
   }
 
   const body = await req.json();
-  const { title, description, recurrenceInterval, customIntervalDays, startDate } = body;
+  const { title, description, recurrenceInterval, customIntervalDays, startDate, company } = body;
 
   if (!title || !recurrenceInterval || !startDate) {
     return NextResponse.json({ error: "title, recurrenceInterval, and startDate are required" }, { status: 400 });
+  }
+
+  if (!COMPANIES.includes(company)) {
+    return NextResponse.json({ error: "company must be RESORT or GROOMING" }, { status: 400 });
   }
 
   const start = new Date(startDate);
@@ -51,6 +60,7 @@ export async function POST(req: NextRequest) {
       startDate: start,
       nextDueDate,
       createdById: session.user.id,
+      company,
     },
   });
 
