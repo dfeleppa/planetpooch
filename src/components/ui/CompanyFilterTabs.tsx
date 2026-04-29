@@ -11,10 +11,12 @@ export function CompanyFilterTabs({
   basePath,
   active,
   extraParams,
+  hideAll,
 }: {
   basePath: string;
   active: Company | "ALL";
   extraParams?: Record<string, string | undefined>;
+  hideAll?: boolean;
 }) {
   const buildHref = (id: Company | "ALL") => {
     const params = new URLSearchParams();
@@ -26,9 +28,11 @@ export function CompanyFilterTabs({
     return qs ? `${basePath}?${qs}` : basePath;
   };
 
+  const visibleTabs = hideAll ? TABS.filter((t) => t.id !== "ALL") : TABS;
+
   return (
     <div className="flex gap-2">
-      {TABS.map((tab) => (
+      {visibleTabs.map((tab) => (
         <Link
           key={tab.id}
           href={buildHref(tab.id)}
