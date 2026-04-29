@@ -6,4 +6,7 @@ const globalForPrisma = globalThis as unknown as {
 
 export const prisma = globalForPrisma.prisma ?? new PrismaClient();
 
-if (process.env.NODE_ENV !== "production") globalForPrisma.prisma = prisma;
+// Reuse the client across hot reloads in dev and across requests inside a
+// single Vercel lambda in prod. Without this, each request can spin up a new
+// PrismaClient and quickly exhaust the Supabase connection pool.
+globalForPrisma.prisma = prisma;

@@ -48,7 +48,7 @@ export function Sidebar() {
   const pathname = usePathname();
   const { data: session } = useSession();
   const role = session?.user?.role;
-  const isSuperAdmin = role === "SUPER_ADMIN" || role === "ADMIN";
+  const isSuperAdmin = role === "SUPER_ADMIN" || role === "DOS" || role === "ADMIN";
   const isManager = role === "MANAGER";
   const isManagerOrAbove = isSuperAdmin || isManager;
 
