@@ -41,6 +41,7 @@ export async function generateMaintenanceTask(scheduleId: string) {
         description: schedule.description,
         dueDate: schedule.nextDueDate,
         status: "PENDING",
+        company: schedule.company,
       },
     });
 

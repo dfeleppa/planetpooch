@@ -78,6 +78,9 @@ export default async function InventoryItemPage({
             <span className={`px-2 py-1 text-xs font-medium rounded-full ${item.category.color}`}>
               {item.category.name}
             </span>
+            <span className="px-2 py-1 text-xs font-medium rounded-full bg-indigo-100 text-indigo-800">
+              {item.company === "RESORT" ? "Pet Resort" : "Mobile Grooming"}
+            </span>
           </div>
           {item.description && <p className="text-gray-500">{item.description}</p>}
         </div>

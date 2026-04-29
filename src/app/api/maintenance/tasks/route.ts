@@ -9,11 +9,14 @@ export async function GET(req: NextRequest) {
   const { searchParams } = req.nextUrl;
   const status = searchParams.get("status");
   const assignedToId = searchParams.get("assignedToId");
+  const companyParam = searchParams.get("company");
+  const company = companyParam === "RESORT" || companyParam === "GROOMING" ? companyParam : null;
 
   const tasks = await prisma.maintenanceTask.findMany({
     where: {
       ...(status && { status: status as never }),
       ...(assignedToId && { assignedToId }),
+      ...(company && { company }),
     },
     orderBy: { dueDate: "asc" },
     include: {

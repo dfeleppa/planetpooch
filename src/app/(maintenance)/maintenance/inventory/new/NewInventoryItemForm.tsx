@@ -1,18 +1,21 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 
+type Company = "RESORT" | "GROOMING";
+
 interface Category {
   id: string;
   name: string;
   color: string;
+  company: Company;
 }
 
-export function NewInventoryItemForm() {
+export function NewInventoryItemForm({ initialCompany }: { initialCompany: Company }) {
   const router = useRouter();
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
@@ -22,6 +25,7 @@ export function NewInventoryItemForm() {
   const [newCategoryName, setNewCategoryName] = useState("");
   const [creatingCategory, setCreatingCategory] = useState(false);
 
+  const [company, setCompany] = useState<Company>(initialCompany);
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [categoryId, setCategoryId] = useState("");
@@ -29,27 +33,25 @@ export function NewInventoryItemForm() {
   const [currentQuantity, setCurrentQuantity] = useState("0");
   const [minimumThreshold, setMinimumThreshold] = useState("0");
 
-  useEffect(() => {
-    fetchCategories();
-  }, []);
-
-  const fetchCategories = async () => {
+  const fetchCategories = useCallback(async () => {
     try {
       setLoadingCategories(true);
-      const res = await fetch("/api/maintenance/inventory-categories");
+      const res = await fetch(`/api/maintenance/inventory-categories?company=${company}`);
       if (res.ok) {
-        const data = await res.json();
+        const data: Category[] = await res.json();
         setCategories(data);
-        if (data.length > 0 && !categoryId) {
-          setCategoryId(data[0].id);
-        }
+        setCategoryId(data.length > 0 ? data[0].id : "");
       }
     } catch (err) {
       console.error("Failed to load categories", err);
     } finally {
       setLoadingCategories(false);
     }
-  };
+  }, [company]);
+
+  useEffect(() => {
+    fetchCategories();
+  }, [fetchCategories]);
 
   const handleCreateCategory = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -67,6 +69,7 @@ export function NewInventoryItemForm() {
         body: JSON.stringify({
           name: newCategoryName.trim(),
           color: "bg-gray-100 text-gray-800",
+          company,
         }),
       });
 
@@ -102,6 +105,7 @@ export function NewInventoryItemForm() {
           unit,
           currentQuantity: Number(currentQuantity),
           minimumThreshold: Number(minimumThreshold),
+          company,
         }),
       });
       if (!res.ok) {
@@ -121,6 +125,17 @@ export function NewInventoryItemForm() {
     <form onSubmit={handleSubmit}>
       <Card>
         <CardContent className="space-y-4">
+          <div className="flex flex-col gap-1">
+            <label className="text-sm font-medium text-gray-700">Company</label>
+            <select
+              value={company}
+              onChange={(e) => setCompany(e.target.value as Company)}
+              className="rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              <option value="GROOMING">Planet Pooch Mobile Grooming</option>
+              <option value="RESORT">Planet Pooch Pet Resort</option>
+            </select>
+          </div>
           <Input
             label="Item Name"
             value={name}
