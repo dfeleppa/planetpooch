@@ -31,9 +31,8 @@ export async function proxy(req: NextRequest) {
   const isManagerOrAbove =
     role === "MANAGER" ||
     role === "SUPER_ADMIN" ||
-    role === "DOS" ||
     role === "ADMIN";
-  const isTopTier = role === "SUPER_ADMIN" || role === "DOS" || role === "ADMIN";
+  const isTopTier = role === "SUPER_ADMIN" || role === "ADMIN";
 
   // Only top-tier roles can manage modules/lessons
   if (pathname.startsWith("/admin/modules") && !isTopTier) {

@@ -214,19 +214,17 @@ export async function PATCH(
       const desired = body.role as Role;
       const callerIsTopTier =
         sessionUser.role === "SUPER_ADMIN" ||
-        sessionUser.role === "DOS" ||
         sessionUser.role === "ADMIN";
-      if ((desired === "SUPER_ADMIN" || desired === "DOS") && !callerIsTopTier) {
+      if (desired === "SUPER_ADMIN" && !callerIsTopTier) {
         return NextResponse.json(
-          { error: "Only Super Admins or DOS can assign top-tier roles" },
+          { error: "Only Super Admins can assign top-tier roles" },
           { status: 403 }
         );
       }
       if (
         desired === "MANAGER" ||
         desired === "EMPLOYEE" ||
-        desired === "SUPER_ADMIN" ||
-        desired === "DOS"
+        desired === "SUPER_ADMIN"
       ) {
         data.role = desired;
       }

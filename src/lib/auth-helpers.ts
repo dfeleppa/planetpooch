@@ -15,14 +15,13 @@ export async function requireAuth() {
   return session;
 }
 
-/** Requires MANAGER or SUPER_ADMIN/DOS (or legacy ADMIN). Use for most admin pages. */
+/** Requires MANAGER or SUPER_ADMIN (or legacy ADMIN). Use for most admin pages. */
 export async function requireManager() {
   const session = await requireAuth();
   const role = (session.user as { role: Role }).role;
   if (
     role !== "MANAGER" &&
     role !== "SUPER_ADMIN" &&
-    role !== "DOS" &&
     role !== "ADMIN"
   ) {
     redirect("/dashboard");
@@ -31,14 +30,13 @@ export async function requireManager() {
 }
 
 /**
- * Requires SUPER_ADMIN or DOS (or legacy ADMIN). Use for module/lesson management
- * and other top-tier admin actions. DOS sits in the same permission tier as
- * SUPER_ADMIN.
+ * Requires SUPER_ADMIN (or legacy ADMIN). Use for module/lesson management
+ * and other top-tier admin actions.
  */
 export async function requireSuperAdmin() {
   const session = await requireAuth();
   const role = (session.user as { role: Role }).role;
-  if (role !== "SUPER_ADMIN" && role !== "DOS" && role !== "ADMIN") {
+  if (role !== "SUPER_ADMIN" && role !== "ADMIN") {
     redirect("/admin");
   }
   return session;
@@ -46,7 +44,7 @@ export async function requireSuperAdmin() {
 
 /**
  * Returns a Prisma `where` filter to scope queries to the user's company.
- * SUPER_ADMIN / DOS: no filter (sees all companies).
+ * SUPER_ADMIN: no filter (sees all companies).
  * MANAGER: filters to their own company.
  */
 export function getCompanyFilter(
@@ -64,19 +62,18 @@ export function getCompanyFilter(
 // `getSession()` + a 403 JSON response.
 // ──────────────────────────────────────────────────────────────────────────────
 
-/** True if the role has manager-level access (MANAGER, SUPER_ADMIN, DOS, or legacy ADMIN). */
+/** True if the role has manager-level access (MANAGER, SUPER_ADMIN, or legacy ADMIN). */
 export function isManagerOrAbove(role: string | undefined | null): boolean {
   return (
     role === "MANAGER" ||
     role === "SUPER_ADMIN" ||
-    role === "DOS" ||
     role === "ADMIN"
   );
 }
 
-/** True if the role is SUPER_ADMIN, DOS, or legacy ADMIN — the top tier. */
+/** True if the role is SUPER_ADMIN or legacy ADMIN — the top tier. */
 export function isSuperAdmin(role: string | undefined | null): boolean {
-  return role === "SUPER_ADMIN" || role === "DOS" || role === "ADMIN";
+  return role === "SUPER_ADMIN" || role === "ADMIN";
 }
 
 // Keep requireAdmin as an alias for backward compatibility during migration

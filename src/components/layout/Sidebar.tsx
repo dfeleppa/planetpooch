@@ -46,7 +46,6 @@ const sharedNav: NavItem[] = [
 
 const ROLE_LABELS: Record<string, string> = {
   SUPER_ADMIN: "Super Admin",
-  DOS: "DOS",
   MANAGER: "Manager",
   EMPLOYEE: "Employee",
   ADMIN: "Admin",
@@ -56,7 +55,7 @@ export function Sidebar() {
   const pathname = usePathname();
   const { data: session } = useSession();
   const role = session?.user?.role;
-  const isSuperAdmin = role === "SUPER_ADMIN" || role === "DOS" || role === "ADMIN";
+  const isSuperAdmin = role === "SUPER_ADMIN" || role === "ADMIN";
   const isManager = role === "MANAGER";
   const isManagerOrAbove = isSuperAdmin || isManager;
 
