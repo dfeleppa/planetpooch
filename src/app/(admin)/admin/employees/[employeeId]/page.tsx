@@ -160,12 +160,8 @@ export default async function EmployeeDetailPage({ params }: { params: Promise<{
             hireDate: employee.hireDate ? employee.hireDate.toISOString() : null,
           }}
           canEditCompany={sessionUser.role !== "MANAGER"}
-          canAssignSuperAdmin={
-            sessionUser.role === "SUPER_ADMIN" || sessionUser.role === "DOS"
-          }
-          canEditRole={
-            sessionUser.role === "SUPER_ADMIN" || sessionUser.role === "DOS"
-          }
+          canAssignSuperAdmin={sessionUser.role === "SUPER_ADMIN"}
+          canEditRole={sessionUser.role === "SUPER_ADMIN"}
         />
       </div>
 

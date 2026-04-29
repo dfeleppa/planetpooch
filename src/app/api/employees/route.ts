@@ -240,15 +240,14 @@ export async function POST(req: NextRequest) {
       normalizedEmail = `${slug}-${suffix}@placeholder.local`;
     }
 
-    // Only top-tier callers (SUPER_ADMIN / DOS / legacy ADMIN) can create
+    // Only top-tier callers (SUPER_ADMIN / legacy ADMIN) can create
     // top-tier accounts. MANAGERs can also create MANAGERs (within their own
     // company, scoped above).
     const callerIsTopTier =
       sessionUser.role === "SUPER_ADMIN" ||
-      sessionUser.role === "DOS" ||
       sessionUser.role === "ADMIN";
     let assignedRole: Role = "EMPLOYEE";
-    if ((role === "SUPER_ADMIN" || role === "DOS") && callerIsTopTier) {
+    if (role === "SUPER_ADMIN" && callerIsTopTier) {
       assignedRole = role;
     } else if (role === "MANAGER" && (callerIsTopTier || sessionUser.role === "MANAGER")) {
       assignedRole = "MANAGER";

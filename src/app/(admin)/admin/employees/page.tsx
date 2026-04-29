@@ -21,7 +21,6 @@ const COMPANY_SHORT: Record<Company, string> = {
 
 const ROLE_LABELS: Partial<Record<Role, string>> = {
   SUPER_ADMIN: "Super Admin",
-  DOS: "DOS",
   MANAGER: "Manager",
   ADMIN: "Admin",
 };
