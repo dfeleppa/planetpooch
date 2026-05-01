@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { getSession } from "@/lib/auth-helpers";
+import { getSession, isManagerOrAbove } from "@/lib/auth-helpers";
+import { getVisibleModuleIdsForUser } from "@/lib/module-visibility";
 
 export async function GET(req: NextRequest) {
   const session = await getSession();
@@ -13,9 +14,26 @@ export async function GET(req: NextRequest) {
     return NextResponse.json([]);
   }
 
+  const moduleIdFilter: { in: string[] } | undefined = isManagerOrAbove(session.user.role)
+    ? undefined
+    : await (async () => {
+        const me = await prisma.user.findUnique({
+          where: { id: session.user.id },
+          select: { jobTitle: true },
+        });
+        const ids = await getVisibleModuleIdsForUser(
+          session.user.id,
+          me?.jobTitle ?? null,
+        );
+        return { in: [...ids] };
+      })();
+
   const lessons = await prisma.lesson.findMany({
     where: {
       searchText: { contains: q, mode: "insensitive" },
+      ...(moduleIdFilter
+        ? { subsection: { moduleId: moduleIdFilter } }
+        : {}),
     },
     select: {
       id: true,

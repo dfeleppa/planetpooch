@@ -4,12 +4,20 @@ import { Card, CardContent } from "@/components/ui/card";
 import { ProgressBar } from "@/components/ui/progress-bar";
 import { Badge } from "@/components/ui/badge";
 import Link from "next/link";
+import { getVisibleModuleIdsForUser } from "@/lib/module-visibility";
 
 export default async function ModulesPage() {
   const session = await requireAuth();
   const userId = session.user.id;
 
+  const me = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { jobTitle: true },
+  });
+  const visibleIds = await getVisibleModuleIdsForUser(userId, me?.jobTitle ?? null);
+
   const modules = await prisma.module.findMany({
+    where: { id: { in: [...visibleIds] } },
     orderBy: { order: "asc" },
     include: {
       subsections: {

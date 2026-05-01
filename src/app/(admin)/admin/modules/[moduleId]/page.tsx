@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import Link from "next/link";
 import { SortableList, DragHandle, SortableHandleProps } from "@/components/SortableList";
+import { ModuleVisibilityCard } from "./ModuleVisibilityCard";
 
 interface Lesson {
   id: string;
@@ -179,6 +180,9 @@ export default function AdminModuleDetailPage() {
           <Button variant="secondary" onClick={() => setEditing(true)}>Edit Module</Button>
         </div>
       )}
+
+      {/* Visibility / role assignments */}
+      <ModuleVisibilityCard moduleId={moduleId} />
 
       {/* Subsections */}
       <div className="flex items-center justify-between mb-4">
