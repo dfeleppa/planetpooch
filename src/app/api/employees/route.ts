@@ -253,8 +253,11 @@ export async function POST(req: NextRequest) {
       assignedRole = "MANAGER";
     }
 
-    const tempPassword = generateTempPassword();
-    const passwordHash = await bcrypt.hash(tempPassword, 10);
+    // Seed with a random password the admin never sees. Until they click
+    // "Send welcome email" the account effectively can't log in — that flow
+    // resets the password and emails the new value to the employee.
+    const seedPassword = generateTempPassword();
+    const passwordHash = await bcrypt.hash(seedPassword, 10);
 
     const user = await prisma.user.create({
       data: {
@@ -306,7 +309,7 @@ export async function POST(req: NextRequest) {
       console.error("[employees.POST] Drive folder creation failed:", err);
     }
 
-    return NextResponse.json({ user, tempPassword }, { status: 201 });
+    return NextResponse.json({ user }, { status: 201 });
   } catch (err) {
     const message = err instanceof Error ? err.message : "Failed to create employee";
     return NextResponse.json({ error: message }, { status: 500 });

@@ -10,6 +10,8 @@ import { Company, Role } from "@prisma/client";
 import { EditEmployeeForm } from "./EditEmployeeForm";
 import { EsignRequestsCard } from "./EsignRequestsCard";
 import { DriveFolderCard } from "./DriveFolderCard";
+import { SendWelcomeEmailButton } from "../SendWelcomeEmailButton";
+import { RevealTempPasswordButton } from "../RevealTempPasswordButton";
 import { EmployeeDocumentsCard } from "@/components/EmployeeDocumentsCard";
 import { DangerZoneCard } from "./DangerZoneCard";
 import { EmployeeModuleAssignments } from "./EmployeeModuleAssignments";
@@ -172,6 +174,40 @@ export default async function EmployeeDetailPage({ params }: { params: Promise<{
           canEditRole={sessionUser.role === "SUPER_ADMIN"}
         />
       </div>
+
+      {!isTerminated && (
+        <Card className="mt-6">
+          <CardHeader>
+            <h2 className="font-semibold text-gray-900">Login access</h2>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div>
+              <p className="text-sm text-gray-700 mb-3">
+                Send the employee a welcome email with a fresh temporary password
+                and a link to sign in. Each send invalidates any previously issued
+                temp password.
+              </p>
+              <SendWelcomeEmailButton
+                employeeId={employee.id}
+                disabled={employee.email.endsWith("@placeholder.local")}
+                disabledHint="No email on file — add one above to send a welcome email."
+              />
+            </div>
+
+            {sessionUser.role === "SUPER_ADMIN" && (
+              <div className="border-t border-gray-100 pt-4">
+                <p className="text-sm text-gray-700 mb-3">
+                  <span className="font-medium">Or generate a temp password manually.</span>{" "}
+                  Use this while transactional email isn&apos;t configured, or to
+                  recover access if the welcome email was lost. Generating
+                  invalidates any previously issued temp password.
+                </p>
+                <RevealTempPasswordButton employeeId={employee.id} />
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
 
       <div className="mt-6">
         <DriveFolderCard
