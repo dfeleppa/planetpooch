@@ -18,8 +18,8 @@ export default async function NewEmployeePage() {
         </Link>
         <h1 className="text-2xl font-bold text-gray-900 mt-2">Add Employee</h1>
         <p className="text-gray-500 mt-1">
-          Create a new account. A temporary password will be generated and shown
-          once — share it with the employee so they can log in and set their own.
+          Create a new account. After creation you can email the employee a
+          temporary password and a link to sign in.
         </p>
       </div>
       <NewEmployeeForm currentRole={user.role} currentCompany={user.company} />

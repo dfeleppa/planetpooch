@@ -7,6 +7,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { AvailabilityEditor, type AvailabilityEntry } from "@/components/AvailabilityEditor";
+import { SendWelcomeEmailButton } from "../SendWelcomeEmailButton";
 
 type Role = "SUPER_ADMIN" | "MANAGER" | "EMPLOYEE" | "ADMIN";
 type Company = "GROOMING" | "RESORT" | "CORPORATE";
@@ -120,9 +121,7 @@ export function NewEmployeeForm({ currentRole, currentCompany }: Props) {
   // Result state
   const [result, setResult] = useState<{
     user: { id: string; name: string; email: string };
-    tempPassword: string;
   } | null>(null);
-  const [copied, setCopied] = useState(false);
   const [terminatedMatch, setTerminatedMatch] = useState<{
     id: string;
     name: string;
@@ -196,13 +195,6 @@ export function NewEmployeeForm({ currentRole, currentCompany }: Props) {
     }
   }
 
-  const copyPassword = async () => {
-    if (!result) return;
-    await navigator.clipboard.writeText(result.tempPassword);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
-  };
-
   function resetForm() {
     setResult(null);
     setFirstName("");
@@ -218,37 +210,42 @@ export function NewEmployeeForm({ currentRole, currentCompany }: Props) {
   }
 
   if (result) {
+    const hasRealEmail = !result.user.email.endsWith("@placeholder.local");
     return (
       <Card>
         <CardContent className="space-y-4">
           <div>
             <h2 className="text-lg font-semibold text-gray-900">Employee created</h2>
             <p className="text-sm text-gray-600 mt-1">
-              {result.user.name} &lt;{result.user.email}&gt;
+              {result.user.name}
+              {hasRealEmail && <> &lt;{result.user.email}&gt;</>}
             </p>
           </div>
 
-          <div className="rounded-lg border border-yellow-300 bg-yellow-50 p-4">
-            <p className="text-sm font-medium text-yellow-900">
-              Temporary password — shown only once
+          <div className="rounded-lg border border-blue-200 bg-blue-50 p-4">
+            <p className="text-sm font-medium text-blue-900">
+              Send the welcome email
             </p>
-            <p className="text-xs text-yellow-800 mt-1">
-              Copy this and share it securely with the employee. They will be
-              required to change it on first login.
+            <p className="text-xs text-blue-800 mt-1">
+              This generates a temporary password and emails it to the employee
+              along with a link to sign in. They&apos;ll be required to change it
+              on first login. You can resend later from the employee&apos;s page.
             </p>
-            <div className="mt-3 flex items-center gap-2">
-              <code className="flex-1 rounded bg-white border border-yellow-300 px-3 py-2 text-sm font-mono">
-                {result.tempPassword}
-              </code>
-              <Button type="button" variant="secondary" onClick={copyPassword}>
-                {copied ? "Copied!" : "Copy"}
-              </Button>
+            <div className="mt-3">
+              <SendWelcomeEmailButton
+                employeeId={result.user.id}
+                disabled={!hasRealEmail}
+                disabledHint="No email on file — add one on the employee's page to send a welcome email."
+              />
             </div>
           </div>
 
           <div className="flex gap-3 pt-2">
             <Link href="/admin/employees">
               <Button type="button">Back to employees</Button>
+            </Link>
+            <Link href={`/admin/employees/${result.user.id}`}>
+              <Button type="button" variant="secondary">View employee</Button>
             </Link>
             <Button type="button" variant="secondary" onClick={resetForm}>
               Add another

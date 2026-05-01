@@ -10,6 +10,7 @@ import { Company, Role } from "@prisma/client";
 import { EditEmployeeForm } from "./EditEmployeeForm";
 import { EsignRequestsCard } from "./EsignRequestsCard";
 import { DriveFolderCard } from "./DriveFolderCard";
+import { SendWelcomeEmailButton } from "../SendWelcomeEmailButton";
 import { EmployeeDocumentsCard } from "@/components/EmployeeDocumentsCard";
 import { DangerZoneCard } from "./DangerZoneCard";
 import { DAYS_OF_WEEK, formatTimeLabel } from "@/lib/availability";
@@ -171,6 +172,26 @@ export default async function EmployeeDetailPage({ params }: { params: Promise<{
           canEditRole={sessionUser.role === "SUPER_ADMIN"}
         />
       </div>
+
+      {!isTerminated && (
+        <Card className="mt-6">
+          <CardHeader>
+            <h2 className="font-semibold text-gray-900">Login access</h2>
+          </CardHeader>
+          <CardContent>
+            <p className="text-sm text-gray-700 mb-3">
+              Send the employee a welcome email with a fresh temporary password
+              and a link to sign in. Each send invalidates any previously issued
+              temp password.
+            </p>
+            <SendWelcomeEmailButton
+              employeeId={employee.id}
+              disabled={employee.email.endsWith("@placeholder.local")}
+              disabledHint="No email on file — add one above to send a welcome email."
+            />
+          </CardContent>
+        </Card>
+      )}
 
       <div className="mt-6">
         <DriveFolderCard
