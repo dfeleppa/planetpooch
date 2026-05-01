@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { AvailabilityEditor, type AvailabilityEntry } from "@/components/AvailabilityEditor";
 import { SendWelcomeEmailButton } from "../SendWelcomeEmailButton";
+import { RevealTempPasswordButton } from "../RevealTempPasswordButton";
 
 type Role = "SUPER_ADMIN" | "MANAGER" | "EMPLOYEE" | "ADMIN";
 type Company = "GROOMING" | "RESORT" | "CORPORATE";
@@ -239,6 +240,22 @@ export function NewEmployeeForm({ currentRole, currentCompany }: Props) {
               />
             </div>
           </div>
+
+          {isSuperAdmin && (
+            <div className="rounded-lg border border-gray-200 bg-gray-50 p-4">
+              <p className="text-sm font-medium text-gray-900">
+                Or generate a temp password manually
+              </p>
+              <p className="text-xs text-gray-600 mt-1">
+                Use this while transactional email isn&apos;t configured. Share
+                the password securely; generating again invalidates the
+                previous one.
+              </p>
+              <div className="mt-3">
+                <RevealTempPasswordButton employeeId={result.user.id} />
+              </div>
+            </div>
+          )}
 
           <div className="flex gap-3 pt-2">
             <Link href="/admin/employees">
