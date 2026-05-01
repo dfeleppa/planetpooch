@@ -15,6 +15,7 @@ import { DangerZoneCard } from "./DangerZoneCard";
 import { DAYS_OF_WEEK, formatTimeLabel } from "@/lib/availability";
 import { getFileWebLink, isDriveEnabled, isStubId } from "@/lib/drive";
 import { formatDate } from "@/lib/utils";
+import { HANDBOOK_SIGNABLE_NAME } from "@/lib/employee-documents";
 
 export default async function EmployeeDetailPage({ params }: { params: Promise<{ employeeId: string }> }) {
   const session = await requireManager();
@@ -112,6 +113,12 @@ export default async function EmployeeDetailPage({ params }: { params: Promise<{
 
   const isTerminated = !!employee.terminatedAt;
 
+  const handbookSigned = esignRequests.some(
+    (r) =>
+      r.signableDocument.name === HANDBOOK_SIGNABLE_NAME &&
+      r.status === "SIGNED",
+  );
+
   return (
     <div>
       <div className="flex items-center gap-2 text-sm text-gray-500 mb-4">
@@ -180,6 +187,7 @@ export default async function EmployeeDetailPage({ params }: { params: Promise<{
           employeeId={employee.id}
           hasDriveFolder={!!employee.driveFolderId}
           isTerminated={isTerminated}
+          handbookSigned={handbookSigned}
           initialDocuments={employeeDocuments.map((d) => ({
             id: d.id,
             category: d.category,

@@ -28,6 +28,14 @@ export const REQUIRED_DOCUMENT_CATEGORIES: EmployeeDocumentCategory[] = [
   "SS_CARD",
 ];
 
+/**
+ * Name of the SignableDocument that represents the Employee Handbook. The
+ * documents card surfaces it as a required item with a "signed via eSign"
+ * status, but it is not a real EmployeeDocument category — admins can't
+ * upload it directly. Must match the SignableDocument's `name` exactly.
+ */
+export const HANDBOOK_SIGNABLE_NAME = "Employee Handbook";
+
 export function isValidCategory(value: unknown): value is EmployeeDocumentCategory {
   return typeof value === "string" && (DOCUMENT_CATEGORIES as string[]).includes(value);
 }

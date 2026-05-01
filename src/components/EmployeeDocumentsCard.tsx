@@ -28,6 +28,7 @@ interface Props {
   employeeId: string;
   hasDriveFolder: boolean;
   isTerminated?: boolean;
+  handbookSigned: boolean;
   initialDocuments: DocumentRow[];
 }
 
@@ -44,6 +45,7 @@ export function EmployeeDocumentsCard({
   employeeId,
   hasDriveFolder,
   isTerminated = false,
+  handbookSigned,
   initialDocuments,
 }: Props) {
   const router = useRouter();
@@ -69,7 +71,8 @@ export function EmployeeDocumentsCard({
     label: DOCUMENT_CATEGORY_LABELS[cat],
     uploaded: uploadedCategories.has(cat),
   }));
-  const missingCount = requiredStatus.filter((r) => !r.uploaded).length;
+  const missingCount =
+    requiredStatus.filter((r) => !r.uploaded).length + (handbookSigned ? 0 : 1);
 
   async function upload(e: React.FormEvent) {
     e.preventDefault();
@@ -138,6 +141,31 @@ export function EmployeeDocumentsCard({
                 </span>
               </li>
             ))}
+            <li
+              className={
+                handbookSigned
+                  ? "flex items-center gap-2 text-sm"
+                  : "flex items-center gap-2 text-sm opacity-60"
+              }
+              title={handbookSigned ? undefined : "Completed via eSignature — uploads disabled"}
+            >
+              <span
+                aria-hidden
+                className={
+                  handbookSigned
+                    ? "inline-flex h-4 w-4 items-center justify-center rounded-full bg-green-100 text-green-700 text-xs"
+                    : "inline-flex h-4 w-4 items-center justify-center rounded-full bg-gray-200 text-gray-400 text-xs"
+                }
+              >
+                {handbookSigned ? "✓" : "·"}
+              </span>
+              <span className={handbookSigned ? "text-gray-900" : "text-gray-500"}>
+                Employee Handbook
+              </span>
+              <span className={handbookSigned ? "text-xs text-green-700" : "text-xs text-gray-400"}>
+                {handbookSigned ? "Signed" : "Awaiting eSignature"}
+              </span>
+            </li>
           </ul>
         </div>
 
