@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import Link from "next/link";
+import { SortableList, DragHandle, SortableHandleProps } from "@/components/SortableList";
 
 interface Lesson {
   id: string;
@@ -111,6 +112,33 @@ export default function AdminModuleDetailPage() {
     loadModule();
   }
 
+  async function handleReorderSubsections(next: Subsection[]) {
+    if (!mod) return;
+    setMod({ ...mod, subsections: next });
+    const res = await fetch(`/api/modules/${moduleId}/subsections/reorder`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ ids: next.map((s) => s.id) }),
+    });
+    if (!res.ok) loadModule();
+  }
+
+  async function handleReorderLessons(subsectionId: string, next: Lesson[]) {
+    if (!mod) return;
+    setMod({
+      ...mod,
+      subsections: mod.subsections.map((s) =>
+        s.id === subsectionId ? { ...s, lessons: next } : s,
+      ),
+    });
+    const res = await fetch(`/api/modules/${moduleId}/lessons/reorder`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ ids: next.map((l) => l.id) }),
+    });
+    if (!res.ok) loadModule();
+  }
+
   if (loading || !mod) {
     return <div className="text-gray-500">Loading module...</div>;
   }
@@ -173,61 +201,69 @@ export default function AdminModuleDetailPage() {
       )}
 
       <div className="space-y-4">
-        {mod.subsections.map((sub) => (
-          <Card key={sub.id}>
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <div>
-                  <h3 className="font-semibold text-gray-900">{sub.title}</h3>
-                  {sub.description && <p className="text-sm text-gray-500">{sub.description}</p>}
-                </div>
-                <div className="flex items-center gap-2">
-                  <Button size="sm" variant="ghost" onClick={() => {
-                    setAddingLessonTo(addingLessonTo === sub.id ? null : sub.id);
-                    setNewLessonTitle("");
-                  }}>
-                    + Lesson
-                  </Button>
-                  <Button size="sm" variant="danger" onClick={() => handleDeleteSubsection(sub.id)}>
-                    Delete
-                  </Button>
-                </div>
-              </div>
-            </CardHeader>
-            <CardContent className="p-0">
-              {addingLessonTo === sub.id && (
-                <div className="px-6 py-3 bg-blue-50 border-b border-blue-100 flex gap-2">
-                  <Input
-                    id="new-lesson"
-                    placeholder="Lesson title"
-                    value={newLessonTitle}
-                    onChange={(e) => setNewLessonTitle(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter") { e.preventDefault(); handleCreateLesson(sub.id); }
-                    }}
-                  />
-                  <Button size="sm" onClick={() => handleCreateLesson(sub.id)}>Add</Button>
-                </div>
-              )}
-              <ul className="divide-y divide-gray-100">
-                {sub.lessons.map((lesson) => (
-                  <li key={lesson.id} className="flex items-center justify-between px-6 py-3 hover:bg-gray-50">
-                    <span className="text-sm text-gray-900">{lesson.title}</span>
-                    <div className="flex items-center gap-2">
-                      <Link href={`/admin/modules/${moduleId}/lessons/${lesson.id}/edit`}>
-                        <Button size="sm" variant="ghost">Edit Content</Button>
-                      </Link>
-                      <Button size="sm" variant="danger" onClick={() => handleDeleteLesson(lesson.id)}>Delete</Button>
+        <SortableList
+          items={mod.subsections}
+          onReorder={handleReorderSubsections}
+          renderItem={(sub, handle) => (
+            <Card className="mb-4">
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <DragHandle {...handle} />
+                    <div>
+                      <h3 className="font-semibold text-gray-900">{sub.title}</h3>
+                      {sub.description && <p className="text-sm text-gray-500">{sub.description}</p>}
                     </div>
-                  </li>
-                ))}
-                {sub.lessons.length === 0 && (
-                  <li className="px-6 py-4 text-sm text-gray-400 text-center">No lessons yet</li>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Button size="sm" variant="ghost" onClick={() => {
+                      setAddingLessonTo(addingLessonTo === sub.id ? null : sub.id);
+                      setNewLessonTitle("");
+                    }}>
+                      + Lesson
+                    </Button>
+                    <Button size="sm" variant="danger" onClick={() => handleDeleteSubsection(sub.id)}>
+                      Delete
+                    </Button>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent className="p-0">
+                {addingLessonTo === sub.id && (
+                  <div className="px-6 py-3 bg-blue-50 border-b border-blue-100 flex gap-2">
+                    <Input
+                      id="new-lesson"
+                      placeholder="Lesson title"
+                      value={newLessonTitle}
+                      onChange={(e) => setNewLessonTitle(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") { e.preventDefault(); handleCreateLesson(sub.id); }
+                      }}
+                    />
+                    <Button size="sm" onClick={() => handleCreateLesson(sub.id)}>Add</Button>
+                  </div>
                 )}
-              </ul>
-            </CardContent>
-          </Card>
-        ))}
+                <div className="divide-y divide-gray-100">
+                  <SortableList
+                    items={sub.lessons}
+                    onReorder={(next) => handleReorderLessons(sub.id, next)}
+                    renderItem={(lesson, lessonHandle) => (
+                      <LessonRow
+                        moduleId={moduleId}
+                        lesson={lesson}
+                        handle={lessonHandle}
+                        onDelete={() => handleDeleteLesson(lesson.id)}
+                      />
+                    )}
+                  />
+                  {sub.lessons.length === 0 && (
+                    <div className="px-6 py-4 text-sm text-gray-400 text-center">No lessons yet</div>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          )}
+        />
 
         {mod.subsections.length === 0 && (
           <Card>
@@ -236,6 +272,33 @@ export default function AdminModuleDetailPage() {
             </CardContent>
           </Card>
         )}
+      </div>
+    </div>
+  );
+}
+
+function LessonRow({
+  moduleId,
+  lesson,
+  handle,
+  onDelete,
+}: {
+  moduleId: string;
+  lesson: Lesson;
+  handle: SortableHandleProps;
+  onDelete: () => void;
+}) {
+  return (
+    <div className="flex items-center justify-between px-6 py-3 hover:bg-gray-50 bg-white">
+      <div className="flex items-center gap-2">
+        <DragHandle {...handle} />
+        <span className="text-sm text-gray-900">{lesson.title}</span>
+      </div>
+      <div className="flex items-center gap-2">
+        <Link href={`/admin/modules/${moduleId}/lessons/${lesson.id}/edit`}>
+          <Button size="sm" variant="ghost">Edit Content</Button>
+        </Link>
+        <Button size="sm" variant="danger" onClick={onDelete}>Delete</Button>
       </div>
     </div>
   );
