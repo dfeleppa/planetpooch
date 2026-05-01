@@ -38,7 +38,7 @@ export default async function ModuleLayout({
   const completedLessonIds = completions.map((c) => c.lessonId);
 
   return (
-    <div className="flex -m-8 min-h-screen">
+    <div className="flex flex-col md:flex-row -m-4 md:-m-8 min-h-screen">
       <ModuleNavSidebar
         moduleId={moduleId}
         moduleTitle={mod.title}
@@ -49,7 +49,7 @@ export default async function ModuleLayout({
         }))}
         completedLessonIds={completedLessonIds}
       />
-      <div className="flex-1 p-8 min-w-0 overflow-auto">
+      <div className="flex-1 p-4 md:p-8 min-w-0 overflow-auto">
         {children}
       </div>
     </div>

@@ -540,6 +540,112 @@ body {
   color: var(--color-pp-ink-4);
 }
 
+/* ============================================================
+   Mobile responsive overrides for the portal layout
+   ============================================================ */
+@media (max-width: 1023px) {
+  /* KPI strip — wrap to 2 columns on tablet/mobile */
+  .pp-kpis {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .pp-kpi-value {
+    font-size: 22px;
+  }
+}
+
+@media (max-width: 767px) {
+  /* Page head: stack the title and primary actions */
+  .pp-h1 {
+    font-size: 22px;
+  }
+
+  /* Tabs: allow horizontal scroll if they overflow */
+  .pp-tabs {
+    overflow-x: auto;
+    flex-wrap: nowrap;
+    -webkit-overflow-scrolling: touch;
+  }
+  .pp-tab {
+    white-space: nowrap;
+  }
+
+  /* Toolbar: keep wrapping; search takes full width first */
+  .pp-toolbar {
+    padding: 8px;
+    gap: 8px;
+  }
+  .pp-search {
+    flex-basis: 100%;
+  }
+
+  /* Roster: switch from grid table to stacked cards */
+  .pp-roster-head {
+    display: none;
+  }
+  .pp-row {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    grid-template-areas:
+      "name view"
+      "role role"
+      "meta meta"
+      "progress progress";
+    column-gap: 12px;
+    row-gap: 8px;
+    padding: 14px;
+  }
+  .pp-row > .pp-rcol-name {
+    grid-area: name;
+  }
+  .pp-row > .pp-rcol-role {
+    grid-area: role;
+    color: var(--color-pp-ink-3);
+    font-size: 12px;
+    white-space: normal;
+  }
+  /* Company / Modules / Docs collapse to a single inline meta row. */
+  .pp-row > .pp-rcol:nth-child(3),
+  .pp-row > .pp-rcol:nth-child(4),
+  .pp-row > .pp-rcol:nth-child(5) {
+    grid-area: meta;
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 12px;
+    color: var(--color-pp-ink-3);
+  }
+  /* Wrap the meta items into one line by giving them no grid placement. */
+  .pp-row > .pp-rcol:nth-child(3) {
+    margin-right: 0;
+  }
+  /* Progress bar spans full width */
+  .pp-row > .pp-rcol:nth-child(6) {
+    grid-area: progress;
+  }
+  /* Hide "Joined" date on small screens to save space — it's available on detail. */
+  .pp-row > .pp-rcol:nth-child(7) {
+    display: none;
+  }
+  /* "View →" link top right */
+  .pp-row > .pp-rcol:last-child {
+    grid-area: view;
+    text-align: right !important;
+    align-self: start;
+  }
+  /* Risk indicator becomes a left border on the whole card */
+  .pp-row.is-risk {
+    border-left: 3px solid var(--color-pp-warn);
+  }
+  .pp-row.is-risk .pp-rcol-name::before {
+    display: none;
+  }
+
+  /* Pagination footer wraps */
+  .pp-pagination {
+    flex-wrap: wrap;
+  }
+}
+
 /* Tiptap editor styles */
 .tiptap {
   outline: none;
