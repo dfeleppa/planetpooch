@@ -157,6 +157,10 @@ model User {
   // Org chart relation
   orgPosition OrgPosition? @relation("UserPosition")
 
+  // Module assignments — modules explicitly granted to this user beyond
+  // whatever their job title would already grant.
+  moduleAssignments ModuleUserAssignment[]
+
   @@index([terminatedAt])
 }
 
@@ -187,9 +191,45 @@ model Module {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
-  subsections   Subsection[]
-  prerequisites ModulePrerequisite[] @relation("DependentModule")
-  dependents    ModulePrerequisite[] @relation("PrerequisiteModule")
+  subsections     Subsection[]
+  prerequisites   ModulePrerequisite[]      @relation("DependentModule")
+  dependents      ModulePrerequisite[]      @relation("PrerequisiteModule")
+  jobTitleAssignments ModuleJobTitleAssignment[]
+  userAssignments     ModuleUserAssignment[]
+}
+
+/// Grants a module to every active user whose `User.jobTitle` matches this
+/// row's `jobTitle` (case-sensitive, matching the value stored on User).
+/// A module with no rows here AND no rows in ModuleUserAssignment is
+/// considered "open" — visible to every employee. The migration that
+/// introduces this table seeds one row per (module, distinct existing
+/// jobTitle) so existing modules keep their current visibility.
+model ModuleJobTitleAssignment {
+  id        String   @id @default(cuid())
+  moduleId  String
+  jobTitle  String
+  createdAt DateTime @default(now())
+
+  module Module @relation(fields: [moduleId], references: [id], onDelete: Cascade)
+
+  @@unique([moduleId, jobTitle])
+  @@index([jobTitle])
+}
+
+/// Individually grants a module to a specific user, on top of any
+/// job-title-based access. Removing a user's job title doesn't revoke
+/// these.
+model ModuleUserAssignment {
+  id         String   @id @default(cuid())
+  moduleId   String
+  userId     String
+  assignedAt DateTime @default(now())
+
+  module Module @relation(fields: [moduleId], references: [id], onDelete: Cascade)
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([moduleId, userId])
+  @@index([userId])
 }
 
 model Subsection {

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { getSession } from "@/lib/auth-helpers";
+import { getSession, isManagerOrAbove } from "@/lib/auth-helpers";
+import { getVisibleModuleIdsForUser } from "@/lib/module-visibility";
 
 export async function GET() {
   const session = await getSession();
@@ -8,7 +9,18 @@ export async function GET() {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
+  const where: { id?: { in: string[] } } = {};
+  if (!isManagerOrAbove(session.user.role)) {
+    const me = await prisma.user.findUnique({
+      where: { id: session.user.id },
+      select: { jobTitle: true },
+    });
+    const ids = await getVisibleModuleIdsForUser(session.user.id, me?.jobTitle ?? null);
+    where.id = { in: [...ids] };
+  }
+
   const modules = await prisma.module.findMany({
+    where,
     orderBy: { order: "asc" },
     include: {
       subsections: {

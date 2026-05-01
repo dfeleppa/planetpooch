@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { getSession, isSuperAdmin } from "@/lib/auth-helpers";
+import { getSession, isManagerOrAbove, isSuperAdmin } from "@/lib/auth-helpers";
 import { extractTextFromTiptapJson } from "@/lib/utils";
+import { isModuleVisibleToUser } from "@/lib/module-visibility";
 
 export async function GET(req: NextRequest, { params }: { params: Promise<{ lessonId: string }> }) {
   const session = await getSession();
@@ -24,6 +25,21 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ less
 
   if (!lesson) {
     return NextResponse.json({ error: "Not found" }, { status: 404 });
+  }
+
+  if (!isManagerOrAbove(session.user.role)) {
+    const me = await prisma.user.findUnique({
+      where: { id: session.user.id },
+      select: { jobTitle: true },
+    });
+    const visible = await isModuleVisibleToUser(
+      lesson.subsection.module.id,
+      session.user.id,
+      me?.jobTitle ?? null,
+    );
+    if (!visible) {
+      return NextResponse.json({ error: "Not found" }, { status: 404 });
+    }
   }
 
   const completion = await prisma.lessonCompletion.findUnique({

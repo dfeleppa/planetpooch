@@ -1,7 +1,8 @@
-import { requireAuth } from "@/lib/auth-helpers";
+import { requireAuth, isManagerOrAbove } from "@/lib/auth-helpers";
 import { prisma } from "@/lib/prisma";
 import { notFound, redirect } from "next/navigation";
 import { cookies } from "next/headers";
+import { isModuleVisibleToUser } from "@/lib/module-visibility";
 
 export default async function ModuleDetailPage({
   params,
@@ -27,6 +28,21 @@ export default async function ModuleDetailPage({
   });
 
   if (!mod) notFound();
+
+  // Managers/super admins can preview any module; employees can only open
+  // modules assigned to them via job title or individual assignment.
+  if (!isManagerOrAbove(session.user.role)) {
+    const me = await prisma.user.findUnique({
+      where: { id: session.user.id },
+      select: { jobTitle: true },
+    });
+    const visible = await isModuleVisibleToUser(
+      moduleId,
+      session.user.id,
+      me?.jobTitle ?? null,
+    );
+    if (!visible) notFound();
+  }
 
   const allLessons = mod.subsections.flatMap((s) => s.lessons);
 

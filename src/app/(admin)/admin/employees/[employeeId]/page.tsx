@@ -12,6 +12,7 @@ import { EsignRequestsCard } from "./EsignRequestsCard";
 import { DriveFolderCard } from "./DriveFolderCard";
 import { EmployeeDocumentsCard } from "@/components/EmployeeDocumentsCard";
 import { DangerZoneCard } from "./DangerZoneCard";
+import { EmployeeModuleAssignments } from "./EmployeeModuleAssignments";
 import { DAYS_OF_WEEK, formatTimeLabel } from "@/lib/availability";
 import { getFileWebLink, isDriveEnabled, isStubId } from "@/lib/drive";
 import { formatDate } from "@/lib/utils";
@@ -257,6 +258,10 @@ export default async function EmployeeDetailPage({ params }: { params: Promise<{
           isTerminated={isTerminated}
           isSuperAdmin={sessionUser.role === "SUPER_ADMIN"}
         />
+      </div>
+
+      <div className="mt-6">
+        <EmployeeModuleAssignments employeeId={employee.id} />
       </div>
 
       {/* Module progress */}

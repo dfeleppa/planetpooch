@@ -7,6 +7,7 @@ import { Company } from "@prisma/client";
 import { DAYS_OF_WEEK, formatTimeLabel } from "@/lib/availability";
 import { HANDBOOK_SIGNABLE_NAME } from "@/lib/employee-documents";
 import { EmployeeDocumentsCard } from "@/components/EmployeeDocumentsCard";
+import { getVisibleModuleIdsForUser } from "@/lib/module-visibility";
 
 const COMPANY_LABELS: Record<Company, string> = {
   GROOMING: "Planet Pooch Grooming",
@@ -36,16 +37,24 @@ export default async function DashboardPage() {
         terminatedAt: true,
       },
     }),
-    prisma.module.findMany({
-      orderBy: { order: "asc" },
-      include: {
-        subsections: {
-          include: {
-            lessons: { select: { id: true, title: true } },
+    (async () => {
+      const me = await prisma.user.findUnique({
+        where: { id: userId },
+        select: { jobTitle: true },
+      });
+      const ids = await getVisibleModuleIdsForUser(userId, me?.jobTitle ?? null);
+      return prisma.module.findMany({
+        where: { id: { in: [...ids] } },
+        orderBy: { order: "asc" },
+        include: {
+          subsections: {
+            include: {
+              lessons: { select: { id: true, title: true } },
+            },
           },
         },
-      },
-    }),
+      });
+    })(),
     prisma.lessonCompletion.findMany({
       where: { userId, isCompleted: true },
       select: { lessonId: true },
