@@ -53,6 +53,10 @@ export default function AdminModuleDetailPage() {
   const [addingLessonTo, setAddingLessonTo] = useState<string | null>(null);
   const [newLessonTitle, setNewLessonTitle] = useState("");
 
+  // Inline subsection title rename
+  const [renamingSubId, setRenamingSubId] = useState<string | null>(null);
+  const [renameSubTitle, setRenameSubTitle] = useState("");
+
   async function loadModule() {
     const res = await fetch(`/api/modules/${moduleId}`);
     const data = await res.json();
@@ -111,6 +115,41 @@ export default function AdminModuleDetailPage() {
     if (!confirm("Delete this lesson?")) return;
     await fetch(`/api/lessons/${lessonId}`, { method: "DELETE" });
     loadModule();
+  }
+
+  function startRenameSubsection(sub: Subsection) {
+    setRenamingSubId(sub.id);
+    setRenameSubTitle(sub.title);
+  }
+
+  function cancelRenameSubsection() {
+    setRenamingSubId(null);
+    setRenameSubTitle("");
+  }
+
+  async function saveRenameSubsection(subsectionId: string) {
+    if (!mod) return;
+    const title = renameSubTitle.trim();
+    if (!title) return;
+    const original = mod.subsections.find((s) => s.id === subsectionId);
+    if (!original || original.title === title) {
+      cancelRenameSubsection();
+      return;
+    }
+    setMod({
+      ...mod,
+      subsections: mod.subsections.map((s) =>
+        s.id === subsectionId ? { ...s, title } : s,
+      ),
+    });
+    setRenamingSubId(null);
+    setRenameSubTitle("");
+    const res = await fetch(`/api/modules/${moduleId}/subsections/${subsectionId}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ title }),
+    });
+    if (!res.ok) loadModule();
   }
 
   async function handleReorderSubsections(next: Subsection[]) {
@@ -211,15 +250,51 @@ export default function AdminModuleDetailPage() {
           renderItem={(sub, handle) => (
             <Card className="mb-4">
               <CardHeader>
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
+                <div className="flex items-center justify-between gap-2">
+                  <div className="flex items-center gap-2 min-w-0 flex-1">
                     <DragHandle {...handle} />
-                    <div>
-                      <h3 className="font-semibold text-gray-900">{sub.title}</h3>
-                      {sub.description && <p className="text-sm text-gray-500">{sub.description}</p>}
+                    <div className="min-w-0 flex-1">
+                      {renamingSubId === sub.id ? (
+                        <div className="flex items-center gap-2">
+                          <Input
+                            id={`rename-sub-${sub.id}`}
+                            value={renameSubTitle}
+                            onChange={(e) => setRenameSubTitle(e.target.value)}
+                            onKeyDown={(e) => {
+                              if (e.key === "Enter") {
+                                e.preventDefault();
+                                saveRenameSubsection(sub.id);
+                              } else if (e.key === "Escape") {
+                                e.preventDefault();
+                                cancelRenameSubsection();
+                              }
+                            }}
+                            autoFocus
+                          />
+                          <Button size="sm" onClick={() => saveRenameSubsection(sub.id)}>Save</Button>
+                          <Button size="sm" variant="secondary" onClick={cancelRenameSubsection}>Cancel</Button>
+                        </div>
+                      ) : (
+                        <div className="flex items-center gap-2">
+                          <h3 className="font-semibold text-gray-900 truncate">{sub.title}</h3>
+                          <button
+                            type="button"
+                            aria-label="Rename subsection"
+                            onClick={() => startRenameSubsection(sub)}
+                            className="text-gray-400 hover:text-gray-700 shrink-0"
+                          >
+                            <svg width="14" height="14" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                              <path d="M14.69 2.66a2.25 2.25 0 0 1 3.18 3.18l-9.9 9.9a2 2 0 0 1-.86.51l-3.7 1.06a.75.75 0 0 1-.93-.93l1.06-3.7a2 2 0 0 1 .51-.86l9.9-9.9zm2.12 1.06a.75.75 0 0 0-1.06 0l-1.13 1.13 1.06 1.06 1.13-1.13a.75.75 0 0 0 0-1.06z" />
+                            </svg>
+                          </button>
+                        </div>
+                      )}
+                      {sub.description && renamingSubId !== sub.id && (
+                        <p className="text-sm text-gray-500">{sub.description}</p>
+                      )}
                     </div>
                   </div>
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2 shrink-0">
                     <Button size="sm" variant="ghost" onClick={() => {
                       setAddingLessonTo(addingLessonTo === sub.id ? null : sub.id);
                       setNewLessonTitle("");
