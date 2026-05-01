@@ -10,7 +10,7 @@ import { Company, Role } from "@prisma/client";
 import { EditEmployeeForm } from "./EditEmployeeForm";
 import { EsignRequestsCard } from "./EsignRequestsCard";
 import { DriveFolderCard } from "./DriveFolderCard";
-import { DocumentsCard } from "./DocumentsCard";
+import { EmployeeDocumentsCard } from "@/components/EmployeeDocumentsCard";
 import { DangerZoneCard } from "./DangerZoneCard";
 import { DAYS_OF_WEEK, formatTimeLabel } from "@/lib/availability";
 import { getFileWebLink, isDriveEnabled, isStubId } from "@/lib/drive";
@@ -183,7 +183,7 @@ export default async function EmployeeDetailPage({ params }: { params: Promise<{
       </div>
 
       <div className="mt-6">
-        <DocumentsCard
+        <EmployeeDocumentsCard
           employeeId={employee.id}
           hasDriveFolder={!!employee.driveFolderId}
           isTerminated={isTerminated}

@@ -12,6 +12,7 @@ import { Company, Role } from "@prisma/client";
 
 async function loadEmployeeForCaller(
   employeeId: string,
+  callerId: string,
   callerRole: Role,
   callerCompany: Company | null
 ) {
@@ -27,6 +28,11 @@ async function loadEmployeeForCaller(
   });
   if (!employee) return null;
 
+  // Self-access: an employee can read / upload their own documents.
+  if (employee.id === callerId) return employee;
+
+  if (!isManagerOrAbove(callerRole)) return null;
+
   const companyFilter = getCompanyFilter(callerRole, callerCompany);
   if (companyFilter.company && employee.company !== companyFilter.company) {
     return null;
@@ -40,14 +46,19 @@ export async function GET(
   { params }: { params: Promise<{ employeeId: string }> }
 ) {
   const session = await getSession();
-  if (!session?.user || !isManagerOrAbove(session.user.role)) {
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  if (!session?.user) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const sessionUser = session.user as { role: Role; company: Company | null };
+  const sessionUser = session.user as {
+    id: string;
+    role: Role;
+    company: Company | null;
+  };
   const { employeeId } = await params;
   const employee = await loadEmployeeForCaller(
     employeeId,
+    sessionUser.id,
     sessionUser.role,
     sessionUser.company
   );
@@ -84,8 +95,8 @@ export async function POST(
   { params }: { params: Promise<{ employeeId: string }> }
 ) {
   const session = await getSession();
-  if (!session?.user || !isManagerOrAbove(session.user.role)) {
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  if (!session?.user) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
   const sessionUser = session.user as {
@@ -97,6 +108,7 @@ export async function POST(
 
   const employee = await loadEmployeeForCaller(
     employeeId,
+    sessionUser.id,
     sessionUser.role,
     sessionUser.company
   );

@@ -41,7 +41,7 @@ const CATEGORY_OPTIONS: { value: EmployeeDocumentCategory; label: string }[] = [
 
 const REQUIRED_CATEGORIES = REQUIRED_DOCUMENT_CATEGORIES;
 
-export function DocumentsCard({
+export function EmployeeDocumentsCard({
   employeeId,
   hasDriveFolder,
   isTerminated = false,

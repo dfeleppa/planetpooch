@@ -3,26 +3,76 @@ import { prisma } from "@/lib/prisma";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { ProgressBar } from "@/components/ui/progress-bar";
 import Link from "next/link";
+import { Company } from "@prisma/client";
+import { DAYS_OF_WEEK, formatTimeLabel } from "@/lib/availability";
+import { HANDBOOK_SIGNABLE_NAME } from "@/lib/employee-documents";
+import { EmployeeDocumentsCard } from "@/components/EmployeeDocumentsCard";
+
+const COMPANY_LABELS: Record<Company, string> = {
+  GROOMING: "Planet Pooch Grooming",
+  RESORT: "Planet Pooch Resort",
+  CORPORATE: "Planet Pooch Corporate",
+};
 
 export default async function DashboardPage() {
   const session = await requireAuth();
   const userId = session.user.id;
 
-  const modules = await prisma.module.findMany({
-    orderBy: { order: "asc" },
-    include: {
-      subsections: {
-        include: {
-          lessons: { select: { id: true, title: true } },
+  const [user, modules, completions, availability, employeeDocuments, handbookEsignRequests] = await Promise.all([
+    prisma.user.findUnique({
+      where: { id: userId },
+      select: {
+        id: true,
+        firstName: true,
+        lastName: true,
+        email: true,
+        role: true,
+        company: true,
+        jobTitle: true,
+        department: true,
+        phone: true,
+        hireDate: true,
+        driveFolderId: true,
+        terminatedAt: true,
+      },
+    }),
+    prisma.module.findMany({
+      orderBy: { order: "asc" },
+      include: {
+        subsections: {
+          include: {
+            lessons: { select: { id: true, title: true } },
+          },
         },
       },
-    },
-  });
+    }),
+    prisma.lessonCompletion.findMany({
+      where: { userId, isCompleted: true },
+      select: { lessonId: true },
+    }),
+    prisma.employeeAvailability.findMany({
+      where: { userId },
+      select: { dayOfWeek: true, startTime: true, endTime: true },
+    }),
+    prisma.employeeDocument.findMany({
+      where: { userId },
+      orderBy: { uploadedAt: "desc" },
+      include: {
+        uploadedBy: { select: { id: true, name: true } },
+      },
+    }),
+    prisma.esignRequest.findMany({
+      where: {
+        userId,
+        status: "SIGNED",
+        signableDocument: { name: HANDBOOK_SIGNABLE_NAME },
+      },
+      select: { id: true },
+      take: 1,
+    }),
+  ]);
 
-  const completions = await prisma.lessonCompletion.findMany({
-    where: { userId, isCompleted: true },
-    select: { lessonId: true },
-  });
+  const handbookSigned = handbookEsignRequests.length > 0;
 
   const completedSet = new Set(completions.map((c) => c.lessonId));
 
@@ -36,7 +86,6 @@ export default async function DashboardPage() {
     totalLessons += total;
     totalCompleted += completed;
 
-    // Find first incomplete lesson for "continue" link
     let continueLesson: { id: string; title: string } | null = null;
     for (const sub of mod.subsections) {
       for (const lesson of sub.lessons) {
@@ -52,14 +101,92 @@ export default async function DashboardPage() {
   });
 
   const overallPercentage = totalLessons > 0 ? Math.round((totalCompleted / totalLessons) * 100) : 0;
+  const availabilityByDay = new Map(availability.map((a) => [a.dayOfWeek, a]));
 
   return (
     <div>
       <h1 className="text-2xl font-bold text-gray-900">Dashboard</h1>
       <p className="text-gray-500 mt-1">Welcome back, {session.user.name}</p>
 
-      {/* Overall Progress */}
+      {user && (
+        <Card className="mt-6">
+          <CardHeader>
+            <h2 className="font-semibold text-gray-900">Employee Info</h2>
+          </CardHeader>
+          <CardContent className="grid grid-cols-2 gap-3 text-sm">
+            <Field label="First Name" value={user.firstName} />
+            <Field label="Last Name" value={user.lastName} />
+            <Field
+              label="Email"
+              value={
+                user.email.endsWith("@placeholder.local")
+                  ? "— (not set)"
+                  : user.email
+              }
+            />
+            <Field label="Phone" value={user.phone || "—"} />
+            <Field label="Role" value={user.role} />
+            <Field label="Company" value={COMPANY_LABELS[user.company]} />
+            <Field label="Job Title" value={user.jobTitle || "—"} />
+            <Field
+              label="Hire Date"
+              value={user.hireDate ? user.hireDate.toISOString().slice(0, 10) : "—"}
+            />
+          </CardContent>
+        </Card>
+      )}
+
+      {user && (
+        <div className="mt-6">
+          <EmployeeDocumentsCard
+            employeeId={user.id}
+            hasDriveFolder={!!user.driveFolderId}
+            isTerminated={!!user.terminatedAt}
+            handbookSigned={handbookSigned}
+            initialDocuments={employeeDocuments.map((d) => ({
+              id: d.id,
+              category: d.category,
+              customName: d.customName,
+              fileName: d.fileName,
+              driveFileId: d.driveFileId,
+              mimeType: d.mimeType,
+              fileSize: d.fileSize,
+              uploadedAt: d.uploadedAt.toISOString(),
+              uploadedBy: d.uploadedBy,
+            }))}
+          />
+        </div>
+      )}
+
       <Card className="mt-6">
+        <CardHeader>
+          <h2 className="font-semibold text-gray-900">Availability</h2>
+        </CardHeader>
+        <CardContent className="p-0">
+          <ul className="divide-y divide-gray-100">
+            {DAYS_OF_WEEK.map((day) => {
+              const entry = availabilityByDay.get(day.value);
+              return (
+                <li
+                  key={day.value}
+                  className="flex items-center justify-between px-6 py-2 text-sm"
+                >
+                  <span className="text-gray-900">{day.label}</span>
+                  {entry ? (
+                    <span className="text-gray-600">
+                      {formatTimeLabel(entry.startTime)} – {formatTimeLabel(entry.endTime)}
+                    </span>
+                  ) : (
+                    <span className="text-gray-400">Unavailable</span>
+                  )}
+                </li>
+              );
+            })}
+          </ul>
+        </CardContent>
+      </Card>
+
+      <Card className="mt-8">
         <CardContent className="py-6">
           <div className="flex items-center gap-6">
             <div className="w-20 h-20 rounded-full border-4 border-blue-500 flex items-center justify-center">
@@ -74,7 +201,6 @@ export default async function DashboardPage() {
         </CardContent>
       </Card>
 
-      {/* Module Progress */}
       <h2 className="text-lg font-semibold text-gray-900 mt-8 mb-4">Your Modules</h2>
       <div className="grid gap-4">
         {moduleProgress.map((mod) => (
@@ -119,6 +245,15 @@ export default async function DashboardPage() {
           </Card>
         )}
       </div>
+    </div>
+  );
+}
+
+function Field({ label, value }: { label: string; value: string }) {
+  return (
+    <div>
+      <div className="text-xs text-gray-500 uppercase tracking-wide">{label}</div>
+      <div className="text-gray-900 mt-0.5">{value}</div>
     </div>
   );
 }
