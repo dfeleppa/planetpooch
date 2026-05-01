@@ -5,6 +5,7 @@ import { ProgressBar } from "@/components/ui/progress-bar";
 import Link from "next/link";
 import { Company } from "@prisma/client";
 import { DAYS_OF_WEEK, formatTimeLabel } from "@/lib/availability";
+import { HANDBOOK_SIGNABLE_NAME } from "@/lib/employee-documents";
 import { EmployeeDocumentsCard } from "@/components/EmployeeDocumentsCard";
 
 const COMPANY_LABELS: Record<Company, string> = {
@@ -17,7 +18,7 @@ export default async function DashboardPage() {
   const session = await requireAuth();
   const userId = session.user.id;
 
-  const [user, modules, completions, availability, employeeDocuments] = await Promise.all([
+  const [user, modules, completions, availability, employeeDocuments, handbookEsignRequests] = await Promise.all([
     prisma.user.findUnique({
       where: { id: userId },
       select: {
@@ -60,7 +61,18 @@ export default async function DashboardPage() {
         uploadedBy: { select: { id: true, name: true } },
       },
     }),
+    prisma.esignRequest.findMany({
+      where: {
+        userId,
+        status: "SIGNED",
+        signableDocument: { name: HANDBOOK_SIGNABLE_NAME },
+      },
+      select: { id: true },
+      take: 1,
+    }),
   ]);
+
+  const handbookSigned = handbookEsignRequests.length > 0;
 
   const completedSet = new Set(completions.map((c) => c.lessonId));
 
@@ -130,6 +142,7 @@ export default async function DashboardPage() {
             employeeId={user.id}
             hasDriveFolder={!!user.driveFolderId}
             isTerminated={!!user.terminatedAt}
+            handbookSigned={handbookSigned}
             initialDocuments={employeeDocuments.map((d) => ({
               id: d.id,
               category: d.category,
