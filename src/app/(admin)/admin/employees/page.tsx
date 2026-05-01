@@ -317,7 +317,7 @@ export default async function AdminEmployeesPage({
   return (
     <div className="flex flex-col gap-6">
       {/* Page head */}
-      <div className="flex items-start justify-between gap-6">
+      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 sm:gap-6">
         <div>
           <h1 className="pp-h1">Employees</h1>
           <p className="pp-sub">
@@ -327,7 +327,7 @@ export default async function AdminEmployeesPage({
           </p>
         </div>
         {tab === "active" && (
-          <div className="flex items-start gap-3">
+          <div className="flex flex-wrap items-start gap-3">
             <CheckPendingEsignaturesButton pendingCount={pendingEsignCount} />
             <Link href="/admin/employees/new" className="pp-btn pp-btn-primary">
               + Add Employee
