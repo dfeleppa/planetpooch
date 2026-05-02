@@ -92,6 +92,21 @@ enum EmployeeDocumentCategory {
   OTHER
 }
 
+enum ServiceLine {
+  GROOMING
+  DAYCARE
+  BOARDING
+  TRAINING
+  MULTIPLE
+}
+
+enum IdeaStatus {
+  DRAFT
+  IN_PRODUCTION
+  SHIPPED
+  ARCHIVED
+}
+
 model User {
   id                 String    @id @default(cuid())
   email              String    @unique
@@ -164,6 +179,7 @@ model User {
 
   // Marketing relations
   voiceProfilesCreated BrandVoiceProfile[] @relation("VoiceProfileCreator")
+  marketingIdeasCreated MarketingIdea[]    @relation("MarketingIdeaCreator")
 
   @@index([terminatedAt])
 }
@@ -701,6 +717,29 @@ model BrandVoiceProfile {
   createdBy User? @relation("VoiceProfileCreator", fields: [createdById], references: [id], onDelete: SetNull)
 
   @@index([version])
+}
+
+/// The seed insight a campaign is built around — the "vets cage dogs all day,
+/// our suites have beds and TVs" observation. Scripts, ad copy, and creatives
+/// hang off an idea. Status moves: DRAFT → IN_PRODUCTION → SHIPPED → ARCHIVED.
+model MarketingIdea {
+  id          String      @id @default(cuid())
+  title       String
+  insight     String      @default("")
+  audience    String      @default("")
+  serviceLine ServiceLine
+  status      IdeaStatus  @default(DRAFT)
+  tags        String[]    @default([])
+  notes       String      @default("")
+  createdById String?
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+
+  createdBy User? @relation("MarketingIdeaCreator", fields: [createdById], references: [id], onDelete: SetNull)
+
+  @@index([status])
+  @@index([serviceLine])
+  @@index([createdAt])
 }
 
 /// One row per day-of-week the employee is available. Times are stored as
