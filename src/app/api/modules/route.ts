@@ -65,7 +65,7 @@ export async function POST(req: NextRequest) {
   }
 
   const body = await req.json();
-  const { title, description, icon } = body;
+  const { title, description, icon, notesEnabled } = body;
 
   if (!title) {
     return NextResponse.json({ error: "Title is required" }, { status: 400 });
@@ -75,7 +75,13 @@ export async function POST(req: NextRequest) {
   const order = (maxOrder._max.order ?? -1) + 1;
 
   const module = await prisma.module.create({
-    data: { title, description: description || "", icon, order },
+    data: {
+      title,
+      description: description || "",
+      icon,
+      order,
+      ...(typeof notesEnabled === "boolean" && { notesEnabled }),
+    },
   });
 
   return NextResponse.json(module, { status: 201 });

@@ -70,7 +70,7 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ modu
 
   const { moduleId } = await params;
   const body = await req.json();
-  const { title, description, icon } = body;
+  const { title, description, icon, notesEnabled } = body;
 
   const mod = await prisma.module.update({
     where: { id: moduleId },
@@ -78,6 +78,7 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ modu
       ...(title !== undefined && { title }),
       ...(description !== undefined && { description }),
       ...(icon !== undefined && { icon }),
+      ...(typeof notesEnabled === "boolean" && { notesEnabled }),
     },
   });
 

@@ -17,7 +17,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ less
     include: {
       subsection: {
         include: {
-          module: { select: { id: true, title: true } },
+          module: { select: { id: true, title: true, order: true, notesEnabled: true } },
         },
       },
     },
@@ -46,16 +46,62 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ less
     where: { userId_lessonId: { userId: session.user.id, lessonId } },
   });
 
-  // Get prev/next lessons
-  const siblingLessons = await prisma.lesson.findMany({
-    where: { subsectionId: lesson.subsectionId },
+  // Walk the full module to find prev/next lessons across subsections.
+  const moduleSubsections = await prisma.subsection.findMany({
+    where: { moduleId: lesson.subsection.module.id },
     orderBy: { order: "asc" },
-    select: { id: true, title: true, order: true },
+    include: {
+      lessons: {
+        orderBy: { order: "asc" },
+        select: { id: true, title: true },
+      },
+    },
   });
+  const flatLessons = moduleSubsections.flatMap((s) => s.lessons);
+  const currentIndex = flatLessons.findIndex((l) => l.id === lessonId);
+  const prevLesson = currentIndex > 0 ? flatLessons[currentIndex - 1] : null;
+  const nextLesson =
+    currentIndex >= 0 && currentIndex < flatLessons.length - 1
+      ? flatLessons[currentIndex + 1]
+      : null;
 
-  const currentIndex = siblingLessons.findIndex((l) => l.id === lessonId);
-  const prevLesson = currentIndex > 0 ? siblingLessons[currentIndex - 1] : null;
-  const nextLesson = currentIndex < siblingLessons.length - 1 ? siblingLessons[currentIndex + 1] : null;
+  // If we're on the last lesson of the module, surface the next module so the
+  // user can continue without having to complete the current one first.
+  let nextModule: { id: string; title: string; firstLessonId: string } | null = null;
+  if (!nextLesson) {
+    const candidates = await prisma.module.findMany({
+      where: { order: { gt: lesson.subsection.module.order } },
+      orderBy: { order: "asc" },
+      include: {
+        subsections: {
+          orderBy: { order: "asc" },
+          include: {
+            lessons: { orderBy: { order: "asc" }, select: { id: true }, take: 1 },
+          },
+        },
+      },
+    });
+    const me = !isManagerOrAbove(session.user.role)
+      ? await prisma.user.findUnique({
+          where: { id: session.user.id },
+          select: { jobTitle: true },
+        })
+      : null;
+    for (const candidate of candidates) {
+      const firstLessonId = candidate.subsections.flatMap((s) => s.lessons)[0]?.id;
+      if (!firstLessonId) continue;
+      if (!isManagerOrAbove(session.user.role)) {
+        const visible = await isModuleVisibleToUser(
+          candidate.id,
+          session.user.id,
+          me?.jobTitle ?? null,
+        );
+        if (!visible) continue;
+      }
+      nextModule = { id: candidate.id, title: candidate.title, firstLessonId };
+      break;
+    }
+  }
 
   return NextResponse.json({
     ...lesson,
@@ -63,6 +109,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ less
     completedAt: completion?.completedAt ?? null,
     prevLesson,
     nextLesson,
+    nextModule,
     module: lesson.subsection.module,
     subsectionTitle: lesson.subsection.title,
   });

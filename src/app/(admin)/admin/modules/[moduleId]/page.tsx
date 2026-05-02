@@ -28,6 +28,7 @@ interface ModuleData {
   title: string;
   description: string;
   icon: string | null;
+  notesEnabled: boolean;
   subsections: Subsection[];
 }
 
@@ -42,6 +43,7 @@ export default function AdminModuleDetailPage() {
   const [editTitle, setEditTitle] = useState("");
   const [editDesc, setEditDesc] = useState("");
   const [editIcon, setEditIcon] = useState("");
+  const [editNotesEnabled, setEditNotesEnabled] = useState(true);
   const [editing, setEditing] = useState(false);
 
   // New subsection form
@@ -64,6 +66,7 @@ export default function AdminModuleDetailPage() {
     setEditTitle(data.title);
     setEditDesc(data.description);
     setEditIcon(data.icon || "");
+    setEditNotesEnabled(data.notesEnabled ?? true);
     setLoading(false);
   }
 
@@ -74,7 +77,7 @@ export default function AdminModuleDetailPage() {
     await fetch(`/api/modules/${moduleId}`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ title: editTitle, description: editDesc, icon: editIcon || null }),
+      body: JSON.stringify({ title: editTitle, description: editDesc, icon: editIcon || null, notesEnabled: editNotesEnabled }),
     });
     setEditing(false);
     loadModule();
@@ -200,6 +203,15 @@ export default function AdminModuleDetailPage() {
               <Input id="edit-title" label="Title" value={editTitle} onChange={(e) => setEditTitle(e.target.value)} required />
               <Input id="edit-desc" label="Description" value={editDesc} onChange={(e) => setEditDesc(e.target.value)} />
               <Input id="edit-icon" label="Icon (emoji)" value={editIcon} onChange={(e) => setEditIcon(e.target.value)} />
+              <label className="flex items-center gap-2 text-sm text-gray-700">
+                <input
+                  type="checkbox"
+                  checked={editNotesEnabled}
+                  onChange={(e) => setEditNotesEnabled(e.target.checked)}
+                  className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                />
+                Enable &quot;My Notes&quot; for this module
+              </label>
               <div className="flex gap-2">
                 <Button type="submit">Save</Button>
                 <Button type="button" variant="secondary" onClick={() => setEditing(false)}>Cancel</Button>
