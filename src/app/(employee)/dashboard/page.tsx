@@ -116,11 +116,11 @@ export default async function DashboardPage() {
         {moduleProgress.map((mod) => (
           <Card key={mod.id} className="hover:shadow-md transition-shadow">
             <CardContent className="py-4">
-              <div className="flex items-center justify-between">
-                <div className="flex-1">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2">
-                    {mod.icon && <span className="text-xl">{mod.icon}</span>}
-                    <Link href={`/modules/${mod.id}`} className="text-lg font-medium text-gray-900 hover:text-blue-600">
+                    {mod.icon && <span className="text-xl flex-shrink-0">{mod.icon}</span>}
+                    <Link href={`/modules/${mod.id}`} className="text-lg font-medium text-gray-900 hover:text-blue-600 break-words">
                       {mod.title}
                     </Link>
                   </div>
@@ -132,13 +132,13 @@ export default async function DashboardPage() {
                 {mod.continueLesson && mod.completedLessons < mod.totalLessons && (
                   <Link
                     href={`/modules/${mod.id}/lessons/${mod.continueLesson.id}`}
-                    className="ml-4 px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors whitespace-nowrap"
+                    className="self-start sm:self-auto sm:ml-4 px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors whitespace-nowrap"
                   >
                     Continue
                   </Link>
                 )}
                 {mod.completedLessons === mod.totalLessons && mod.totalLessons > 0 && (
-                  <span className="ml-4 px-4 py-2 bg-green-100 text-green-700 text-sm font-medium rounded-lg">
+                  <span className="self-start sm:self-auto sm:ml-4 px-4 py-2 bg-green-100 text-green-700 text-sm font-medium rounded-lg">
                     Complete!
                   </span>
                 )}
@@ -161,7 +161,7 @@ export default async function DashboardPage() {
           <CardHeader>
             <h2 className="font-semibold text-gray-900">Employee Info</h2>
           </CardHeader>
-          <CardContent className="grid grid-cols-2 gap-3 text-sm">
+          <CardContent className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
             <Field label="First Name" value={user.firstName} />
             <Field label="Last Name" value={user.lastName} />
             <Field

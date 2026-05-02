@@ -61,12 +61,12 @@ export default function AdminModulesPage() {
 
   return (
     <div>
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Manage Modules</h1>
           <p className="text-gray-500 mt-1">Create, edit, and organize training modules</p>
         </div>
-        <Button onClick={() => setShowCreate(!showCreate)}>
+        <Button onClick={() => setShowCreate(!showCreate)} className="self-start sm:self-auto">
           {showCreate ? "Cancel" : "New Module"}
         </Button>
       </div>
@@ -88,18 +88,18 @@ export default function AdminModulesPage() {
         {modules.map((mod) => (
           <Card key={mod.id} className="hover:shadow-md transition-shadow">
             <CardContent className="py-4">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  {mod.icon && <span className="text-2xl">{mod.icon}</span>}
-                  <div>
-                    <Link href={`/admin/modules/${mod.id}`} className="text-lg font-medium text-gray-900 hover:text-blue-600">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                <div className="flex items-start sm:items-center gap-3 min-w-0">
+                  {mod.icon && <span className="text-2xl flex-shrink-0">{mod.icon}</span>}
+                  <div className="min-w-0">
+                    <Link href={`/admin/modules/${mod.id}`} className="text-lg font-medium text-gray-900 hover:text-blue-600 break-words">
                       {mod.title}
                     </Link>
                     {mod.description && <p className="text-sm text-gray-500">{mod.description}</p>}
                     <p className="text-xs text-gray-400 mt-1">{mod.totalLessons} lessons</p>
                   </div>
                 </div>
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 flex-shrink-0 self-end sm:self-auto">
                   <Link href={`/admin/modules/${mod.id}`}>
                     <Button variant="secondary" size="sm">Edit</Button>
                   </Link>

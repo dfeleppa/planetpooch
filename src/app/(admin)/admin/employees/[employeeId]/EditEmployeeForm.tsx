@@ -117,7 +117,7 @@ export function EditEmployeeForm({ employee, canEditCompany, canAssignSuperAdmin
             Edit
           </Button>
         </CardHeader>
-        <CardContent className="grid grid-cols-2 gap-3 text-sm">
+        <CardContent className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
           <Field label="First Name" value={employee.firstName} />
           <Field label="Last Name" value={employee.lastName} />
           <Field
@@ -148,7 +148,7 @@ export function EditEmployeeForm({ employee, canEditCompany, canAssignSuperAdmin
       </CardHeader>
       <CardContent>
         <form onSubmit={save} className="space-y-4">
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <Input
               label="First Name"
               value={firstName}
@@ -171,7 +171,7 @@ export function EditEmployeeForm({ employee, canEditCompany, canAssignSuperAdmin
             placeholder="jane@planetpooch.com"
           />
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="flex flex-col gap-1">
               <label className="text-sm font-medium text-gray-700">Company</label>
               {canEditCompany ? (
@@ -252,7 +252,7 @@ export function EditEmployeeForm({ employee, canEditCompany, canAssignSuperAdmin
             )}
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <Input
               label="Phone (optional)"
               value={phone}
