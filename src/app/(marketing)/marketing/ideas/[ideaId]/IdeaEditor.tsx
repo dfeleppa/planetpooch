@@ -247,19 +247,6 @@ export function IdeaEditor({ idea }: { idea: IdeaProp }) {
         </CardContent>
       </Card>
 
-      <Card>
-        <CardHeader>
-          <h2 className="text-base font-semibold text-gray-900">
-            Scripts &amp; copy
-          </h2>
-        </CardHeader>
-        <CardContent className="pt-0">
-          <p className="text-sm text-gray-500">
-            Coming next: generate scripts &amp; hooks from this idea using the
-            Voice Profile.
-          </p>
-        </CardContent>
-      </Card>
     </form>
   );
 }

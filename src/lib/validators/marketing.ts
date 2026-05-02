@@ -55,3 +55,56 @@ export const UpdateMarketingIdeaSchema = z.object({
 
 export type CreateMarketingIdeaInput = z.infer<typeof CreateMarketingIdeaSchema>;
 export type UpdateMarketingIdeaInput = z.infer<typeof UpdateMarketingIdeaSchema>;
+
+// ── Scripts + Hooks ─────────────────────────────────────────────────────────
+
+export const PlatformSchema = z.enum([
+  "REELS",
+  "TIKTOK",
+  "YT_SHORTS",
+  "META_FEED",
+  "FB_FEED",
+  "MULTI",
+]);
+
+export const ScriptStatusSchema = z.enum([
+  "DRAFT",
+  "APPROVED",
+  "FILMED",
+  "POSTED",
+  "ARCHIVED",
+]);
+
+export const HookStatusSchema = z.enum([
+  "DRAFT",
+  "APPROVED",
+  "REJECTED",
+  "WINNER",
+]);
+
+export const GenerateScriptsRequestSchema = z.object({
+  scriptCount: z.number().int().min(1).max(5).default(3),
+  hooksPerScript: z.number().int().min(1).max(10).default(5),
+  platform: PlatformSchema.default("MULTI"),
+});
+
+export const UpdateScriptSchema = z.object({
+  body: z.string().max(20000).optional(),
+  platform: PlatformSchema.optional(),
+  status: ScriptStatusSchema.optional(),
+  notes: z.string().max(2000).optional(),
+});
+
+export const UpdateHookSchema = z.object({
+  label: z.string().trim().max(200).optional(),
+  text: z.string().trim().min(1).max(2000).optional(),
+  status: HookStatusSchema.optional(),
+  notes: z.string().max(2000).optional(),
+  order: z.number().int().nonnegative().optional(),
+});
+
+export type GenerateScriptsRequestInput = z.infer<
+  typeof GenerateScriptsRequestSchema
+>;
+export type UpdateScriptInput = z.infer<typeof UpdateScriptSchema>;
+export type UpdateHookInput = z.infer<typeof UpdateHookSchema>;

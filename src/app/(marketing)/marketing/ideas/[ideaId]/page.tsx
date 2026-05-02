@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { requireMarketing } from "@/lib/auth-helpers";
 import { prisma } from "@/lib/prisma";
 import { IdeaEditor } from "./IdeaEditor";
+import { ScriptsSection } from "./ScriptsSection";
 
 export default async function IdeaDetailPage({
   params,
@@ -14,13 +15,21 @@ export default async function IdeaDetailPage({
 
   const idea = await prisma.marketingIdea.findUnique({
     where: { id: ideaId },
-    include: { createdBy: { select: { id: true, name: true } } },
+    include: {
+      createdBy: { select: { id: true, name: true } },
+      scripts: {
+        orderBy: { createdAt: "desc" },
+        include: {
+          hooks: { orderBy: { order: "asc" }, select: { id: true, text: true } },
+        },
+      },
+    },
   });
   if (!idea) notFound();
 
   return (
-    <div className="max-w-3xl">
-      <div className="mb-4">
+    <div className="max-w-3xl space-y-4">
+      <div>
         <Link
           href="/marketing/ideas"
           className="text-sm text-gray-500 hover:text-gray-700"
@@ -43,6 +52,20 @@ export default async function IdeaDetailPage({
           createdAt: idea.createdAt.toISOString(),
           updatedAt: idea.updatedAt.toISOString(),
         }}
+      />
+
+      <ScriptsSection
+        ideaId={idea.id}
+        scripts={idea.scripts.map((s) => ({
+          id: s.id,
+          body: s.body,
+          status: s.status,
+          platform: s.platform,
+          hookCount: s.hooks.length,
+          firstHookText: s.hooks[0]?.text ?? "",
+          createdAt: s.createdAt.toISOString(),
+          voiceProfileVersion: s.voiceProfileVersion,
+        }))}
       />
     </div>
   );
