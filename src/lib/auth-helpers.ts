@@ -42,6 +42,16 @@ export async function requireSuperAdmin() {
   return session;
 }
 
+/** Requires MARKETING or SUPER_ADMIN. Use for /marketing pages. */
+export async function requireMarketing() {
+  const session = await requireAuth();
+  const role = (session.user as { role: Role }).role;
+  if (role !== "MARKETING" && role !== "SUPER_ADMIN" && role !== "ADMIN") {
+    redirect("/dashboard");
+  }
+  return session;
+}
+
 /**
  * Returns a Prisma `where` filter to scope queries to the user's company.
  * SUPER_ADMIN: no filter (sees all companies).
@@ -74,6 +84,11 @@ export function isManagerOrAbove(role: string | undefined | null): boolean {
 /** True if the role is SUPER_ADMIN or legacy ADMIN — the top tier. */
 export function isSuperAdmin(role: string | undefined | null): boolean {
   return role === "SUPER_ADMIN" || role === "ADMIN";
+}
+
+/** True if the role can access /marketing (MARKETING or SUPER_ADMIN). */
+export function hasMarketingAccess(role: string | undefined | null): boolean {
+  return role === "MARKETING" || role === "SUPER_ADMIN" || role === "ADMIN";
 }
 
 // Keep requireAdmin as an alias for backward compatibility during migration
