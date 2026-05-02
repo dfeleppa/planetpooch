@@ -33,6 +33,8 @@ export async function proxy(req: NextRequest) {
     role === "SUPER_ADMIN" ||
     role === "ADMIN";
   const isTopTier = role === "SUPER_ADMIN" || role === "ADMIN";
+  const hasMarketingAccess =
+    role === "MARKETING" || role === "SUPER_ADMIN" || role === "ADMIN";
 
   // Only top-tier roles can manage modules/lessons
   if (pathname.startsWith("/admin/modules") && !isTopTier) {
@@ -41,6 +43,11 @@ export async function proxy(req: NextRequest) {
 
   // Admin section requires MANAGER or SUPER_ADMIN
   if (pathname.startsWith("/admin") && !isManagerOrAbove) {
+    return NextResponse.redirect(new URL("/dashboard", req.url));
+  }
+
+  // Marketing section requires MARKETING or SUPER_ADMIN
+  if (pathname.startsWith("/marketing") && !hasMarketingAccess) {
     return NextResponse.redirect(new URL("/dashboard", req.url));
   }
 
@@ -55,6 +62,7 @@ export const config = {
     "/search/:path*",
     "/maintenance/:path*",
     "/tasks/:path*",
+    "/marketing/:path*",
     "/change-password",
   ],
 };

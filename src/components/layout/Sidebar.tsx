@@ -44,10 +44,16 @@ const sharedNav: NavItem[] = [
   { href: "/tasks", label: "Tasks", icon: "✓" },
 ];
 
+const marketingNav: NavItem[] = [
+  { href: "/marketing", label: "Marketing", icon: "✦" },
+  { href: "/marketing/voice", label: "Voice Profile", icon: "✎" },
+];
+
 const ROLE_LABELS: Record<string, string> = {
   SUPER_ADMIN: "Super Admin",
   MANAGER: "Manager",
   EMPLOYEE: "Employee",
+  MARKETING: "Marketing",
   ADMIN: "Admin",
 };
 
@@ -58,6 +64,7 @@ export function Sidebar() {
   const isSuperAdmin = role === "SUPER_ADMIN" || role === "ADMIN";
   const isManager = role === "MANAGER";
   const isManagerOrAbove = isSuperAdmin || isManager;
+  const hasMarketingAccess = role === "MARKETING" || isSuperAdmin;
 
   const nav = isSuperAdmin ? superAdminNav : isManager ? managerNav : employeeNav;
 
@@ -98,7 +105,7 @@ export function Sidebar() {
     if (href === "/dashboard" || href === "/admin") return pathname === href;
     if (pathname !== href && !pathname.startsWith(href + "/")) return false;
     // Longest-prefix wins: don't highlight /maintenance when on /maintenance/inventory.
-    const candidates = [...nav, ...sharedNav]
+    const candidates = [...nav, ...sharedNav, ...marketingNav]
       .map((n) => n.href)
       .filter((h) => h !== "/dashboard" && h !== "/admin")
       .filter((h) => pathname === h || pathname.startsWith(h + "/"));
@@ -225,6 +232,33 @@ export function Sidebar() {
               );
             })}
           </div>
+
+          {/* Marketing section — visible to MARKETING role and SUPER_ADMIN */}
+          {hasMarketingAccess && (
+            <>
+              {!isCollapsed ? (
+                <div className="px-2.5 pt-1 text-[10px] font-medium uppercase tracking-[0.08em] text-pp-ink-4">
+                  Marketing
+                </div>
+              ) : (
+                <div className="mx-1.5 h-px bg-pp-line" />
+              )}
+              <div className="-mt-2 flex flex-col gap-px">
+                {marketingNav.map((item) => {
+                  const active = isActive(item.href);
+                  return (
+                    <Link key={item.href} href={item.href} title={isCollapsed ? item.label : undefined} className={navItemClass(active)}>
+                      {activeRail(active)}
+                      <span className={cn("text-[14px] w-4 text-center flex-shrink-0", active ? "text-pp-accent" : "text-pp-ink-3")}>
+                        {item.icon}
+                      </span>
+                      {!isCollapsed && <span className="truncate">{item.label}</span>}
+                    </Link>
+                  );
+                })}
+              </div>
+            </>
+          )}
 
           {/* Manager/Admin: Employee View section */}
           {isManagerOrAbove && (

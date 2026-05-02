@@ -12,6 +12,7 @@ enum Role {
   SUPER_ADMIN
   MANAGER
   EMPLOYEE
+  MARKETING
   ADMIN // legacy — existing rows only, use SUPER_ADMIN for new admins
 }
 
@@ -160,6 +161,9 @@ model User {
   // Module assignments — modules explicitly granted to this user beyond
   // whatever their job title would already grant.
   moduleAssignments ModuleUserAssignment[]
+
+  // Marketing relations
+  voiceProfilesCreated BrandVoiceProfile[] @relation("VoiceProfileCreator")
 
   @@index([terminatedAt])
 }
@@ -670,6 +674,33 @@ model EmployeeDocument {
 
   @@index([userId])
   @@index([category])
+}
+
+// ============================================================
+// Marketing Models
+// ============================================================
+
+/// Versioned brand voice profile. Saving the editor inserts a new row rather
+/// than updating the existing one, so every generator call can stamp the exact
+/// version it referenced. The "current" profile is the row with the highest
+/// version. Older versions are kept for audit + correlating quality changes
+/// to voice changes.
+model BrandVoiceProfile {
+  id              String   @id @default(cuid())
+  version         Int      @unique
+  tone            String   @default("")
+  doRules         String   @default("")
+  dontRules       String   @default("")
+  bannedPhrases   String[] @default([])
+  complianceRules String   @default("")
+  exemplars       String   @default("")
+  notes           String   @default("")
+  createdById     String?
+  createdAt       DateTime @default(now())
+
+  createdBy User? @relation("VoiceProfileCreator", fields: [createdById], references: [id], onDelete: SetNull)
+
+  @@index([version])
 }
 
 /// One row per day-of-week the employee is available. Times are stored as
