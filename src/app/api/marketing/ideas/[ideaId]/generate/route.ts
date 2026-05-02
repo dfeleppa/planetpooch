@@ -48,6 +48,7 @@ export async function POST(
       scriptCount: parsed.data.scriptCount,
       hooksPerScript: parsed.data.hooksPerScript,
       voiceProfile,
+      model: parsed.data.model,
     });
   } catch (err) {
     const message =

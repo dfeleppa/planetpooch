@@ -1,4 +1,17 @@
 import type { HookStatus, Platform, ScriptStatus } from "@prisma/client";
+import type { ScriptModel } from "@/lib/validators/marketing";
+
+export const SCRIPT_MODELS: ScriptModel[] = [
+  "claude-haiku-4-5",
+  "claude-sonnet-4-6",
+  "claude-opus-4-7",
+];
+
+export const SCRIPT_MODEL_LABELS: Record<ScriptModel, string> = {
+  "claude-haiku-4-5": "Haiku 4.5 — fastest, lowest cost",
+  "claude-sonnet-4-6": "Sonnet 4.6 — balanced",
+  "claude-opus-4-7": "Opus 4.7 — highest quality, slowest",
+};
 
 export const PLATFORM_LABELS: Record<Platform, string> = {
   REELS: "Instagram Reels",

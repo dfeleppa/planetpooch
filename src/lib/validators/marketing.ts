@@ -82,10 +82,21 @@ export const HookStatusSchema = z.enum([
   "WINNER",
 ]);
 
+// Whitelist of models the generator is allowed to call. Keeping this server-side
+// stops a client from passing an arbitrary model id and racking up cost.
+export const ScriptModelSchema = z.enum([
+  "claude-haiku-4-5",
+  "claude-sonnet-4-6",
+  "claude-opus-4-7",
+]);
+
+export type ScriptModel = z.infer<typeof ScriptModelSchema>;
+
 export const GenerateScriptsRequestSchema = z.object({
   scriptCount: z.number().int().min(1).max(5).default(3),
   hooksPerScript: z.number().int().min(1).max(10).default(5),
   platform: PlatformSchema.default("MULTI"),
+  model: ScriptModelSchema.default("claude-haiku-4-5"),
 });
 
 export const UpdateScriptSchema = z.object({

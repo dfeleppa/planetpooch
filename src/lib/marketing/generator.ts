@@ -2,6 +2,7 @@ import Anthropic from "@anthropic-ai/sdk";
 import type { BrandVoiceProfile, ServiceLine, Platform } from "@prisma/client";
 import { renderVoiceProfileForPrompt } from "./voice";
 import { SERVICE_LINE_LABELS } from "./ideas";
+import type { ScriptModel } from "@/lib/validators/marketing";
 
 /**
  * Static service-line context. Lives next to the voice profile inside the
@@ -176,6 +177,7 @@ export async function generateScriptsForIdea(input: {
   scriptCount: number;
   hooksPerScript: number;
   voiceProfile: BrandVoiceProfile | null;
+  model: ScriptModel;
 }): Promise<GenerationResult> {
   if (!process.env.ANTHROPIC_API_KEY) {
     throw new Error(
@@ -186,7 +188,7 @@ export async function generateScriptsForIdea(input: {
   const client = new Anthropic();
 
   const response = await client.messages.create({
-    model: "claude-haiku-4-5",
+    model: input.model,
     max_tokens: 16000,
     system: buildSystemBlocks(input.voiceProfile, input.serviceLine),
     output_config: {
