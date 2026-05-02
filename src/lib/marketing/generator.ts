@@ -186,9 +186,8 @@ export async function generateScriptsForIdea(input: {
   const client = new Anthropic();
 
   const response = await client.messages.create({
-    model: "claude-opus-4-7",
+    model: "claude-haiku-4-5",
     max_tokens: 16000,
-    thinking: { type: "adaptive" },
     system: buildSystemBlocks(input.voiceProfile, input.serviceLine),
     output_config: {
       format: { type: "json_schema", schema: RESPONSE_SCHEMA },

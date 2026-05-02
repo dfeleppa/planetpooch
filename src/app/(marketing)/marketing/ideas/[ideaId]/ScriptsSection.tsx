@@ -141,7 +141,7 @@ export function ScriptsSection({ ideaId, scripts }: Props) {
             </div>
             {error && <p className="text-sm text-red-600">{error}</p>}
             <p className="text-xs text-gray-500">
-              Uses the latest Voice Profile. Takes 30-60 seconds.
+              Uses the latest Voice Profile. Takes 5-15 seconds.
             </p>
             <div className="flex gap-2">
               <Button type="submit" size="sm" disabled={generating}>
