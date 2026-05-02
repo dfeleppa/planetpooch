@@ -46,6 +46,7 @@ const sharedNav: NavItem[] = [
 
 const marketingNav: NavItem[] = [
   { href: "/marketing", label: "Marketing", icon: "✦" },
+  { href: "/marketing/voice", label: "Voice Profile", icon: "✎" },
 ];
 
 const ROLE_LABELS: Record<string, string> = {

@@ -1,8 +1,11 @@
+import Link from "next/link";
 import { requireMarketing } from "@/lib/auth-helpers";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import { getLatestVoiceProfile } from "@/lib/marketing/voice";
 
 export default async function MarketingDashboardPage() {
   await requireMarketing();
+  const voiceProfile = await getLatestVoiceProfile();
 
   return (
     <div>
@@ -46,10 +49,24 @@ export default async function MarketingDashboardPage() {
         <CardHeader>
           <h2 className="text-base font-semibold text-gray-900">Getting started</h2>
         </CardHeader>
-        <CardContent className="pt-0">
+        <CardContent className="pt-0 space-y-3">
+          <Link
+            href="/marketing/voice"
+            className="block p-3 rounded-lg border border-gray-200 hover:bg-gray-50 transition-colors"
+          >
+            <p className="text-sm font-medium text-gray-900">
+              {voiceProfile
+                ? `Voice Profile · v${voiceProfile.version}`
+                : "Set up your Voice Profile"}
+            </p>
+            <p className="text-xs text-gray-500">
+              {voiceProfile
+                ? "Edit tone, do/don'ts, banned phrases, and exemplars. Every generator reads from the latest version."
+                : "Tone, do/don'ts, banned phrases, and exemplars. Every generator will read from the latest version."}
+            </p>
+          </Link>
           <p className="text-sm text-gray-500">
-            This section is being built. Next up: brand voice profile, ideas
-            list, and the first generator.
+            Next up: ideas list and the first generator.
           </p>
         </CardContent>
       </Card>
