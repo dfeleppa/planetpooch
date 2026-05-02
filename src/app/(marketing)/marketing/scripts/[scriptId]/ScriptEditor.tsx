@@ -54,6 +54,7 @@ type ScriptProp = {
   status: ScriptStatus;
   notes: string;
   voiceProfileVersion: number | null;
+  model: string | null;
   createdByName: string | null;
   createdAt: string;
   updatedAt: string;
@@ -191,6 +192,7 @@ export function ScriptEditor({ script }: { script: ScriptProp }) {
             {script.voiceProfileVersion !== null && (
               <> · generated against voice v{script.voiceProfileVersion}</>
             )}
+            {script.model && <> · model {script.model}</>}
           </p>
         </div>
         <Badge variant={SCRIPT_STATUS_VARIANT[status]}>

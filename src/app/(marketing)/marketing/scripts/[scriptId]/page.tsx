@@ -49,6 +49,7 @@ export default async function ScriptDetailPage({
           status: script.status,
           notes: script.notes,
           voiceProfileVersion: script.voiceProfileVersion,
+          model: script.model,
           createdByName: script.createdBy?.name ?? null,
           createdAt: script.createdAt.toISOString(),
           updatedAt: script.updatedAt.toISOString(),
