@@ -63,12 +63,12 @@ export default async function MaintenanceTasksPage({
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-6">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Maintenance Tasks</h1>
           <p className="text-gray-500 mt-1">All task occurrences from maintenance schedules</p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           {["", "PENDING", "IN_PROGRESS", "COMPLETED", "OVERDUE"].map((s) => (
             <Link
               key={s}

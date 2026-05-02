@@ -63,12 +63,12 @@ export default async function MaintenanceDashboardPage({
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-6">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Maintenance</h1>
           <p className="text-gray-500 mt-1">Facility maintenance schedules and inventory</p>
         </div>
-        <div className="flex gap-3">
+        <div className="flex flex-wrap gap-3">
           <Link href={`/maintenance/schedules${qs}`} className="text-sm text-blue-600 hover:text-blue-700 font-medium">
             View Schedules
           </Link>
@@ -82,7 +82,7 @@ export default async function MaintenanceDashboardPage({
         <CompanyFilterTabs basePath="/maintenance" active={active} hideAll />
       </div>
 
-      <div className="grid grid-cols-4 gap-4 mb-8">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-8">
         <Card>
           <CardContent className="py-4 text-center">
             <p className="text-3xl font-bold text-blue-600">{totalSchedules}</p>
@@ -109,7 +109,7 @@ export default async function MaintenanceDashboardPage({
         </Card>
       </div>
 
-      <div className="grid grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
         <Card>
           <CardHeader>
             <div className="flex items-center justify-between">

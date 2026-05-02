@@ -38,7 +38,7 @@ export function Toolbar({ editor, onInsertEmbed }: ToolbarProps) {
   );
 
   return (
-    <div className="flex flex-wrap items-center gap-1 p-2 border-b border-gray-200 bg-gray-50 rounded-t-lg">
+    <div className="flex flex-nowrap sm:flex-wrap items-center gap-1 p-2 border-b border-gray-200 bg-gray-50 rounded-t-lg overflow-x-auto sm:overflow-visible">
       {/* Text formatting */}
       <ToolbarButton
         onClick={() => editor.chain().focus().toggleBold().run()}
