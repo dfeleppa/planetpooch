@@ -249,6 +249,8 @@ export async function POST(req: NextRequest) {
     let assignedRole: Role = "EMPLOYEE";
     if (role === "SUPER_ADMIN" && callerIsTopTier) {
       assignedRole = role;
+    } else if (role === "MARKETING" && callerIsTopTier) {
+      assignedRole = "MARKETING";
     } else if (role === "MANAGER" && (callerIsTopTier || sessionUser.role === "MANAGER")) {
       assignedRole = "MANAGER";
     }
