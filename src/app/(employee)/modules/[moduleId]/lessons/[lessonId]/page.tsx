@@ -15,10 +15,11 @@ interface LessonData {
   estimatedMinutes: number | null;
   isCompleted: boolean;
   completedAt: string | null;
-  module: { id: string; title: string };
+  module: { id: string; title: string; notesEnabled: boolean };
   subsectionTitle: string;
   prevLesson: { id: string; title: string } | null;
   nextLesson: { id: string; title: string } | null;
+  nextModule: { id: string; title: string; firstLessonId: string } | null;
 }
 
 export default function LessonPage() {
@@ -98,7 +99,7 @@ export default function LessonPage() {
       </Card>
 
       {/* Notes */}
-      <LessonNotes lessonId={lessonId} />
+      {lesson.module.notesEnabled && <LessonNotes lessonId={lessonId} />}
 
       {/* Navigation */}
       <div className="flex justify-between mt-8 pt-6 border-t border-gray-200">
@@ -121,6 +122,16 @@ export default function LessonPage() {
             className="flex items-center gap-2 text-sm text-blue-600 hover:text-blue-800"
           >
             {lesson.nextLesson.title}
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+            </svg>
+          </Link>
+        ) : lesson.nextModule ? (
+          <Link
+            href={`/modules/${lesson.nextModule.id}/lessons/${lesson.nextModule.firstLessonId}`}
+            className="flex items-center gap-2 text-sm text-blue-600 hover:text-blue-800"
+          >
+            Next module: {lesson.nextModule.title}
             <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
             </svg>

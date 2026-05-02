@@ -188,6 +188,7 @@ model Module {
   description String   @default("")
   order       Int
   icon        String?
+  notesEnabled Boolean @default(true)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 

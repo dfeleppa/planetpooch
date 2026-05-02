@@ -22,6 +22,7 @@ export default function AdminModulesPage() {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [icon, setIcon] = useState("");
+  const [notesEnabled, setNotesEnabled] = useState(true);
   const [loading, setLoading] = useState(true);
 
   async function loadModules() {
@@ -38,12 +39,13 @@ export default function AdminModulesPage() {
     const res = await fetch("/api/modules", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ title, description, icon: icon || null }),
+      body: JSON.stringify({ title, description, icon: icon || null, notesEnabled }),
     });
     if (res.ok) {
       setTitle("");
       setDescription("");
       setIcon("");
+      setNotesEnabled(true);
       setShowCreate(false);
       loadModules();
     }
@@ -78,6 +80,15 @@ export default function AdminModulesPage() {
               <Input id="title" label="Title" value={title} onChange={(e) => setTitle(e.target.value)} required />
               <Input id="description" label="Description" value={description} onChange={(e) => setDescription(e.target.value)} />
               <Input id="icon" label="Icon (emoji)" value={icon} onChange={(e) => setIcon(e.target.value)} placeholder="e.g. 📚" />
+              <label className="flex items-center gap-2 text-sm text-gray-700">
+                <input
+                  type="checkbox"
+                  checked={notesEnabled}
+                  onChange={(e) => setNotesEnabled(e.target.checked)}
+                  className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                />
+                Enable &quot;My Notes&quot; for this module
+              </label>
               <Button type="submit">Create Module</Button>
             </form>
           </CardContent>
