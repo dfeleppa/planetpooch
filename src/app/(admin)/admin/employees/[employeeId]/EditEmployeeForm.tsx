@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 
-type Role = "SUPER_ADMIN" | "MANAGER" | "EMPLOYEE" | "ADMIN";
+type Role = "SUPER_ADMIN" | "MANAGER" | "EMPLOYEE" | "MARKETING" | "ADMIN";
 type Company = "GROOMING" | "RESORT" | "CORPORATE";
 
 interface Props {
@@ -207,6 +207,7 @@ export function EditEmployeeForm({ employee, canEditCompany, canAssignSuperAdmin
                 >
                   <option value="EMPLOYEE">Employee</option>
                   <option value="MANAGER">Manager</option>
+                  {canAssignSuperAdmin && <option value="MARKETING">Marketing</option>}
                   {canAssignSuperAdmin && <option value="SUPER_ADMIN">Super Admin</option>}
                 </select>
               ) : (

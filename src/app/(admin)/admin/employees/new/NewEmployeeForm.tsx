@@ -10,7 +10,7 @@ import { AvailabilityEditor, type AvailabilityEntry } from "@/components/Availab
 import { SendWelcomeEmailButton } from "../SendWelcomeEmailButton";
 import { RevealTempPasswordButton } from "../RevealTempPasswordButton";
 
-type Role = "SUPER_ADMIN" | "MANAGER" | "EMPLOYEE" | "ADMIN";
+type Role = "SUPER_ADMIN" | "MANAGER" | "EMPLOYEE" | "MARKETING" | "ADMIN";
 type Company = "GROOMING" | "RESORT" | "CORPORATE";
 
 interface Props {
@@ -333,6 +333,7 @@ export function NewEmployeeForm({ currentRole, currentCompany }: Props) {
             <SelectField label="Role" value={role} onChange={(v) => setRole(v as Role)}>
               <option value="EMPLOYEE">Employee</option>
               <option value="MANAGER">Manager</option>
+              {isSuperAdmin && <option value="MARKETING">Marketing</option>}
               {isSuperAdmin && <option value="SUPER_ADMIN">Super Admin</option>}
             </SelectField>
           </div>

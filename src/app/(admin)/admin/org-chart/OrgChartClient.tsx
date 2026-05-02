@@ -4,7 +4,7 @@ import { useMemo, useRef, useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 
-type RoleVal = "SUPER_ADMIN" | "MANAGER" | "EMPLOYEE" | "ADMIN";
+type RoleVal = "SUPER_ADMIN" | "MANAGER" | "EMPLOYEE" | "MARKETING" | "ADMIN";
 type CompanyVal = "GROOMING" | "RESORT" | "CORPORATE";
 
 interface Position {
