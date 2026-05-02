@@ -780,6 +780,10 @@ model Script {
   platform            Platform     @default(MULTI)
   status              ScriptStatus @default(DRAFT)
   voiceProfileVersion Int?
+  /// Anthropic model id that produced this script (e.g. "claude-haiku-4-5").
+  /// Null for hand-written scripts. Stored so we can correlate quality
+  /// regressions to model swaps.
+  model               String?
   notes               String       @default("")
   createdById         String?
   createdAt           DateTime     @default(now())
@@ -803,6 +807,9 @@ model Hook {
   order               Int        @default(0)
   status              HookStatus @default(DRAFT)
   voiceProfileVersion Int?
+  /// Same as Script.model — denormalized onto Hook for easier per-hook
+  /// quality analysis without joining back through Script.
+  model               String?
   notes               String     @default("")
   createdAt           DateTime   @default(now())
   updatedAt           DateTime   @updatedAt

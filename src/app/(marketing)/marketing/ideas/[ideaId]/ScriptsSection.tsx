@@ -9,9 +9,12 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
   PLATFORM_LABELS,
+  SCRIPT_MODEL_LABELS,
+  SCRIPT_MODELS,
   SCRIPT_STATUS_LABELS,
   SCRIPT_STATUS_VARIANT,
 } from "@/lib/marketing/scripts";
+import type { ScriptModel } from "@/lib/validators/marketing";
 
 const PLATFORMS: Platform[] = [
   "MULTI",
@@ -44,6 +47,7 @@ export function ScriptsSection({ ideaId, scripts }: Props) {
   const [scriptCount, setScriptCount] = useState(3);
   const [hooksPerScript, setHooksPerScript] = useState(5);
   const [platform, setPlatform] = useState<Platform>("MULTI");
+  const [model, setModel] = useState<ScriptModel>("claude-haiku-4-5");
   const [generating, setGenerating] = useState(false);
   const [error, setError] = useState("");
 
@@ -55,7 +59,7 @@ export function ScriptsSection({ ideaId, scripts }: Props) {
       const res = await fetch(`/api/marketing/ideas/${ideaId}/generate`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ scriptCount, hooksPerScript, platform }),
+        body: JSON.stringify({ scriptCount, hooksPerScript, platform, model }),
       });
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
@@ -138,6 +142,22 @@ export function ScriptsSection({ ideaId, scripts }: Props) {
                   ))}
                 </select>
               </div>
+            </div>
+            <div className="flex flex-col gap-1">
+              <label className="text-xs font-medium text-gray-700">
+                Model
+              </label>
+              <select
+                value={model}
+                onChange={(e) => setModel(e.target.value as ScriptModel)}
+                className="rounded-lg border border-gray-300 px-3 py-1.5 text-sm bg-white"
+              >
+                {SCRIPT_MODELS.map((m) => (
+                  <option key={m} value={m}>
+                    {SCRIPT_MODEL_LABELS[m]}
+                  </option>
+                ))}
+              </select>
             </div>
             {error && <p className="text-sm text-red-600">{error}</p>}
             <p className="text-xs text-gray-500">

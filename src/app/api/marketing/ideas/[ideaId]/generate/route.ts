@@ -48,6 +48,7 @@ export async function POST(
       scriptCount: parsed.data.scriptCount,
       hooksPerScript: parsed.data.hooksPerScript,
       voiceProfile,
+      model: parsed.data.model,
     });
   } catch (err) {
     const message =
@@ -64,6 +65,7 @@ export async function POST(
           body: script.body,
           platform: parsed.data.platform,
           voiceProfileVersion: result.voiceProfileVersion,
+          model: parsed.data.model,
           createdById: userId,
           hooks: {
             create: script.hooks.map((hook, i) => ({
@@ -71,6 +73,7 @@ export async function POST(
               text: hook.text,
               order: i,
               voiceProfileVersion: result.voiceProfileVersion,
+              model: parsed.data.model,
             })),
           },
         },
