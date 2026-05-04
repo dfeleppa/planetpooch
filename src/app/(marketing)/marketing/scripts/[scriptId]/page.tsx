@@ -2,7 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { requireMarketing } from "@/lib/auth-helpers";
 import { prisma } from "@/lib/prisma";
-import { getScriptPerformance } from "@/lib/marketing/performance";
+import { getAdAggregates, getScriptPerformance } from "@/lib/marketing/performance";
 import { ScriptEditor } from "./ScriptEditor";
 import { ScriptPerformanceCard } from "./ScriptPerformanceCard";
 
@@ -24,7 +24,10 @@ export default async function ScriptDetailPage({
   });
   if (!script) notFound();
 
-  const performance = await getScriptPerformance(script.id, 30);
+  const [performance, ads] = await Promise.all([
+    getScriptPerformance(script.id, 30),
+    getAdAggregates({ scriptId: script.id, days: 30 }),
+  ]);
 
   return (
     <div className="w-full space-y-4">
@@ -47,6 +50,16 @@ export default async function ScriptDetailPage({
         scriptId={script.id}
         metaAdSlug={script.metaAdSlug}
         performance={performance}
+        ads={ads.map((a) => ({
+          adId: a.adId,
+          adName: a.adName,
+          spendCents: a.spendCents,
+          impressions: a.impressions,
+          videoPlays3s: a.videoPlays3s,
+          videoThruplays: a.videoThruplays,
+          purchases: a.purchases,
+          purchaseValueCents: a.purchaseValueCents,
+        }))}
       />
 
       <ScriptEditor

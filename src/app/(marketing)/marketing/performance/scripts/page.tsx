@@ -1,27 +1,22 @@
 import Link from "next/link";
 import { requireMarketing } from "@/lib/auth-helpers";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import {
   DAY_PRESETS,
   formatCents,
   formatHookRate,
   formatHoldRate,
   formatRoas,
-  getAdAggregates,
-  getCampaigns,
-  getLinkableScripts,
+  getScriptLeaderboard,
   SORTABLE_COLUMNS,
   type SortColumn,
   type SortDir,
 } from "@/lib/marketing/performance";
-import { AdLinkPicker } from "./AdLinkPicker";
-import { PerformanceActions } from "./PerformanceActions";
-import { PerformanceFilters } from "./PerformanceFilters";
-import { PerformanceTabs } from "./PerformanceTabs";
+import { PerformanceTabs } from "../PerformanceTabs";
 
 type SearchParams = {
   days?: string;
-  campaign?: string;
   sort?: string;
   dir?: string;
 };
@@ -41,7 +36,7 @@ function parseDir(raw: string | undefined): SortDir {
   return raw === "asc" ? "asc" : "desc";
 }
 
-export default async function PerformancePage({
+export default async function ScriptLeaderboardPage({
   searchParams,
 }: {
   searchParams: Promise<SearchParams>;
@@ -49,63 +44,80 @@ export default async function PerformancePage({
   await requireMarketing();
   const sp = await searchParams;
   const days = parseDays(sp.days);
-  const campaign = sp.campaign?.trim() ?? "";
   const sort = parseSort(sp.sort);
   const dir = parseDir(sp.dir);
 
-  const [ads, campaigns, scripts] = await Promise.all([
-    getAdAggregates({ days, campaign, sort, dir }),
-    getCampaigns(days),
-    getLinkableScripts(),
-  ]);
+  const scripts = await getScriptLeaderboard({ days, sort, dir });
 
-  const totals = ads.reduce(
-    (acc, a) => {
-      acc.spendCents += a.spendCents;
-      acc.impressions += a.impressions;
-      acc.purchases += a.purchases;
-      acc.purchaseValueCents += a.purchaseValueCents;
+  const totals = scripts.reduce(
+    (acc, s) => {
+      acc.spendCents += s.spendCents;
+      acc.purchases += s.purchases;
+      acc.purchaseValueCents += s.purchaseValueCents;
       return acc;
     },
-    { spendCents: 0, impressions: 0, purchases: 0, purchaseValueCents: 0 }
+    { spendCents: 0, purchases: 0, purchaseValueCents: 0 }
   );
 
   return (
     <div>
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Ad Performance</h1>
+          <h1 className="text-2xl font-bold text-gray-900">
+            Script Performance
+          </h1>
           <p className="text-gray-500 mt-1">
-            Last {days} days from Meta Ads. Re-syncs nightly; refresh to pull
-            fresh numbers immediately.
+            Ad performance grouped by linked Script. Last {days} days.
           </p>
         </div>
-        <PerformanceActions />
       </div>
 
-      <PerformanceTabs active="ads" />
+      <PerformanceTabs active="scripts" />
 
-      <PerformanceFilters
-        days={days}
-        campaign={campaign}
-        campaigns={campaigns}
-      />
+      <div
+        className="inline-flex rounded-lg border border-gray-200 bg-white p-0.5 mb-4"
+        role="group"
+        aria-label="Date range"
+      >
+        {DAY_PRESETS.map((d) => {
+          const params = new URLSearchParams();
+          if (d !== 30) params.set("days", String(d));
+          if (sort !== "spend") params.set("sort", sort);
+          if (dir !== "desc") params.set("dir", dir);
+          const qs = params.toString();
+          const href = qs
+            ? `/marketing/performance/scripts?${qs}`
+            : "/marketing/performance/scripts";
+          return (
+            <Link
+              key={d}
+              href={href}
+              aria-current={d === days ? "true" : undefined}
+              className={`px-3 py-1 text-sm rounded-md transition-colors ${
+                d === days
+                  ? "bg-blue-600 text-white"
+                  : "text-gray-600 hover:bg-gray-100"
+              }`}
+            >
+              {d}d
+            </Link>
+          );
+        })}
+      </div>
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-6">
+        <Card>
+          <CardContent className="py-4 text-center">
+            <p className="text-2xl font-bold text-gray-900">{scripts.length}</p>
+            <p className="text-sm text-gray-500">Scripts with ad activity</p>
+          </CardContent>
+        </Card>
         <Card>
           <CardContent className="py-4 text-center">
             <p className="text-2xl font-bold text-gray-900">
               {formatCents(totals.spendCents)}
             </p>
             <p className="text-sm text-gray-500">Spend ({days}d)</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="py-4 text-center">
-            <p className="text-2xl font-bold text-gray-900">
-              {totals.impressions.toLocaleString()}
-            </p>
-            <p className="text-sm text-gray-500">Impressions</p>
           </CardContent>
         </Card>
         <Card>
@@ -129,27 +141,29 @@ export default async function PerformancePage({
       <Card>
         <CardHeader>
           <h2 className="text-base font-semibold text-gray-900">
-            Ads ({ads.length})
-            {campaign && (
-              <span className="ml-2 text-sm font-normal text-gray-500">
-                in {campaign}
-              </span>
-            )}
+            Scripts ({scripts.length})
           </h2>
         </CardHeader>
         <CardContent className="pt-0">
-          {ads.length === 0 ? (
+          {scripts.length === 0 ? (
             <p className="text-sm text-gray-500 py-6 text-center">
-              {campaign
-                ? "No ads in this campaign for the selected window."
-                : "No insights yet. Click Refresh now above once your Meta credentials are configured."}
+              No scripts have linked ad activity in the last {days} days. Link
+              ads to scripts from the{" "}
+              <Link
+                href="/marketing/performance"
+                className="text-blue-600 hover:underline"
+              >
+                Ads view
+              </Link>
+              .
             </p>
           ) : (
             <div className="overflow-x-auto -mx-2 sm:mx-0">
               <table className="w-full text-sm">
                 <thead>
                   <tr className="text-left text-xs text-gray-500 border-b border-gray-200">
-                    <th className="px-2 py-2 font-medium">Ad</th>
+                    <th className="px-2 py-2 font-medium">Script</th>
+                    <th className="px-2 py-2 font-medium text-right">Ads</th>
                     <SortableTh col="spend" sort={sort} dir={dir} sp={sp}>
                       Spend
                     </SortableTh>
@@ -174,64 +188,56 @@ export default async function PerformancePage({
                   </tr>
                 </thead>
                 <tbody>
-                  {ads.map((a) => {
+                  {scripts.map((s) => {
                     const ctr =
-                      a.impressions > 0
-                        ? `${((a.linkClicks / a.impressions) * 100).toFixed(2)}%`
+                      s.impressions > 0
+                        ? `${((s.linkClicks / s.impressions) * 100).toFixed(2)}%`
                         : "—";
                     return (
                       <tr
-                        key={a.adId}
+                        key={s.scriptId}
                         className="border-b border-gray-100 hover:bg-gray-50"
                       >
                         <td className="px-2 py-3 max-w-[280px]">
-                          <div className="font-medium text-gray-900 truncate">
-                            {a.adName}
-                          </div>
+                          <Link
+                            href={`/marketing/scripts/${s.scriptId}`}
+                            className="font-medium text-gray-900 hover:text-blue-600 truncate block"
+                          >
+                            {s.ideaTitle}
+                          </Link>
                           <div className="flex items-center gap-2 mt-0.5">
-                            {a.campaignName && (
-                              <span className="text-xs text-gray-500 truncate">
-                                {a.campaignName}
+                            <Badge variant="default">{s.platform}</Badge>
+                            <Badge variant="default">{s.status}</Badge>
+                            {s.metaAdSlug && (
+                              <span className="text-xs text-gray-500 font-mono truncate">
+                                {s.metaAdSlug}
                               </span>
                             )}
-                            <AdLinkPicker
-                              adId={a.adId}
-                              adName={a.adName}
-                              currentScriptId={a.scriptId}
-                              currentScriptIdeaTitle={a.scriptIdeaTitle}
-                              scripts={scripts}
-                            />
-                            {a.scriptId && (
-                              <Link
-                                href={`/marketing/scripts/${a.scriptId}`}
-                                className="text-xs text-blue-600 hover:underline"
-                                aria-label="Open linked script"
-                              >
-                                open →
-                              </Link>
-                            )}
                           </div>
                         </td>
                         <td className="px-2 py-3 text-right tabular-nums">
-                          {formatCents(a.spendCents)}
+                          {s.adCount}
                         </td>
                         <td className="px-2 py-3 text-right tabular-nums">
-                          {a.impressions.toLocaleString()}
+                          {formatCents(s.spendCents)}
                         </td>
                         <td className="px-2 py-3 text-right tabular-nums">
-                          {formatHookRate(a.videoPlays3s, a.impressions)}
+                          {s.impressions.toLocaleString()}
                         </td>
                         <td className="px-2 py-3 text-right tabular-nums">
-                          {formatHoldRate(a.videoThruplays, a.videoPlays3s)}
+                          {formatHookRate(s.videoPlays3s, s.impressions)}
+                        </td>
+                        <td className="px-2 py-3 text-right tabular-nums">
+                          {formatHoldRate(s.videoThruplays, s.videoPlays3s)}
                         </td>
                         <td className="px-2 py-3 text-right tabular-nums">
                           {ctr}
                         </td>
                         <td className="px-2 py-3 text-right tabular-nums">
-                          {a.purchases}
+                          {s.purchases}
                         </td>
                         <td className="px-2 py-3 text-right tabular-nums">
-                          {formatRoas(a.purchaseValueCents, a.spendCents)}
+                          {formatRoas(s.purchaseValueCents, s.spendCents)}
                         </td>
                       </tr>
                     );
@@ -260,21 +266,16 @@ function SortableTh({
   children: React.ReactNode;
 }) {
   const active = sort === col;
-  // Clicking the active column flips direction. Clicking a new column
-  // defaults to desc — "biggest first" is what marketers want for every
-  // metric we expose here.
   const nextDir: SortDir = active && dir === "desc" ? "asc" : "desc";
   const params = new URLSearchParams();
   if (sp.days) params.set("days", sp.days);
-  if (sp.campaign) params.set("campaign", sp.campaign);
   params.set("sort", col);
-  // "desc" is the default, so we only include dir when it deviates.
   if (nextDir !== "desc") params.set("dir", nextDir);
   const arrow = active ? (dir === "desc" ? "↓" : "↑") : "";
   return (
     <th className="px-2 py-2 font-medium text-right">
       <Link
-        href={`/marketing/performance?${params.toString()}`}
+        href={`/marketing/performance/scripts?${params.toString()}`}
         scroll={false}
         className={`inline-flex items-center gap-1 hover:text-gray-900 ${
           active ? "text-gray-900" : ""

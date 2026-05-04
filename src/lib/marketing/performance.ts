@@ -39,6 +39,8 @@ export type AggregateOptions = {
   days?: number;
   /** Filter to a single campaign name; undefined/empty = all campaigns. */
   campaign?: string;
+  /** Filter to ads linked to this scriptId. */
+  scriptId?: string;
   sort?: SortColumn;
   dir?: SortDir;
 };
@@ -50,8 +52,19 @@ function windowStart(days: number): Date {
   return since;
 }
 
-/** Numeric value of a sortable column for an aggregate row. Null/undefined sort below all real numbers. */
-function sortValue(a: AdAggregate, col: SortColumn): number | null {
+/** Shape that any sortable row needs. Both AdAggregate and ScriptLeaderboardRow satisfy this. */
+type MetricRow = {
+  spendCents: number;
+  impressions: number;
+  linkClicks: number;
+  videoPlays3s: number | null;
+  videoThruplays: number | null;
+  purchases: number;
+  purchaseValueCents: number;
+};
+
+/** Numeric value of a sortable column for any metric row. Null = no data; sorts last. */
+function sortValue(a: MetricRow, col: SortColumn): number | null {
   switch (col) {
     case "spend":
       return a.spendCents;
@@ -80,9 +93,9 @@ function sortValue(a: AdAggregate, col: SortColumn): number | null {
   }
 }
 
-function compareAggregates(
-  a: AdAggregate,
-  b: AdAggregate,
+function compareMetricRows(
+  a: MetricRow,
+  b: MetricRow,
   col: SortColumn,
   dir: SortDir
 ): number {
@@ -107,6 +120,7 @@ export async function getAdAggregates(
   const sort = options.sort ?? "spend";
   const dir = options.dir ?? "desc";
   const campaign = options.campaign?.trim() || undefined;
+  const scriptId = options.scriptId;
 
   // Group by ad. We pick the most recent (adName, campaignName) per ad so
   // renames in Ads Manager show through.
@@ -114,6 +128,7 @@ export async function getAdAggregates(
     where: {
       date: { gte: windowStart(days) },
       ...(campaign ? { campaignName: campaign } : {}),
+      ...(scriptId ? { scriptId } : {}),
     },
     orderBy: { date: "desc" },
     include: {
@@ -162,8 +177,125 @@ export async function getAdAggregates(
   }
 
   return Array.from(byAd.values()).sort((a, b) =>
-    compareAggregates(a, b, sort, dir)
+    compareMetricRows(a, b, sort, dir)
   );
+}
+
+export type ScriptLeaderboardRow = {
+  scriptId: string;
+  ideaId: string;
+  ideaTitle: string;
+  platform: string;
+  status: string;
+  metaAdSlug: string | null;
+  spendCents: number;
+  impressions: number;
+  linkClicks: number;
+  videoPlays3s: number | null;
+  videoThruplays: number | null;
+  purchases: number;
+  purchaseValueCents: number;
+  /** Distinct ads contributing to this script's totals in the window. */
+  adCount: number;
+  /** Most recent insight date — useful for spotting stale scripts. */
+  lastDate: Date;
+};
+
+export type LeaderboardOptions = {
+  days?: number;
+  sort?: SortColumn;
+  dir?: SortDir;
+};
+
+/**
+ * Per-script aggregates over the trailing N days, joined with script
+ * metadata for display. Only includes scripts that have at least one
+ * linked insight in the window — scripts with no ad activity aren't
+ * useful here.
+ */
+export async function getScriptLeaderboard(
+  options: LeaderboardOptions = {}
+): Promise<ScriptLeaderboardRow[]> {
+  const days = options.days ?? 30;
+  const sort = options.sort ?? "spend";
+  const dir = options.dir ?? "desc";
+
+  const rows = await prisma.metaAdInsight.findMany({
+    where: {
+      date: { gte: windowStart(days) },
+      scriptId: { not: null },
+    },
+    select: {
+      adId: true,
+      date: true,
+      spendCents: true,
+      impressions: true,
+      linkClicks: true,
+      videoPlays3s: true,
+      videoThruplays: true,
+      purchases: true,
+      purchaseValueCents: true,
+      scriptId: true,
+      script: {
+        select: {
+          id: true,
+          platform: true,
+          status: true,
+          metaAdSlug: true,
+          idea: { select: { id: true, title: true } },
+        },
+      },
+    },
+  });
+
+  type Acc = ScriptLeaderboardRow & { adIds: Set<string> };
+  const byScript = new Map<string, Acc>();
+
+  for (const r of rows) {
+    if (!r.scriptId || !r.script) continue;
+    let row = byScript.get(r.scriptId);
+    if (!row) {
+      row = {
+        scriptId: r.scriptId,
+        ideaId: r.script.idea.id,
+        ideaTitle: r.script.idea.title,
+        platform: r.script.platform,
+        status: r.script.status,
+        metaAdSlug: r.script.metaAdSlug,
+        spendCents: 0,
+        impressions: 0,
+        linkClicks: 0,
+        videoPlays3s: null,
+        videoThruplays: null,
+        purchases: 0,
+        purchaseValueCents: 0,
+        adCount: 0,
+        lastDate: r.date,
+        adIds: new Set<string>(),
+      };
+      byScript.set(r.scriptId, row);
+    }
+    row.spendCents += r.spendCents;
+    row.impressions += r.impressions;
+    row.linkClicks += r.linkClicks;
+    if (r.videoPlays3s !== null) {
+      row.videoPlays3s = (row.videoPlays3s ?? 0) + r.videoPlays3s;
+    }
+    if (r.videoThruplays !== null) {
+      row.videoThruplays = (row.videoThruplays ?? 0) + r.videoThruplays;
+    }
+    row.purchases += r.purchases;
+    row.purchaseValueCents += r.purchaseValueCents;
+    row.adIds.add(r.adId);
+    if (r.date > row.lastDate) row.lastDate = r.date;
+  }
+
+  const out: ScriptLeaderboardRow[] = [];
+  for (const acc of byScript.values()) {
+    const { adIds, ...rest } = acc;
+    out.push({ ...rest, adCount: adIds.size });
+  }
+  return out.sort((a, b) => compareMetricRows(a, b, sort, dir));
 }
 
 export type LinkableScript = {
