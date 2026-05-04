@@ -18,7 +18,7 @@ export async function POST(
   { params }: { params: Promise<{ ideaId: string }> }
 ) {
   const session = await getSession();
-  if (!session?.user || !hasMarketingAccess(session.user.role)) {
+  if (!session?.user || !hasMarketingAccess(session.user.role, session.user.jobTitle)) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 

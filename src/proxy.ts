@@ -28,13 +28,18 @@ export async function proxy(req: NextRequest) {
   }
 
   const role = token.role as string;
+  const jobTitle = (token.jobTitle as string | null | undefined) ?? null;
   const isManagerOrAbove =
     role === "MANAGER" ||
     role === "SUPER_ADMIN" ||
     role === "ADMIN";
   const isTopTier = role === "SUPER_ADMIN" || role === "ADMIN";
+  // CMO job title gets full marketing access regardless of role.
   const hasMarketingAccess =
-    role === "MARKETING" || role === "SUPER_ADMIN" || role === "ADMIN";
+    role === "MARKETING" ||
+    role === "SUPER_ADMIN" ||
+    role === "ADMIN" ||
+    jobTitle === "CMO";
 
   // Only top-tier roles can manage modules/lessons
   if (pathname.startsWith("/admin/modules") && !isTopTier) {

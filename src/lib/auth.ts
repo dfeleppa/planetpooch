@@ -37,6 +37,7 @@ export const authOptions: NextAuthOptions = {
           name: user.name,
           role: user.role,
           company: user.company,
+          jobTitle: user.jobTitle,
           mustChangePassword: user.mustChangePassword,
         };
       },
@@ -54,6 +55,7 @@ export const authOptions: NextAuthOptions = {
         token.id = user.id;
         token.role = (user as { role: Role }).role;
         token.company = (user as { company?: Company | null }).company ?? null;
+        token.jobTitle = (user as { jobTitle?: string | null }).jobTitle ?? null;
         token.mustChangePassword = (user as { mustChangePassword?: boolean }).mustChangePassword ?? false;
         token.terminatedAt = null;
         token.lastChecked = Date.now();
@@ -75,6 +77,7 @@ export const authOptions: NextAuthOptions = {
             mustChangePassword: true,
             role: true,
             company: true,
+            jobTitle: true,
             terminatedAt: true,
           },
         });
@@ -82,6 +85,7 @@ export const authOptions: NextAuthOptions = {
           token.mustChangePassword = fresh.mustChangePassword;
           token.role = fresh.role;
           token.company = fresh.company;
+          token.jobTitle = fresh.jobTitle;
           token.terminatedAt = fresh.terminatedAt
             ? fresh.terminatedAt.toISOString()
             : null;
@@ -109,11 +113,13 @@ export const authOptions: NextAuthOptions = {
           id: string;
           role: Role;
           company: Company | null;
+          jobTitle: string | null;
           mustChangePassword: boolean;
         };
         u.id = token.id as string;
         u.role = token.role as Role;
         u.company = (token.company as Company | null) ?? null;
+        u.jobTitle = (token.jobTitle as string | null) ?? null;
         u.mustChangePassword = Boolean(token.mustChangePassword);
       }
       return session;
