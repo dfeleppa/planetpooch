@@ -15,6 +15,9 @@ const jetBrainsMono = JetBrains_Mono({
 export const metadata: Metadata = {
   title: "Planet Pooch - Employee Onboarding",
   description: "Employee onboarding and training platform",
+  icons: {
+    icon: "/icon-mark.png",
+  },
 };
 
 export default function RootLayout({
