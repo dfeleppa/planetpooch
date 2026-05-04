@@ -1,0 +1,8 @@
+{
+  "crons": [
+    {
+      "path": "/api/marketing/performance/cron",
+      "schedule": "0 7 * * *"
+    }
+  ]
+}
