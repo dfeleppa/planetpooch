@@ -55,6 +55,7 @@ type ScriptProp = {
   notes: string;
   voiceProfileVersion: number | null;
   model: string | null;
+  metaAdSlug: string | null;
   createdByName: string | null;
   createdAt: string;
   updatedAt: string;
@@ -68,6 +69,7 @@ export function ScriptEditor({ script }: { script: ScriptProp }) {
   const [platform, setPlatform] = useState<Platform>(script.platform);
   const [status, setStatus] = useState<ScriptStatus>(script.status);
   const [notes, setNotes] = useState(script.notes);
+  const [metaAdSlug, setMetaAdSlug] = useState(script.metaAdSlug ?? "");
   const [hooks, setHooks] = useState<HookProp[]>(script.hooks);
 
   const [saving, setSaving] = useState(false);
@@ -84,7 +86,13 @@ export function ScriptEditor({ script }: { script: ScriptProp }) {
       const scriptRes = await fetch(`/api/marketing/scripts/${script.id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ body, platform, status, notes }),
+        body: JSON.stringify({
+          body,
+          platform,
+          status,
+          notes,
+          metaAdSlug: metaAdSlug.trim(),
+        }),
       });
       if (!scriptRes.ok) {
         const data = await scriptRes.json().catch(() => ({}));
@@ -260,6 +268,25 @@ export function ScriptEditor({ script }: { script: ScriptProp }) {
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
             />
+          </div>
+
+          <div className="flex flex-col gap-1">
+            <label className="text-sm font-medium text-gray-700">
+              Meta ad slug
+            </label>
+            <input
+              type="text"
+              className="rounded-lg border border-gray-300 px-3 py-2 text-sm font-mono shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+              value={metaAdSlug}
+              onChange={(e) => setMetaAdSlug(e.target.value)}
+              placeholder="pp-grm-suite-tour"
+              pattern="[a-z0-9](?:[a-z0-9-]{1,38}[a-z0-9])?"
+            />
+            <p className="text-xs text-gray-500">
+              Paste this string into the Meta ad name. Insights matching the
+              substring auto-link to this script. Lowercase letters, digits,
+              and dashes only.
+            </p>
           </div>
         </CardContent>
       </Card>

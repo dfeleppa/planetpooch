@@ -99,11 +99,27 @@ export const GenerateScriptsRequestSchema = z.object({
   model: ScriptModelSchema.default("claude-haiku-4-5"),
 });
 
+// Slug constraint: short, ascii-printable, copy-paste-safe into Meta ad
+// names. Lowercase letters, digits, dashes; 3-40 chars. Empty string clears
+// the slug (sent over the wire as null).
+export const MetaAdSlugSchema = z
+  .string()
+  .trim()
+  .regex(
+    /^[a-z0-9](?:[a-z0-9-]{1,38}[a-z0-9])?$/,
+    "Use lowercase letters, digits, and dashes (3-40 chars)."
+  );
+
 export const UpdateScriptSchema = z.object({
   body: z.string().max(20000).optional(),
   platform: PlatformSchema.optional(),
   status: ScriptStatusSchema.optional(),
   notes: z.string().max(2000).optional(),
+  // Empty string → null (clears the slug); otherwise validate the slug.
+  metaAdSlug: z
+    .union([z.literal(""), MetaAdSlugSchema])
+    .optional()
+    .transform((v) => (v === "" ? null : v)),
 });
 
 export const UpdateHookSchema = z.object({

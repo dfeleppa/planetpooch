@@ -784,14 +784,19 @@ model Script {
   /// Null for hand-written scripts. Stored so we can correlate quality
   /// regressions to model swaps.
   model               String?
+  /// Short slug pasted into the Meta ad name to auto-link insights back to
+  /// this script (e.g. "pp-grm-suite-tour"). Whoever uploads the ad to
+  /// Ads Manager is responsible for putting the slug in the name.
+  metaAdSlug          String?      @unique
   notes               String       @default("")
   createdById         String?
   createdAt           DateTime     @default(now())
   updatedAt           DateTime     @updatedAt
 
-  idea      MarketingIdea @relation(fields: [ideaId], references: [id], onDelete: Cascade)
-  createdBy User?         @relation("ScriptCreator", fields: [createdById], references: [id], onDelete: SetNull)
+  idea      MarketingIdea  @relation(fields: [ideaId], references: [id], onDelete: Cascade)
+  createdBy User?          @relation("ScriptCreator", fields: [createdById], references: [id], onDelete: SetNull)
   hooks     Hook[]
+  insights  MetaAdInsight[]
 
   @@index([ideaId])
   @@index([status])
@@ -816,6 +821,43 @@ model Hook {
 
   script Script @relation(fields: [scriptId], references: [id], onDelete: Cascade)
 
+  @@index([scriptId])
+}
+
+/// One row per (Meta ad, day). Sourced from the Meta Marketing API
+/// (`/{ad-account}/insights` with `time_increment=1`). Money is stored as
+/// integer cents to avoid float drift; currency is taken from the ad account
+/// at sync time and assumed consistent. The nightly cron re-syncs the last
+/// 7 days because Meta backfills attribution for ~3.
+///
+/// `scriptId` is populated at sync time by matching `Script.metaAdSlug`
+/// against `adName`. Null means we couldn't auto-link — surface those in the
+/// UI so someone can rename the ad or set the slug.
+model MetaAdInsight {
+  id                 String   @id @default(cuid())
+  adId               String
+  adName             String
+  campaignId         String?
+  campaignName       String?
+  adsetId            String?
+  adsetName          String?
+  date               DateTime @db.Date
+  spendCents         Int      @default(0)
+  impressions        Int      @default(0)
+  reach              Int?
+  frequency          Float?
+  linkClicks         Int      @default(0)
+  videoPlays3s       Int?
+  videoThruplays     Int?
+  purchases          Int      @default(0)
+  purchaseValueCents Int      @default(0)
+  scriptId           String?
+  syncedAt           DateTime @default(now())
+
+  script Script? @relation(fields: [scriptId], references: [id], onDelete: SetNull)
+
+  @@unique([adId, date])
+  @@index([date])
   @@index([scriptId])
 }
 

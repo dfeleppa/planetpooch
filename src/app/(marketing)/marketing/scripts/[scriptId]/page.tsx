@@ -2,7 +2,9 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { requireMarketing } from "@/lib/auth-helpers";
 import { prisma } from "@/lib/prisma";
+import { getScriptPerformance } from "@/lib/marketing/performance";
 import { ScriptEditor } from "./ScriptEditor";
+import { ScriptPerformanceCard } from "./ScriptPerformanceCard";
 
 export default async function ScriptDetailPage({
   params,
@@ -22,6 +24,8 @@ export default async function ScriptDetailPage({
   });
   if (!script) notFound();
 
+  const performance = await getScriptPerformance(script.id, 30);
+
   return (
     <div className="max-w-4xl space-y-4">
       <div className="text-sm text-gray-500 space-x-2">
@@ -39,6 +43,12 @@ export default async function ScriptDetailPage({
         <span className="text-gray-700">Script</span>
       </div>
 
+      <ScriptPerformanceCard
+        scriptId={script.id}
+        metaAdSlug={script.metaAdSlug}
+        performance={performance}
+      />
+
       <ScriptEditor
         script={{
           id: script.id,
@@ -50,6 +60,7 @@ export default async function ScriptDetailPage({
           notes: script.notes,
           voiceProfileVersion: script.voiceProfileVersion,
           model: script.model,
+          metaAdSlug: script.metaAdSlug,
           createdByName: script.createdBy?.name ?? null,
           createdAt: script.createdAt.toISOString(),
           updatedAt: script.updatedAt.toISOString(),
