@@ -3,17 +3,58 @@ import { requireMarketing } from "@/lib/auth-helpers";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import {
+  DAY_PRESETS,
   formatCents,
   formatHookRate,
   formatHoldRate,
   formatRoas,
   getAdAggregates,
+  getCampaigns,
+  SORTABLE_COLUMNS,
+  type SortColumn,
+  type SortDir,
 } from "@/lib/marketing/performance";
 import { PerformanceActions } from "./PerformanceActions";
+import { PerformanceFilters } from "./PerformanceFilters";
 
-export default async function PerformancePage() {
+type SearchParams = {
+  days?: string;
+  campaign?: string;
+  sort?: string;
+  dir?: string;
+};
+
+function parseDays(raw: string | undefined): number {
+  const n = raw ? Number(raw) : 30;
+  return (DAY_PRESETS as readonly number[]).includes(n) ? n : 30;
+}
+
+function parseSort(raw: string | undefined): SortColumn {
+  return (SORTABLE_COLUMNS as readonly string[]).includes(raw ?? "")
+    ? (raw as SortColumn)
+    : "spend";
+}
+
+function parseDir(raw: string | undefined): SortDir {
+  return raw === "asc" ? "asc" : "desc";
+}
+
+export default async function PerformancePage({
+  searchParams,
+}: {
+  searchParams: Promise<SearchParams>;
+}) {
   await requireMarketing();
-  const ads = await getAdAggregates(30);
+  const sp = await searchParams;
+  const days = parseDays(sp.days);
+  const campaign = sp.campaign?.trim() ?? "";
+  const sort = parseSort(sp.sort);
+  const dir = parseDir(sp.dir);
+
+  const [ads, campaigns] = await Promise.all([
+    getAdAggregates({ days, campaign, sort, dir }),
+    getCampaigns(days),
+  ]);
 
   const totals = ads.reduce(
     (acc, a) => {
@@ -32,12 +73,18 @@ export default async function PerformancePage() {
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Ad Performance</h1>
           <p className="text-gray-500 mt-1">
-            Last 30 days from Meta Ads. Re-syncs nightly; refresh to pull
+            Last {days} days from Meta Ads. Re-syncs nightly; refresh to pull
             fresh numbers immediately.
           </p>
         </div>
         <PerformanceActions />
       </div>
+
+      <PerformanceFilters
+        days={days}
+        campaign={campaign}
+        campaigns={campaigns}
+      />
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-6">
         <Card>
@@ -45,7 +92,7 @@ export default async function PerformancePage() {
             <p className="text-2xl font-bold text-gray-900">
               {formatCents(totals.spendCents)}
             </p>
-            <p className="text-sm text-gray-500">Spend (30d)</p>
+            <p className="text-sm text-gray-500">Spend ({days}d)</p>
           </CardContent>
         </Card>
         <Card>
@@ -78,13 +125,19 @@ export default async function PerformancePage() {
         <CardHeader>
           <h2 className="text-base font-semibold text-gray-900">
             Ads ({ads.length})
+            {campaign && (
+              <span className="ml-2 text-sm font-normal text-gray-500">
+                in {campaign}
+              </span>
+            )}
           </h2>
         </CardHeader>
         <CardContent className="pt-0">
           {ads.length === 0 ? (
             <p className="text-sm text-gray-500 py-6 text-center">
-              No insights yet. Click <strong>Refresh now</strong> above
-              once your Meta credentials are configured.
+              {campaign
+                ? "No ads in this campaign for the selected window."
+                : "No insights yet. Click Refresh now above once your Meta credentials are configured."}
             </p>
           ) : (
             <div className="overflow-x-auto -mx-2 sm:mx-0">
@@ -92,19 +145,27 @@ export default async function PerformancePage() {
                 <thead>
                   <tr className="text-left text-xs text-gray-500 border-b border-gray-200">
                     <th className="px-2 py-2 font-medium">Ad</th>
-                    <th className="px-2 py-2 font-medium text-right">Spend</th>
-                    <th className="px-2 py-2 font-medium text-right">Impr.</th>
-                    <th className="px-2 py-2 font-medium text-right">
+                    <SortableTh col="spend" sort={sort} dir={dir} sp={sp}>
+                      Spend
+                    </SortableTh>
+                    <SortableTh col="impressions" sort={sort} dir={dir} sp={sp}>
+                      Impr.
+                    </SortableTh>
+                    <SortableTh col="hookRate" sort={sort} dir={dir} sp={sp}>
                       Hook rate
-                    </th>
-                    <th className="px-2 py-2 font-medium text-right">
+                    </SortableTh>
+                    <SortableTh col="holdRate" sort={sort} dir={dir} sp={sp}>
                       Hold rate
-                    </th>
-                    <th className="px-2 py-2 font-medium text-right">CTR</th>
-                    <th className="px-2 py-2 font-medium text-right">
+                    </SortableTh>
+                    <SortableTh col="ctr" sort={sort} dir={dir} sp={sp}>
+                      CTR
+                    </SortableTh>
+                    <SortableTh col="purchases" sort={sort} dir={dir} sp={sp}>
                       Purchases
-                    </th>
-                    <th className="px-2 py-2 font-medium text-right">ROAS</th>
+                    </SortableTh>
+                    <SortableTh col="roas" sort={sort} dir={dir} sp={sp}>
+                      ROAS
+                    </SortableTh>
                   </tr>
                 </thead>
                 <tbody>
@@ -173,5 +234,46 @@ export default async function PerformancePage() {
         </CardContent>
       </Card>
     </div>
+  );
+}
+
+function SortableTh({
+  col,
+  sort,
+  dir,
+  sp,
+  children,
+}: {
+  col: SortColumn;
+  sort: SortColumn;
+  dir: SortDir;
+  sp: SearchParams;
+  children: React.ReactNode;
+}) {
+  const active = sort === col;
+  // Clicking the active column flips direction. Clicking a new column
+  // defaults to desc — "biggest first" is what marketers want for every
+  // metric we expose here.
+  const nextDir: SortDir = active && dir === "desc" ? "asc" : "desc";
+  const params = new URLSearchParams();
+  if (sp.days) params.set("days", sp.days);
+  if (sp.campaign) params.set("campaign", sp.campaign);
+  params.set("sort", col);
+  // "desc" is the default, so we only include dir when it deviates.
+  if (nextDir !== "desc") params.set("dir", nextDir);
+  const arrow = active ? (dir === "desc" ? "↓" : "↑") : "";
+  return (
+    <th className="px-2 py-2 font-medium text-right">
+      <Link
+        href={`/marketing/performance?${params.toString()}`}
+        scroll={false}
+        className={`inline-flex items-center gap-1 hover:text-gray-900 ${
+          active ? "text-gray-900" : ""
+        }`}
+      >
+        {children}
+        {arrow && <span aria-hidden>{arrow}</span>}
+      </Link>
+    </th>
   );
 }
