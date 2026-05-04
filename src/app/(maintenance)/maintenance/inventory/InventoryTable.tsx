@@ -23,6 +23,9 @@ export function InventoryTable({ items }: { items: InventoryRow[] }) {
   const [quantities, setQuantities] = useState<Record<string, string>>(() =>
     Object.fromEntries(items.map((i) => [i.id, String(i.currentQuantity)]))
   );
+  const [thresholds, setThresholds] = useState<Record<string, string>>(() =>
+    Object.fromEntries(items.map((i) => [i.id, String(i.minimumThreshold)]))
+  );
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
@@ -41,6 +44,7 @@ export function InventoryTable({ items }: { items: InventoryRow[] }) {
 
   const startEditing = () => {
     setQuantities(Object.fromEntries(items.map((i) => [i.id, String(i.currentQuantity)])));
+    setThresholds(Object.fromEntries(items.map((i) => [i.id, String(i.minimumThreshold)])));
     setError("");
     setEditing(true);
   };
@@ -52,7 +56,7 @@ export function InventoryTable({ items }: { items: InventoryRow[] }) {
 
   const handleSave = async () => {
     setError("");
-    const changes = items
+    const quantityChanges = items
       .map((item) => {
         const next = Number(quantities[item.id]);
         if (!Number.isFinite(next) || next < 0) return null;
@@ -62,22 +66,40 @@ export function InventoryTable({ items }: { items: InventoryRow[] }) {
       })
       .filter((c): c is { id: string; delta: number } => c !== null);
 
-    if (changes.length === 0) {
+    const thresholdChanges = items
+      .map((item) => {
+        const raw = thresholds[item.id];
+        if (raw === undefined || raw === "") return null;
+        const next = Number(raw);
+        if (!Number.isFinite(next) || next < 0) return null;
+        if (next === item.minimumThreshold) return null;
+        return { id: item.id, minimumThreshold: next };
+      })
+      .filter((c): c is { id: string; minimumThreshold: number } => c !== null);
+
+    if (quantityChanges.length === 0 && thresholdChanges.length === 0) {
       setEditing(false);
       return;
     }
 
     setSaving(true);
     try {
-      const results = await Promise.all(
-        changes.map((c) =>
+      const results = await Promise.all([
+        ...quantityChanges.map((c) =>
           fetch(`/api/maintenance/inventory/${c.id}/adjust`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ quantityChange: c.delta, reason: "Stock count" }),
           })
-        )
-      );
+        ),
+        ...thresholdChanges.map((c) =>
+          fetch(`/api/maintenance/inventory/${c.id}`, {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ minimumThreshold: c.minimumThreshold }),
+          })
+        ),
+      ]);
       const failed = results.filter((r) => !r.ok).length;
       if (failed > 0) {
         throw new Error(`${failed} item${failed === 1 ? "" : "s"} failed to update`);
@@ -125,7 +147,12 @@ export function InventoryTable({ items }: { items: InventoryRow[] }) {
           {items.map((item, index) => {
             const editedQty = Number(quantities[item.id] ?? item.currentQuantity);
             const displayQty = editing && Number.isFinite(editedQty) ? editedQty : item.currentQuantity;
-            const isLow = item.minimumThreshold > 0 && displayQty <= item.minimumThreshold;
+            const editedThreshold = Number(thresholds[item.id] ?? item.minimumThreshold);
+            const displayThreshold =
+              editing && Number.isFinite(editedThreshold) && editedThreshold >= 0
+                ? editedThreshold
+                : item.minimumThreshold;
+            const isLow = displayThreshold > 0 && displayQty <= displayThreshold;
             const isOut = displayQty === 0;
             const isLast = index === items.length - 1;
             return (
@@ -173,7 +200,22 @@ export function InventoryTable({ items }: { items: InventoryRow[] }) {
                     item.currentQuantity
                   )}
                 </TableCell>
-                <TableCell className="text-gray-600">{item.minimumThreshold || "—"}</TableCell>
+                <TableCell className="text-gray-600">
+                  {editing ? (
+                    <input
+                      type="number"
+                      inputMode="numeric"
+                      min={0}
+                      value={thresholds[item.id] ?? ""}
+                      onChange={(e) =>
+                        setThresholds((prev) => ({ ...prev, [item.id]: e.target.value }))
+                      }
+                      className="w-24 rounded-md border border-gray-300 px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                  ) : (
+                    item.minimumThreshold || "—"
+                  )}
+                </TableCell>
                 <TableCell>
                   {isOut ? (
                     <Badge variant="danger">Out of stock</Badge>
