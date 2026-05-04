@@ -1,6 +1,7 @@
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import {
   formatCents,
+  formatCpl,
   formatHookRate,
   formatHoldRate,
   formatRoas,
@@ -14,6 +15,7 @@ type Performance = {
   videoThruplays: number | null;
   purchases: number;
   purchaseValueCents: number;
+  leads: number;
   adCount: number;
 } | null;
 
@@ -26,6 +28,7 @@ type ContributingAd = {
   videoThruplays: number | null;
   purchases: number;
   purchaseValueCents: number;
+  leads: number;
 };
 
 /**
@@ -73,8 +76,27 @@ export function ScriptPerformanceCard({
           </p>
         ) : (
           <>
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
               <Stat label="Spend" value={formatCents(performance.spendCents)} />
+              <Stat
+                label="Leads"
+                value={performance.leads.toLocaleString()}
+              />
+              <Stat
+                label="CPL"
+                value={formatCpl(performance.spendCents, performance.leads)}
+              />
+              <Stat
+                label="Purchases"
+                value={performance.purchases.toString()}
+              />
+              <Stat
+                label="ROAS"
+                value={formatRoas(
+                  performance.purchaseValueCents,
+                  performance.spendCents
+                )}
+              />
               <Stat
                 label="Impressions"
                 value={performance.impressions.toLocaleString()}
@@ -97,21 +119,7 @@ export function ScriptPerformanceCard({
                 label="Link clicks"
                 value={performance.linkClicks.toLocaleString()}
               />
-              <Stat
-                label="Purchases"
-                value={performance.purchases.toString()}
-              />
-              <Stat
-                label="ROAS"
-                value={formatRoas(
-                  performance.purchaseValueCents,
-                  performance.spendCents
-                )}
-              />
-              <Stat
-                label="Ads"
-                value={performance.adCount.toString()}
-              />
+              <Stat label="Ads" value={performance.adCount.toString()} />
             </div>
 
             {ads.length > 0 && (
@@ -131,6 +139,12 @@ export function ScriptPerformanceCard({
                       </th>
                       <th className="px-2 py-2 font-medium text-right">
                         Hold
+                      </th>
+                      <th className="px-2 py-2 font-medium text-right">
+                        Leads
+                      </th>
+                      <th className="px-2 py-2 font-medium text-right">
+                        CPL
                       </th>
                       <th className="px-2 py-2 font-medium text-right">
                         Purch.
@@ -163,6 +177,12 @@ export function ScriptPerformanceCard({
                         </td>
                         <td className="px-2 py-2 text-right tabular-nums">
                           {formatHoldRate(a.videoThruplays, a.videoPlays3s)}
+                        </td>
+                        <td className="px-2 py-2 text-right tabular-nums">
+                          {a.leads}
+                        </td>
+                        <td className="px-2 py-2 text-right tabular-nums">
+                          {formatCpl(a.spendCents, a.leads)}
                         </td>
                         <td className="px-2 py-2 text-right tabular-nums">
                           {a.purchases}

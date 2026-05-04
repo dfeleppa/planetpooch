@@ -103,6 +103,7 @@ async function upsertOne(
     videoThruplays: row.videoThruplays,
     purchases: row.purchases,
     purchaseValueCents: row.purchaseValueCents,
+    leads: row.leads,
     scriptId,
     syncedAt: new Date(),
   };

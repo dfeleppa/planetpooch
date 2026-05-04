@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import {
   DAY_PRESETS,
   formatCents,
+  formatCpl,
   formatHookRate,
   formatHoldRate,
   formatRoas,
@@ -65,9 +66,16 @@ export default async function PerformancePage({
       acc.impressions += a.impressions;
       acc.purchases += a.purchases;
       acc.purchaseValueCents += a.purchaseValueCents;
+      acc.leads += a.leads;
       return acc;
     },
-    { spendCents: 0, impressions: 0, purchases: 0, purchaseValueCents: 0 }
+    {
+      spendCents: 0,
+      impressions: 0,
+      purchases: 0,
+      purchaseValueCents: 0,
+      leads: 0,
+    }
   );
 
   return (
@@ -91,7 +99,7 @@ export default async function PerformancePage({
         campaigns={campaigns}
       />
 
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-6">
+      <div className="grid grid-cols-2 lg:grid-cols-6 gap-3 sm:gap-4 mb-6">
         <Card>
           <CardContent className="py-4 text-center">
             <p className="text-2xl font-bold text-gray-900">
@@ -106,6 +114,22 @@ export default async function PerformancePage({
               {totals.impressions.toLocaleString()}
             </p>
             <p className="text-sm text-gray-500">Impressions</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="py-4 text-center">
+            <p className="text-2xl font-bold text-gray-900">
+              {totals.leads.toLocaleString()}
+            </p>
+            <p className="text-sm text-gray-500">Leads</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="py-4 text-center">
+            <p className="text-2xl font-bold text-gray-900">
+              {formatCpl(totals.spendCents, totals.leads)}
+            </p>
+            <p className="text-sm text-gray-500">CPL</p>
           </CardContent>
         </Card>
         <Card>
@@ -164,6 +188,12 @@ export default async function PerformancePage({
                     </SortableTh>
                     <SortableTh col="ctr" sort={sort} dir={dir} sp={sp}>
                       CTR
+                    </SortableTh>
+                    <SortableTh col="leads" sort={sort} dir={dir} sp={sp}>
+                      Leads
+                    </SortableTh>
+                    <SortableTh col="cpl" sort={sort} dir={dir} sp={sp}>
+                      CPL
                     </SortableTh>
                     <SortableTh col="purchases" sort={sort} dir={dir} sp={sp}>
                       Purchases
@@ -226,6 +256,12 @@ export default async function PerformancePage({
                         </td>
                         <td className="px-2 py-3 text-right tabular-nums">
                           {ctr}
+                        </td>
+                        <td className="px-2 py-3 text-right tabular-nums">
+                          {a.leads}
+                        </td>
+                        <td className="px-2 py-3 text-right tabular-nums">
+                          {formatCpl(a.spendCents, a.leads)}
                         </td>
                         <td className="px-2 py-3 text-right tabular-nums">
                           {a.purchases}

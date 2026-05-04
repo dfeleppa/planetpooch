@@ -60,6 +60,7 @@ export type NormalizedInsight = {
   videoThruplays: number | null;
   purchases: number;
   purchaseValueCents: number;
+  leads: number;
 };
 
 function toCents(dollars: string | undefined): number {
@@ -140,6 +141,31 @@ function extractPurchases(
   return total;
 }
 
+/**
+ * Lead conversions across every Meta variant. `lead` covers Instant Forms,
+ * the `lead_grouped` variants are newer aggregated reporting, and the
+ * pixel variant covers website-side lead events. If the account uses a
+ * named custom conversion for leads, map it here once you know its
+ * action_type (it'll appear as `offsite_conversion.custom.<name>`).
+ */
+const LEAD_TYPES = new Set([
+  "lead",
+  "onsite_conversion.lead_grouped",
+  "offsite_conversion.lead_grouped",
+  "offsite_conversion.fb_pixel_lead",
+]);
+
+function extractLeads(
+  actions: { action_type: string; value: string }[] | undefined
+): number {
+  if (!actions) return 0;
+  let total = 0;
+  for (const a of actions) {
+    if (LEAD_TYPES.has(a.action_type)) total += toInt(a.value);
+  }
+  return total;
+}
+
 function extractPurchaseValueCents(
   actionValues: { action_type: string; value: string }[] | undefined
 ): number {
@@ -169,6 +195,7 @@ function normalize(row: RawInsight): NormalizedInsight {
     videoThruplays: sumActions(row.video_thruplay_watched_actions),
     purchases: extractPurchases(row.actions),
     purchaseValueCents: extractPurchaseValueCents(row.action_values),
+    leads: extractLeads(row.actions),
   };
 }
 
