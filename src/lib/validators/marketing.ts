@@ -13,6 +13,16 @@ export const SaveVoiceProfileSchema = z.object({
   complianceRules: z.string().trim().max(10000).default(""),
   exemplars: z.string().trim().max(50000).default(""),
   notes: z.string().trim().max(5000).default(""),
+  targetAudience: z.string().trim().max(5000).default(""),
+  problemSolved: z.string().trim().max(5000).default(""),
+  offer: z.string().trim().max(5000).default(""),
+  offerMechanism: z.string().trim().max(5000).default(""),
+  pricing: z.string().trim().max(5000).default(""),
+  beforeAfterState: z.string().trim().max(5000).default(""),
+  primaryObjections: z.string().trim().max(5000).default(""),
+  acquisitionChannels: z.string().trim().max(5000).default(""),
+  growthConstraint: z.string().trim().max(5000).default(""),
+  uniqueMechanism: z.string().trim().max(5000).default(""),
 });
 
 export type SaveVoiceProfileInput = z.infer<typeof SaveVoiceProfileSchema>;

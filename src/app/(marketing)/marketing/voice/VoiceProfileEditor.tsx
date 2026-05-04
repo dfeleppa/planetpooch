@@ -14,6 +14,16 @@ type InitialProfile = {
   complianceRules: string;
   exemplars: string;
   notes: string;
+  targetAudience: string;
+  problemSolved: string;
+  offer: string;
+  offerMechanism: string;
+  pricing: string;
+  beforeAfterState: string;
+  primaryObjections: string;
+  acquisitionChannels: string;
+  growthConstraint: string;
+  uniqueMechanism: string;
   createdAt: string;
 };
 
@@ -34,6 +44,16 @@ export function VoiceProfileEditor({ initial }: Props) {
   );
   const [exemplars, setExemplars] = useState(initial?.exemplars ?? "");
   const [notes, setNotes] = useState(initial?.notes ?? "");
+  const [targetAudience, setTargetAudience] = useState(initial?.targetAudience ?? "");
+  const [problemSolved, setProblemSolved] = useState(initial?.problemSolved ?? "");
+  const [offer, setOffer] = useState(initial?.offer ?? "");
+  const [offerMechanism, setOfferMechanism] = useState(initial?.offerMechanism ?? "");
+  const [pricing, setPricing] = useState(initial?.pricing ?? "");
+  const [beforeAfterState, setBeforeAfterState] = useState(initial?.beforeAfterState ?? "");
+  const [primaryObjections, setPrimaryObjections] = useState(initial?.primaryObjections ?? "");
+  const [acquisitionChannels, setAcquisitionChannels] = useState(initial?.acquisitionChannels ?? "");
+  const [growthConstraint, setGrowthConstraint] = useState(initial?.growthConstraint ?? "");
+  const [uniqueMechanism, setUniqueMechanism] = useState(initial?.uniqueMechanism ?? "");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const [savedVersion, setSavedVersion] = useState<number | null>(null);
@@ -60,6 +80,16 @@ export function VoiceProfileEditor({ initial }: Props) {
           complianceRules,
           exemplars,
           notes,
+          targetAudience,
+          problemSolved,
+          offer,
+          offerMechanism,
+          pricing,
+          beforeAfterState,
+          primaryObjections,
+          acquisitionChannels,
+          growthConstraint,
+          uniqueMechanism,
         }),
       });
       if (!res.ok) {
@@ -84,6 +114,92 @@ export function VoiceProfileEditor({ initial }: Props) {
 
   return (
     <form onSubmit={handleSave} className="space-y-4">
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <h2 className="text-base font-semibold text-gray-900">
+              Business context
+            </h2>
+            <p className="text-xs text-gray-500">
+              Defines what we do, not how we sound. The foundation every
+              generation grounds in.
+            </p>
+          </div>
+        </CardHeader>
+        <CardContent className="space-y-5">
+          <Field
+            label="Who is the specific target audience/avatar?"
+            value={targetAudience}
+            onChange={setTargetAudience}
+            rows={3}
+            placeholder="Pet parents in [metro], 30–55, household income $120K+, 1–2 dogs, treat the dog like family. Leans female, professional, often guilt-driven about long workdays."
+          />
+          <Field
+            label="What is the specific problem you solve for them?"
+            value={problemSolved}
+            onChange={setProblemSolved}
+            rows={3}
+            placeholder="Their dog spends most of the day alone or in a cage at the vet. They want real care — outdoor time, attention, no stress — without the guilt of a bad alternative."
+          />
+          <Field
+            label="What is the offer (Product/Service)?"
+            value={offer}
+            onChange={setOffer}
+            rows={3}
+            placeholder="Mobile grooming, daycare, overnight boarding (glass suites), and force-free training — under one roof or to your driveway."
+          />
+          <Field
+            label="What is the core mechanism of the offer (How it works)?"
+            value={offerMechanism}
+            onChange={setOfferMechanism}
+            rows={4}
+            placeholder="Boarding: glass-walled suites with raised beds + TVs, twice-daily 1:1 enrichment, outdoor yard time. Mobile grooming: custom van pulls into the driveway, hydraulic table, warm-water bath, same groomer every visit."
+          />
+          <Field
+            label="How is it priced?"
+            value={pricing}
+            onChange={setPricing}
+            rows={3}
+            placeholder="Boarding $95/night standard suite, $135 luxury suite. Mobile grooming $120–$185 depending on coat. Daycare $52/day, $450/10-pack. Training $180/private session, $295 for the 6-week group class."
+          />
+          <Field
+            label='What is the "Before and After" state for the customer?'
+            value={beforeAfterState}
+            onChange={setBeforeAfterState}
+            rows={4}
+            placeholder="Before: dropping the dog at the vet kennel and feeling sick about it all weekend. After: getting a video of their dog napping in a real bed with a stuffed kong, and actually enjoying the trip."
+          />
+          <Field
+            label="What are the primary objections to the offer?"
+            value={primaryObjections}
+            onChange={setPrimaryObjections}
+            rows={4}
+            placeholder={"- 'It's more expensive than the vet'\n- 'My dog has separation anxiety, won't handle it'\n- 'Can I trust strangers with my dog overnight?'\n- 'How is this different from PetSmart?'"}
+          />
+          <Field
+            label="What are your currently profitable customer acquisition channels?"
+            value={acquisitionChannels}
+            onChange={setAcquisitionChannels}
+            rows={3}
+            placeholder="Organic short-form (Reels/TikTok) — strongest channel. Google Maps/local SEO. Meta paid for boarding promos. Word-of-mouth from groomers → boarding crossover."
+          />
+          <Field
+            label="What is the current primary constraint/bottleneck to growth?"
+            value={growthConstraint}
+            onChange={setGrowthConstraint}
+            rows={3}
+            placeholder="Suite capacity on weekends — boarding sells out 4–6 weeks ahead in summer. Bottleneck is real estate, not demand."
+          />
+          <Field
+            label="What is your unique mechanism (Why you over competitors)?"
+            value={uniqueMechanism}
+            onChange={setUniqueMechanism}
+            rows={4}
+            placeholder="No cages anywhere on property — full-stop. Glass suites, real beds, 1:1 enrichment twice a day. Vet boarding is ~3 short walks then back in a cage; PetSmart-style daycare is a warehouse room. We're the only operator in [metro] with outdoor grass yards + glass suites."
+          />
+        </CardContent>
+      </Card>
+
       <Card>
         <CardHeader>
           <div className="flex items-center justify-between">
