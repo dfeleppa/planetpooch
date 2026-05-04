@@ -4,7 +4,7 @@ import { getSession, hasMarketingAccess } from "@/lib/auth-helpers";
 
 export async function GET() {
   const session = await getSession();
-  if (!session?.user || !hasMarketingAccess(session.user.role)) {
+  if (!session?.user || !hasMarketingAccess(session.user.role, session.user.jobTitle)) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 

@@ -9,7 +9,7 @@ export async function PATCH(
   { params }: { params: Promise<{ hookId: string }> }
 ) {
   const session = await getSession();
-  if (!session?.user || !hasMarketingAccess(session.user.role)) {
+  if (!session?.user || !hasMarketingAccess(session.user.role, session.user.jobTitle)) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
@@ -35,7 +35,7 @@ export async function DELETE(
   { params }: { params: Promise<{ hookId: string }> }
 ) {
   const session = await getSession();
-  if (!session?.user || !hasMarketingAccess(session.user.role)) {
+  if (!session?.user || !hasMarketingAccess(session.user.role, session.user.jobTitle)) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 

@@ -42,11 +42,11 @@ export async function requireSuperAdmin() {
   return session;
 }
 
-/** Requires MARKETING or SUPER_ADMIN. Use for /marketing pages. */
+/** Requires MARKETING or SUPER_ADMIN, or the CMO job title. Use for /marketing pages. */
 export async function requireMarketing() {
   const session = await requireAuth();
-  const role = (session.user as { role: Role }).role;
-  if (role !== "MARKETING" && role !== "SUPER_ADMIN" && role !== "ADMIN") {
+  const user = session.user as { role: Role; jobTitle: string | null };
+  if (!hasMarketingAccess(user.role, user.jobTitle)) {
     redirect("/dashboard");
   }
   return session;
@@ -86,9 +86,19 @@ export function isSuperAdmin(role: string | undefined | null): boolean {
   return role === "SUPER_ADMIN" || role === "ADMIN";
 }
 
-/** True if the role can access /marketing (MARKETING or SUPER_ADMIN). */
-export function hasMarketingAccess(role: string | undefined | null): boolean {
-  return role === "MARKETING" || role === "SUPER_ADMIN" || role === "ADMIN";
+/**
+ * True if the user can access /marketing. Grants access to the MARKETING role,
+ * to top-tier admins (SUPER_ADMIN / legacy ADMIN), and to anyone with the CMO
+ * job title regardless of role.
+ */
+export function hasMarketingAccess(
+  role: string | undefined | null,
+  jobTitle?: string | undefined | null
+): boolean {
+  if (role === "MARKETING" || role === "SUPER_ADMIN" || role === "ADMIN") {
+    return true;
+  }
+  return jobTitle === "CMO";
 }
 
 // Keep requireAdmin as an alias for backward compatibility during migration
