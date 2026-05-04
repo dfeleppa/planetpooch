@@ -23,11 +23,11 @@ function ymd(d: Date): string {
  * days nightly is the standard pattern: Meta backfills attribution for ~3
  * days after the click, so today's numbers are still moving.
  *
- * Auto-links each row to a Script by checking if `Script.metaAdSlug`
- * appears as a substring of `adName`. The slug is set by the marketing
- * lead and pasted into the ad name in Ads Manager. Unmatched ads stay
- * unlinked — surface them in the UI so someone can fix the ad name or
- * set the slug.
+ * Linking precedence per ad:
+ *   1. MetaAdScriptOverride — manual override set by a marketer in the UI.
+ *   2. Script.metaAdSlug substring match against adName — the auto-linker.
+ * If neither matches, scriptId stays null and the row surfaces as
+ * "unlinked" in the performance table.
  */
 export async function syncRecentInsights(days = 7): Promise<SyncResult> {
   const until = new Date();
@@ -47,6 +47,17 @@ export async function syncRecentInsights(days = 7): Promise<SyncResult> {
     if (s.metaAdSlug) slugToScriptId.set(s.metaAdSlug, s.id);
   }
 
+  // Pull overrides only for the ads we're about to upsert — keeps the
+  // payload small even as the override table grows.
+  const adIds = Array.from(new Set(rows.map((r) => r.adId)));
+  const overrides = adIds.length
+    ? await prisma.metaAdScriptOverride.findMany({
+        where: { adId: { in: adIds } },
+        select: { adId: true, scriptId: true },
+      })
+    : [];
+  const overrideByAdId = new Map(overrides.map((o) => [o.adId, o.scriptId]));
+
   function findScriptId(adName: string): string | null {
     for (const [slug, id] of slugToScriptId) {
       if (adName.includes(slug)) return id;
@@ -56,7 +67,8 @@ export async function syncRecentInsights(days = 7): Promise<SyncResult> {
 
   let linked = 0;
   for (const row of rows) {
-    const scriptId = findScriptId(row.adName);
+    const scriptId =
+      overrideByAdId.get(row.adId) ?? findScriptId(row.adName);
     if (scriptId) linked += 1;
     await upsertOne(row, scriptId);
   }

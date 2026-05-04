@@ -1,7 +1,6 @@
 import Link from "next/link";
 import { requireMarketing } from "@/lib/auth-helpers";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import {
   DAY_PRESETS,
   formatCents,
@@ -10,10 +9,12 @@ import {
   formatRoas,
   getAdAggregates,
   getCampaigns,
+  getLinkableScripts,
   SORTABLE_COLUMNS,
   type SortColumn,
   type SortDir,
 } from "@/lib/marketing/performance";
+import { AdLinkPicker } from "./AdLinkPicker";
 import { PerformanceActions } from "./PerformanceActions";
 import { PerformanceFilters } from "./PerformanceFilters";
 
@@ -51,9 +52,10 @@ export default async function PerformancePage({
   const sort = parseSort(sp.sort);
   const dir = parseDir(sp.dir);
 
-  const [ads, campaigns] = await Promise.all([
+  const [ads, campaigns, scripts] = await Promise.all([
     getAdAggregates({ days, campaign, sort, dir }),
     getCampaigns(days),
+    getLinkableScripts(),
   ]);
 
   const totals = ads.reduce(
@@ -189,17 +191,21 @@ export default async function PerformancePage({
                                 {a.campaignName}
                               </span>
                             )}
-                            {a.scriptId ? (
+                            <AdLinkPicker
+                              adId={a.adId}
+                              adName={a.adName}
+                              currentScriptId={a.scriptId}
+                              currentScriptIdeaTitle={a.scriptIdeaTitle}
+                              scripts={scripts}
+                            />
+                            {a.scriptId && (
                               <Link
                                 href={`/marketing/scripts/${a.scriptId}`}
-                                className="text-xs"
+                                className="text-xs text-blue-600 hover:underline"
+                                aria-label="Open linked script"
                               >
-                                <Badge variant="info">
-                                  ↪ {a.scriptIdeaTitle ?? "script"}
-                                </Badge>
+                                open →
                               </Link>
-                            ) : (
-                              <Badge variant="default">unlinked</Badge>
                             )}
                           </div>
                         </td>

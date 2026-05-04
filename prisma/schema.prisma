@@ -808,10 +808,11 @@ model Script {
   createdAt           DateTime     @default(now())
   updatedAt           DateTime     @updatedAt
 
-  idea      MarketingIdea  @relation(fields: [ideaId], references: [id], onDelete: Cascade)
-  createdBy User?          @relation("ScriptCreator", fields: [createdById], references: [id], onDelete: SetNull)
-  hooks     Hook[]
-  insights  MetaAdInsight[]
+  idea          MarketingIdea          @relation(fields: [ideaId], references: [id], onDelete: Cascade)
+  createdBy     User?                  @relation("ScriptCreator", fields: [createdById], references: [id], onDelete: SetNull)
+  hooks         Hook[]
+  insights      MetaAdInsight[]
+  adOverrides   MetaAdScriptOverride[]
 
   @@index([ideaId])
   @@index([status])
@@ -873,6 +874,22 @@ model MetaAdInsight {
 
   @@unique([adId, date])
   @@index([date])
+  @@index([scriptId])
+}
+
+/// Manual override of the auto-linker. When a row exists here for an adId,
+/// sync uses this scriptId instead of running slug-matching for that ad.
+/// Keyed by adId (not (adId, date)) so the override survives ad renames and
+/// applies to every day's insight row for that ad.
+model MetaAdScriptOverride {
+  adId      String   @id
+  scriptId  String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  createdBy String?
+
+  script Script @relation(fields: [scriptId], references: [id], onDelete: Cascade)
+
   @@index([scriptId])
 }
 

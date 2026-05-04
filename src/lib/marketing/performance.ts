@@ -166,6 +166,45 @@ export async function getAdAggregates(
   );
 }
 
+export type LinkableScript = {
+  id: string;
+  ideaTitle: string;
+  platform: string;
+  status: string;
+  metaAdSlug: string | null;
+  createdAt: Date;
+};
+
+/**
+ * Scripts that a marketer might link an ad to, ordered by most recent.
+ * Capped because the picker is a flat list — if this exceeds the cap
+ * regularly, swap the picker for a search input.
+ */
+export async function getLinkableScripts(
+  limit = 200
+): Promise<LinkableScript[]> {
+  const rows = await prisma.script.findMany({
+    select: {
+      id: true,
+      platform: true,
+      status: true,
+      metaAdSlug: true,
+      createdAt: true,
+      idea: { select: { title: true } },
+    },
+    orderBy: { createdAt: "desc" },
+    take: limit,
+  });
+  return rows.map((r) => ({
+    id: r.id,
+    ideaTitle: r.idea.title,
+    platform: r.platform,
+    status: r.status,
+    metaAdSlug: r.metaAdSlug,
+    createdAt: r.createdAt,
+  }));
+}
+
 /** Distinct campaign names seen in the trailing-N-day window, sorted alphabetically. */
 export async function getCampaigns(days = 30): Promise<string[]> {
   const rows = await prisma.metaAdInsight.findMany({
