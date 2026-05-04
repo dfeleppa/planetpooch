@@ -1,10 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { getSession } from "@/lib/auth-helpers";
+import { getSession, hasModuleManagementAccess } from "@/lib/auth-helpers";
 
 export async function PUT(req: NextRequest) {
   const session = await getSession();
-  if (!session?.user || !["SUPER_ADMIN","ADMIN"].includes(session.user.role)) {
+  if (!session?.user || !hasModuleManagementAccess(session.user.role, session.user.jobTitle)) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 

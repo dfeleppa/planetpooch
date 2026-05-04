@@ -69,8 +69,15 @@ export function Sidebar() {
   const isManagerOrAbove = isSuperAdmin || isManager;
   const hasMarketingAccess =
     role === "MARKETING" || isSuperAdmin || jobTitle === "CMO";
+  // CMO can manage modules — give the same admin nav as SUPER_ADMIN so
+  // "Manage Modules" appears alongside the rest of the admin links.
+  const canManageModules = isSuperAdmin || jobTitle === "CMO";
 
-  const nav = isSuperAdmin ? superAdminNav : isManager ? managerNav : employeeNav;
+  const nav = canManageModules
+    ? superAdminNav
+    : isManager
+    ? managerNav
+    : employeeNav;
 
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
