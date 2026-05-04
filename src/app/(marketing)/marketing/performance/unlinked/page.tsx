@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import {
   DAY_PRESETS,
   formatCents,
+  formatCpl,
   formatHookRate,
   formatHoldRate,
   formatRoas,
@@ -56,6 +57,7 @@ export default async function UnlinkedAdsPage({
   ]);
 
   const unlinkedSpendCents = ads.reduce((sum, a) => sum + a.spendCents, 0);
+  const unlinkedLeads = ads.reduce((sum, a) => sum + a.leads, 0);
   const unlinkedSharePct =
     totalSpendCents > 0
       ? ((unlinkedSpendCents / totalSpendCents) * 100).toFixed(1)
@@ -106,7 +108,7 @@ export default async function UnlinkedAdsPage({
         })}
       </div>
 
-      <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 mb-6">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-6">
         <Card>
           <CardContent className="py-4 text-center">
             <p className="text-2xl font-bold text-gray-900">{ads.length}</p>
@@ -119,6 +121,14 @@ export default async function UnlinkedAdsPage({
               {formatCents(unlinkedSpendCents)}
             </p>
             <p className="text-sm text-gray-500">Unattributed spend</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="py-4 text-center">
+            <p className="text-2xl font-bold text-gray-900">
+              {unlinkedLeads.toLocaleString()}
+            </p>
+            <p className="text-sm text-gray-500">Unattributed leads</p>
           </CardContent>
         </Card>
         <Card>
@@ -161,6 +171,12 @@ export default async function UnlinkedAdsPage({
                     <SortableTh col="holdRate" sort={sort} dir={dir} sp={sp}>
                       Hold
                     </SortableTh>
+                    <SortableTh col="leads" sort={sort} dir={dir} sp={sp}>
+                      Leads
+                    </SortableTh>
+                    <SortableTh col="cpl" sort={sort} dir={dir} sp={sp}>
+                      CPL
+                    </SortableTh>
                     <SortableTh col="purchases" sort={sort} dir={dir} sp={sp}>
                       Purch.
                     </SortableTh>
@@ -200,6 +216,12 @@ export default async function UnlinkedAdsPage({
                       </td>
                       <td className="px-2 py-3 text-right tabular-nums">
                         {formatHoldRate(a.videoThruplays, a.videoPlays3s)}
+                      </td>
+                      <td className="px-2 py-3 text-right tabular-nums">
+                        {a.leads}
+                      </td>
+                      <td className="px-2 py-3 text-right tabular-nums">
+                        {formatCpl(a.spendCents, a.leads)}
                       </td>
                       <td className="px-2 py-3 text-right tabular-nums">
                         {a.purchases}

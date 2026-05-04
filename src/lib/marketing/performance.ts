@@ -14,6 +14,7 @@ export type AdAggregate = {
   videoThruplays: number | null;
   purchases: number;
   purchaseValueCents: number;
+  leads: number;
   /** First day we have data for this ad in the window. */
   firstDate: Date;
   /** Most recent day we have data for this ad. */
@@ -28,6 +29,8 @@ export const SORTABLE_COLUMNS = [
   "ctr",
   "purchases",
   "roas",
+  "leads",
+  "cpl",
 ] as const;
 export type SortColumn = (typeof SORTABLE_COLUMNS)[number];
 export type SortDir = "asc" | "desc";
@@ -63,6 +66,7 @@ type MetricRow = {
   videoThruplays: number | null;
   purchases: number;
   purchaseValueCents: number;
+  leads: number;
 };
 
 /** Numeric value of a sortable column for any metric row. Null = no data; sorts last. */
@@ -74,6 +78,8 @@ function sortValue(a: MetricRow, col: SortColumn): number | null {
       return a.impressions;
     case "purchases":
       return a.purchases;
+    case "leads":
+      return a.leads;
     case "hookRate":
       if (a.videoPlays3s === null || a.impressions === 0) return null;
       return a.videoPlays3s / a.impressions;
@@ -92,6 +98,11 @@ function sortValue(a: MetricRow, col: SortColumn): number | null {
     case "roas":
       if (a.spendCents === 0) return null;
       return a.purchaseValueCents / a.spendCents;
+    case "cpl":
+      // Lower is better, but we keep the comparator monotonic — UX flips
+      // direction at the click level if users want cheapest first.
+      if (a.leads === 0) return null;
+      return a.spendCents / a.leads;
   }
 }
 
@@ -162,6 +173,7 @@ export async function getAdAggregates(
         videoThruplays: r.videoThruplays,
         purchases: r.purchases,
         purchaseValueCents: r.purchaseValueCents,
+        leads: r.leads,
         firstDate: r.date,
         lastDate: r.date,
       });
@@ -180,6 +192,7 @@ export async function getAdAggregates(
     }
     existing.purchases += r.purchases;
     existing.purchaseValueCents += r.purchaseValueCents;
+    existing.leads += r.leads;
     if (r.date < existing.firstDate) existing.firstDate = r.date;
     if (r.date > existing.lastDate) existing.lastDate = r.date;
   }
@@ -203,6 +216,7 @@ export type ScriptLeaderboardRow = {
   videoThruplays: number | null;
   purchases: number;
   purchaseValueCents: number;
+  leads: number;
   /** Distinct ads contributing to this script's totals in the window. */
   adCount: number;
   /** Most recent insight date — useful for spotting stale scripts. */
@@ -243,6 +257,7 @@ export async function getScriptLeaderboard(
       videoThruplays: true,
       purchases: true,
       purchaseValueCents: true,
+      leads: true,
       scriptId: true,
       script: {
         select: {
@@ -277,6 +292,7 @@ export async function getScriptLeaderboard(
         videoThruplays: null,
         purchases: 0,
         purchaseValueCents: 0,
+        leads: 0,
         adCount: 0,
         lastDate: r.date,
         adIds: new Set<string>(),
@@ -294,6 +310,7 @@ export async function getScriptLeaderboard(
     }
     row.purchases += r.purchases;
     row.purchaseValueCents += r.purchaseValueCents;
+    row.leads += r.leads;
     row.adIds.add(r.adId);
     if (r.date > row.lastDate) row.lastDate = r.date;
   }
@@ -383,6 +400,7 @@ export async function getScriptPerformance(
   videoThruplays: number | null;
   purchases: number;
   purchaseValueCents: number;
+  leads: number;
   /** Number of distinct ads we have data for. */
   adCount: number;
 } | null> {
@@ -401,6 +419,7 @@ export async function getScriptPerformance(
       videoThruplays: true,
       purchases: true,
       purchaseValueCents: true,
+      leads: true,
     },
   });
   if (rows.length === 0) return null;
@@ -413,6 +432,7 @@ export async function getScriptPerformance(
   let videoThruplays: number | null = null;
   let purchases = 0;
   let purchaseValueCents = 0;
+  let leads = 0;
   for (const r of rows) {
     adIds.add(r.adId);
     spendCents += r.spendCents;
@@ -426,6 +446,7 @@ export async function getScriptPerformance(
     }
     purchases += r.purchases;
     purchaseValueCents += r.purchaseValueCents;
+    leads += r.leads;
   }
   return {
     spendCents,
@@ -435,6 +456,7 @@ export async function getScriptPerformance(
     videoThruplays,
     purchases,
     purchaseValueCents,
+    leads,
     adCount: adIds.size,
   };
 }
@@ -471,4 +493,10 @@ export function formatRoas(
 ): string {
   if (spendCents === 0) return "—";
   return (purchaseValueCents / spendCents).toFixed(2);
+}
+
+/** Cost per lead: spend / leads. Returns "—" when no leads (avoid divide-by-zero). */
+export function formatCpl(spendCents: number, leads: number): string {
+  if (leads === 0) return "—";
+  return formatCents(Math.round(spendCents / leads));
 }

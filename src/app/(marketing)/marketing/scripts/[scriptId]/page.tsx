@@ -59,6 +59,7 @@ export default async function ScriptDetailPage({
           videoThruplays: a.videoThruplays,
           purchases: a.purchases,
           purchaseValueCents: a.purchaseValueCents,
+          leads: a.leads,
         }))}
       />
 

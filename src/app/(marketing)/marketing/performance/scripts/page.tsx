@@ -5,6 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import {
   DAY_PRESETS,
   formatCents,
+  formatCpl,
   formatHookRate,
   formatHoldRate,
   formatRoas,
@@ -54,9 +55,10 @@ export default async function ScriptLeaderboardPage({
       acc.spendCents += s.spendCents;
       acc.purchases += s.purchases;
       acc.purchaseValueCents += s.purchaseValueCents;
+      acc.leads += s.leads;
       return acc;
     },
-    { spendCents: 0, purchases: 0, purchaseValueCents: 0 }
+    { spendCents: 0, purchases: 0, purchaseValueCents: 0, leads: 0 }
   );
 
   return (
@@ -105,11 +107,11 @@ export default async function ScriptLeaderboardPage({
         })}
       </div>
 
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-6">
+      <div className="grid grid-cols-2 lg:grid-cols-6 gap-3 sm:gap-4 mb-6">
         <Card>
           <CardContent className="py-4 text-center">
             <p className="text-2xl font-bold text-gray-900">{scripts.length}</p>
-            <p className="text-sm text-gray-500">Scripts with ad activity</p>
+            <p className="text-sm text-gray-500">Scripts</p>
           </CardContent>
         </Card>
         <Card>
@@ -118,6 +120,22 @@ export default async function ScriptLeaderboardPage({
               {formatCents(totals.spendCents)}
             </p>
             <p className="text-sm text-gray-500">Spend ({days}d)</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="py-4 text-center">
+            <p className="text-2xl font-bold text-gray-900">
+              {totals.leads.toLocaleString()}
+            </p>
+            <p className="text-sm text-gray-500">Leads</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="py-4 text-center">
+            <p className="text-2xl font-bold text-gray-900">
+              {formatCpl(totals.spendCents, totals.leads)}
+            </p>
+            <p className="text-sm text-gray-500">CPL</p>
           </CardContent>
         </Card>
         <Card>
@@ -179,6 +197,12 @@ export default async function ScriptLeaderboardPage({
                     <SortableTh col="ctr" sort={sort} dir={dir} sp={sp}>
                       CTR
                     </SortableTh>
+                    <SortableTh col="leads" sort={sort} dir={dir} sp={sp}>
+                      Leads
+                    </SortableTh>
+                    <SortableTh col="cpl" sort={sort} dir={dir} sp={sp}>
+                      CPL
+                    </SortableTh>
                     <SortableTh col="purchases" sort={sort} dir={dir} sp={sp}>
                       Purchases
                     </SortableTh>
@@ -232,6 +256,12 @@ export default async function ScriptLeaderboardPage({
                         </td>
                         <td className="px-2 py-3 text-right tabular-nums">
                           {ctr}
+                        </td>
+                        <td className="px-2 py-3 text-right tabular-nums">
+                          {s.leads}
+                        </td>
+                        <td className="px-2 py-3 text-right tabular-nums">
+                          {formatCpl(s.spendCents, s.leads)}
                         </td>
                         <td className="px-2 py-3 text-right tabular-nums">
                           {s.purchases}

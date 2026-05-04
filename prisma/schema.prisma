@@ -867,6 +867,9 @@ model MetaAdInsight {
   videoThruplays     Int?
   purchases          Int      @default(0)
   purchaseValueCents Int      @default(0)
+  /// Lead conversions (Meta Lead Forms + pixel/CAPI lead events). Sum of
+  /// every action_type that maps to "lead" — see LEAD_TYPES in insights.ts.
+  leads              Int      @default(0)
   scriptId           String?
   syncedAt           DateTime @default(now())
 
