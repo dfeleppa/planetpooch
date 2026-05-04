@@ -26,7 +26,7 @@ export default async function NewTaskPage({
   if (!project) notFound();
 
   return (
-    <div className="max-w-2xl">
+    <div className="w-full">
       <div className="flex items-center gap-2 text-sm text-gray-500 mb-4">
         <Link href="/tasks" className="hover:text-blue-600">Tasks</Link>
         <span>/</span>
