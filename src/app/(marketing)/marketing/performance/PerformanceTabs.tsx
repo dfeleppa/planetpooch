@@ -1,11 +1,15 @@
 import Link from "next/link";
 
 /**
- * Tab nav between the per-ad and per-script performance views. Server
- * component because both target pages are server components and there's
- * no client state to manage.
+ * Tab nav between the per-ad, per-script, and unlinked-triage performance
+ * views. Server component because all target pages are server components
+ * and there's no client state to manage.
  */
-export function PerformanceTabs({ active }: { active: "ads" | "scripts" }) {
+export function PerformanceTabs({
+  active,
+}: {
+  active: "ads" | "scripts" | "unlinked";
+}) {
   return (
     <nav
       className="inline-flex rounded-lg border border-gray-200 bg-white p-0.5 mb-4"
@@ -20,6 +24,11 @@ export function PerformanceTabs({ active }: { active: "ads" | "scripts" }) {
         href="/marketing/performance/scripts"
         label="Scripts"
         active={active === "scripts"}
+      />
+      <Tab
+        href="/marketing/performance/unlinked"
+        label="Unlinked"
+        active={active === "unlinked"}
       />
     </nav>
   );

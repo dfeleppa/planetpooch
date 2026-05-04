@@ -41,6 +41,8 @@ export type AggregateOptions = {
   campaign?: string;
   /** Filter to ads linked to this scriptId. */
   scriptId?: string;
+  /** "linked" = scriptId IS NOT NULL; "unlinked" = scriptId IS NULL; "all" = both (default). */
+  linked?: "all" | "linked" | "unlinked";
   sort?: SortColumn;
   dir?: SortDir;
 };
@@ -121,6 +123,7 @@ export async function getAdAggregates(
   const dir = options.dir ?? "desc";
   const campaign = options.campaign?.trim() || undefined;
   const scriptId = options.scriptId;
+  const linked = options.linked ?? "all";
 
   // Group by ad. We pick the most recent (adName, campaignName) per ad so
   // renames in Ads Manager show through.
@@ -129,6 +132,11 @@ export async function getAdAggregates(
       date: { gte: windowStart(days) },
       ...(campaign ? { campaignName: campaign } : {}),
       ...(scriptId ? { scriptId } : {}),
+      ...(linked === "linked"
+        ? { scriptId: { not: null } }
+        : linked === "unlinked"
+        ? { scriptId: null }
+        : {}),
     },
     orderBy: { date: "desc" },
     include: {
@@ -296,6 +304,15 @@ export async function getScriptLeaderboard(
     out.push({ ...rest, adCount: adIds.size });
   }
   return out.sort((a, b) => compareMetricRows(a, b, sort, dir));
+}
+
+/** Total spend (in cents) across every insight row in the trailing window. */
+export async function getTotalSpendCents(days = 30): Promise<number> {
+  const result = await prisma.metaAdInsight.aggregate({
+    where: { date: { gte: windowStart(days) } },
+    _sum: { spendCents: true },
+  });
+  return result._sum.spendCents ?? 0;
 }
 
 export type LinkableScript = {
