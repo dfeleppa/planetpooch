@@ -5,7 +5,7 @@ import { NewIdeaForm } from "./NewIdeaForm";
 export default async function NewIdeaPage() {
   await requireMarketing();
   return (
-    <div className="max-w-3xl">
+    <div className="w-full">
       <div className="mb-4">
         <Link
           href="/marketing/ideas"

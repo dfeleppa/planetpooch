@@ -28,7 +28,7 @@ export default async function IdeaDetailPage({
   if (!idea) notFound();
 
   return (
-    <div className="max-w-3xl space-y-4">
+    <div className="w-full space-y-4">
       <div>
         <Link
           href="/marketing/ideas"

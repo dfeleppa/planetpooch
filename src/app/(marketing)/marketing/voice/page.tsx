@@ -7,7 +7,7 @@ export default async function VoiceProfilePage() {
   const profile = await getLatestVoiceProfile();
 
   return (
-    <div className="max-w-4xl">
+    <div className="w-full">
       <div className="mb-6">
         <h1 className="text-2xl font-bold text-gray-900">Brand Voice Profile</h1>
         <p className="text-gray-500 mt-1">
