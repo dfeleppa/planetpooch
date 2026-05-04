@@ -38,6 +38,16 @@ export async function saveNewVoiceProfileVersion(
         complianceRules: input.complianceRules,
         exemplars: input.exemplars,
         notes: input.notes,
+        targetAudience: input.targetAudience,
+        problemSolved: input.problemSolved,
+        offer: input.offer,
+        offerMechanism: input.offerMechanism,
+        pricing: input.pricing,
+        beforeAfterState: input.beforeAfterState,
+        primaryObjections: input.primaryObjections,
+        acquisitionChannels: input.acquisitionChannels,
+        growthConstraint: input.growthConstraint,
+        uniqueMechanism: input.uniqueMechanism,
         createdById,
       },
     });
@@ -54,6 +64,27 @@ export function renderVoiceProfileForPrompt(
 ): string {
   if (!profile) return "";
   const sections: string[] = [];
+
+  const businessFields: Array<[string, string]> = [
+    ["Target audience", profile.targetAudience],
+    ["Problem we solve", profile.problemSolved],
+    ["Offer", profile.offer],
+    ["How the offer works", profile.offerMechanism],
+    ["Pricing", profile.pricing],
+    ["Before/after state", profile.beforeAfterState],
+    ["Primary objections", profile.primaryObjections],
+    ["Acquisition channels", profile.acquisitionChannels],
+    ["Growth constraint", profile.growthConstraint],
+    ["Unique mechanism (why us)", profile.uniqueMechanism],
+  ];
+  const businessBody = businessFields
+    .filter(([, v]) => v && v.trim().length > 0)
+    .map(([label, v]) => `## ${label}\n${v}`)
+    .join("\n\n");
+  if (businessBody) {
+    sections.push(`# Business context\n${businessBody}`);
+  }
+
   if (profile.tone) sections.push(`# Tone\n${profile.tone}`);
   if (profile.doRules) sections.push(`# Do\n${profile.doRules}`);
   if (profile.dontRules) sections.push(`# Don't\n${profile.dontRules}`);

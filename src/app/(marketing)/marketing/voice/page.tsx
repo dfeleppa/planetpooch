@@ -29,6 +29,16 @@ export default async function VoiceProfilePage() {
                 complianceRules: profile.complianceRules,
                 exemplars: profile.exemplars,
                 notes: profile.notes,
+                targetAudience: profile.targetAudience,
+                problemSolved: profile.problemSolved,
+                offer: profile.offer,
+                offerMechanism: profile.offerMechanism,
+                pricing: profile.pricing,
+                beforeAfterState: profile.beforeAfterState,
+                primaryObjections: profile.primaryObjections,
+                acquisitionChannels: profile.acquisitionChannels,
+                growthConstraint: profile.growthConstraint,
+                uniqueMechanism: profile.uniqueMechanism,
                 createdAt: profile.createdAt.toISOString(),
               }
             : null

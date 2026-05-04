@@ -736,6 +736,21 @@ model BrandVoiceProfile {
   complianceRules String   @default("")
   exemplars       String   @default("")
   notes           String   @default("")
+
+  // Business context — defines what the business is and offers, not how it
+  // sounds. Rendered into the system prompt above the tone block so every
+  // generation grounds in the same foundation.
+  targetAudience       String @default("")
+  problemSolved        String @default("")
+  offer                String @default("")
+  offerMechanism       String @default("")
+  pricing              String @default("")
+  beforeAfterState     String @default("")
+  primaryObjections    String @default("")
+  acquisitionChannels  String @default("")
+  growthConstraint     String @default("")
+  uniqueMechanism      String @default("")
+
   createdById     String?
   createdAt       DateTime @default(now())
 
