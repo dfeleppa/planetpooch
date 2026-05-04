@@ -8,7 +8,7 @@ export default async function NewEmployeePage() {
   const user = session.user as { role: Role; company: Company };
 
   return (
-    <div className="max-w-2xl">
+    <div className="w-full">
       <div className="mb-6">
         <Link
           href="/admin/employees"

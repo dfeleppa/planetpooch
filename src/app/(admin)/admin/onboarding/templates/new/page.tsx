@@ -6,7 +6,7 @@ export default async function NewTemplatePage() {
   await requireAdmin();
 
   return (
-    <div className="max-w-2xl">
+    <div className="w-full">
       <div className="mb-6">
         <Link
           href="/admin/onboarding/templates"

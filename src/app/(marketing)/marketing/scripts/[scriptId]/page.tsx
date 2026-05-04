@@ -27,7 +27,7 @@ export default async function ScriptDetailPage({
   const performance = await getScriptPerformance(script.id, 30);
 
   return (
-    <div className="max-w-4xl space-y-4">
+    <div className="w-full space-y-4">
       <div className="text-sm text-gray-500 space-x-2">
         <Link href="/marketing/ideas" className="hover:text-gray-700">
           Ideas
