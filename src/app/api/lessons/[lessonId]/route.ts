@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { getSession, isManagerOrAbove, isSuperAdmin } from "@/lib/auth-helpers";
+import { getSession, isManagerOrAbove, hasModuleManagementAccess } from "@/lib/auth-helpers";
 import { extractTextFromTiptapJson } from "@/lib/utils";
 import { isModuleVisibleToUser } from "@/lib/module-visibility";
 
@@ -117,7 +117,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ less
 
 export async function PUT(req: NextRequest, { params }: { params: Promise<{ lessonId: string }> }) {
   const session = await getSession();
-  if (!session?.user || !isSuperAdmin(session.user.role)) {
+  if (!session?.user || !hasModuleManagementAccess(session.user.role, session.user.jobTitle)) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
@@ -143,7 +143,7 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ less
 
 export async function DELETE(req: NextRequest, { params }: { params: Promise<{ lessonId: string }> }) {
   const session = await getSession();
-  if (!session?.user || !isSuperAdmin(session.user.role)) {
+  if (!session?.user || !hasModuleManagementAccess(session.user.role, session.user.jobTitle)) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 

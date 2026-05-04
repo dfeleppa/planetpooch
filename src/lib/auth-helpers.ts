@@ -87,6 +87,19 @@ export function isSuperAdmin(role: string | undefined | null): boolean {
 }
 
 /**
+ * True if the user can manage modules and lessons (create / edit / delete /
+ * reorder / assign). Top-tier admins always qualify, plus anyone with the CMO
+ * job title regardless of role.
+ */
+export function hasModuleManagementAccess(
+  role: string | undefined | null,
+  jobTitle?: string | undefined | null
+): boolean {
+  if (role === "SUPER_ADMIN" || role === "ADMIN") return true;
+  return jobTitle === "CMO";
+}
+
+/**
  * True if the user can access /marketing. Grants access to the MARKETING role,
  * to top-tier admins (SUPER_ADMIN / legacy ADMIN), and to anyone with the CMO
  * job title regardless of role.

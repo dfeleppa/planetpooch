@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { getSession, isSuperAdmin } from "@/lib/auth-helpers";
+import { getSession, hasModuleManagementAccess } from "@/lib/auth-helpers";
 
 /**
  * GET — returns the current job-title and user assignments for a module,
@@ -12,7 +12,7 @@ export async function GET(
   { params }: { params: Promise<{ moduleId: string }> },
 ) {
   const session = await getSession();
-  if (!session?.user || !isSuperAdmin(session.user.role)) {
+  if (!session?.user || !hasModuleManagementAccess(session.user.role, session.user.jobTitle)) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
@@ -72,7 +72,7 @@ export async function PUT(
   { params }: { params: Promise<{ moduleId: string }> },
 ) {
   const session = await getSession();
-  if (!session?.user || !isSuperAdmin(session.user.role)) {
+  if (!session?.user || !hasModuleManagementAccess(session.user.role, session.user.jobTitle)) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 

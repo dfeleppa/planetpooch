@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { getSession } from "@/lib/auth-helpers";
+import { getSession, hasModuleManagementAccess } from "@/lib/auth-helpers";
 
 async function wouldCreateCycle(moduleId: string, prerequisiteId: string): Promise<boolean> {
   // BFS from prerequisiteId's own prerequisites to check if moduleId is reachable
@@ -44,7 +44,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ modu
 
 export async function PUT(req: NextRequest, { params }: { params: Promise<{ moduleId: string }> }) {
   const session = await getSession();
-  if (!session?.user || !["SUPER_ADMIN","ADMIN"].includes(session.user.role)) {
+  if (!session?.user || !hasModuleManagementAccess(session.user.role, session.user.jobTitle)) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
