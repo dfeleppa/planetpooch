@@ -18,7 +18,6 @@ const INSIGHT_FIELDS = [
   "reach",
   "frequency",
   "inline_link_clicks",
-  "video_3_sec_watched_actions",
   "video_thruplay_watched_actions",
   "actions",
   "action_values",
@@ -38,7 +37,6 @@ type RawInsight = {
   reach?: string;
   frequency?: string;
   inline_link_clicks?: string;
-  video_3_sec_watched_actions?: { action_type: string; value: string }[];
   video_thruplay_watched_actions?: { action_type: string; value: string }[];
   actions?: { action_type: string; value: string }[];
   action_values?: { action_type: string; value: string }[];
@@ -115,6 +113,22 @@ const PURCHASE_TYPES = new Set([
   "offsite_conversion.custom",
 ]);
 
+function extractActionByType(
+  actions: { action_type: string; value: string }[] | undefined,
+  type: string
+): number | null {
+  if (!actions) return null;
+  let total = 0;
+  let found = false;
+  for (const a of actions) {
+    if (a.action_type === type) {
+      total += toInt(a.value);
+      found = true;
+    }
+  }
+  return found ? total : null;
+}
+
 function extractPurchases(
   actions: { action_type: string; value: string }[] | undefined
 ): number {
@@ -151,7 +165,7 @@ function normalize(row: RawInsight): NormalizedInsight {
     reach: toIntOrNull(row.reach),
     frequency: toFloatOrNull(row.frequency),
     linkClicks: toInt(row.inline_link_clicks),
-    videoPlays3s: sumActions(row.video_3_sec_watched_actions),
+    videoPlays3s: extractActionByType(row.actions, "video_view"),
     videoThruplays: sumActions(row.video_thruplay_watched_actions),
     purchases: extractPurchases(row.actions),
     purchaseValueCents: extractPurchaseValueCents(row.action_values),
