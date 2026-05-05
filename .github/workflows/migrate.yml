@@ -1,0 +1,52 @@
+# Applies pending Prisma migrations to the production database whenever
+# something under prisma/migrations/ lands on main. Runs from a GitHub
+# Actions runner (not Vercel build), because Vercel's build sandbox can't
+# reach Supabase's direct DB host on port 5432 — see commits 52efcaf /
+# cc99c04 for the prior failed attempts. GH runners can.
+#
+# The Vercel deploy and this workflow both kick off on push to main and
+# run in parallel. For the additive migrations we ship today this is
+# fine — Postgres adds the column or table while the new code is still
+# building, so by the time Vercel finishes (minutes) the migration
+# (seconds) is done. For a destructive migration you'd want to deploy
+# code that doesn't depend on the change first, then merge the migration
+# in a follow-up PR.
+name: Migrate Prisma schema
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "prisma/migrations/**"
+      - "prisma/schema.prisma"
+      - ".github/workflows/migrate.yml"
+
+# Never run two migrations against the same DB at once. cancel-in-progress
+# is false because cancelling a half-applied migration is worse than
+# queueing.
+concurrency:
+  group: prisma-migrate-prod
+  cancel-in-progress: false
+
+jobs:
+  migrate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+
+      # --ignore-scripts skips the postinstall prisma generate — migrate
+      # deploy doesn't need a generated client, just the migrations dir.
+      - name: Install deps
+        run: npm ci --ignore-scripts
+
+      - name: Apply migrations
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          DIRECT_URL: ${{ secrets.DIRECT_URL }}
+        run: npx prisma migrate deploy
