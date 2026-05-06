@@ -157,11 +157,17 @@ export function IdeaEditor({ idea }: { idea: IdeaProp }) {
             <label className="text-sm font-medium text-gray-700">
               Insight
             </label>
+            <p className="text-xs text-gray-500">
+              The underlying truth about the buyer or service — a truth, not
+              a pitch. This is the most important field; the angle generator
+              fans this single truth out into 6–10 distinct angles.
+            </p>
             <textarea
               rows={6}
               className="rounded-lg border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
               value={insight}
               onChange={(e) => setInsight(e.target.value)}
+              placeholder="Vets boarding dogs walk them ~3 times a day. The other 21 hours, the dog is in a cage."
             />
           </div>
 
@@ -203,9 +209,10 @@ export function IdeaEditor({ idea }: { idea: IdeaProp }) {
             </div>
 
             <Input
-              label="Audience"
+              label="Audience signal"
               value={audience}
               onChange={(e) => setAudience(e.target.value)}
+              placeholder="Loose: people who might care"
             />
           </div>
 

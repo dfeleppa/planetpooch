@@ -1,6 +1,25 @@
 import { prisma } from "@/lib/prisma";
 import type { BrandVoiceProfile } from "@prisma/client";
-import type { SaveVoiceProfileInput } from "@/lib/validators/marketing";
+import {
+  ProofBankEntrySchema,
+  type ProofBankEntry,
+  type SaveVoiceProfileInput,
+} from "@/lib/validators/marketing";
+
+/**
+ * Parse the JSON `proofBank` column into a typed array. Stored as Json so
+ * the row can grow without a migration; validated on read so a malformed
+ * row doesn't blow up generation.
+ */
+export function readProofBank(profile: BrandVoiceProfile | null): ProofBankEntry[] {
+  if (!profile) return [];
+  const raw = profile.proofBank;
+  if (!Array.isArray(raw)) return [];
+  return raw.flatMap((entry) => {
+    const parsed = ProofBankEntrySchema.safeParse(entry);
+    return parsed.success ? [parsed.data] : [];
+  });
+}
 
 /**
  * Returns the highest-version voice profile, or `null` if none have been
@@ -48,6 +67,10 @@ export async function saveNewVoiceProfileVersion(
         acquisitionChannels: input.acquisitionChannels,
         growthConstraint: input.growthConstraint,
         uniqueMechanism: input.uniqueMechanism,
+        tonalRange: input.tonalRange,
+        forbiddenTerritory: input.forbiddenTerritory,
+        proofBank: input.proofBank,
+        visualIdentityGuardrails: input.visualIdentityGuardrails,
         createdById,
       },
     });
@@ -86,14 +109,58 @@ export function renderVoiceProfileForPrompt(
   }
 
   if (profile.tone) sections.push(`# Tone\n${profile.tone}`);
+
+  // Andromeda: tonal range caps the angle generator's emotional registers.
+  // Emit it even when empty so the model knows the constraint exists — empty
+  // means "no cap, use any register".
+  if (profile.tonalRange.length > 0) {
+    sections.push(
+      `# Tonal range (the only emotional registers the angle generator may use)\n` +
+        profile.tonalRange.map((r) => `- ${r}`).join("\n")
+    );
+  }
+
   if (profile.doRules) sections.push(`# Do\n${profile.doRules}`);
   if (profile.dontRules) sections.push(`# Don't\n${profile.dontRules}`);
+
+  if (profile.forbiddenTerritory) {
+    sections.push(
+      `# Forbidden territory (never frame an angle around any of these)\n${profile.forbiddenTerritory}`
+    );
+  }
+
   if (profile.bannedPhrases.length > 0) {
     sections.push(
       `# Banned phrases (never use these)\n` +
         profile.bannedPhrases.map((p) => `- ${p}`).join("\n")
     );
   }
+
+  // Proof bank: flatten to markdown lines per kind so the model can scan and
+  // pick a citation rather than parsing JSON. Empty bank → omit the section.
+  const proofBank = readProofBank(profile);
+  if (proofBank.length > 0) {
+    const KIND_LABEL: Record<ProofBankEntry["kind"], string> = {
+      stat: "Stat",
+      testimonial: "Testimonial",
+      transformation: "Transformation",
+      story: "Story",
+    };
+    const lines = proofBank.map((e) => {
+      const src = e.source ? ` _(${e.source})_` : "";
+      return `- **${KIND_LABEL[e.kind]}:** ${e.text}${src}`;
+    });
+    sections.push(
+      `# Proof bank (anchor every "real results" claim to one of these — never invent stats, names, or transformations)\n${lines.join("\n")}`
+    );
+  }
+
+  if (profile.visualIdentityGuardrails) {
+    sections.push(
+      `# Visual identity guardrails (what the brand looks like on camera — keep shot lists consistent with these)\n${profile.visualIdentityGuardrails}`
+    );
+  }
+
   if (profile.complianceRules) {
     sections.push(`# Compliance rules\n${profile.complianceRules}`);
   }
