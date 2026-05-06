@@ -35,7 +35,12 @@ export async function GET(req: NextRequest) {
     }
     if (err instanceof MetaApiError) {
       return NextResponse.json(
-        { error: `Meta API: ${err.message}`, fbCode: err.fbCode },
+        {
+          error: `Meta API: ${err.message}`,
+          fbCode: err.fbCode,
+          fbType: err.fbType,
+          status: err.status,
+        },
         { status: 502 }
       );
     }

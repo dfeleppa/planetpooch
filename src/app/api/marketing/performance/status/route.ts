@@ -44,6 +44,7 @@ export async function GET() {
           error: err.message,
           status: err.status,
           fbCode: err.fbCode,
+          fbType: err.fbType,
         },
         { status: 200 }
       );
