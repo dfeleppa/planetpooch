@@ -7,7 +7,29 @@ import { Badge } from "@/components/ui/badge";
 
 type Status =
   | { ok: true; account: { id: string; name: string; currency: string; timezone: string } }
-  | { ok: false; kind: "config" | "api" | "unknown"; error: string };
+  | {
+      ok: false;
+      kind: "config" | "api" | "unknown";
+      error: string;
+      // Only set when kind === "api" — Meta-side diagnostic codes pulled
+      // from the Graph API error body. fbCode in particular pinpoints
+      // permission vs. token vs. app-restriction failures.
+      status?: number;
+      fbCode?: number;
+      fbType?: string;
+    };
+
+function formatFbDiag(s: {
+  status?: number;
+  fbCode?: number;
+  fbType?: string;
+}): string {
+  const parts: string[] = [];
+  if (s.status) parts.push(`HTTP ${s.status}`);
+  if (s.fbCode !== undefined) parts.push(`code ${s.fbCode}`);
+  if (s.fbType) parts.push(s.fbType);
+  return parts.length > 0 ? parts.join(" · ") : "";
+}
 
 /**
  * Two pieces in one component because they share state: the connection
@@ -60,11 +82,14 @@ export function PerformanceActions() {
             windowSince: string;
             windowUntil: string;
           }
-        | { error: string };
+        | { error: string; status?: number; fbCode?: number; fbType?: string };
       if (!res.ok) {
-        setRefreshMessage(
-          "error" in data ? data.error : `Refresh failed (${res.status})`
-        );
+        if ("error" in data) {
+          const diag = formatFbDiag(data);
+          setRefreshMessage(diag ? `${data.error} (${diag})` : data.error);
+        } else {
+          setRefreshMessage(`Refresh failed (${res.status})`);
+        }
         // Re-check status so the banner reflects whatever just broke.
         void loadStatus();
         return;
@@ -96,9 +121,14 @@ export function PerformanceActions() {
         </p>
       )}
       {status && !status.ok && (
-        <p className="text-xs text-red-600 max-w-md sm:text-right">
-          {status.error}
-        </p>
+        <div className="text-xs text-red-600 max-w-md sm:text-right">
+          <p>{status.error}</p>
+          {status.kind === "api" && formatFbDiag(status) && (
+            <p className="font-mono text-[11px] text-red-500/80">
+              {formatFbDiag(status)}
+            </p>
+          )}
+        </div>
       )}
     </div>
   );
