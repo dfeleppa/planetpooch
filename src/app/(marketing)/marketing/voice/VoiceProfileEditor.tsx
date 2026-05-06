@@ -4,6 +4,11 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import {
+  EMOTIONAL_REGISTERS,
+  EMOTIONAL_REGISTER_LABELS,
+} from "@/lib/marketing/angles";
+import type { EmotionalRegister, ProofBankEntry } from "@/lib/validators/marketing";
 
 type InitialProfile = {
   version: number;
@@ -24,7 +29,18 @@ type InitialProfile = {
   acquisitionChannels: string;
   growthConstraint: string;
   uniqueMechanism: string;
+  tonalRange: EmotionalRegister[];
+  forbiddenTerritory: string;
+  proofBank: ProofBankEntry[];
+  visualIdentityGuardrails: string;
   createdAt: string;
+};
+
+const PROOF_KIND_LABELS: Record<ProofBankEntry["kind"], string> = {
+  stat: "Stat",
+  testimonial: "Testimonial",
+  transformation: "Transformation",
+  story: "Story",
 };
 
 type Props = {
@@ -54,6 +70,18 @@ export function VoiceProfileEditor({ initial }: Props) {
   const [acquisitionChannels, setAcquisitionChannels] = useState(initial?.acquisitionChannels ?? "");
   const [growthConstraint, setGrowthConstraint] = useState(initial?.growthConstraint ?? "");
   const [uniqueMechanism, setUniqueMechanism] = useState(initial?.uniqueMechanism ?? "");
+  const [tonalRange, setTonalRange] = useState<EmotionalRegister[]>(
+    initial?.tonalRange ?? []
+  );
+  const [forbiddenTerritory, setForbiddenTerritory] = useState(
+    initial?.forbiddenTerritory ?? ""
+  );
+  const [proofBank, setProofBank] = useState<ProofBankEntry[]>(
+    initial?.proofBank ?? []
+  );
+  const [visualIdentityGuardrails, setVisualIdentityGuardrails] = useState(
+    initial?.visualIdentityGuardrails ?? ""
+  );
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const [savedVersion, setSavedVersion] = useState<number | null>(null);
@@ -90,6 +118,10 @@ export function VoiceProfileEditor({ initial }: Props) {
           acquisitionChannels,
           growthConstraint,
           uniqueMechanism,
+          tonalRange,
+          forbiddenTerritory,
+          proofBank,
+          visualIdentityGuardrails,
         }),
       });
       if (!res.ok) {
@@ -279,6 +311,166 @@ export function VoiceProfileEditor({ initial }: Props) {
           <div className="flex gap-3 pt-2">
             <Button type="submit" disabled={saving}>
               {saving ? "Saving…" : "Save as new version"}
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <h2 className="text-base font-semibold text-gray-900">
+              Andromeda guardrails
+            </h2>
+            <p className="text-xs text-gray-500">
+              Constraints that shape what the angle generator can produce.
+            </p>
+          </div>
+        </CardHeader>
+        <CardContent className="space-y-5">
+          <div className="flex flex-col gap-2">
+            <label className="text-sm font-medium text-gray-700">
+              Tonal range
+            </label>
+            <p className="text-xs text-gray-500">
+              The emotional registers the angle generator is allowed to use.
+              Leave empty to allow all. Two angles for the same idea may
+              never share a register, so a wider range gives the generator
+              more room.
+            </p>
+            <div className="flex flex-wrap gap-2 pt-1">
+              {EMOTIONAL_REGISTERS.map((r) => {
+                const active = tonalRange.includes(r);
+                return (
+                  <button
+                    type="button"
+                    key={r}
+                    onClick={() =>
+                      setTonalRange((prev) =>
+                        prev.includes(r)
+                          ? prev.filter((x) => x !== r)
+                          : [...prev, r]
+                      )
+                    }
+                    className={
+                      "rounded-full border px-3 py-1 text-xs font-medium transition-colors " +
+                      (active
+                        ? "border-blue-500 bg-blue-50 text-blue-700"
+                        : "border-gray-300 bg-white text-gray-700 hover:bg-gray-50")
+                    }
+                  >
+                    {EMOTIONAL_REGISTER_LABELS[r]}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          <Field
+            label="Forbidden territory"
+            help="Angles or framings the brand won't touch (e.g., shame-based weight loss, mocking customers). The generator avoids anything that sounds like these."
+            value={forbiddenTerritory}
+            onChange={setForbiddenTerritory}
+            rows={4}
+            placeholder={"- Don't shame pet parents for using daycare or boarding\n- Never imply other groomers are unsafe by name\n- No 'before/after' weight loss style framing"}
+          />
+
+          <Field
+            label="Visual identity guardrails"
+            help="What the brand actually looks like on camera. The shot list generator stays consistent with these — keeps split-screen, kinetic-text, etc. on-brand."
+            value={visualIdentityGuardrails}
+            onChange={setVisualIdentityGuardrails}
+            rows={4}
+            placeholder="Hand-held UGC feel, natural light. Always show real dogs (no stock). Brand color is teal — appears in van wraps and lower thirds. Never use generic stock music."
+          />
+
+          <div className="flex flex-col gap-2">
+            <label className="text-sm font-medium text-gray-700">
+              Proof bank
+            </label>
+            <p className="text-xs text-gray-500">
+              Real stats, transformations, testimonials, and stories the
+              script generator may cite. Without entries here it will
+              avoid factual claims rather than invent them.
+            </p>
+            <div className="space-y-2">
+              {proofBank.map((entry, i) => (
+                <div
+                  key={i}
+                  className="rounded-lg border border-gray-200 p-3 space-y-2 bg-white"
+                >
+                  <div className="flex items-center gap-2">
+                    <select
+                      value={entry.kind}
+                      onChange={(e) =>
+                        setProofBank((prev) =>
+                          prev.map((p, idx) =>
+                            idx === i
+                              ? { ...p, kind: e.target.value as ProofBankEntry["kind"] }
+                              : p
+                          )
+                        )
+                      }
+                      className="rounded-md border border-gray-300 px-2 py-1 text-xs bg-white"
+                    >
+                      {(Object.keys(PROOF_KIND_LABELS) as ProofBankEntry["kind"][]).map(
+                        (k) => (
+                          <option key={k} value={k}>
+                            {PROOF_KIND_LABELS[k]}
+                          </option>
+                        )
+                      )}
+                    </select>
+                    <input
+                      value={entry.source ?? ""}
+                      onChange={(e) =>
+                        setProofBank((prev) =>
+                          prev.map((p, idx) =>
+                            idx === i ? { ...p, source: e.target.value } : p
+                          )
+                        )
+                      }
+                      placeholder="Source (optional, e.g., 'internal Q3 2025')"
+                      className="flex-1 rounded-md border border-gray-200 px-2 py-1 text-xs bg-gray-50"
+                    />
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setProofBank((prev) => prev.filter((_, idx) => idx !== i))
+                      }
+                      className="text-xs text-red-600 hover:text-red-700"
+                    >
+                      Remove
+                    </button>
+                  </div>
+                  <textarea
+                    rows={2}
+                    value={entry.text}
+                    onChange={(e) =>
+                      setProofBank((prev) =>
+                        prev.map((p, idx) =>
+                          idx === i ? { ...p, text: e.target.value } : p
+                        )
+                      )
+                    }
+                    placeholder="87% of dogs return for a second stay; average tenure 14 months."
+                    className="w-full rounded-md border border-gray-200 px-2 py-1.5 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                  />
+                </div>
+              ))}
+            </div>
+            <Button
+              type="button"
+              variant="secondary"
+              size="sm"
+              onClick={() =>
+                setProofBank((prev) => [
+                  ...prev,
+                  { kind: "stat", text: "", source: "" },
+                ])
+              }
+            >
+              + Add proof
             </Button>
           </div>
         </CardContent>

@@ -1,5 +1,5 @@
 import { requireMarketing } from "@/lib/auth-helpers";
-import { getLatestVoiceProfile } from "@/lib/marketing/voice";
+import { getLatestVoiceProfile, readProofBank } from "@/lib/marketing/voice";
 import { VoiceProfileEditor } from "./VoiceProfileEditor";
 
 export default async function VoiceProfilePage() {
@@ -39,6 +39,10 @@ export default async function VoiceProfilePage() {
                 acquisitionChannels: profile.acquisitionChannels,
                 growthConstraint: profile.growthConstraint,
                 uniqueMechanism: profile.uniqueMechanism,
+                tonalRange: profile.tonalRange,
+                forbiddenTerritory: profile.forbiddenTerritory,
+                proofBank: readProofBank(profile),
+                visualIdentityGuardrails: profile.visualIdentityGuardrails,
                 createdAt: profile.createdAt.toISOString(),
               }
             : null

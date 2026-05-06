@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { requireMarketing } from "@/lib/auth-helpers";
 import { prisma } from "@/lib/prisma";
 import { IdeaEditor } from "./IdeaEditor";
+import { AngleReview } from "./AngleReview";
 import { ScriptsSection } from "./ScriptsSection";
 
 export default async function IdeaDetailPage({
@@ -17,10 +18,11 @@ export default async function IdeaDetailPage({
     where: { id: ideaId },
     include: {
       createdBy: { select: { id: true, name: true } },
+      angles: { orderBy: { createdAt: "asc" } },
       scripts: {
         orderBy: { createdAt: "desc" },
         include: {
-          hooks: { orderBy: { order: "asc" }, select: { id: true, text: true } },
+          angle: { select: { id: true, name: true, emotionalRegister: true } },
         },
       },
     },
@@ -54,17 +56,24 @@ export default async function IdeaDetailPage({
         }}
       />
 
+      <AngleReview ideaId={idea.id} angles={idea.angles} />
+
       <ScriptsSection
-        ideaId={idea.id}
         scripts={idea.scripts.map((s) => ({
           id: s.id,
+          hook: s.hook,
           body: s.body,
           status: s.status,
           platform: s.platform,
-          hookCount: s.hooks.length,
-          firstHookText: s.hooks[0]?.text ?? "",
           createdAt: s.createdAt.toISOString(),
           voiceProfileVersion: s.voiceProfileVersion,
+          angle: s.angle
+            ? {
+                id: s.angle.id,
+                name: s.angle.name,
+                emotionalRegister: s.angle.emotionalRegister,
+              }
+            : null,
         }))}
       />
     </div>
