@@ -1,4 +1,4 @@
-import { requireManager, getCompanyFilter } from "@/lib/auth-helpers";
+import { requireEmployeeManager, getCompanyFilter } from "@/lib/auth-helpers";
 import { prisma } from "@/lib/prisma";
 import Link from "next/link";
 import { formatDate } from "@/lib/utils";
@@ -113,9 +113,17 @@ export default async function AdminEmployeesPage({
     progress?: string;
   }>;
 }) {
-  const session = await requireManager();
-  const sessionUser = session.user as { role: Role; company: Company };
-  const companyFilter = getCompanyFilter(sessionUser.role, sessionUser.company);
+  const session = await requireEmployeeManager();
+  const sessionUser = session.user as {
+    role: Role;
+    company: Company;
+    jobTitle: string | null;
+  };
+  const companyFilter = getCompanyFilter(
+    sessionUser.role,
+    sessionUser.company,
+    sessionUser.jobTitle
+  );
   const isSuperAdmin = sessionUser.role === "SUPER_ADMIN" || sessionUser.role === "ADMIN";
 
   const sp = await searchParams;

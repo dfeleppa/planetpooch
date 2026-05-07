@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { getSession, isManagerOrAbove, hasModuleManagementAccess } from "@/lib/auth-helpers";
+import { getSession, isManagerOrAbove, hasModuleEditAccess } from "@/lib/auth-helpers";
 import { getVisibleModuleIdsForUser } from "@/lib/module-visibility";
 
 export async function GET() {
@@ -10,7 +10,12 @@ export async function GET() {
   }
 
   const where: { id?: { in: string[] } } = {};
-  if (!isManagerOrAbove(session.user.role)) {
+  // Manager-tier (and Front Desk Staff, who can edit modules) see all
+  // modules in the picker; everyone else sees only modules visible to them.
+  if (
+    !isManagerOrAbove(session.user.role) &&
+    !hasModuleEditAccess(session.user.role, session.user.jobTitle)
+  ) {
     const me = await prisma.user.findUnique({
       where: { id: session.user.id },
       select: { jobTitle: true },
@@ -60,7 +65,7 @@ export async function GET() {
 
 export async function POST(req: NextRequest) {
   const session = await getSession();
-  if (!session?.user || !hasModuleManagementAccess(session.user.role, session.user.jobTitle)) {
+  if (!session?.user || !hasModuleEditAccess(session.user.role, session.user.jobTitle)) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 

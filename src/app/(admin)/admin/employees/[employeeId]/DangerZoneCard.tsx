@@ -11,6 +11,7 @@ interface Props {
   employeeName: string;
   isTerminated: boolean;
   isSuperAdmin: boolean;
+  canEndEmployment: boolean;
 }
 
 export function DangerZoneCard({
@@ -18,6 +19,7 @@ export function DangerZoneCard({
   employeeName,
   isTerminated,
   isSuperAdmin,
+  canEndEmployment,
 }: Props) {
   const router = useRouter();
   const [busy, setBusy] = useState<"reactivate" | "delete" | null>(null);
@@ -72,7 +74,7 @@ export function DangerZoneCard({
         <h2 className="font-semibold text-red-700">Danger Zone</h2>
       </CardHeader>
       <CardContent className="space-y-3">
-        {!isTerminated && (
+        {!isTerminated && canEndEmployment && (
           <div className="flex items-center justify-between gap-3">
             <div className="text-sm text-gray-700">
               <p className="font-medium">End employment</p>

@@ -1,4 +1,4 @@
-import { requireManager, getCompanyFilter } from "@/lib/auth-helpers";
+import { requireEmployeeManager, getCompanyFilter } from "@/lib/auth-helpers";
 import { prisma } from "@/lib/prisma";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { ProgressBar } from "@/components/ui/progress-bar";
@@ -21,9 +21,19 @@ import { formatDate } from "@/lib/utils";
 import { HANDBOOK_SIGNABLE_NAME } from "@/lib/employee-documents";
 
 export default async function EmployeeDetailPage({ params }: { params: Promise<{ employeeId: string }> }) {
-  const session = await requireManager();
-  const sessionUser = session.user as { role: Role; company: Company };
-  const companyFilter = getCompanyFilter(sessionUser.role, sessionUser.company);
+  const session = await requireEmployeeManager();
+  const sessionUser = session.user as {
+    role: Role;
+    company: Company;
+    jobTitle: string | null;
+  };
+  const companyFilter = getCompanyFilter(
+    sessionUser.role,
+    sessionUser.company,
+    sessionUser.jobTitle
+  );
+  const callerIsScopedTier =
+    sessionUser.role === "MANAGER" || sessionUser.jobTitle === "Front Desk Staff";
   const { employeeId } = await params;
 
   const employee = await prisma.user.findUnique({
@@ -50,7 +60,7 @@ export default async function EmployeeDetailPage({ params }: { params: Promise<{
 
   if (!employee) notFound();
   if (companyFilter.company && employee.company !== companyFilter.company) notFound();
-  if (sessionUser.role === "MANAGER" && employee.role !== "EMPLOYEE") notFound();
+  if (callerIsScopedTier && employee.role !== "EMPLOYEE") notFound();
 
   const modules = await prisma.module.findMany({
     orderBy: { order: "asc" },
@@ -169,7 +179,7 @@ export default async function EmployeeDetailPage({ params }: { params: Promise<{
             phone: employee.phone,
             hireDate: employee.hireDate ? employee.hireDate.toISOString() : null,
           }}
-          canEditCompany={sessionUser.role !== "MANAGER"}
+          canEditCompany={!callerIsScopedTier}
           canAssignSuperAdmin={sessionUser.role === "SUPER_ADMIN"}
           canEditRole={sessionUser.role === "SUPER_ADMIN"}
         />
@@ -287,14 +297,19 @@ export default async function EmployeeDetailPage({ params }: { params: Promise<{
         />
       </div>
 
-      <div className="mt-6">
-        <DangerZoneCard
-          employeeId={employee.id}
-          employeeName={employee.name}
-          isTerminated={isTerminated}
-          isSuperAdmin={sessionUser.role === "SUPER_ADMIN"}
-        />
-      </div>
+      {/* Front Desk Staff cannot end-employment, reactivate, or delete —
+          they'd see an empty Danger Zone card, so omit it entirely. */}
+      {sessionUser.jobTitle !== "Front Desk Staff" && (
+        <div className="mt-6">
+          <DangerZoneCard
+            employeeId={employee.id}
+            employeeName={employee.name}
+            isTerminated={isTerminated}
+            isSuperAdmin={sessionUser.role === "SUPER_ADMIN"}
+            canEndEmployment={true}
+          />
+        </div>
+      )}
 
       <div className="mt-6">
         <EmployeeModuleAssignments employeeId={employee.id} />

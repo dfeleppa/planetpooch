@@ -2,18 +2,28 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import {
   getSession,
-  isManagerOrAbove,
+  hasEmployeeManagementAccess,
   getCompanyFilter,
 } from "@/lib/auth-helpers";
 import { Company, Role } from "@prisma/client";
 
 async function loadEmployeeOrForbidden(employeeId: string) {
   const session = await getSession();
-  if (!session?.user || !isManagerOrAbove(session.user.role)) {
+  if (!session?.user || !hasEmployeeManagementAccess(session.user.role, session.user.jobTitle)) {
     return { error: NextResponse.json({ error: "Forbidden" }, { status: 403 }) };
   }
-  const sessionUser = session.user as { role: Role; company: Company };
-  const filter = getCompanyFilter(sessionUser.role, sessionUser.company);
+  const sessionUser = session.user as {
+    role: Role;
+    company: Company;
+    jobTitle: string | null;
+  };
+  const filter = getCompanyFilter(
+    sessionUser.role,
+    sessionUser.company,
+    sessionUser.jobTitle
+  );
+  const callerIsScopedTier =
+    sessionUser.role === "MANAGER" || sessionUser.jobTitle === "Front Desk Staff";
 
   const employee = await prisma.user.findUnique({
     where: { id: employeeId },
@@ -26,7 +36,7 @@ async function loadEmployeeOrForbidden(employeeId: string) {
   if (filter.company && employee.company !== filter.company) {
     return { error: NextResponse.json({ error: "Not found" }, { status: 404 }) };
   }
-  if (sessionUser.role === "MANAGER" && employee.role !== "EMPLOYEE") {
+  if (callerIsScopedTier && employee.role !== "EMPLOYEE") {
     return { error: NextResponse.json({ error: "Not found" }, { status: 404 }) };
   }
 

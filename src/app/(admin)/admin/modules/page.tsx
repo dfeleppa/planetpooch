@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useSession } from "next-auth/react";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -17,6 +18,15 @@ interface Module {
 }
 
 export default function AdminModulesPage() {
+  const { data: session } = useSession();
+  const role = session?.user?.role;
+  const jobTitle = session?.user?.jobTitle;
+  // Only top-tier admins (and CMO) can delete; Front Desk can edit/create
+  // but not delete. Hide the destructive controls for Front Desk so they
+  // don't get a 403 on click.
+  const canDeleteModules =
+    role === "SUPER_ADMIN" || role === "ADMIN" || jobTitle === "CMO";
+
   const [modules, setModules] = useState<Module[]>([]);
   const [showCreate, setShowCreate] = useState(false);
   const [title, setTitle] = useState("");
@@ -114,7 +124,9 @@ export default function AdminModulesPage() {
                   <Link href={`/admin/modules/${mod.id}`}>
                     <Button variant="secondary" size="sm">Edit</Button>
                   </Link>
-                  <Button variant="danger" size="sm" onClick={() => handleDelete(mod.id)}>Delete</Button>
+                  {canDeleteModules && (
+                    <Button variant="danger" size="sm" onClick={() => handleDelete(mod.id)}>Delete</Button>
+                  )}
                 </div>
               </div>
             </CardContent>

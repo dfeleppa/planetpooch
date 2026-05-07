@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
-import { getSession, getCompanyFilter, isManagerOrAbove } from "@/lib/auth-helpers";
+import { getSession, getCompanyFilter, hasEmployeeManagementAccess } from "@/lib/auth-helpers";
 import { generateTempPassword } from "@/lib/onboarding";
 import { createEmployeeFolder } from "@/lib/drive";
 import { isValidDayOfWeek, isValidTimeSlot } from "@/lib/availability";
@@ -9,23 +9,31 @@ import { Company, DayOfWeek, Role } from "@prisma/client";
 
 export async function GET(req: NextRequest) {
   const session = await getSession();
-  if (!session?.user || !isManagerOrAbove(session.user.role)) {
+  if (!session?.user || !hasEmployeeManagementAccess(session.user.role, session.user.jobTitle)) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
-  const user = session.user as { role: Role; company: Company | null };
-  const companyFilter = getCompanyFilter(user.role, user.company);
+  const user = session.user as {
+    role: Role;
+    company: Company | null;
+    jobTitle: string | null;
+  };
+  const companyFilter = getCompanyFilter(user.role, user.company, user.jobTitle);
+  // MANAGER + Front Desk are scoped tiers — neither can request the `all`
+  // status (which mixes active and terminated across every company).
+  const isScopedTier = user.role === "MANAGER" || user.jobTitle === "Front Desk Staff";
 
-  // ?status=active|terminated|all (default: active). MANAGER can't request
-  // 'all' — that's a SUPER_ADMIN view of everyone including past employees.
+  // ?status=active|terminated|all (default: active). Scoped tiers can't
+  // request 'all' — that's a SUPER_ADMIN view of everyone including past
+  // employees.
   const statusParam = req.nextUrl.searchParams.get("status") ?? "active";
   let terminationFilter: { terminatedAt?: null | { not: null } } = { terminatedAt: null };
   if (statusParam === "terminated") {
     terminationFilter = { terminatedAt: { not: null } };
   } else if (statusParam === "all") {
-    if (user.role === "MANAGER") {
+    if (isScopedTier) {
       return NextResponse.json(
-        { error: "Managers can request only active or terminated employees" },
+        { error: "Only Super Admins can request all employees" },
         { status: 403 }
       );
     }
@@ -104,7 +112,7 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   const session = await getSession();
-  if (!session?.user || !isManagerOrAbove(session.user.role)) {
+  if (!session?.user || !hasEmployeeManagementAccess(session.user.role, session.user.jobTitle)) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
@@ -187,13 +195,20 @@ export async function POST(req: NextRequest) {
     }
     const fullName = `${trimmedFirst} ${trimmedLast}`;
 
-    const sessionUser = session.user as { role: Role; company: Company };
+    const sessionUser = session.user as {
+      role: Role;
+      company: Company;
+      jobTitle: string | null;
+    };
+    const callerIsFrontDesk = sessionUser.jobTitle === "Front Desk Staff";
+    const callerIsScopedTier = sessionUser.role === "MANAGER" || callerIsFrontDesk;
 
-    // MANAGERs can only create employees in their own company. SUPER_ADMINs
-    // must pick one of the three companies — there is no "no company" option
-    // anymore; CORPORATE is the explicit value for cross-division employees.
+    // Scoped tiers (MANAGER, Front Desk) can only create employees in their
+    // own company. SUPER_ADMIN must pick one of the three companies — there
+    // is no "no company" option anymore; CORPORATE is the explicit value
+    // for cross-division employees.
     let assignedCompany: Company;
-    if (sessionUser.role === "MANAGER") {
+    if (callerIsScopedTier) {
       assignedCompany = sessionUser.company;
     } else {
       const valid: Company[] = ["GROOMING", "RESORT", "CORPORATE"];
@@ -242,7 +257,7 @@ export async function POST(req: NextRequest) {
 
     // Only top-tier callers (SUPER_ADMIN / legacy ADMIN) can create
     // top-tier accounts. MANAGERs can also create MANAGERs (within their own
-    // company, scoped above).
+    // company, scoped above). Front Desk Staff can only create EMPLOYEEs.
     const callerIsTopTier =
       sessionUser.role === "SUPER_ADMIN" ||
       sessionUser.role === "ADMIN";
