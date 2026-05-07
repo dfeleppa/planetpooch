@@ -50,6 +50,22 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      # Diagnostic: confirm the secrets actually reach the runner. Prints
+      # only the byte length, never the value, so it's safe to leave in.
+      # If either is 0, the secret is missing or the workflow can't see it
+      # (wrong scope — repo vs. environment vs. organization).
+      - name: Verify DB env vars are set
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          DIRECT_URL: ${{ secrets.DIRECT_URL }}
+        run: |
+          echo "DATABASE_URL length: ${#DATABASE_URL}"
+          echo "DIRECT_URL length:   ${#DIRECT_URL}"
+          if [ -z "$DIRECT_URL" ]; then
+            echo "::error::DIRECT_URL is empty. Check Settings → Secrets and variables → Actions. If the secret lives under an Environment, the job needs 'environment: <name>' declared."
+            exit 1
+          fi
+
       - name: Apply migrations
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
