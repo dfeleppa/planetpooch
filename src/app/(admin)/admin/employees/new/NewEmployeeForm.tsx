@@ -16,6 +16,7 @@ type Company = "GROOMING" | "RESORT" | "CORPORATE";
 interface Props {
   currentRole: Role;
   currentCompany: Company;
+  currentJobTitle: string | null;
 }
 
 const COMPANY_LABELS: Record<Company, string> = {
@@ -78,7 +79,7 @@ function SelectField({
   );
 }
 
-export function NewEmployeeForm({ currentRole, currentCompany }: Props) {
+export function NewEmployeeForm({ currentRole, currentCompany, currentJobTitle }: Props) {
   const router = useRouter();
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
@@ -97,6 +98,9 @@ export function NewEmployeeForm({ currentRole, currentCompany }: Props) {
   const isSuperAdmin =
     currentRole === "SUPER_ADMIN" || currentRole === "ADMIN";
   const isManager = currentRole === "MANAGER";
+  const isFrontDesk = currentJobTitle === "Front Desk Staff";
+  // Scoped tiers (MANAGER, Front Desk) are locked to their own company.
+  const isScopedTier = isManager || isFrontDesk;
 
   const titleOptions = JOB_TITLES[company];
   const isCustomTitle = jobTitle === "__custom__";
@@ -310,7 +314,7 @@ export function NewEmployeeForm({ currentRole, currentCompany }: Props) {
             {/* Company */}
             <div className="flex flex-col gap-1">
               <label className="text-sm font-medium text-gray-700">Company</label>
-              {isManager ? (
+              {isScopedTier ? (
                 <input
                   readOnly
                   value={COMPANY_LABELS[currentCompany]}
@@ -332,7 +336,7 @@ export function NewEmployeeForm({ currentRole, currentCompany }: Props) {
             {/* Role */}
             <SelectField label="Role" value={role} onChange={(v) => setRole(v as Role)}>
               <option value="EMPLOYEE">Employee</option>
-              <option value="MANAGER">Manager</option>
+              {!isFrontDesk && <option value="MANAGER">Manager</option>}
               {isSuperAdmin && <option value="MARKETING">Marketing</option>}
               {isSuperAdmin && <option value="SUPER_ADMIN">Super Admin</option>}
             </SelectField>

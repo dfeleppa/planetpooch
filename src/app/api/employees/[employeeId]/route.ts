@@ -1,17 +1,25 @@
 import { NextRequest, NextResponse } from "next/server";
 import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
-import { getSession, getCompanyFilter, isManagerOrAbove, isSuperAdmin } from "@/lib/auth-helpers";
+import { getSession, getCompanyFilter, hasEmployeeManagementAccess, isSuperAdmin } from "@/lib/auth-helpers";
 import { Company, Role } from "@prisma/client";
 
 export async function GET(req: NextRequest, { params }: { params: Promise<{ employeeId: string }> }) {
   const session = await getSession();
-  if (!session?.user || !isManagerOrAbove(session.user.role)) {
+  if (!session?.user || !hasEmployeeManagementAccess(session.user.role, session.user.jobTitle)) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
-  const sessionUser = session.user as { role: Role; company: Company | null };
-  const companyFilter = getCompanyFilter(sessionUser.role, sessionUser.company);
+  const sessionUser = session.user as {
+    role: Role;
+    company: Company | null;
+    jobTitle: string | null;
+  };
+  const companyFilter = getCompanyFilter(
+    sessionUser.role,
+    sessionUser.company,
+    sessionUser.jobTitle
+  );
 
   const { employeeId } = await params;
 
@@ -112,7 +120,7 @@ export async function PATCH(
   { params }: { params: Promise<{ employeeId: string }> }
 ) {
   const session = await getSession();
-  if (!session?.user || !isManagerOrAbove(session.user.role)) {
+  if (!session?.user || !hasEmployeeManagementAccess(session.user.role, session.user.jobTitle)) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
@@ -120,8 +128,15 @@ export async function PATCH(
     id: string;
     role: Role;
     company: Company | null;
+    jobTitle: string | null;
   };
-  const companyFilter = getCompanyFilter(sessionUser.role, sessionUser.company);
+  const companyFilter = getCompanyFilter(
+    sessionUser.role,
+    sessionUser.company,
+    sessionUser.jobTitle
+  );
+  const callerIsScopedTier =
+    sessionUser.role === "MANAGER" || sessionUser.jobTitle === "Front Desk Staff";
 
   const { employeeId } = await params;
 
@@ -135,10 +150,10 @@ export async function PATCH(
   if (companyFilter.company && target.company !== companyFilter.company) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
-  // MANAGERs can only edit EMPLOYEE-role users
-  if (sessionUser.role === "MANAGER" && target.role !== "EMPLOYEE") {
+  // Scoped tiers (MANAGER, Front Desk) can only edit EMPLOYEE-role users.
+  if (callerIsScopedTier && target.role !== "EMPLOYEE") {
     return NextResponse.json(
-      { error: "Managers can only edit employees" },
+      { error: "You can only edit employees" },
       { status: 403 }
     );
   }
@@ -197,9 +212,10 @@ export async function PATCH(
     if ("department" in body) data.department = body.department?.trim() || null;
     if ("hireDate" in body) data.hireDate = body.hireDate ? new Date(body.hireDate) : null;
 
-    if ("company" in body && sessionUser.role !== "MANAGER") {
-      // MANAGERs cannot change company. SUPER_ADMINs must pick one of the
-      // three valid Company values — null is no longer permitted.
+    if ("company" in body && !callerIsScopedTier) {
+      // Scoped tiers (MANAGER, Front Desk) cannot change company. SUPER_ADMIN
+      // must pick one of the three valid Company values — null is no longer
+      // permitted.
       const valid: Company[] = ["GROOMING", "RESORT", "CORPORATE"];
       if (!valid.includes(body.company)) {
         return NextResponse.json(
@@ -215,6 +231,14 @@ export async function PATCH(
       const callerIsTopTier =
         sessionUser.role === "SUPER_ADMIN" ||
         sessionUser.role === "ADMIN";
+      // Front Desk Staff cannot change roles at all. They are below MANAGER
+      // in the hierarchy and the form-side never exposes the field.
+      if (sessionUser.jobTitle === "Front Desk Staff" && desired !== target.role) {
+        return NextResponse.json(
+          { error: "Front Desk staff cannot change employee roles" },
+          { status: 403 }
+        );
+      }
       if (
         (desired === "SUPER_ADMIN" || desired === "MARKETING") &&
         !callerIsTopTier

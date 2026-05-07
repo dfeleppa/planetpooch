@@ -1,11 +1,15 @@
-import { requireManager } from "@/lib/auth-helpers";
+import { requireEmployeeManager } from "@/lib/auth-helpers";
 import { NewEmployeeForm } from "./NewEmployeeForm";
 import Link from "next/link";
 import { Company, Role } from "@prisma/client";
 
 export default async function NewEmployeePage() {
-  const session = await requireManager();
-  const user = session.user as { role: Role; company: Company };
+  const session = await requireEmployeeManager();
+  const user = session.user as {
+    role: Role;
+    company: Company;
+    jobTitle: string | null;
+  };
 
   return (
     <div className="w-full">
@@ -22,7 +26,11 @@ export default async function NewEmployeePage() {
           temporary password and a link to sign in.
         </p>
       </div>
-      <NewEmployeeForm currentRole={user.role} currentCompany={user.company} />
+      <NewEmployeeForm
+        currentRole={user.role}
+        currentCompany={user.company}
+        currentJobTitle={user.jobTitle}
+      />
     </div>
   );
 }

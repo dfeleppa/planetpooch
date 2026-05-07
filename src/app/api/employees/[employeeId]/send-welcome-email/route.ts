@@ -4,7 +4,7 @@ import { prisma } from "@/lib/prisma";
 import {
   getSession,
   getCompanyFilter,
-  isManagerOrAbove,
+  hasEmployeeManagementAccess,
 } from "@/lib/auth-helpers";
 import { generateTempPassword } from "@/lib/onboarding";
 import { isEmailEnabled, sendWelcomeEmail } from "@/lib/email";
@@ -23,7 +23,7 @@ export async function POST(
   { params }: { params: Promise<{ employeeId: string }> }
 ) {
   const session = await getSession();
-  if (!session?.user || !isManagerOrAbove(session.user.role)) {
+  if (!session?.user || !hasEmployeeManagementAccess(session.user.role, session.user.jobTitle)) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
@@ -38,8 +38,16 @@ export async function POST(
   }
 
   const { employeeId } = await params;
-  const sessionUser = session.user as { role: Role; company: Company };
-  const companyFilter = getCompanyFilter(sessionUser.role, sessionUser.company);
+  const sessionUser = session.user as {
+    role: Role;
+    company: Company;
+    jobTitle: string | null;
+  };
+  const companyFilter = getCompanyFilter(
+    sessionUser.role,
+    sessionUser.company,
+    sessionUser.jobTitle
+  );
 
   const target = await prisma.user.findUnique({
     where: { id: employeeId },

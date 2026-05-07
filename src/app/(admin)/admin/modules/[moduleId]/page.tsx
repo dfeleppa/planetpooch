@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
+import { useSession } from "next-auth/react";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -35,6 +36,13 @@ interface ModuleData {
 export default function AdminModuleDetailPage() {
   const params = useParams();
   const router = useRouter();
+  const { data: session } = useSession();
+  const role = session?.user?.role;
+  const jobTitle = session?.user?.jobTitle;
+  // Front Desk can edit subsections/lessons but not delete them — hide the
+  // destructive controls so they don't get a 403 on click.
+  const canDeleteContent =
+    role === "SUPER_ADMIN" || role === "ADMIN" || jobTitle === "CMO";
   const moduleId = params.moduleId as string;
   const [mod, setMod] = useState<ModuleData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -313,9 +321,11 @@ export default function AdminModuleDetailPage() {
                     }}>
                       + Lesson
                     </Button>
-                    <Button size="sm" variant="danger" onClick={() => handleDeleteSubsection(sub.id)}>
-                      Delete
-                    </Button>
+                    {canDeleteContent && (
+                      <Button size="sm" variant="danger" onClick={() => handleDeleteSubsection(sub.id)}>
+                        Delete
+                      </Button>
+                    )}
                   </div>
                 </div>
               </CardHeader>
@@ -344,6 +354,7 @@ export default function AdminModuleDetailPage() {
                         lesson={lesson}
                         handle={lessonHandle}
                         onDelete={() => handleDeleteLesson(lesson.id)}
+                        canDelete={canDeleteContent}
                       />
                     )}
                   />
@@ -373,11 +384,13 @@ function LessonRow({
   lesson,
   handle,
   onDelete,
+  canDelete,
 }: {
   moduleId: string;
   lesson: Lesson;
   handle: SortableHandleProps;
   onDelete: () => void;
+  canDelete: boolean;
 }) {
   return (
     <div className="flex items-center justify-between px-6 py-3 hover:bg-gray-50 bg-white">
@@ -389,7 +402,9 @@ function LessonRow({
         <Link href={`/admin/modules/${moduleId}/lessons/${lesson.id}/edit`}>
           <Button size="sm" variant="ghost">Edit Content</Button>
         </Link>
-        <Button size="sm" variant="danger" onClick={onDelete}>Delete</Button>
+        {canDelete && (
+          <Button size="sm" variant="danger" onClick={onDelete}>Delete</Button>
+        )}
       </div>
     </div>
   );

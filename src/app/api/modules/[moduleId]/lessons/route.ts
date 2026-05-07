@@ -1,11 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { getSession, hasModuleManagementAccess } from "@/lib/auth-helpers";
+import { getSession, hasModuleEditAccess } from "@/lib/auth-helpers";
 import { extractTextFromTiptapJson } from "@/lib/utils";
 
 export async function POST(req: NextRequest) {
   const session = await getSession();
-  if (!session?.user || !hasModuleManagementAccess(session.user.role, session.user.jobTitle)) {
+  if (!session?.user || !hasModuleEditAccess(session.user.role, session.user.jobTitle)) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
