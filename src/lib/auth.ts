@@ -31,6 +31,17 @@ export const authOptions: NextAuthOptions = {
         // wrong-password failure so we don't leak account state to attackers.
         if (user.terminatedAt) return null;
 
+        // Stamp the last successful sign-in. Best-effort — a transient DB
+        // hiccup here shouldn't block authentication for the user.
+        try {
+          await prisma.user.update({
+            where: { id: user.id },
+            data: { lastLoginAt: new Date() },
+          });
+        } catch (err) {
+          console.error("[auth.authorize] lastLoginAt update failed:", err);
+        }
+
         return {
           id: user.id,
           email: user.email,

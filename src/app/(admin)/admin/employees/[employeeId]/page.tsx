@@ -52,6 +52,7 @@ export default async function EmployeeDetailPage({ params }: { params: Promise<{
       hireDate: true,
       driveFolderId: true,
       createdAt: true,
+      lastLoginAt: true,
       terminatedAt: true,
       terminationReason: true,
       terminatedBy: { select: { id: true, name: true } },
@@ -191,7 +192,15 @@ export default async function EmployeeDetailPage({ params }: { params: Promise<{
             <h2 className="font-semibold text-gray-900">Login access</h2>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div>
+            <div className="text-sm">
+              <span className="font-medium text-gray-700">Last sign-in:</span>{" "}
+              <span className="text-gray-600">
+                {employee.lastLoginAt
+                  ? formatDateTime(employee.lastLoginAt)
+                  : "Never signed in"}
+              </span>
+            </div>
+            <div className="border-t border-gray-100 pt-4">
               <p className="text-sm text-gray-700 mb-3">
                 Send the employee a welcome email with a fresh temporary password
                 and a link to sign in. Each send invalidates any previously issued
