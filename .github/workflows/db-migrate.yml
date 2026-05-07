@@ -1,0 +1,57 @@
+# Apply Prisma migrations to production on push to main.
+#
+# Vercel's build runs `prisma generate && next build` only — it does NOT
+# run `prisma migrate deploy`. (See commit cc99c04: Vercel's build network
+# couldn't reach the Supabase host the last time we tried it from Vercel.)
+# This workflow runs migrations from a GitHub-hosted runner instead, which
+# can reach Supabase fine.
+#
+# The path filter ensures this only fires when migration files actually
+# change. It runs only on push to main (not on preview branches), so a
+# schema change in an open PR won't migrate prod until the PR merges.
+#
+# Race note: this runs in parallel with Vercel's deploy on the same push.
+# DDL is fast (seconds) and Vercel builds take minutes, so the migration
+# almost always lands first. Keep migrations backward-compatible (additive
+# only — new nullable columns, new tables) so the brief overlap with the
+# old code is safe.
+#
+# Required repo secrets (Settings → Secrets and variables → Actions):
+#   DATABASE_URL — Supabase transaction pooler (port 6543)
+#   DIRECT_URL   — Supabase session pooler (port 5432), used by `migrate`
+
+name: db-migrate
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "prisma/migrations/**"
+      - "prisma/schema.prisma"
+      - ".github/workflows/db-migrate.yml"
+  workflow_dispatch:
+
+concurrency:
+  group: db-migrate
+  cancel-in-progress: false
+
+jobs:
+  migrate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Apply migrations
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          DIRECT_URL: ${{ secrets.DIRECT_URL }}
+        run: npx prisma migrate deploy
