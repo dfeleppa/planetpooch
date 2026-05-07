@@ -39,6 +39,10 @@ jobs:
   migrate:
     runs-on: ubuntu-latest
     timeout-minutes: 5
+    # Secrets live in the "production" GitHub Environment. Without this
+    # declaration, the job sees only repo-level secrets and the env-scoped
+    # DATABASE_URL / DIRECT_URL come through as empty strings.
+    environment: production
     steps:
       - uses: actions/checkout@v5
 
