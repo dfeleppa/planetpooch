@@ -87,7 +87,6 @@ const ANGLE_SCHEMA = {
   properties: {
     angles: {
       type: "array" as const,
-      minItems: 6,
       maxItems: 10,
       items: {
         type: "object" as const,
