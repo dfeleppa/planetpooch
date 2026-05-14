@@ -996,6 +996,37 @@ model MetaAdScriptOverride {
   @@index([scriptId])
 }
 
+// ============================================================
+// Finance Models
+// ============================================================
+
+/// Manual finance metric entries. One row per (business, period). Money is
+/// stored as integer cents to avoid float drift. Computed KPIs (CAC, LTV,
+/// ROAS) are derived at read time from the raw inputs.
+model FinanceMetric {
+  id             String   @id @default(cuid())
+  business       String   // "mobile-grooming-manual" | "pet-resort-manual"
+  periodStart    DateTime @db.Date
+  periodEnd      DateTime @db.Date
+
+  totalRevenue     Int? // cents
+  totalProfit      Int? // cents
+  totalCustomers   Int?
+  totalAdSpend     Int? // cents
+  totalConversions Int?
+  metaAdSpend      Int? // cents
+  metaRevenue      Int? // cents
+  googleAdSpend    Int? // cents
+  googleRevenue    Int? // cents
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([business, periodStart, periodEnd])
+  @@index([business])
+  @@index([periodStart, periodEnd])
+}
+
 /// One row per day-of-week the employee is available. Times are stored as
 /// "HH:MM" 24-hour strings on 30-minute boundaries (e.g. "09:00", "17:30").
 /// Days the employee is NOT available simply have no row — absence == off.
