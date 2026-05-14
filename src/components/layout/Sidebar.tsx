@@ -61,6 +61,7 @@ const marketingNav: NavItem[] = [
 
 const financeNav: NavItem[] = [
   { href: "/finance", label: "Dashboard", icon: "$" },
+  { href: "/finance/data", label: "Data", icon: "◈" },
 ];
 
 const ROLE_LABELS: Record<string, string> = {
