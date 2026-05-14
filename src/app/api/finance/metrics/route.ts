@@ -47,7 +47,7 @@ export async function PUT(req: NextRequest) {
     return NextResponse.json({ error: "business, periodStart, and periodEnd are required" }, { status: 400 });
   }
 
-  const validBusinesses = ["mobile-grooming-manual", "pet-resort-manual"];
+  const validBusinesses = ["all-businesses-manual", "mobile-grooming-manual", "pet-resort-manual"];
   if (!validBusinesses.includes(business)) {
     return NextResponse.json({ error: "Invalid business" }, { status: 400 });
   }

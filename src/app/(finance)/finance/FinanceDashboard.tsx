@@ -9,11 +9,12 @@ const BUSINESSES = [
   { value: "", label: "All Businesses" },
   { value: "mobile-grooming", label: "Planet Pooch Mobile Grooming" },
   { value: "pet-resort", label: "Planet Pooch Pet Resort" },
+  { value: "all-businesses-manual", label: "All Businesses (Manual)" },
   { value: "mobile-grooming-manual", label: "Mobile Grooming (Manual)" },
   { value: "pet-resort-manual", label: "Pet Resort (Manual)" },
 ];
 
-const MANUAL_BUSINESSES = ["mobile-grooming-manual", "pet-resort-manual"];
+const MANUAL_BUSINESSES = ["all-businesses-manual", "mobile-grooming-manual", "pet-resort-manual"];
 
 const DATE_RANGES = [
   { value: "mtd", label: "Month to Date" },
