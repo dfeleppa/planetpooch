@@ -391,10 +391,16 @@ function SourceTable({ groups }: { groups: SourceGroup[] }) {
 export function GhlDataView() {
   const [opportunities, setOpportunities] = useState<Opportunity[]>([]);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [cachedAt, setCachedAt] = useState<string | null>(null);
 
-  useEffect(() => {
-    fetch("/api/ghl/data")
+  const load = (refresh = false) => {
+    if (refresh) setRefreshing(true);
+    else setLoading(true);
+
+    const url = refresh ? "/api/ghl/data?refresh=1" : "/api/ghl/data";
+    fetch(url)
       .then(async (res) => {
         if (!res.ok) {
           const body = await res.json().catch(() => ({}));
@@ -405,12 +411,23 @@ export function GhlDataView() {
         return res.json() as Promise<{
           opportunities: Opportunity[];
           total: number;
+          cached?: boolean;
+          cachedAt?: string;
         }>;
       })
-      .then((d) => setOpportunities(d.opportunities))
+      .then((d) => {
+        setOpportunities(d.opportunities);
+        setCachedAt(d.cachedAt ?? null);
+        setError(null);
+      })
       .catch((e: Error) => setError(e.message))
-      .finally(() => setLoading(false));
-  }, []);
+      .finally(() => {
+        setLoading(false);
+        setRefreshing(false);
+      });
+  };
+
+  useEffect(() => { load(); }, []);
 
   if (loading) {
     return (
@@ -438,6 +455,22 @@ export function GhlDataView() {
 
   return (
     <div className="space-y-6">
+      {/* Cache info + refresh */}
+      <div className="flex items-center justify-between">
+        <p className="text-xs text-gray-400">
+          {cachedAt
+            ? `Cached ${new Date(cachedAt).toLocaleString()}`
+            : "Live data"}
+        </p>
+        <button
+          onClick={() => load(true)}
+          disabled={refreshing}
+          className="text-xs px-3 py-1.5 rounded border border-gray-300 text-gray-600 hover:bg-gray-50 disabled:opacity-50"
+        >
+          {refreshing ? "Refreshing…" : "Refresh"}
+        </button>
+      </div>
+
       {/* KPI cards */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <Card>
