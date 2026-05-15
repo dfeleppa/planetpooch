@@ -21,6 +21,13 @@ export type SyncResult = {
   orders: ResourceResult;
   leads: ResourceResult;
   leadSourceMatched: number;
+  /// How many time-window slices we processed in this invocation. >1 means
+  /// the backfill is still catching up; the next call resumes from where
+  /// the watermarks landed.
+  chunks: number;
+  /// True when every per-resource watermark is at or past `now` — the
+  /// backfill is fully drained and the next call will be a no-op fast path.
+  caughtUp: boolean;
 };
 
 /**
@@ -41,12 +48,23 @@ function isoNow(): string {
   return new Date().toISOString();
 }
 
-async function getWatermark(resource: string): Promise<Date> {
+/**
+ * The raw watermark — the upper bound of what we've already synced for
+ * this resource. Used to decide whether we're caught up.
+ */
+async function getCompletedThrough(resource: string): Promise<Date> {
   const row = await prisma.moegoSyncState.findUnique({ where: { resource } });
-  if (row) {
-    return new Date(row.lastSyncedAt.getTime() - OVERLAP_MINUTES * 60_000);
-  }
+  if (row) return row.lastSyncedAt;
   return new Date(Date.now() - BACKFILL_DAYS * 24 * 60 * 60 * 1000);
+}
+
+/**
+ * The slice's startTime for an API call — completedThrough minus a small
+ * overlap to absorb late updates and clock skew. We accept a few seconds
+ * of re-pulled rows per chunk in exchange for not missing edits.
+ */
+function sliceStartFrom(completedThrough: Date): Date {
+  return new Date(completedThrough.getTime() - OVERLAP_MINUTES * 60_000);
 }
 
 async function setWatermark(
@@ -235,32 +253,122 @@ async function attributeLeadSources(): Promise<number> {
 }
 
 /**
+ * Each invocation processes at most CHUNK_DAYS of history per resource per
+ * loop iteration. A 2-year backfill would otherwise blow past Vercel's
+ * function timeout; this way the work splits into bite-sized slices and
+ * the per-resource watermark advances after every successful slice — a
+ * 504 mid-run loses at most one chunk's progress.
+ */
+const CHUNK_DAYS = 30;
+
+/**
+ * Soft runtime budget per invocation. Vercel's maxDuration is 300s; we
+ * exit a bit early so the in-flight slice can finish cleanly and the
+ * response can serialize. Re-call the endpoint to keep draining.
+ */
+const RUNTIME_BUDGET_MS = 250_000;
+
+function addDays(d: Date, days: number): Date {
+  return new Date(d.getTime() + days * 24 * 60 * 60 * 1000);
+}
+
+/**
  * Run an incremental sync of all three MoeGo resources. Each resource has
  * its own watermark so a partial failure (e.g. orders 500s) doesn't
  * advance the other resources' cursors.
+ *
+ * The function loops: pick the resource with the oldest watermark, sync
+ * a CHUNK_DAYS-wide slice, advance that resource's watermark, repeat.
+ * Stops when either (a) everything is caught up to `now` or (b) we've
+ * burned the runtime budget. Returns `caughtUp: false` in case (b) so
+ * the caller knows to call again.
  */
 export async function syncAll(): Promise<SyncResult> {
-  const end = new Date();
-  const customerStart = await getWatermark("customer");
-  const customers = await syncCustomers(customerStart, end);
-  await setWatermark("customer", end, customers.fetched);
+  const startedAt = Date.now();
+  const targetEnd = new Date();
 
-  const orderStart = await getWatermark("order");
-  const orders = await syncOrders(orderStart, end);
-  await setWatermark("order", end, orders.fetched);
+  const totals = {
+    customers: { fetched: 0, upserted: 0 } as ResourceResult,
+    orders: { fetched: 0, upserted: 0 } as ResourceResult,
+    leads: { fetched: 0, upserted: 0 } as ResourceResult,
+  };
+  const initialCompleted = {
+    customer: await getCompletedThrough("customer"),
+    order: await getCompletedThrough("order"),
+    lead: await getCompletedThrough("lead"),
+  };
+  let chunks = 0;
 
-  const leadStart = await getWatermark("lead");
-  const leads = await syncLeads(leadStart, end);
-  await setWatermark("lead", end, leads.fetched);
+  while (true) {
+    if (Date.now() - startedAt > RUNTIME_BUDGET_MS) break;
 
+    const completed = {
+      customer: await getCompletedThrough("customer"),
+      order: await getCompletedThrough("order"),
+      lead: await getCompletedThrough("lead"),
+    };
+
+    // Pick the resource furthest behind. Tie-break order is arbitrary.
+    const behind = (Object.entries(completed) as [
+      "customer" | "order" | "lead",
+      Date,
+    ][])
+      .filter(([, w]) => w < targetEnd)
+      .sort((a, b) => a[1].getTime() - b[1].getTime());
+
+    if (behind.length === 0) break; // caught up
+
+    const [resource, completedThrough] = behind[0];
+    const sliceStart = sliceStartFrom(completedThrough);
+    const sliceEnd = new Date(
+      Math.min(
+        addDays(completedThrough, CHUNK_DAYS).getTime(),
+        targetEnd.getTime()
+      )
+    );
+
+    if (resource === "customer") {
+      const r = await syncCustomers(sliceStart, sliceEnd);
+      totals.customers.fetched += r.fetched;
+      totals.customers.upserted += r.upserted;
+      await setWatermark("customer", sliceEnd, r.fetched);
+    } else if (resource === "order") {
+      const r = await syncOrders(sliceStart, sliceEnd);
+      totals.orders.fetched += r.fetched;
+      totals.orders.upserted += r.upserted;
+      await setWatermark("order", sliceEnd, r.fetched);
+    } else {
+      const r = await syncLeads(sliceStart, sliceEnd);
+      totals.leads.fetched += r.fetched;
+      totals.leads.upserted += r.upserted;
+      await setWatermark("lead", sliceEnd, r.fetched);
+    }
+    chunks++;
+  }
+
+  const finalCompleted = {
+    customer: await getCompletedThrough("customer"),
+    order: await getCompletedThrough("order"),
+    lead: await getCompletedThrough("lead"),
+  };
+  const caughtUp =
+    finalCompleted.customer >= targetEnd &&
+    finalCompleted.order >= targetEnd &&
+    finalCompleted.lead >= targetEnd;
+
+  // Lead-source attribution is cheap (single grouped join) so we run it
+  // every invocation rather than gating on caughtUp — partial progress is
+  // still useful while later chunks are draining.
   const leadSourceMatched = await attributeLeadSources();
 
   return {
-    windowStart: customerStart.toISOString(),
+    windowStart: initialCompleted.customer.toISOString(),
     windowEnd: isoNow(),
-    customers,
-    orders,
-    leads,
+    customers: totals.customers,
+    orders: totals.orders,
+    leads: totals.leads,
     leadSourceMatched,
+    chunks,
+    caughtUp,
   };
 }

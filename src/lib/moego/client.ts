@@ -15,7 +15,13 @@
 
 const BASE_URL = "https://openapi.moego.pet/v1";
 const PAGE_SIZE = 100;
-const SLEEP_MS = 1000;
+/**
+ * Sleep between paginated pages of the SAME resource. MoeGo doesn't
+ * publish rate limits; their own example script uses 1s, but that's
+ * conservative — 250ms holds well under any sane public-API ceiling and
+ * keeps long backfills inside the function timeout.
+ */
+const SLEEP_MS = 250;
 
 export class MoegoConfigError extends Error {
   constructor(message: string) {

@@ -66,6 +66,7 @@ export function MoegoDashboard() {
   const [error, setError] = useState<string | null>(null);
   const [companies, setCompanies] = useState<DiscoveredCompany[] | null>(null);
   const [discovering, setDiscovering] = useState(false);
+  const [syncProgress, setSyncProgress] = useState<string | null>(null);
 
   const load = useCallback(async (window: WindowDays) => {
     setLoading(true);
@@ -93,11 +94,40 @@ export function MoegoDashboard() {
   async function runSync() {
     setSyncing(true);
     setError(null);
+    setSyncProgress(null);
+    let totalChunks = 0;
+    let totalCustomers = 0;
+    let totalOrders = 0;
+    let totalLeads = 0;
+
+    // Server processes ~30-day slices within its runtime budget and
+    // returns `caughtUp: false` if there's more history to pull. Loop
+    // calls until we drain the backfill — at most a handful of round
+    // trips even for a 2-year history.
     try {
-      const res = await fetch("/api/finance/moego/sync", { method: "POST" });
-      if (!res.ok) {
-        const body = (await res.json().catch(() => ({}))) as { error?: string };
-        throw new Error(body.error ?? `HTTP ${res.status}`);
+      for (let i = 0; i < 30; i++) {
+        const res = await fetch("/api/finance/moego/sync", { method: "POST" });
+        if (!res.ok) {
+          const body = (await res.json().catch(() => ({}))) as {
+            error?: string;
+          };
+          throw new Error(body.error ?? `HTTP ${res.status}`);
+        }
+        const data = (await res.json()) as {
+          caughtUp: boolean;
+          chunks: number;
+          customers: { upserted: number };
+          orders: { upserted: number };
+          leads: { upserted: number };
+        };
+        totalChunks += data.chunks;
+        totalCustomers += data.customers.upserted;
+        totalOrders += data.orders.upserted;
+        totalLeads += data.leads.upserted;
+        setSyncProgress(
+          `${totalChunks} chunks · ${totalCustomers} customers, ${totalOrders} orders, ${totalLeads} leads upserted`
+        );
+        if (data.caughtUp) break;
       }
       await load(days);
     } catch (e) {
@@ -174,6 +204,13 @@ export function MoegoDashboard() {
       {error && (
         <div className="mb-4 p-3 rounded-lg bg-red-50 border border-red-200 text-sm text-red-700">
           {error}
+        </div>
+      )}
+
+      {syncProgress && (
+        <div className="mb-4 p-3 rounded-lg bg-gray-50 border border-gray-200 text-xs text-gray-600">
+          {syncing ? "Syncing… " : "Sync complete. "}
+          {syncProgress}
         </div>
       )}
 
