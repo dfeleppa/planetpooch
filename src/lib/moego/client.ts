@@ -18,10 +18,10 @@ const PAGE_SIZE = 100;
 /**
  * Sleep between paginated pages of the SAME resource. MoeGo doesn't
  * publish rate limits; their own example script uses 1s, but that's
- * conservative — 250ms holds well under any sane public-API ceiling and
- * keeps long backfills inside the function timeout.
+ * conservative — 100ms holds well under any sane public-API ceiling
+ * and keeps long backfills inside the function timeout.
  */
-const SLEEP_MS = 250;
+const SLEEP_MS = 100;
 
 export class MoegoConfigError extends Error {
   constructor(message: string) {
@@ -114,21 +114,25 @@ type PaginatedResponse<TKey extends string, TRow> = {
 } & { [K in TKey]: TRow[] };
 
 /**
- * Page through a `:list` endpoint until exhausted. MoeGo list endpoints
- * require `companyId` at the top of the body and put per-resource filters
- * under a `filter` object. Some endpoints (orders, leads) additionally
- * require a non-empty `businessIds` array — pass it via `extraTop`.
- * The collection key is the field the API returns rows under (e.g.
+ * Stream pages from a MoeGo `:list` endpoint. Each yielded array is one
+ * page (≤PAGE_SIZE rows). The caller persists each page as it arrives,
+ * so a busy 30-day slice doesn't have to fit thousands of rows in
+ * memory before any DB write happens — and we can interleave the time-
+ * budget check between pages instead of just between slices.
+ *
+ * MoeGo list endpoints require `companyId` at the top of the body and
+ * put per-resource filters under `filter`. Some endpoints (orders,
+ * leads) additionally require a non-empty `businessIds` array via
+ * `extraTop`. `rowKey` is the field the API returns rows under (e.g.
  * "customers", "orders").
  */
-export async function listAllPages<TKey extends string, TRow>(
+export async function* listPages<TKey extends string, TRow>(
   path: string,
   rowKey: TKey,
   filter: Record<string, unknown> = {},
   extraTop: Record<string, unknown> = {}
-): Promise<TRow[]> {
+): AsyncGenerator<TRow[]> {
   const { companyId } = getMoegoConfig();
-  const all: TRow[] = [];
   let pageToken = "1";
   let pages = 0;
 
@@ -141,15 +145,13 @@ export async function listAllPages<TKey extends string, TRow>(
     };
     const res = await moegoPost<PaginatedResponse<TKey, TRow>>(path, body);
     const rows = res[rowKey] ?? [];
-    all.push(...rows);
+    yield rows;
     pages++;
 
     if (!res.nextPageToken || rows.length === 0) break;
     pageToken = res.nextPageToken;
     await sleep(SLEEP_MS);
   }
-
-  return all;
 }
 
 export type MoegoCompany = {
@@ -264,21 +266,21 @@ export function toCents(amount: string | number | undefined | null): number {
   return Math.round(n * 100);
 }
 
-export async function listCustomers(filters: {
+export function streamCustomers(filters: {
   lastUpdatedTime?: { startTime: string; endTime: string };
-}): Promise<MoegoCustomerRow[]> {
-  return listAllPages<"customers", MoegoCustomerRow>(
+}): AsyncGenerator<MoegoCustomerRow[]> {
+  return listPages<"customers", MoegoCustomerRow>(
     "/customers:list",
     "customers",
     filters
   );
 }
 
-export async function listOrders(
+export function streamOrders(
   filters: { lastUpdatedTime?: { startTime: string; endTime: string } },
   businessIds: string[]
-): Promise<MoegoOrderRow[]> {
-  return listAllPages<"orders", MoegoOrderRow>(
+): AsyncGenerator<MoegoOrderRow[]> {
+  return listPages<"orders", MoegoOrderRow>(
     "/orders:list",
     "orders",
     filters,
@@ -286,11 +288,11 @@ export async function listOrders(
   );
 }
 
-export async function listLeads(
+export function streamLeads(
   filters: { lastUpdatedTime?: { startTime: string; endTime: string } },
   businessIds: string[]
-): Promise<MoegoLeadRow[]> {
-  return listAllPages<"leads", MoegoLeadRow>(
+): AsyncGenerator<MoegoLeadRow[]> {
+  return listPages<"leads", MoegoLeadRow>(
     "/leads:list",
     "leads",
     filters,
