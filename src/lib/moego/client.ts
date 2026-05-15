@@ -34,7 +34,27 @@ export class MoegoApiError extends Error {
   }
 }
 
-export function getMoegoConfig(): { apiKey: string } {
+export function getMoegoConfig(): { apiKey: string; companyId: string } {
+  const apiKey = process.env.MOEGO_API_KEY;
+  if (!apiKey) {
+    throw new MoegoConfigError(
+      "MOEGO_API_KEY is not set. Add the base64 API key from MoeGo to your environment."
+    );
+  }
+  const companyId = process.env.MOEGO_COMPANY_ID;
+  if (!companyId) {
+    throw new MoegoConfigError(
+      "MOEGO_COMPANY_ID is not set. Run the company discovery endpoint to find your obfuscated company ID (format: cmp_...)."
+    );
+  }
+  return { apiKey, companyId };
+}
+
+/**
+ * The auth-only subset of config — used by company discovery, which has
+ * to run BEFORE the user has a companyId to set.
+ */
+export function getMoegoAuth(): { apiKey: string } {
   const apiKey = process.env.MOEGO_API_KEY;
   if (!apiKey) {
     throw new MoegoConfigError(
@@ -49,7 +69,7 @@ function sleep(ms: number): Promise<void> {
 }
 
 async function moegoPost<T>(path: string, body: unknown): Promise<T> {
-  const { apiKey } = getMoegoConfig();
+  const { apiKey } = getMoegoAuth();
   const res = await fetch(`${BASE_URL}${path}`, {
     method: "POST",
     cache: "no-store",
@@ -80,31 +100,30 @@ async function moegoPost<T>(path: string, body: unknown): Promise<T> {
   return (await res.json()) as T;
 }
 
-type PaginatedRequest = {
-  pagination: { pageSize: number; pageToken: string };
-} & Record<string, unknown>;
-
 type PaginatedResponse<TKey extends string, TRow> = {
   nextPageToken?: string;
 } & { [K in TKey]: TRow[] };
 
 /**
- * Page through a `:list` endpoint until exhausted. Caller supplies the
- * collection key the API returns rows under (e.g. "customers", "orders")
- * and any filter fields to include in the request body.
+ * Page through a `:list` endpoint until exhausted. MoeGo list endpoints
+ * require `companyId` at the top of the body and put per-resource filters
+ * under a `filter` object. The collection key is the field the API returns
+ * rows under (e.g. "customers", "orders").
  */
 export async function listAllPages<TKey extends string, TRow>(
   path: string,
   rowKey: TKey,
-  filters: Record<string, unknown> = {}
+  filter: Record<string, unknown> = {}
 ): Promise<TRow[]> {
+  const { companyId } = getMoegoConfig();
   const all: TRow[] = [];
   let pageToken = "1";
   let pages = 0;
 
   while (pages < 1000) {
-    const body: PaginatedRequest = {
-      ...filters,
+    const body = {
+      companyId,
+      filter,
       pagination: { pageSize: PAGE_SIZE, pageToken },
     };
     const res = await moegoPost<PaginatedResponse<TKey, TRow>>(path, body);
@@ -117,6 +136,37 @@ export async function listAllPages<TKey extends string, TRow>(
     await sleep(SLEEP_MS);
   }
 
+  return all;
+}
+
+export type MoegoCompany = {
+  id: string;
+  name?: string;
+  country?: string;
+  timezone?: { id?: string };
+};
+
+/**
+ * Discovery: list every company the API key has access to. Unlike the
+ * resource :list endpoints, this one doesn't require a companyId — it's
+ * the bootstrap step you run once to find the value for MOEGO_COMPANY_ID.
+ */
+export async function listCompanies(): Promise<MoegoCompany[]> {
+  const all: MoegoCompany[] = [];
+  let pageToken = "1";
+  let pages = 0;
+
+  while (pages < 50) {
+    const res = await moegoPost<PaginatedResponse<"companies", MoegoCompany>>(
+      "/companies:list",
+      { pagination: { pageSize: PAGE_SIZE, pageToken } }
+    );
+    all.push(...(res.companies ?? []));
+    pages++;
+    if (!res.nextPageToken || (res.companies ?? []).length === 0) break;
+    pageToken = res.nextPageToken;
+    await sleep(SLEEP_MS);
+  }
   return all;
 }
 
