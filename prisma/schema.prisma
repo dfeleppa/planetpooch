@@ -1027,6 +1027,100 @@ model FinanceMetric {
   @@index([periodStart, periodEnd])
 }
 
+// ============================================================
+// MoeGo CRM Models
+// ============================================================
+//
+// MoeGo is our primary CRM + service delivery system. We sync a slim
+// projection of three resources nightly:
+//   - Customer: the people we serve; LTV is summed from their orders.
+//   - Order:    invoice-level records; paidAmount drives revenue/LTV.
+//   - Lead:     pre-conversion records that carry referralSource — the
+//               only place lead source lives natively in MoeGo. After
+//               promote→Customer we join back by phone number to attach
+//               lead source to the customer.
+//
+// Money is stored in integer cents to avoid float drift. moegoId values
+// are the upstream string identifiers (unique within MoeGo).
+
+model MoegoCustomer {
+  id              String   @id @default(cuid())
+  moegoId         String   @unique
+  name            String?
+  email           String?
+  /// E.164 if MoeGo returns it that way; otherwise raw. Used to join
+  /// promoted leads back to customers (no FK in MoeGo's data model).
+  mainPhoneNumber String?
+  /// Best-effort lead source for this customer. Populated either from the
+  /// `field_lead_source_detail` custom field on the customer record, or
+  /// from the matching MoegoLead.referralSource when phones line up.
+  leadSource      String?
+  /// `createdTime` from MoeGo. We use this as "acquired on" for CAC math —
+  /// new customers in a window are those whose createdTime falls in it.
+  createdTime     DateTime
+  lastUpdatedTime DateTime?
+  syncedAt        DateTime @default(now())
+
+  orders MoegoOrder[]
+
+  @@index([createdTime])
+  @@index([leadSource])
+  @@index([mainPhoneNumber])
+}
+
+model MoegoOrder {
+  id                  String   @id @default(cuid())
+  moegoId             String   @unique
+  /// The customer's MoeGo id. Nullable because MoeGo allows walk-in orders
+  /// without a linked customer; those still count in revenue but not LTV.
+  customerMoegoId     String?
+  status              String?
+  /// Pre-tax subtotal in cents.
+  subTotalCents       Int      @default(0)
+  /// Final invoice total in cents.
+  totalCents          Int      @default(0)
+  /// What the customer actually paid; the LTV summand.
+  paidCents           Int      @default(0)
+  refundedCents       Int      @default(0)
+  /// MoeGo's order `createdTime` — when the invoice was opened.
+  createdTime         DateTime
+  lastUpdatedTime     DateTime?
+  syncedAt            DateTime @default(now())
+
+  customer MoegoCustomer? @relation(fields: [customerMoegoId], references: [moegoId], onDelete: SetNull)
+
+  @@index([customerMoegoId])
+  @@index([createdTime])
+}
+
+model MoegoLead {
+  id              String   @id @default(cuid())
+  moegoId         String   @unique
+  name            String?
+  mainPhoneNumber String?
+  /// MoeGo's `referralSource` field — the canonical lead source label
+  /// (e.g. "Instagram", "Referral", "Google").
+  referralSource  String?
+  lifeCycleId     String?
+  actionStatusId  String?
+  createdTime     DateTime
+  lastUpdatedTime DateTime?
+  syncedAt        DateTime @default(now())
+
+  @@index([mainPhoneNumber])
+  @@index([referralSource])
+}
+
+/// Per-resource cursor for incremental MoeGo syncs. We pull rows where
+/// `lastUpdatedTime > lastSyncedAt - overlap` and bump the watermark
+/// after a successful run. Resource is one of "customer" | "order" | "lead".
+model MoegoSyncState {
+  resource     String   @id
+  lastSyncedAt DateTime
+  lastRowCount Int      @default(0)
+  updatedAt    DateTime @updatedAt
+}
+
 /// One row per day-of-week the employee is available. Times are stored as
 /// "HH:MM" 24-hour strings on 30-minute boundaries (e.g. "09:00", "17:30").
 /// Days the employee is NOT available simply have no row — absence == off.

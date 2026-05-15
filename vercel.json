@@ -3,6 +3,10 @@
     {
       "path": "/api/marketing/performance/cron",
       "schedule": "0 7 * * *"
+    },
+    {
+      "path": "/api/finance/moego/cron",
+      "schedule": "30 7 * * *"
     }
   ]
 }
