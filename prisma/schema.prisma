@@ -1061,8 +1061,6 @@ model MoegoCustomer {
   lastUpdatedTime DateTime?
   syncedAt        DateTime @default(now())
 
-  orders MoegoOrder[]
-
   @@index([createdTime])
   @@index([leadSource])
   @@index([mainPhoneNumber])
@@ -1073,6 +1071,9 @@ model MoegoOrder {
   moegoId             String   @unique
   /// The customer's MoeGo id. Nullable because MoeGo allows walk-in orders
   /// without a linked customer; those still count in revenue but not LTV.
+  /// No FK constraint: order slices can arrive before their customer is
+  /// synced (or reference a customer outside the backfill window). We
+  /// resolve the join in application code via metrics aggregations.
   customerMoegoId     String?
   status              String?
   /// Pre-tax subtotal in cents.
@@ -1086,8 +1087,6 @@ model MoegoOrder {
   createdTime         DateTime
   lastUpdatedTime     DateTime?
   syncedAt            DateTime @default(now())
-
-  customer MoegoCustomer? @relation(fields: [customerMoegoId], references: [moegoId], onDelete: SetNull)
 
   @@index([customerMoegoId])
   @@index([createdTime])
