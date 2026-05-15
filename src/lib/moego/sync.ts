@@ -4,6 +4,7 @@ import {
   listCustomers,
   listLeads,
   listOrders,
+  MoegoApiError,
   toCents,
   type MoegoCustomerRow,
   type MoegoLeadRow,
@@ -29,6 +30,11 @@ export type SyncResult = {
   /// True when every per-resource watermark is at or past `now` — the
   /// backfill is fully drained and the next call will be a no-op fast path.
   caughtUp: boolean;
+  /// Resources whose endpoints returned 401/403. We mark them caught-up
+  /// so the loop doesn't spin on them, but surface the list so the user
+  /// knows scope is missing (e.g. leads is a paid add-on that not every
+  /// MoeGo account has).
+  skipped: string[];
 };
 
 /**
@@ -306,12 +312,29 @@ export async function syncAll(): Promise<SyncResult> {
   // array. Discover once per invocation rather than caching: it's a
   // single small page and ensures new businesses get picked up
   // automatically without an env var.
-  const businesses = await listBusinesses();
-  const businessIds = businesses.map((b) => b.id);
-  if (businessIds.length === 0) {
-    throw new Error(
-      "MoeGo returned no businesses under the configured company. Verify MOEGO_COMPANY_ID."
-    );
+  //
+  // If the API key isn't scoped to /v1/businesses:list, fall back to
+  // syncing customers only — orders and leads will be marked skipped
+  // below since they can't run without businessIds.
+  let businessIds: string[] = [];
+  let businessesAccessDenied = false;
+  try {
+    const businesses = await listBusinesses();
+    businessIds = businesses.map((b) => b.id);
+    if (businessIds.length === 0) {
+      throw new Error(
+        "MoeGo returned no businesses under the configured company. Verify MOEGO_COMPANY_ID."
+      );
+    }
+  } catch (err) {
+    if (
+      err instanceof MoegoApiError &&
+      (err.status === 401 || err.status === 403)
+    ) {
+      businessesAccessDenied = true;
+    } else {
+      throw err;
+    }
   }
 
   const totals = {
@@ -325,6 +348,34 @@ export async function syncAll(): Promise<SyncResult> {
     lead: await getCompletedThrough("lead"),
   };
   let chunks = 0;
+  const skipped: string[] = [];
+
+  // No business IDs → can't query orders or leads. Mark both done so the
+  // loop only attempts customers. Surfaced in the response so the user
+  // knows scope is missing.
+  if (businessesAccessDenied) {
+    skipped.push("businesses", "order", "lead");
+    await setWatermark("order", targetEnd, 0);
+    await setWatermark("lead", targetEnd, 0);
+  }
+
+  /**
+   * Some MoeGo API keys aren't scoped to every resource — leads in
+   * particular is a paid add-on that not every account has. Rather than
+   * fail the whole sync on a 401/403, mark the resource as caught-up so
+   * the loop doesn't keep retrying it, and continue with the rest.
+   */
+  async function handlePermissionDenied(
+    resource: "customer" | "order" | "lead",
+    err: unknown
+  ): Promise<boolean> {
+    if (err instanceof MoegoApiError && (err.status === 401 || err.status === 403)) {
+      if (!skipped.includes(resource)) skipped.push(resource);
+      await setWatermark(resource, targetEnd, 0);
+      return true;
+    }
+    return false;
+  }
 
   while (true) {
     if (Date.now() - startedAt > RUNTIME_BUDGET_MS) break;
@@ -354,21 +405,30 @@ export async function syncAll(): Promise<SyncResult> {
       )
     );
 
-    if (resource === "customer") {
-      const r = await syncCustomers(sliceStart, sliceEnd);
-      totals.customers.fetched += r.fetched;
-      totals.customers.upserted += r.upserted;
-      await setWatermark("customer", sliceEnd, r.fetched);
-    } else if (resource === "order") {
-      const r = await syncOrders(sliceStart, sliceEnd, businessIds);
-      totals.orders.fetched += r.fetched;
-      totals.orders.upserted += r.upserted;
-      await setWatermark("order", sliceEnd, r.fetched);
-    } else {
-      const r = await syncLeads(sliceStart, sliceEnd, businessIds);
-      totals.leads.fetched += r.fetched;
-      totals.leads.upserted += r.upserted;
-      await setWatermark("lead", sliceEnd, r.fetched);
+    try {
+      if (resource === "customer") {
+        const r = await syncCustomers(sliceStart, sliceEnd);
+        totals.customers.fetched += r.fetched;
+        totals.customers.upserted += r.upserted;
+        await setWatermark("customer", sliceEnd, r.fetched);
+      } else if (resource === "order") {
+        const r = await syncOrders(sliceStart, sliceEnd, businessIds);
+        totals.orders.fetched += r.fetched;
+        totals.orders.upserted += r.upserted;
+        await setWatermark("order", sliceEnd, r.fetched);
+      } else {
+        const r = await syncLeads(sliceStart, sliceEnd, businessIds);
+        totals.leads.fetched += r.fetched;
+        totals.leads.upserted += r.upserted;
+        await setWatermark("lead", sliceEnd, r.fetched);
+      }
+    } catch (err) {
+      if (await handlePermissionDenied(resource, err)) {
+        // Fall through to next iteration; resource is now watermarked to
+        // targetEnd so `behind` won't pick it again this run.
+      } else {
+        throw err;
+      }
     }
     chunks++;
   }
@@ -397,5 +457,6 @@ export async function syncAll(): Promise<SyncResult> {
     leadSourceMatched,
     chunks,
     caughtUp,
+    skipped,
   };
 }

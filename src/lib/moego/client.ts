@@ -100,7 +100,10 @@ async function moegoPost<T>(path: string, body: unknown): Promise<T> {
     } catch {
       // body wasn't JSON
     }
-    throw new MoegoApiError(message, res.status);
+    // Prefix with the path so a generic "unauthorized" tells us which
+    // endpoint MoeGo rejected (e.g. leads might be a separate add-on
+    // that the API key isn't scoped to).
+    throw new MoegoApiError(`${path}: ${message}`, res.status);
   }
 
   return (await res.json()) as T;
