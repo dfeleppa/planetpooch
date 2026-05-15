@@ -113,13 +113,16 @@ type PaginatedResponse<TKey extends string, TRow> = {
 /**
  * Page through a `:list` endpoint until exhausted. MoeGo list endpoints
  * require `companyId` at the top of the body and put per-resource filters
- * under a `filter` object. The collection key is the field the API returns
- * rows under (e.g. "customers", "orders").
+ * under a `filter` object. Some endpoints (orders, leads) additionally
+ * require a non-empty `businessIds` array — pass it via `extraTop`.
+ * The collection key is the field the API returns rows under (e.g.
+ * "customers", "orders").
  */
 export async function listAllPages<TKey extends string, TRow>(
   path: string,
   rowKey: TKey,
-  filter: Record<string, unknown> = {}
+  filter: Record<string, unknown> = {},
+  extraTop: Record<string, unknown> = {}
 ): Promise<TRow[]> {
   const { companyId } = getMoegoConfig();
   const all: TRow[] = [];
@@ -129,6 +132,7 @@ export async function listAllPages<TKey extends string, TRow>(
   while (pages < 1000) {
     const body = {
       companyId,
+      ...extraTop,
       filter,
       pagination: { pageSize: PAGE_SIZE, pageToken },
     };
@@ -152,6 +156,12 @@ export type MoegoCompany = {
   timezone?: { id?: string };
 };
 
+export type MoegoBusiness = {
+  id: string;
+  name?: string;
+  companyId?: string;
+};
+
 /**
  * Discovery: list every company the API key has access to. Unlike the
  * resource :list endpoints, this one doesn't require a companyId — it's
@@ -170,6 +180,35 @@ export async function listCompanies(): Promise<MoegoCompany[]> {
     all.push(...(res.companies ?? []));
     pages++;
     if (!res.nextPageToken || (res.companies ?? []).length === 0) break;
+    pageToken = res.nextPageToken;
+    await sleep(SLEEP_MS);
+  }
+  return all;
+}
+
+/**
+ * List every business under the configured company. Required because
+ * /v1/orders:list and /v1/leads:list reject requests with an empty
+ * businessIds array — auto-discovering the set means we don't need a
+ * separate env var, and new businesses are picked up automatically.
+ */
+export async function listBusinesses(): Promise<MoegoBusiness[]> {
+  const { companyId } = getMoegoConfig();
+  const all: MoegoBusiness[] = [];
+  let pageToken = "1";
+  let pages = 0;
+
+  while (pages < 50) {
+    const res = await moegoPost<PaginatedResponse<"businesses", MoegoBusiness>>(
+      "/businesses:list",
+      {
+        companyId,
+        pagination: { pageSize: PAGE_SIZE, pageToken },
+      }
+    );
+    all.push(...(res.businesses ?? []));
+    pages++;
+    if (!res.nextPageToken || (res.businesses ?? []).length === 0) break;
     pageToken = res.nextPageToken;
     await sleep(SLEEP_MS);
   }
@@ -232,18 +271,26 @@ export async function listCustomers(filters: {
   );
 }
 
-export async function listOrders(filters: {
-  lastUpdatedTime?: { startTime: string; endTime: string };
-}): Promise<MoegoOrderRow[]> {
+export async function listOrders(
+  filters: { lastUpdatedTime?: { startTime: string; endTime: string } },
+  businessIds: string[]
+): Promise<MoegoOrderRow[]> {
   return listAllPages<"orders", MoegoOrderRow>(
     "/orders:list",
     "orders",
-    filters
+    filters,
+    { businessIds }
   );
 }
 
-export async function listLeads(filters: {
-  lastUpdatedTime?: { startTime: string; endTime: string };
-}): Promise<MoegoLeadRow[]> {
-  return listAllPages<"leads", MoegoLeadRow>("/leads:list", "leads", filters);
+export async function listLeads(
+  filters: { lastUpdatedTime?: { startTime: string; endTime: string } },
+  businessIds: string[]
+): Promise<MoegoLeadRow[]> {
+  return listAllPages<"leads", MoegoLeadRow>(
+    "/leads:list",
+    "leads",
+    filters,
+    { businessIds }
+  );
 }
