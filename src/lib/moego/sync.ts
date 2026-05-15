@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import {
+  listBusinesses,
   listCustomers,
   listLeads,
   listOrders,
@@ -130,13 +131,20 @@ async function syncCustomers(start: Date, end: Date): Promise<ResourceResult> {
   return { fetched: rows.length, upserted };
 }
 
-async function syncOrders(start: Date, end: Date): Promise<ResourceResult> {
-  const rows: MoegoOrderRow[] = await listOrders({
-    lastUpdatedTime: {
-      startTime: start.toISOString(),
-      endTime: end.toISOString(),
+async function syncOrders(
+  start: Date,
+  end: Date,
+  businessIds: string[]
+): Promise<ResourceResult> {
+  const rows: MoegoOrderRow[] = await listOrders(
+    {
+      lastUpdatedTime: {
+        startTime: start.toISOString(),
+        endTime: end.toISOString(),
+      },
     },
-  });
+    businessIds
+  );
 
   let upserted = 0;
   for (const r of rows) {
@@ -170,13 +178,20 @@ async function syncOrders(start: Date, end: Date): Promise<ResourceResult> {
   return { fetched: rows.length, upserted };
 }
 
-async function syncLeads(start: Date, end: Date): Promise<ResourceResult> {
-  const rows: MoegoLeadRow[] = await listLeads({
-    lastUpdatedTime: {
-      startTime: start.toISOString(),
-      endTime: end.toISOString(),
+async function syncLeads(
+  start: Date,
+  end: Date,
+  businessIds: string[]
+): Promise<ResourceResult> {
+  const rows: MoegoLeadRow[] = await listLeads(
+    {
+      lastUpdatedTime: {
+        startTime: start.toISOString(),
+        endTime: end.toISOString(),
+      },
     },
-  });
+    businessIds
+  );
 
   let upserted = 0;
   for (const r of rows) {
@@ -287,6 +302,18 @@ export async function syncAll(): Promise<SyncResult> {
   const startedAt = Date.now();
   const targetEnd = new Date();
 
+  // /v1/orders:list and /v1/leads:list require a non-empty businessIds
+  // array. Discover once per invocation rather than caching: it's a
+  // single small page and ensures new businesses get picked up
+  // automatically without an env var.
+  const businesses = await listBusinesses();
+  const businessIds = businesses.map((b) => b.id);
+  if (businessIds.length === 0) {
+    throw new Error(
+      "MoeGo returned no businesses under the configured company. Verify MOEGO_COMPANY_ID."
+    );
+  }
+
   const totals = {
     customers: { fetched: 0, upserted: 0 } as ResourceResult,
     orders: { fetched: 0, upserted: 0 } as ResourceResult,
@@ -333,12 +360,12 @@ export async function syncAll(): Promise<SyncResult> {
       totals.customers.upserted += r.upserted;
       await setWatermark("customer", sliceEnd, r.fetched);
     } else if (resource === "order") {
-      const r = await syncOrders(sliceStart, sliceEnd);
+      const r = await syncOrders(sliceStart, sliceEnd, businessIds);
       totals.orders.fetched += r.fetched;
       totals.orders.upserted += r.upserted;
       await setWatermark("order", sliceEnd, r.fetched);
     } else {
-      const r = await syncLeads(sliceStart, sliceEnd);
+      const r = await syncLeads(sliceStart, sliceEnd, businessIds);
       totals.leads.fetched += r.fetched;
       totals.leads.upserted += r.upserted;
       await setWatermark("lead", sliceEnd, r.fetched);
