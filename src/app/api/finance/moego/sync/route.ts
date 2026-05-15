@@ -25,6 +25,13 @@ export async function POST() {
         { status: err.status }
       );
     }
-    throw err;
+    // Surface the underlying error rather than leaving the route to
+    // throw an opaque 500 — the dashboard reads `error` from the body.
+    const message = err instanceof Error ? err.message : String(err);
+    console.error("MoeGo sync failed:", err);
+    return NextResponse.json(
+      { error: `Sync failed: ${message}` },
+      { status: 500 }
+    );
   }
 }

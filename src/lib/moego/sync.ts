@@ -321,11 +321,6 @@ export async function syncAll(): Promise<SyncResult> {
   try {
     const businesses = await listBusinesses();
     businessIds = businesses.map((b) => b.id);
-    if (businessIds.length === 0) {
-      throw new Error(
-        "MoeGo returned no businesses under the configured company. Verify MOEGO_COMPANY_ID."
-      );
-    }
   } catch (err) {
     if (
       err instanceof MoegoApiError &&
@@ -336,6 +331,11 @@ export async function syncAll(): Promise<SyncResult> {
       throw err;
     }
   }
+  // No businesses (either denied or empty list) → treat order/lead as
+  // out-of-scope. Surfaced in `skipped` below so the user can tell
+  // whether to ask MoeGo for broader access or to verify their
+  // MOEGO_COMPANY_ID.
+  const noBusinessIds = businessIds.length === 0;
 
   const totals = {
     customers: { fetched: 0, upserted: 0 } as ResourceResult,
@@ -353,8 +353,12 @@ export async function syncAll(): Promise<SyncResult> {
   // No business IDs → can't query orders or leads. Mark both done so the
   // loop only attempts customers. Surfaced in the response so the user
   // knows scope is missing.
-  if (businessesAccessDenied) {
-    skipped.push("businesses", "order", "lead");
+  if (noBusinessIds) {
+    skipped.push(
+      businessesAccessDenied ? "businesses(403)" : "businesses(empty)",
+      "order",
+      "lead"
+    );
     await setWatermark("order", targetEnd, 0);
     await setWatermark("lead", targetEnd, 0);
   }

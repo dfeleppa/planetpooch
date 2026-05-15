@@ -35,6 +35,11 @@ export async function GET(req: NextRequest) {
         { status: err.status }
       );
     }
-    throw err;
+    const message = err instanceof Error ? err.message : String(err);
+    console.error("MoeGo cron sync failed:", err);
+    return NextResponse.json(
+      { error: `Sync failed: ${message}` },
+      { status: 500 }
+    );
   }
 }
