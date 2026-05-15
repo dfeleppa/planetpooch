@@ -52,12 +52,20 @@ function relative(iso: string | null): string {
   return `${Math.round(hours / 24)}d ago`;
 }
 
+type DiscoveredCompany = {
+  id: string;
+  name?: string;
+  country?: string;
+};
+
 export function MoegoDashboard() {
   const [days, setDays] = useState<WindowDays>(30);
   const [metrics, setMetrics] = useState<MoegoMetrics | null>(null);
   const [loading, setLoading] = useState(true);
   const [syncing, setSyncing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [companies, setCompanies] = useState<DiscoveredCompany[] | null>(null);
+  const [discovering, setDiscovering] = useState(false);
 
   const load = useCallback(async (window: WindowDays) => {
     setLoading(true);
@@ -99,6 +107,27 @@ export function MoegoDashboard() {
     }
   }
 
+  async function discoverCompanies() {
+    setDiscovering(true);
+    setError(null);
+    setCompanies(null);
+    try {
+      const res = await fetch("/api/finance/moego/discover", {
+        cache: "no-store",
+      });
+      if (!res.ok) {
+        const body = (await res.json().catch(() => ({}))) as { error?: string };
+        throw new Error(body.error ?? `HTTP ${res.status}`);
+      }
+      const data = (await res.json()) as { companies: DiscoveredCompany[] };
+      setCompanies(data.companies);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Discovery failed");
+    } finally {
+      setDiscovering(false);
+    }
+  }
+
   return (
     <div>
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-6">
@@ -131,12 +160,42 @@ export function MoegoDashboard() {
           >
             {syncing ? "Syncing…" : "Sync now"}
           </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={discoverCompanies}
+            disabled={discovering}
+          >
+            {discovering ? "Looking…" : "Find company ID"}
+          </Button>
         </div>
       </div>
 
       {error && (
         <div className="mb-4 p-3 rounded-lg bg-red-50 border border-red-200 text-sm text-red-700">
           {error}
+        </div>
+      )}
+
+      {companies && (
+        <div className="mb-4 p-3 rounded-lg bg-blue-50 border border-blue-200 text-sm text-blue-900">
+          <p className="font-medium mb-2">
+            Set <code className="px-1 bg-white rounded">MOEGO_COMPANY_ID</code>{" "}
+            to one of these (then redeploy):
+          </p>
+          {companies.length === 0 ? (
+            <p>No companies returned — check that the API key is valid.</p>
+          ) : (
+            <ul className="space-y-1">
+              {companies.map((c) => (
+                <li key={c.id} className="font-mono text-xs">
+                  <span className="font-semibold">{c.id}</span>
+                  {c.name ? ` — ${c.name}` : ""}
+                  {c.country ? ` (${c.country})` : ""}
+                </li>
+              ))}
+            </ul>
+          )}
         </div>
       )}
 
