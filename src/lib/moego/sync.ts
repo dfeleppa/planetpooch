@@ -1,9 +1,10 @@
+import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import {
   listBusinesses,
-  listCustomers,
-  listLeads,
-  listOrders,
+  streamCustomers,
+  streamLeads,
+  streamOrders,
   MoegoApiError,
   toCents,
   type MoegoCustomerRow,
@@ -99,50 +100,108 @@ function customerLeadSource(row: MoegoCustomerRow): string | null {
   return null;
 }
 
-async function syncCustomers(start: Date, end: Date): Promise<ResourceResult> {
-  const rows = await listCustomers({
+/**
+ * Bulk upsert one page of customers in a single Postgres round trip.
+ * Postgres' `INSERT ... ON CONFLICT DO UPDATE` handles per-row upsert
+ * semantics atomically, ~50–100× faster than the Prisma per-row upsert
+ * loop it replaces.
+ *
+ * `leadSource` uses `COALESCE(EXCLUDED.leadSource, "MoegoCustomer".leadSource)`
+ * so a re-sync without a new value doesn't blank an existing attribution.
+ */
+async function upsertCustomerPage(rows: MoegoCustomerRow[]): Promise<number> {
+  if (rows.length === 0) return 0;
+  const now = new Date();
+  const values = rows.map(
+    (r) =>
+      Prisma.sql`(${"cmoego_" + r.id}, ${r.id}, ${r.name ?? null}, ${
+        r.email ?? null
+      }, ${r.mainPhoneNumber ?? null}, ${customerLeadSource(r)}, ${new Date(
+        r.createdTime
+      )}, ${r.lastUpdatedTime ? new Date(r.lastUpdatedTime) : null}, ${now})`
+  );
+  await prisma.$executeRaw`
+    INSERT INTO "MoegoCustomer"
+      ("id", "moegoId", "name", "email", "mainPhoneNumber", "leadSource",
+       "createdTime", "lastUpdatedTime", "syncedAt")
+    VALUES ${Prisma.join(values)}
+    ON CONFLICT ("moegoId") DO UPDATE SET
+      "name"            = EXCLUDED."name",
+      "email"           = EXCLUDED."email",
+      "mainPhoneNumber" = EXCLUDED."mainPhoneNumber",
+      "leadSource"      = COALESCE(EXCLUDED."leadSource", "MoegoCustomer"."leadSource"),
+      "lastUpdatedTime" = EXCLUDED."lastUpdatedTime",
+      "syncedAt"        = EXCLUDED."syncedAt"
+  `;
+  return rows.length;
+}
+
+async function syncCustomers(
+  start: Date,
+  end: Date,
+  shouldStop: () => boolean
+): Promise<{ fetched: number; upserted: number; completed: boolean }> {
+  let fetched = 0;
+  let upserted = 0;
+  let completed = true;
+  for await (const page of streamCustomers({
     lastUpdatedTime: {
       startTime: start.toISOString(),
       endTime: end.toISOString(),
     },
-  });
-
-  let upserted = 0;
-  for (const r of rows) {
-    await prisma.moegoCustomer.upsert({
-      where: { moegoId: r.id },
-      create: {
-        moegoId: r.id,
-        name: r.name ?? null,
-        email: r.email ?? null,
-        mainPhoneNumber: r.mainPhoneNumber ?? null,
-        leadSource: customerLeadSource(r),
-        createdTime: new Date(r.createdTime),
-        lastUpdatedTime: r.lastUpdatedTime ? new Date(r.lastUpdatedTime) : null,
-        syncedAt: new Date(),
-      },
-      update: {
-        name: r.name ?? null,
-        email: r.email ?? null,
-        mainPhoneNumber: r.mainPhoneNumber ?? null,
-        // Don't clobber an existing leadSource with null — once attributed
-        // we want it to stick across re-syncs.
-        ...(customerLeadSource(r) ? { leadSource: customerLeadSource(r) } : {}),
-        lastUpdatedTime: r.lastUpdatedTime ? new Date(r.lastUpdatedTime) : null,
-        syncedAt: new Date(),
-      },
-    });
-    upserted++;
+  })) {
+    fetched += page.length;
+    upserted += await upsertCustomerPage(page);
+    if (shouldStop()) {
+      completed = false;
+      break;
+    }
   }
-  return { fetched: rows.length, upserted };
+  return { fetched, upserted, completed };
+}
+
+async function upsertOrderPage(rows: MoegoOrderRow[]): Promise<number> {
+  if (rows.length === 0) return 0;
+  const now = new Date();
+  const values = rows.map(
+    (r) =>
+      Prisma.sql`(${"omoego_" + r.id}, ${r.id}, ${r.customerId ?? null}, ${
+        r.status ?? null
+      }, ${toCents(r.subTotalAmount)}, ${toCents(r.totalAmount)}, ${toCents(
+        r.paidAmount
+      )}, ${toCents(r.refundedAmount)}, ${new Date(r.createdTime)}, ${
+        r.lastUpdatedTime ? new Date(r.lastUpdatedTime) : null
+      }, ${now})`
+  );
+  await prisma.$executeRaw`
+    INSERT INTO "MoegoOrder"
+      ("id", "moegoId", "customerMoegoId", "status", "subTotalCents",
+       "totalCents", "paidCents", "refundedCents", "createdTime",
+       "lastUpdatedTime", "syncedAt")
+    VALUES ${Prisma.join(values)}
+    ON CONFLICT ("moegoId") DO UPDATE SET
+      "customerMoegoId" = EXCLUDED."customerMoegoId",
+      "status"          = EXCLUDED."status",
+      "subTotalCents"   = EXCLUDED."subTotalCents",
+      "totalCents"      = EXCLUDED."totalCents",
+      "paidCents"       = EXCLUDED."paidCents",
+      "refundedCents"   = EXCLUDED."refundedCents",
+      "lastUpdatedTime" = EXCLUDED."lastUpdatedTime",
+      "syncedAt"        = EXCLUDED."syncedAt"
+  `;
+  return rows.length;
 }
 
 async function syncOrders(
   start: Date,
   end: Date,
-  businessIds: string[]
-): Promise<ResourceResult> {
-  const rows: MoegoOrderRow[] = await listOrders(
+  businessIds: string[],
+  shouldStop: () => boolean
+): Promise<{ fetched: number; upserted: number; completed: boolean }> {
+  let fetched = 0;
+  let upserted = 0;
+  let completed = true;
+  for await (const page of streamOrders(
     {
       lastUpdatedTime: {
         startTime: start.toISOString(),
@@ -150,46 +209,58 @@ async function syncOrders(
       },
     },
     businessIds
-  );
-
-  let upserted = 0;
-  for (const r of rows) {
-    await prisma.moegoOrder.upsert({
-      where: { moegoId: r.id },
-      create: {
-        moegoId: r.id,
-        customerMoegoId: r.customerId ?? null,
-        status: r.status ?? null,
-        subTotalCents: toCents(r.subTotalAmount),
-        totalCents: toCents(r.totalAmount),
-        paidCents: toCents(r.paidAmount),
-        refundedCents: toCents(r.refundedAmount),
-        createdTime: new Date(r.createdTime),
-        lastUpdatedTime: r.lastUpdatedTime ? new Date(r.lastUpdatedTime) : null,
-        syncedAt: new Date(),
-      },
-      update: {
-        customerMoegoId: r.customerId ?? null,
-        status: r.status ?? null,
-        subTotalCents: toCents(r.subTotalAmount),
-        totalCents: toCents(r.totalAmount),
-        paidCents: toCents(r.paidAmount),
-        refundedCents: toCents(r.refundedAmount),
-        lastUpdatedTime: r.lastUpdatedTime ? new Date(r.lastUpdatedTime) : null,
-        syncedAt: new Date(),
-      },
-    });
-    upserted++;
+  )) {
+    fetched += page.length;
+    upserted += await upsertOrderPage(page);
+    if (shouldStop()) {
+      completed = false;
+      break;
+    }
   }
-  return { fetched: rows.length, upserted };
+  return { fetched, upserted, completed };
+}
+
+async function upsertLeadPage(rows: MoegoLeadRow[]): Promise<number> {
+  if (rows.length === 0) return 0;
+  const now = new Date();
+  const values = rows.map(
+    (r) =>
+      Prisma.sql`(${"lmoego_" + r.id}, ${r.id}, ${r.name ?? null}, ${
+        r.mainPhoneNumber ?? null
+      }, ${r.referralSource ?? null}, ${r.lifeCycleId ?? null}, ${
+        r.actionStatusId ?? null
+      }, ${new Date(r.createdTime)}, ${
+        r.lastUpdatedTime ? new Date(r.lastUpdatedTime) : null
+      }, ${now})`
+  );
+  await prisma.$executeRaw`
+    INSERT INTO "MoegoLead"
+      ("id", "moegoId", "name", "mainPhoneNumber", "referralSource",
+       "lifeCycleId", "actionStatusId", "createdTime", "lastUpdatedTime",
+       "syncedAt")
+    VALUES ${Prisma.join(values)}
+    ON CONFLICT ("moegoId") DO UPDATE SET
+      "name"            = EXCLUDED."name",
+      "mainPhoneNumber" = EXCLUDED."mainPhoneNumber",
+      "referralSource"  = EXCLUDED."referralSource",
+      "lifeCycleId"     = EXCLUDED."lifeCycleId",
+      "actionStatusId"  = EXCLUDED."actionStatusId",
+      "lastUpdatedTime" = EXCLUDED."lastUpdatedTime",
+      "syncedAt"        = EXCLUDED."syncedAt"
+  `;
+  return rows.length;
 }
 
 async function syncLeads(
   start: Date,
   end: Date,
-  businessIds: string[]
-): Promise<ResourceResult> {
-  const rows: MoegoLeadRow[] = await listLeads(
+  businessIds: string[],
+  shouldStop: () => boolean
+): Promise<{ fetched: number; upserted: number; completed: boolean }> {
+  let fetched = 0;
+  let upserted = 0;
+  let completed = true;
+  for await (const page of streamLeads(
     {
       lastUpdatedTime: {
         startTime: start.toISOString(),
@@ -197,36 +268,15 @@ async function syncLeads(
       },
     },
     businessIds
-  );
-
-  let upserted = 0;
-  for (const r of rows) {
-    await prisma.moegoLead.upsert({
-      where: { moegoId: r.id },
-      create: {
-        moegoId: r.id,
-        name: r.name ?? null,
-        mainPhoneNumber: r.mainPhoneNumber ?? null,
-        referralSource: r.referralSource ?? null,
-        lifeCycleId: r.lifeCycleId ?? null,
-        actionStatusId: r.actionStatusId ?? null,
-        createdTime: new Date(r.createdTime),
-        lastUpdatedTime: r.lastUpdatedTime ? new Date(r.lastUpdatedTime) : null,
-        syncedAt: new Date(),
-      },
-      update: {
-        name: r.name ?? null,
-        mainPhoneNumber: r.mainPhoneNumber ?? null,
-        referralSource: r.referralSource ?? null,
-        lifeCycleId: r.lifeCycleId ?? null,
-        actionStatusId: r.actionStatusId ?? null,
-        lastUpdatedTime: r.lastUpdatedTime ? new Date(r.lastUpdatedTime) : null,
-        syncedAt: new Date(),
-      },
-    });
-    upserted++;
+  )) {
+    fetched += page.length;
+    upserted += await upsertLeadPage(page);
+    if (shouldStop()) {
+      completed = false;
+      break;
+    }
   }
-  return { fetched: rows.length, upserted };
+  return { fetched, upserted, completed };
 }
 
 /**
@@ -409,22 +459,37 @@ export async function syncAll(): Promise<SyncResult> {
       )
     );
 
+    const shouldStop = () => Date.now() - startedAt > RUNTIME_BUDGET_MS;
+
     try {
       if (resource === "customer") {
-        const r = await syncCustomers(sliceStart, sliceEnd);
+        const r = await syncCustomers(sliceStart, sliceEnd, shouldStop);
         totals.customers.fetched += r.fetched;
         totals.customers.upserted += r.upserted;
-        await setWatermark("customer", sliceEnd, r.fetched);
+        // Only advance the watermark if the slice finished cleanly.
+        // Otherwise the next invocation re-processes this slice from
+        // its start (upserts are idempotent — re-pull is safe).
+        if (r.completed) await setWatermark("customer", sliceEnd, r.fetched);
       } else if (resource === "order") {
-        const r = await syncOrders(sliceStart, sliceEnd, businessIds);
+        const r = await syncOrders(
+          sliceStart,
+          sliceEnd,
+          businessIds,
+          shouldStop
+        );
         totals.orders.fetched += r.fetched;
         totals.orders.upserted += r.upserted;
-        await setWatermark("order", sliceEnd, r.fetched);
+        if (r.completed) await setWatermark("order", sliceEnd, r.fetched);
       } else {
-        const r = await syncLeads(sliceStart, sliceEnd, businessIds);
+        const r = await syncLeads(
+          sliceStart,
+          sliceEnd,
+          businessIds,
+          shouldStop
+        );
         totals.leads.fetched += r.fetched;
         totals.leads.upserted += r.upserted;
-        await setWatermark("lead", sliceEnd, r.fetched);
+        if (r.completed) await setWatermark("lead", sliceEnd, r.fetched);
       }
     } catch (err) {
       if (await handlePermissionDenied(resource, err)) {
