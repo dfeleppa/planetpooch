@@ -99,6 +99,7 @@ export function MoegoDashboard() {
     let totalCustomers = 0;
     let totalOrders = 0;
     let totalLeads = 0;
+    const skippedAll = new Set<string>();
 
     // Server processes ~30-day slices within its runtime budget and
     // returns `caughtUp: false` if there's more history to pull. Loop
@@ -119,13 +120,19 @@ export function MoegoDashboard() {
           customers: { upserted: number };
           orders: { upserted: number };
           leads: { upserted: number };
+          skipped?: string[];
         };
         totalChunks += data.chunks;
         totalCustomers += data.customers.upserted;
         totalOrders += data.orders.upserted;
         totalLeads += data.leads.upserted;
+        for (const s of data.skipped ?? []) skippedAll.add(s);
+        const skippedSuffix =
+          skippedAll.size > 0
+            ? ` · skipped (no API scope): ${Array.from(skippedAll).join(", ")}`
+            : "";
         setSyncProgress(
-          `${totalChunks} chunks · ${totalCustomers} customers, ${totalOrders} orders, ${totalLeads} leads upserted`
+          `${totalChunks} chunks · ${totalCustomers} customers, ${totalOrders} orders, ${totalLeads} leads upserted${skippedSuffix}`
         );
         if (data.caughtUp) break;
       }
