@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { CustomersTable } from "./CustomersTable";
 
 type LeadSourceRow = {
   source: string;
@@ -351,6 +352,10 @@ export function MoegoDashboard() {
           )}
         </CardContent>
       </Card>
+
+      <div className="mt-6">
+        <CustomersTable />
+      </div>
     </div>
   );
 }
