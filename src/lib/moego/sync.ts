@@ -60,12 +60,17 @@ function isoNow(): string {
 
 /**
  * The raw watermark — the upper bound of what we've already synced for
- * this resource. Used to decide whether we're caught up.
+ * this resource. Used to decide whether we're caught up. Callers pass
+ * the default to use when no row exists (typically `now - BACKFILL_DAYS`
+ * for the normal incremental sync, or the window start for a year sync).
  */
-async function getCompletedThrough(resource: string): Promise<Date> {
+async function getCompletedThrough(
+  resource: string,
+  initialDefault: Date
+): Promise<Date> {
   const row = await prisma.moegoSyncState.findUnique({ where: { resource } });
   if (row) return row.lastSyncedAt;
-  return new Date(Date.now() - BACKFILL_DAYS * 24 * 60 * 60 * 1000);
+  return initialDefault;
 }
 
 /**
@@ -406,9 +411,40 @@ function addDays(d: Date, days: number): Date {
  * burned the runtime budget. Returns `caughtUp: false` in case (b) so
  * the caller knows to call again.
  */
-export async function syncAll(): Promise<SyncResult> {
+export type SyncWindow = {
+  /** Inclusive lower bound on lastUpdatedTime. */
+  start: Date;
+  /** Exclusive upper bound. The sync stops once watermarks cross this. */
+  end: Date;
+  /**
+   * Suffix appended to each MoegoSyncState resource key (e.g. ":y2024")
+   * so a windowed sync's progress is tracked independently of the
+   * regular incremental sync. Keep short; persisted to a TEXT pkey.
+   */
+  tag: string;
+};
+
+export type SyncOptions = {
+  /**
+   * When set, sync only rows in [window.start, window.end) and track
+   * progress under windowed resource keys ("customer:<tag>", etc.) so
+   * the regular incremental sync's watermarks aren't disturbed.
+   */
+  window?: SyncWindow;
+};
+
+export async function syncAll(options: SyncOptions = {}): Promise<SyncResult> {
+  const { window } = options;
   const startedAt = Date.now();
-  const targetEnd = new Date();
+  const targetEnd = window?.end ?? new Date();
+  /// Default for a brand-new MoegoSyncState row. For windowed syncs we
+  /// start at window.start; for the normal sync we go back BACKFILL_DAYS.
+  const initialDefault =
+    window?.start ?? new Date(Date.now() - BACKFILL_DAYS * 24 * 60 * 60 * 1000);
+  /// Resource keys are suffixed for windowed syncs so we keep a
+  /// separate cursor per window.
+  const rkey = (base: "customer" | "order" | "lead") =>
+    window ? `${base}:${window.tag}` : base;
 
   // /v1/orders:list and /v1/leads:list require a non-empty businessIds
   // array. Discover once per invocation rather than caching: it's a
@@ -445,9 +481,9 @@ export async function syncAll(): Promise<SyncResult> {
     leads: { fetched: 0, upserted: 0 } as ResourceResult,
   };
   const initialCompleted = {
-    customer: await getCompletedThrough("customer"),
-    order: await getCompletedThrough("order"),
-    lead: await getCompletedThrough("lead"),
+    customer: await getCompletedThrough(rkey("customer"), initialDefault),
+    order: await getCompletedThrough(rkey("order"), initialDefault),
+    lead: await getCompletedThrough(rkey("lead"), initialDefault),
   };
   let chunks = 0;
   const skipped: string[] = [];
@@ -461,8 +497,8 @@ export async function syncAll(): Promise<SyncResult> {
       "order",
       "lead"
     );
-    await setWatermark("order", targetEnd, 0);
-    await setWatermark("lead", targetEnd, 0);
+    await setWatermark(rkey("order"), targetEnd, 0);
+    await setWatermark(rkey("lead"), targetEnd, 0);
   }
 
   /**
@@ -477,7 +513,7 @@ export async function syncAll(): Promise<SyncResult> {
   ): Promise<boolean> {
     if (err instanceof MoegoApiError && (err.status === 401 || err.status === 403)) {
       if (!skipped.includes(resource)) skipped.push(resource);
-      await setWatermark(resource, targetEnd, 0);
+      await setWatermark(rkey(resource), targetEnd, 0);
       return true;
     }
     return false;
@@ -487,9 +523,9 @@ export async function syncAll(): Promise<SyncResult> {
     if (Date.now() - startedAt > RUNTIME_BUDGET_MS) break;
 
     const completed = {
-      customer: await getCompletedThrough("customer"),
-      order: await getCompletedThrough("order"),
-      lead: await getCompletedThrough("lead"),
+      customer: await getCompletedThrough(rkey("customer"), initialDefault),
+      order: await getCompletedThrough(rkey("order"), initialDefault),
+      lead: await getCompletedThrough(rkey("lead"), initialDefault),
     };
 
     // Pick the resource furthest behind. Tie-break order is arbitrary.
@@ -521,7 +557,7 @@ export async function syncAll(): Promise<SyncResult> {
         // Only advance the watermark if the slice finished cleanly.
         // Otherwise the next invocation re-processes this slice from
         // its start (upserts are idempotent — re-pull is safe).
-        if (r.completed) await setWatermark("customer", sliceEnd, r.fetched);
+        if (r.completed) await setWatermark(rkey("customer"), sliceEnd, r.fetched);
       } else if (resource === "order") {
         const r = await syncOrders(
           sliceStart,
@@ -531,7 +567,7 @@ export async function syncAll(): Promise<SyncResult> {
         );
         totals.orders.fetched += r.fetched;
         totals.orders.upserted += r.upserted;
-        if (r.completed) await setWatermark("order", sliceEnd, r.fetched);
+        if (r.completed) await setWatermark(rkey("order"), sliceEnd, r.fetched);
       } else {
         const r = await syncLeads(
           sliceStart,
@@ -541,7 +577,7 @@ export async function syncAll(): Promise<SyncResult> {
         );
         totals.leads.fetched += r.fetched;
         totals.leads.upserted += r.upserted;
-        if (r.completed) await setWatermark("lead", sliceEnd, r.fetched);
+        if (r.completed) await setWatermark(rkey("lead"), sliceEnd, r.fetched);
       }
     } catch (err) {
       if (await handlePermissionDenied(resource, err)) {
@@ -555,9 +591,9 @@ export async function syncAll(): Promise<SyncResult> {
   }
 
   const finalCompleted = {
-    customer: await getCompletedThrough("customer"),
-    order: await getCompletedThrough("order"),
-    lead: await getCompletedThrough("lead"),
+    customer: await getCompletedThrough(rkey("customer"), initialDefault),
+    order: await getCompletedThrough(rkey("order"), initialDefault),
+    lead: await getCompletedThrough(rkey("lead"), initialDefault),
   };
   const caughtUp =
     finalCompleted.customer >= targetEnd &&

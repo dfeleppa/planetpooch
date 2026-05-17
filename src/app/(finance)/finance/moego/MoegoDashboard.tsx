@@ -69,6 +69,9 @@ export function MoegoDashboard() {
   const [syncProgress, setSyncProgress] = useState<string | null>(null);
   /// Range to pass to /api/finance/moego/reset. "" = full backfill.
   const [resyncDays, setResyncDays] = useState<string>("90");
+  const [resyncYear, setResyncYear] = useState<string>(
+    String(new Date().getUTCFullYear())
+  );
 
   const load = useCallback(async (window: WindowDays) => {
     setLoading(true);
@@ -93,7 +96,11 @@ export function MoegoDashboard() {
     void load(days);
   }, [days, load]);
 
-  async function runSync() {
+  /**
+   * Poll a sync endpoint until it reports caughtUp. Shared between the
+   * normal /sync flow and the year-bounded /sync-year flow.
+   */
+  async function pollSync(url: string, label: string) {
     setSyncing(true);
     setError(null);
     setSyncProgress(null);
@@ -108,8 +115,8 @@ export function MoegoDashboard() {
     // calls until we drain the backfill — at most a handful of round
     // trips even for a 2-year history.
     try {
-      for (let i = 0; i < 30; i++) {
-        const res = await fetch("/api/finance/moego/sync", { method: "POST" });
+      for (let i = 0; i < 60; i++) {
+        const res = await fetch(url, { method: "POST" });
         if (!res.ok) {
           const body = (await res.json().catch(() => ({}))) as {
             error?: string;
@@ -134,7 +141,7 @@ export function MoegoDashboard() {
             ? ` · skipped (no API scope): ${Array.from(skippedAll).join(", ")}`
             : "";
         setSyncProgress(
-          `${totalChunks} chunks · ${totalCustomers} customers, ${totalOrders} orders, ${totalLeads} leads upserted${skippedSuffix}`
+          `${label} · ${totalChunks} chunks · ${totalCustomers} customers, ${totalOrders} orders, ${totalLeads} leads upserted${skippedSuffix}`
         );
         if (data.caughtUp) break;
       }
@@ -144,6 +151,14 @@ export function MoegoDashboard() {
     } finally {
       setSyncing(false);
     }
+  }
+
+  async function runSync() {
+    await pollSync("/api/finance/moego/sync", "Incremental");
+  }
+
+  async function runYearSync(year: string) {
+    await pollSync(`/api/finance/moego/sync-year?year=${year}`, `Year ${year}`);
   }
 
   async function discoverCompanies() {
@@ -242,6 +257,39 @@ export function MoegoDashboard() {
             disabled={syncing}
           >
             Resync window
+          </Button>
+          <select
+            value={resyncYear}
+            onChange={(e) => setResyncYear(e.target.value)}
+            disabled={syncing}
+            className="text-xs border border-gray-200 rounded-md px-2 py-1.5 bg-white"
+          >
+            {(() => {
+              const current = new Date().getUTCFullYear();
+              const years: number[] = [];
+              for (let y = current; y >= 2020; y--) years.push(y);
+              return years.map((y) => (
+                <option key={y} value={String(y)}>
+                  Year {y}
+                </option>
+              ));
+            })()}
+          </select>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={async () => {
+              if (
+                !confirm(
+                  `Sync only customers, orders, and leads updated during ${resyncYear} (Jan 1 – Dec 31). Existing rows are overwritten in place (safe).`
+                )
+              )
+                return;
+              await runYearSync(resyncYear);
+            }}
+            disabled={syncing}
+          >
+            Sync year
           </Button>
           <Button
             variant="ghost"
