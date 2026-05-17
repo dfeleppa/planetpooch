@@ -18,14 +18,44 @@ type CustomerRow = {
   lastOrderTime: Date | null;
 };
 
-type Sort = "ltv" | "recent" | "created";
-const SORT_VALUES: ReadonlySet<Sort> = new Set(["ltv", "recent", "created"]);
+type Sort =
+  | "name"
+  | "leadSource"
+  | "created"
+  | "orders"
+  | "ltv"
+  | "lastOrder";
+type Dir = "asc" | "desc";
+
+const SORT_VALUES: ReadonlySet<Sort> = new Set([
+  "name",
+  "leadSource",
+  "created",
+  "orders",
+  "ltv",
+  "lastOrder",
+]);
+const DIR_VALUES: ReadonlySet<Dir> = new Set(["asc", "desc"]);
+
+/**
+ * Default direction for each column — picked so the first click "does
+ * the obvious thing" (highest revenue first, alphabetical names, etc).
+ */
+const DEFAULT_DIR: Record<Sort, Dir> = {
+  name: "asc",
+  leadSource: "asc",
+  created: "desc",
+  orders: "desc",
+  ltv: "desc",
+  lastOrder: "desc",
+};
 
 /**
  * Per-customer detail for /finance/moego. Returns one row per customer
  * with their lifetime order count, revenue (sum of paidCents), and last
- * order date. Aggregated in a single GROUP BY so we can sort by LTV and
- * paginate without computing every customer's revenue on every request.
+ * order date. Aggregated in a single GROUP BY so we can sort by any
+ * column and paginate without computing every customer's revenue on
+ * every request.
  */
 export async function GET(req: NextRequest) {
   const session = await getSession();
@@ -40,6 +70,11 @@ export async function GET(req: NextRequest) {
   const sort: Sort = (SORT_VALUES as Set<string>).has(sortRaw)
     ? (sortRaw as Sort)
     : "ltv";
+  const dirRaw = sp.get("dir");
+  const dir: Dir =
+    dirRaw && (DIR_VALUES as Set<string>).has(dirRaw)
+      ? (dirRaw as Dir)
+      : DEFAULT_DIR[sort];
 
   const offset = (page - 1) * PAGE_SIZE;
   const like = search ? `%${search}%` : null;
@@ -54,14 +89,29 @@ export async function GET(req: NextRequest) {
       )`
     : Prisma.empty;
 
-  // ORDER BY varies; keep all three sorts deterministic by tie-breaking
-  // on moegoId.
-  const orderBy =
-    sort === "recent"
-      ? Prisma.sql`ORDER BY "lastOrderTime" DESC NULLS LAST, c."moegoId" ASC`
-      : sort === "created"
-        ? Prisma.sql`ORDER BY c."createdTime" DESC, c."moegoId" ASC`
-        : Prisma.sql`ORDER BY "revenueCents" DESC NULLS LAST, c."moegoId" ASC`;
+  // ORDER BY: pick the column, apply the direction, NULLS-LAST when
+  // descending so empty rows don't crowd the top. Tie-break on moegoId
+  // for deterministic paging.
+  const dirSql = dir === "asc" ? Prisma.sql`ASC` : Prisma.sql`DESC`;
+  const nullsSql =
+    dir === "asc" ? Prisma.sql`NULLS FIRST` : Prisma.sql`NULLS LAST`;
+  const orderBy = (() => {
+    switch (sort) {
+      case "name":
+        return Prisma.sql`ORDER BY lower(c."name") ${dirSql} ${nullsSql}, c."moegoId" ASC`;
+      case "leadSource":
+        return Prisma.sql`ORDER BY c."leadSource" ${dirSql} ${nullsSql}, c."moegoId" ASC`;
+      case "created":
+        return Prisma.sql`ORDER BY c."createdTime" ${dirSql}, c."moegoId" ASC`;
+      case "orders":
+        return Prisma.sql`ORDER BY "orderCount" ${dirSql}, c."moegoId" ASC`;
+      case "lastOrder":
+        return Prisma.sql`ORDER BY "lastOrderTime" ${dirSql} ${nullsSql}, c."moegoId" ASC`;
+      case "ltv":
+      default:
+        return Prisma.sql`ORDER BY "revenueCents" ${dirSql} ${nullsSql}, c."moegoId" ASC`;
+    }
+  })();
 
   const rows = await prisma.$queryRaw<CustomerRow[]>`
     SELECT
@@ -106,5 +156,6 @@ export async function GET(req: NextRequest) {
     page,
     pageSize: PAGE_SIZE,
     sort,
+    dir,
   });
 }
