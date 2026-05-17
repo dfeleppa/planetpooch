@@ -201,6 +201,32 @@ export function MoegoDashboard() {
           <Button
             variant="ghost"
             size="sm"
+            onClick={async () => {
+              if (
+                !confirm(
+                  "Reset all sync watermarks? The next sync will re-pull every customer and order from MoeGo to apply any parsing changes. This is slow for large histories but safe — existing rows are overwritten in place."
+                )
+              )
+                return;
+              const res = await fetch("/api/finance/moego/reset", {
+                method: "POST",
+              });
+              if (res.ok) {
+                await runSync();
+              } else {
+                const body = (await res
+                  .json()
+                  .catch(() => ({}))) as { error?: string };
+                setError(body.error ?? `Reset failed: HTTP ${res.status}`);
+              }
+            }}
+            disabled={syncing}
+          >
+            Resync from scratch
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
             onClick={discoverCompanies}
             disabled={discovering}
           >

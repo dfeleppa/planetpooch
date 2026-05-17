@@ -109,14 +109,28 @@ function customerLeadSource(row: MoegoCustomerRow): string | null {
  * `leadSource` uses `COALESCE(EXCLUDED.leadSource, "MoegoCustomer".leadSource)`
  * so a re-sync without a new value doesn't blank an existing attribution.
  */
+/**
+ * MoeGo splits name into firstName/lastName with no composite. Build
+ * the display name from whichever pieces are present so the table and
+ * detail view stop showing "—" for every customer.
+ */
+function customerDisplayName(r: MoegoCustomerRow): string | null {
+  if (r.name && r.name.trim()) return r.name.trim();
+  const parts = [r.firstName, r.lastName].filter(
+    (s): s is string => typeof s === "string" && s.trim().length > 0
+  );
+  if (parts.length === 0) return null;
+  return parts.join(" ").trim();
+}
+
 async function upsertCustomerPage(rows: MoegoCustomerRow[]): Promise<number> {
   if (rows.length === 0) return 0;
   const now = new Date();
   const values = rows.map(
     (r) =>
-      Prisma.sql`(${"cmoego_" + r.id}, ${r.id}, ${r.name ?? null}, ${
+      Prisma.sql`(${"cmoego_" + r.id}, ${r.id}, ${customerDisplayName(r)}, ${
         r.email ?? null
-      }, ${r.mainPhoneNumber ?? null}, ${customerLeadSource(r)}, ${new Date(
+      }, ${r.mainPhoneNumber ?? r.phone ?? null}, ${customerLeadSource(r)}, ${new Date(
         r.createdTime
       )}, ${r.lastUpdatedTime ? new Date(r.lastUpdatedTime) : null}, ${now})`
   );

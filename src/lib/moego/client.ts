@@ -222,11 +222,33 @@ export async function listBusinesses(): Promise<MoegoBusiness[]> {
 
 // ---------- Resource types we project into Postgres ----------
 
+/**
+ * MoeGo money values follow the google.type.Money proto, which JSON-
+ * serializes as `{ currencyCode, units, nanos }`. We store integer
+ * cents, so we accept either the Money object or a legacy string/number
+ * shape for forward-compat with any other shape MoeGo might use.
+ */
+export type MoegoMoney =
+  | { currencyCode?: string; units?: string | number; nanos?: number }
+  | string
+  | number
+  | null
+  | undefined;
+
 export type MoegoCustomerRow = {
   id: string;
+  /// MoeGo splits the name into `firstName` + `lastName` — there is no
+  /// composite `name` field. We accept an optional top-level `name` too
+  /// in case a future API revision exposes one.
+  firstName?: string;
+  lastName?: string;
   name?: string;
   email?: string;
   mainPhoneNumber?: string;
+  /// Legacy/alternate field name MoeGo uses in some places (the
+  /// CreateCustomer request body uses `phone`, the list response uses
+  /// `mainPhoneNumber`).
+  phone?: string;
   createdTime: string; // ISO 8601
   lastUpdatedTime?: string;
   customFields?: Record<string, unknown>;
@@ -236,10 +258,10 @@ export type MoegoOrderRow = {
   id: string;
   customerId?: string;
   status?: string;
-  subTotalAmount?: string | number;
-  totalAmount?: string | number;
-  paidAmount?: string | number;
-  refundedAmount?: string | number;
+  subTotalAmount?: MoegoMoney;
+  totalAmount?: MoegoMoney;
+  paidAmount?: MoegoMoney;
+  refundedAmount?: MoegoMoney;
   createdTime: string;
   lastUpdatedTime?: string;
 };
@@ -256,14 +278,29 @@ export type MoegoLeadRow = {
 };
 
 /**
- * MoeGo returns money as decimal strings ("12.34") in some places and as
- * numbers in others. Normalise to integer cents; missing values → 0.
+ * MoeGo serializes money as a google.type.Money object
+ * (`{ currencyCode, units, nanos }`). Units = whole units (dollars);
+ * nanos = nanoseconds-of-a-unit (1 unit = 1e9 nanos). We also accept
+ * decimal strings/numbers for forward-compat with any other shape that
+ * might appear. Missing values → 0.
  */
-export function toCents(amount: string | number | undefined | null): number {
+export function toCents(amount: MoegoMoney): number {
   if (amount == null) return 0;
-  const n = typeof amount === "string" ? Number(amount) : amount;
-  if (!Number.isFinite(n)) return 0;
-  return Math.round(n * 100);
+  if (typeof amount === "number") {
+    return Number.isFinite(amount) ? Math.round(amount * 100) : 0;
+  }
+  if (typeof amount === "string") {
+    const n = Number(amount);
+    return Number.isFinite(n) ? Math.round(n * 100) : 0;
+  }
+  // Money object: units may arrive as a string (Long.toString) or number.
+  const unitsRaw = amount.units;
+  const units =
+    typeof unitsRaw === "string" ? Number(unitsRaw) : (unitsRaw ?? 0);
+  const nanos = typeof amount.nanos === "number" ? amount.nanos : 0;
+  if (!Number.isFinite(units)) return 0;
+  // 1 cent = 1e7 nanos; preserve sign correctly when only one side is set.
+  return Math.round(units * 100 + nanos / 1e7);
 }
 
 export function streamCustomers(filters: {
