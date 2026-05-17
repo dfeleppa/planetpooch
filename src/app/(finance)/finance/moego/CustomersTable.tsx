@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -169,10 +170,19 @@ export function CustomersTable() {
                   {data.rows.map((r) => (
                     <tr
                       key={r.moegoId}
-                      className="border-b border-gray-100 last:border-b-0"
+                      className="border-b border-gray-100 last:border-b-0 hover:bg-gray-50 cursor-pointer"
+                      onClick={() => {
+                        window.location.href = `/finance/moego/customers/${encodeURIComponent(r.moegoId)}`;
+                      }}
                     >
                       <td className="py-2 text-gray-900">
-                        {r.name ?? <span className="text-gray-400">—</span>}
+                        <Link
+                          href={`/finance/moego/customers/${encodeURIComponent(r.moegoId)}`}
+                          onClick={(e) => e.stopPropagation()}
+                          className="hover:text-blue-600 hover:underline"
+                        >
+                          {r.name ?? <span className="text-gray-400">—</span>}
+                        </Link>
                       </td>
                       <td className="py-2 text-gray-700">
                         <div className="text-xs">
