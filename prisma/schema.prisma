@@ -1051,10 +1051,23 @@ model MoegoCustomer {
   /// E.164 if MoeGo returns it that way; otherwise raw. Used to join
   /// promoted leads back to customers (no FK in MoeGo's data model).
   mainPhoneNumber String?
-  /// Best-effort lead source for this customer. Populated either from the
-  /// `field_lead_source_detail` custom field on the customer record, or
-  /// from the matching MoegoLead.referralSource when phones line up.
+  /// Best-effort lead source. Tried in order: customer.referralSource
+  /// (typed), customer.source (string), customFields.field_lead_source_detail,
+  /// then phone-matched MoegoLead.referralSource.
   leadSource      String?
+  /// MoeGo's preferred location for this customer — surfaces a per-
+  /// location dimension for revenue/LTV breakdowns when the user
+  /// operates multiple businesses.
+  preferredBusinessId String?
+  /// MoeGo's most recent appointment date for the customer. Drives
+  /// churn segments ("haven't been in 60+ days").
+  lastAppointmentDate DateTime?
+  /// MoeGo's next scheduled appointment, if any.
+  nextAppointmentDate DateTime?
+  /// MoeGo customer tags (VIP, allergies, etc.). Stored as a string
+  /// array to keep the existing segmentation queryable without a
+  /// separate join table.
+  tags            String[]
   /// `createdTime` from MoeGo. We use this as "acquired on" for CAC math —
   /// new customers in a window are those whose createdTime falls in it.
   createdTime     DateTime
@@ -1064,6 +1077,8 @@ model MoegoCustomer {
   @@index([createdTime])
   @@index([leadSource])
   @@index([mainPhoneNumber])
+  @@index([preferredBusinessId])
+  @@index([lastAppointmentDate])
 }
 
 model MoegoOrder {
@@ -1075,6 +1090,9 @@ model MoegoOrder {
   /// synced (or reference a customer outside the backfill window). We
   /// resolve the join in application code via metrics aggregations.
   customerMoegoId     String?
+  /// Which MoeGo business (location) this order belongs to. Required
+  /// for per-location revenue breakdowns.
+  businessId          String?
   status              String?
   /// Pre-tax subtotal in cents.
   subTotalCents       Int      @default(0)
@@ -1083,13 +1101,26 @@ model MoegoOrder {
   /// What the customer actually paid; the LTV summand.
   paidCents           Int      @default(0)
   refundedCents       Int      @default(0)
+  /// Sales tax in cents.
+  taxCents            Int      @default(0)
+  /// Discounts applied (positive number; subtract from subTotal to get
+  /// the discounted line total).
+  discountCents       Int      @default(0)
+  /// Tips/gratuity in cents.
+  tipsCents           Int      @default(0)
   /// MoeGo's order `createdTime` — when the invoice was opened.
   createdTime         DateTime
+  /// When the sale was actually recorded (money in). Different from
+  /// createdTime when the order sits open for a while before payment.
+  salesDatetime       DateTime?
+  /// When the order was marked complete.
+  completedTime       DateTime?
   lastUpdatedTime     DateTime?
   syncedAt            DateTime @default(now())
 
   @@index([customerMoegoId])
   @@index([createdTime])
+  @@index([businessId])
 }
 
 model MoegoLead {
