@@ -56,8 +56,7 @@ function relative(iso: string | null): string {
 type DiscoveredCompany = {
   id: string;
   name?: string;
-  country?: string;
-};
+  country?: string;};
 
 export function MoegoDashboard() {
   const [days, setDays] = useState<WindowDays>(30);
@@ -68,6 +67,8 @@ export function MoegoDashboard() {
   const [companies, setCompanies] = useState<DiscoveredCompany[] | null>(null);
   const [discovering, setDiscovering] = useState(false);
   const [syncProgress, setSyncProgress] = useState<string | null>(null);
+  /// Range to pass to /api/finance/moego/reset. "" = full backfill.
+  const [resyncDays, setResyncDays] = useState<string>("90");
 
   const load = useCallback(async (window: WindowDays) => {
     setLoading(true);
@@ -198,19 +199,37 @@ export function MoegoDashboard() {
           >
             {syncing ? "Syncing…" : "Sync now"}
           </Button>
+          <select
+            value={resyncDays}
+            onChange={(e) => setResyncDays(e.target.value)}
+            disabled={syncing}
+            className="text-xs border border-gray-200 rounded-md px-2 py-1.5 bg-white"
+          >
+            <option value="30">Last 30 days</option>
+            <option value="90">Last 90 days</option>
+            <option value="180">Last 180 days</option>
+            <option value="365">Last 1 year</option>
+            <option value="730">Last 2 years</option>
+            <option value="">From scratch</option>
+          </select>
           <Button
             variant="ghost"
             size="sm"
             onClick={async () => {
+              const label =
+                resyncDays === ""
+                  ? "every customer, order, and lead from MoeGo (slow for big histories)"
+                  : `the last ${resyncDays} days of customers, orders, and leads`;
               if (
                 !confirm(
-                  "Reset all sync watermarks? The next sync will re-pull every customer and order from MoeGo to apply any parsing changes. This is slow for large histories but safe — existing rows are overwritten in place."
+                  `Resync ${label}? Existing rows are overwritten in place (safe).`
                 )
               )
                 return;
-              const res = await fetch("/api/finance/moego/reset", {
-                method: "POST",
-              });
+              const url = resyncDays
+                ? `/api/finance/moego/reset?days=${resyncDays}`
+                : "/api/finance/moego/reset";
+              const res = await fetch(url, { method: "POST" });
               if (res.ok) {
                 await runSync();
               } else {
@@ -222,7 +241,7 @@ export function MoegoDashboard() {
             }}
             disabled={syncing}
           >
-            Resync from scratch
+            Resync window
           </Button>
           <Button
             variant="ghost"
