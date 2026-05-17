@@ -17,21 +17,37 @@ type CustomerRow = {
   lastOrderTime: string | null;
 };
 
+type Sort =
+  | "name"
+  | "leadSource"
+  | "created"
+  | "orders"
+  | "ltv"
+  | "lastOrder";
+type Dir = "asc" | "desc";
+
 type ApiResponse = {
   rows: CustomerRow[];
   total: number;
   page: number;
   pageSize: number;
-  sort: "ltv" | "recent" | "created";
+  sort: Sort;
+  dir: Dir;
 };
 
-type Sort = ApiResponse["sort"];
-
-const SORTS: { value: Sort; label: string }[] = [
-  { value: "ltv", label: "LTV" },
-  { value: "recent", label: "Last order" },
-  { value: "created", label: "Newest" },
-];
+/**
+ * Default direction per column — picked so the first click on a header
+ * does the obvious thing. Re-clicking the active column flips the
+ * direction.
+ */
+const DEFAULT_DIR: Record<Sort, Dir> = {
+  name: "asc",
+  leadSource: "asc",
+  created: "desc",
+  orders: "desc",
+  ltv: "desc",
+  lastOrder: "desc",
+};
 
 function dollars(cents: number): string {
   return (cents / 100).toLocaleString("en-US", {
@@ -53,6 +69,7 @@ function shortDate(iso: string | null): string {
 export function CustomersTable() {
   const [page, setPage] = useState(1);
   const [sort, setSort] = useState<Sort>("ltv");
+  const [dir, setDir] = useState<Dir>("desc");
   /// `search` is the live input; `debounced` lags 300ms behind so we
   /// don't fire a query on every keystroke.
   const [search, setSearch] = useState("");
@@ -70,7 +87,7 @@ export function CustomersTable() {
   // on page 5 of one filter sees an empty page after switching.
   useEffect(() => {
     setPage(1);
-  }, [debounced, sort]);
+  }, [debounced, sort, dir]);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -79,6 +96,7 @@ export function CustomersTable() {
       const params = new URLSearchParams({
         page: String(page),
         sort,
+        dir,
       });
       if (debounced) params.set("search", debounced);
       const res = await fetch(
@@ -95,13 +113,29 @@ export function CustomersTable() {
     } finally {
       setLoading(false);
     }
-  }, [page, sort, debounced]);
+  }, [page, sort, dir, debounced]);
 
   useEffect(() => {
     void load();
   }, [load]);
 
-  const totalPages = data ? Math.max(1, Math.ceil(data.total / data.pageSize)) : 1;
+  /**
+   * Click handler for column headers: first click on a column sorts
+   * by that column with its default direction; clicking the active
+   * column flips between asc and desc.
+   */
+  function toggleSort(col: Sort) {
+    if (sort === col) {
+      setDir((d) => (d === "asc" ? "desc" : "asc"));
+    } else {
+      setSort(col);
+      setDir(DEFAULT_DIR[col]);
+    }
+  }
+
+  const totalPages = data
+    ? Math.max(1, Math.ceil(data.total / data.pageSize))
+    : 1;
 
   return (
     <Card>
@@ -111,32 +145,15 @@ export function CustomersTable() {
             <h2 className="text-base font-semibold text-gray-900">Customers</h2>
             <p className="text-xs text-gray-500 mt-1">
               One row per MoeGo customer. LTV is sum of paidAmount across all
-              their orders.
+              their orders. Click a column header to sort.
             </p>
           </div>
-          <div className="flex items-center gap-2">
-            <Input
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search name, email, phone…"
-              className="w-56"
-            />
-            <div className="flex gap-1 bg-gray-100 rounded-lg p-1">
-              {SORTS.map((s) => (
-                <button
-                  key={s.value}
-                  onClick={() => setSort(s.value)}
-                  className={`px-2.5 py-1 text-xs font-medium rounded-md transition-colors ${
-                    sort === s.value
-                      ? "bg-white text-gray-900 shadow-sm"
-                      : "text-gray-600 hover:text-gray-900"
-                  }`}
-                >
-                  {s.label}
-                </button>
-              ))}
-            </div>
-          </div>
+          <Input
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Search name, email, phone…"
+            className="w-56"
+          />
         </div>
       </CardHeader>
       <CardContent className="pt-0">
@@ -157,13 +174,51 @@ export function CustomersTable() {
               <table className="w-full text-sm">
                 <thead>
                   <tr className="text-left text-xs text-gray-500 uppercase tracking-wide border-b border-gray-200">
-                    <th className="py-2 font-medium">Name</th>
+                    <SortHeader
+                      col="name"
+                      label="Name"
+                      sort={sort}
+                      dir={dir}
+                      onClick={toggleSort}
+                    />
                     <th className="py-2 font-medium">Contact</th>
-                    <th className="py-2 font-medium">Lead source</th>
-                    <th className="py-2 font-medium">Acquired</th>
-                    <th className="py-2 font-medium text-right">Orders</th>
-                    <th className="py-2 font-medium text-right">LTV</th>
-                    <th className="py-2 font-medium">Last order</th>
+                    <SortHeader
+                      col="leadSource"
+                      label="Lead source"
+                      sort={sort}
+                      dir={dir}
+                      onClick={toggleSort}
+                    />
+                    <SortHeader
+                      col="created"
+                      label="Acquired"
+                      sort={sort}
+                      dir={dir}
+                      onClick={toggleSort}
+                    />
+                    <SortHeader
+                      col="orders"
+                      label="Orders"
+                      sort={sort}
+                      dir={dir}
+                      onClick={toggleSort}
+                      align="right"
+                    />
+                    <SortHeader
+                      col="ltv"
+                      label="LTV"
+                      sort={sort}
+                      dir={dir}
+                      onClick={toggleSort}
+                      align="right"
+                    />
+                    <SortHeader
+                      col="lastOrder"
+                      label="Last order"
+                      sort={sort}
+                      dir={dir}
+                      onClick={toggleSort}
+                    />
                   </tr>
                 </thead>
                 <tbody>
@@ -241,5 +296,38 @@ export function CustomersTable() {
         )}
       </CardContent>
     </Card>
+  );
+}
+
+function SortHeader({
+  col,
+  label,
+  sort,
+  dir,
+  onClick,
+  align = "left",
+}: {
+  col: Sort;
+  label: string;
+  sort: Sort;
+  dir: Dir;
+  onClick: (col: Sort) => void;
+  align?: "left" | "right";
+}) {
+  const active = sort === col;
+  const arrow = active ? (dir === "asc" ? "↑" : "↓") : "";
+  return (
+    <th className={`py-2 font-medium ${align === "right" ? "text-right" : ""}`}>
+      <button
+        type="button"
+        onClick={() => onClick(col)}
+        className={`uppercase tracking-wide hover:text-gray-900 transition-colors ${
+          active ? "text-gray-900" : "text-gray-500"
+        }`}
+      >
+        {label}
+        {active && <span className="ml-1">{arrow}</span>}
+      </button>
+    </th>
   );
 }
