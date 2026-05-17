@@ -235,6 +235,20 @@ export type MoegoMoney =
   | null
   | undefined;
 
+/**
+ * `referralSource` is typed as MoeGo's `ReferralSource` enum/struct.
+ * In practice it serializes as either a plain string ("Instagram") or
+ * an object that carries a display label (e.g. `{ name: "Instagram",
+ * id: "..." }`). Normalize both via `readReferralSource()`.
+ */
+export type MoegoReferralSource =
+  | string
+  | { name?: string; value?: string; label?: string; id?: string }
+  | null
+  | undefined;
+
+export type MoegoCustomerTag = string | { name?: string; label?: string };
+
 export type MoegoCustomerRow = {
   id: string;
   /// MoeGo splits the name into `firstName` + `lastName` — there is no
@@ -249,6 +263,14 @@ export type MoegoCustomerRow = {
   /// CreateCustomer request body uses `phone`, the list response uses
   /// `mainPhoneNumber`).
   phone?: string;
+  /// Primary lead-source signal on the customer object.
+  referralSource?: MoegoReferralSource;
+  /// Secondary lead-source signal (plain string).
+  source?: string;
+  preferredBusinessId?: string;
+  lastAppointmentDate?: string;
+  nextAppointmentDate?: string;
+  tags?: MoegoCustomerTag[];
   createdTime: string; // ISO 8601
   lastUpdatedTime?: string;
   customFields?: Record<string, unknown>;
@@ -257,25 +279,62 @@ export type MoegoCustomerRow = {
 export type MoegoOrderRow = {
   id: string;
   customerId?: string;
+  businessId?: string;
   status?: string;
   subTotalAmount?: MoegoMoney;
   totalAmount?: MoegoMoney;
   paidAmount?: MoegoMoney;
   refundedAmount?: MoegoMoney;
+  taxAmount?: MoegoMoney;
+  discountAmount?: MoegoMoney;
+  tipsAmount?: MoegoMoney;
   createdTime: string;
   lastUpdatedTime?: string;
+  salesDatetime?: string;
+  completedTime?: string;
 };
 
 export type MoegoLeadRow = {
   id: string;
   name?: string;
   mainPhoneNumber?: string;
-  referralSource?: string;
+  referralSource?: MoegoReferralSource;
   lifeCycleId?: string;
   actionStatusId?: string;
   createdTime: string;
   lastUpdatedTime?: string;
 };
+
+/**
+ * Coerce MoeGo's `ReferralSource` (string or labelled object) down to
+ * a single display string. Returns null when nothing usable is set.
+ */
+export function readReferralSource(rs: MoegoReferralSource): string | null {
+  if (rs == null) return null;
+  if (typeof rs === "string") return rs.trim() || null;
+  const candidate = rs.name ?? rs.label ?? rs.value;
+  if (typeof candidate === "string" && candidate.trim()) return candidate.trim();
+  return null;
+}
+
+/**
+ * Coerce a MoeGo tag list (strings or labelled objects) into a clean
+ * string[] suitable for the Postgres TEXT[] column.
+ */
+export function readTags(tags: MoegoCustomerTag[] | undefined): string[] {
+  if (!tags || !Array.isArray(tags)) return [];
+  const out: string[] = [];
+  for (const t of tags) {
+    if (typeof t === "string") {
+      const v = t.trim();
+      if (v) out.push(v);
+    } else if (t && typeof t === "object") {
+      const v = (t.name ?? t.label)?.trim?.();
+      if (v) out.push(v);
+    }
+  }
+  return out;
+}
 
 /**
  * MoeGo serializes money as a google.type.Money object

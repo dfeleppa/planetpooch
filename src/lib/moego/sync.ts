@@ -2,6 +2,8 @@ import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import {
   listBusinesses,
+  readReferralSource,
+  readTags,
   streamCustomers,
   streamLeads,
   streamOrders,
@@ -88,15 +90,24 @@ async function setWatermark(
 }
 
 /**
- * MoeGo customers carry an optional `field_lead_source_detail` custom
- * field. Pull it out as the customer's lead source if present — otherwise
- * we'll fall back to phone-matched leads after all three resources sync.
+ * Try multiple MoeGo signals to determine a customer's lead source.
+ * Priority is roughly "most authoritative first":
+ *   1. customer.referralSource — the typed field MoeGo intends for this
+ *   2. customer.source — plain string "acquisition channel"
+ *   3. customFields.field_lead_source_detail — a common custom-field
+ *      name some accounts use for in-house tracking
+ * Anything still null at this point will be backfilled later by phone-
+ * matched MoegoLead.referralSource in attributeLeadSources().
  */
 function customerLeadSource(row: MoegoCustomerRow): string | null {
+  const ref = readReferralSource(row.referralSource);
+  if (ref) return ref;
+  if (row.source && row.source.trim()) return row.source.trim();
   const cf = row.customFields;
-  if (!cf || typeof cf !== "object") return null;
-  const v = (cf as Record<string, unknown>)["field_lead_source_detail"];
-  if (typeof v === "string" && v.trim()) return v.trim();
+  if (cf && typeof cf === "object") {
+    const v = (cf as Record<string, unknown>)["field_lead_source_detail"];
+    if (typeof v === "string" && v.trim()) return v.trim();
+  }
   return null;
 }
 
@@ -123,6 +134,12 @@ function customerDisplayName(r: MoegoCustomerRow): string | null {
   return parts.join(" ").trim();
 }
 
+function parseDate(s: string | undefined): Date | null {
+  if (!s) return null;
+  const d = new Date(s);
+  return Number.isNaN(d.getTime()) ? null : d;
+}
+
 async function upsertCustomerPage(rows: MoegoCustomerRow[]): Promise<number> {
   if (rows.length === 0) return 0;
   const now = new Date();
@@ -130,22 +147,31 @@ async function upsertCustomerPage(rows: MoegoCustomerRow[]): Promise<number> {
     (r) =>
       Prisma.sql`(${"cmoego_" + r.id}, ${r.id}, ${customerDisplayName(r)}, ${
         r.email ?? null
-      }, ${r.mainPhoneNumber ?? r.phone ?? null}, ${customerLeadSource(r)}, ${new Date(
-        r.createdTime
-      )}, ${r.lastUpdatedTime ? new Date(r.lastUpdatedTime) : null}, ${now})`
+      }, ${r.mainPhoneNumber ?? r.phone ?? null}, ${customerLeadSource(r)}, ${
+        r.preferredBusinessId ?? null
+      }, ${parseDate(r.lastAppointmentDate)}, ${parseDate(
+        r.nextAppointmentDate
+      )}, ${readTags(r.tags)}, ${new Date(r.createdTime)}, ${
+        r.lastUpdatedTime ? new Date(r.lastUpdatedTime) : null
+      }, ${now})`
   );
   await prisma.$executeRaw`
     INSERT INTO "MoegoCustomer"
       ("id", "moegoId", "name", "email", "mainPhoneNumber", "leadSource",
-       "createdTime", "lastUpdatedTime", "syncedAt")
+       "preferredBusinessId", "lastAppointmentDate", "nextAppointmentDate",
+       "tags", "createdTime", "lastUpdatedTime", "syncedAt")
     VALUES ${Prisma.join(values)}
     ON CONFLICT ("moegoId") DO UPDATE SET
-      "name"            = EXCLUDED."name",
-      "email"           = EXCLUDED."email",
-      "mainPhoneNumber" = EXCLUDED."mainPhoneNumber",
-      "leadSource"      = COALESCE(EXCLUDED."leadSource", "MoegoCustomer"."leadSource"),
-      "lastUpdatedTime" = EXCLUDED."lastUpdatedTime",
-      "syncedAt"        = EXCLUDED."syncedAt"
+      "name"                = EXCLUDED."name",
+      "email"               = EXCLUDED."email",
+      "mainPhoneNumber"     = EXCLUDED."mainPhoneNumber",
+      "leadSource"          = COALESCE(EXCLUDED."leadSource", "MoegoCustomer"."leadSource"),
+      "preferredBusinessId" = EXCLUDED."preferredBusinessId",
+      "lastAppointmentDate" = EXCLUDED."lastAppointmentDate",
+      "nextAppointmentDate" = EXCLUDED."nextAppointmentDate",
+      "tags"                = EXCLUDED."tags",
+      "lastUpdatedTime"     = EXCLUDED."lastUpdatedTime",
+      "syncedAt"            = EXCLUDED."syncedAt"
   `;
   return rows.length;
 }
@@ -180,26 +206,38 @@ async function upsertOrderPage(rows: MoegoOrderRow[]): Promise<number> {
   const values = rows.map(
     (r) =>
       Prisma.sql`(${"omoego_" + r.id}, ${r.id}, ${r.customerId ?? null}, ${
-        r.status ?? null
-      }, ${toCents(r.subTotalAmount)}, ${toCents(r.totalAmount)}, ${toCents(
-        r.paidAmount
-      )}, ${toCents(r.refundedAmount)}, ${new Date(r.createdTime)}, ${
+        r.businessId ?? null
+      }, ${r.status ?? null}, ${toCents(r.subTotalAmount)}, ${toCents(
+        r.totalAmount
+      )}, ${toCents(r.paidAmount)}, ${toCents(r.refundedAmount)}, ${toCents(
+        r.taxAmount
+      )}, ${toCents(r.discountAmount)}, ${toCents(r.tipsAmount)}, ${new Date(
+        r.createdTime
+      )}, ${parseDate(r.salesDatetime)}, ${parseDate(r.completedTime)}, ${
         r.lastUpdatedTime ? new Date(r.lastUpdatedTime) : null
       }, ${now})`
   );
   await prisma.$executeRaw`
     INSERT INTO "MoegoOrder"
-      ("id", "moegoId", "customerMoegoId", "status", "subTotalCents",
-       "totalCents", "paidCents", "refundedCents", "createdTime",
+      ("id", "moegoId", "customerMoegoId", "businessId", "status",
+       "subTotalCents", "totalCents", "paidCents", "refundedCents",
+       "taxCents", "discountCents", "tipsCents",
+       "createdTime", "salesDatetime", "completedTime",
        "lastUpdatedTime", "syncedAt")
     VALUES ${Prisma.join(values)}
     ON CONFLICT ("moegoId") DO UPDATE SET
       "customerMoegoId" = EXCLUDED."customerMoegoId",
+      "businessId"      = EXCLUDED."businessId",
       "status"          = EXCLUDED."status",
       "subTotalCents"   = EXCLUDED."subTotalCents",
       "totalCents"      = EXCLUDED."totalCents",
       "paidCents"       = EXCLUDED."paidCents",
       "refundedCents"   = EXCLUDED."refundedCents",
+      "taxCents"        = EXCLUDED."taxCents",
+      "discountCents"   = EXCLUDED."discountCents",
+      "tipsCents"       = EXCLUDED."tipsCents",
+      "salesDatetime"   = EXCLUDED."salesDatetime",
+      "completedTime"   = EXCLUDED."completedTime",
       "lastUpdatedTime" = EXCLUDED."lastUpdatedTime",
       "syncedAt"        = EXCLUDED."syncedAt"
   `;
@@ -241,7 +279,7 @@ async function upsertLeadPage(rows: MoegoLeadRow[]): Promise<number> {
     (r) =>
       Prisma.sql`(${"lmoego_" + r.id}, ${r.id}, ${r.name ?? null}, ${
         r.mainPhoneNumber ?? null
-      }, ${r.referralSource ?? null}, ${r.lifeCycleId ?? null}, ${
+      }, ${readReferralSource(r.referralSource)}, ${r.lifeCycleId ?? null}, ${
         r.actionStatusId ?? null
       }, ${new Date(r.createdTime)}, ${
         r.lastUpdatedTime ? new Date(r.lastUpdatedTime) : null

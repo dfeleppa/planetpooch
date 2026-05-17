@@ -12,6 +12,9 @@ type CustomerRow = {
   email: string | null;
   mainPhoneNumber: string | null;
   leadSource: string | null;
+  preferredBusinessId: string | null;
+  lastAppointmentDate: Date | null;
+  tags: string[];
   createdTime: Date;
   orderCount: bigint;
   revenueCents: bigint;
@@ -120,6 +123,9 @@ export async function GET(req: NextRequest) {
       c."email",
       c."mainPhoneNumber",
       c."leadSource",
+      c."preferredBusinessId",
+      c."lastAppointmentDate",
+      c."tags",
       c."createdTime",
       COUNT(o."id")              AS "orderCount",
       COALESCE(SUM(o."paidCents"), 0) AS "revenueCents",
@@ -147,6 +153,9 @@ export async function GET(req: NextRequest) {
       email: r.email,
       mainPhoneNumber: r.mainPhoneNumber,
       leadSource: r.leadSource,
+      preferredBusinessId: r.preferredBusinessId,
+      lastAppointmentDate: r.lastAppointmentDate,
+      tags: r.tags ?? [],
       createdTime: r.createdTime,
       orderCount: Number(r.orderCount),
       revenueCents: Number(r.revenueCents),

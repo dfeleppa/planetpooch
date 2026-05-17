@@ -11,6 +11,9 @@ type CustomerRow = {
   email: string | null;
   mainPhoneNumber: string | null;
   leadSource: string | null;
+  preferredBusinessId: string | null;
+  lastAppointmentDate: string | null;
+  tags: string[];
   createdTime: string;
   orderCount: number;
   revenueCents: number;
@@ -189,6 +192,7 @@ export function CustomersTable() {
                       dir={dir}
                       onClick={toggleSort}
                     />
+                    <th className="py-2 font-medium">Tags</th>
                     <SortHeader
                       col="created"
                       label="Acquired"
@@ -251,6 +255,27 @@ export function CustomersTable() {
                       <td className="py-2 text-gray-700 text-xs">
                         {r.leadSource ?? (
                           <span className="text-gray-400">unattributed</span>
+                        )}
+                      </td>
+                      <td className="py-2 text-xs">
+                        {r.tags.length === 0 ? (
+                          <span className="text-gray-400">—</span>
+                        ) : (
+                          <div className="flex flex-wrap gap-1">
+                            {r.tags.slice(0, 3).map((t) => (
+                              <span
+                                key={t}
+                                className="px-1.5 py-0.5 rounded bg-gray-100 text-gray-700"
+                              >
+                                {t}
+                              </span>
+                            ))}
+                            {r.tags.length > 3 && (
+                              <span className="text-gray-500">
+                                +{r.tags.length - 3}
+                              </span>
+                            )}
+                          </div>
                         )}
                       </td>
                       <td className="py-2 text-gray-700 text-xs">

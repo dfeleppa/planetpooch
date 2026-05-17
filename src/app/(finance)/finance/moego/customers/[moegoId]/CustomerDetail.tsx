@@ -9,6 +9,10 @@ type Customer = {
   email: string | null;
   mainPhoneNumber: string | null;
   leadSource: string | null;
+  preferredBusinessId: string | null;
+  lastAppointmentDate: string | null;
+  nextAppointmentDate: string | null;
+  tags: string[];
   createdTime: string;
   lastUpdatedTime: string | null;
   syncedAt: string;
@@ -16,12 +20,18 @@ type Customer = {
 
 type Order = {
   moegoId: string;
+  businessId: string | null;
   status: string | null;
   subTotalCents: number;
   totalCents: number;
   paidCents: number;
   refundedCents: number;
+  taxCents: number;
+  discountCents: number;
+  tipsCents: number;
   createdTime: string;
+  salesDatetime: string | null;
+  completedTime: string | null;
   lastUpdatedTime: string | null;
 };
 
@@ -195,6 +205,38 @@ export function CustomerDetail({ moegoId }: { moegoId: string }) {
               <Row label="Email" value={customer.email} />
               <Row label="Phone" value={customer.mainPhoneNumber} />
               <Row label="Lead source" value={customer.leadSource} />
+              <Row
+                label="Preferred location"
+                value={customer.preferredBusinessId}
+                mono
+              />
+              <Row
+                label="Last appointment"
+                value={shortDate(customer.lastAppointmentDate)}
+              />
+              <Row
+                label="Next appointment"
+                value={shortDate(customer.nextAppointmentDate)}
+              />
+              <div className="flex justify-between gap-3">
+                <dt className="text-gray-500">Tags</dt>
+                <dd className="text-right">
+                  {customer.tags.length === 0 ? (
+                    <span className="text-gray-400">—</span>
+                  ) : (
+                    <div className="flex flex-wrap gap-1 justify-end">
+                      {customer.tags.map((t) => (
+                        <span
+                          key={t}
+                          className="px-1.5 py-0.5 rounded bg-gray-100 text-gray-700 text-xs"
+                        >
+                          {t}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                </dd>
+              </div>
               <Row label="MoeGo ID" value={customer.moegoId} mono />
               <Row label="Last updated" value={dateTime(customer.lastUpdatedTime)} />
               <Row label="Synced" value={dateTime(customer.syncedAt)} />
