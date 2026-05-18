@@ -10,18 +10,19 @@ type LeadSourceRow = {
   source: string;
   customers: number;
   revenueCents: number;
-  avgLtvCents: number;
+  avgRevenueCents: number;
 };
 
 type MoegoMetrics = {
-  windowDays: number;
   windowStart: string;
   windowEnd: string;
+  revenueCents: number;
+  orderCount: number;
+  uniqueCustomers: number;
   newCustomers: number;
-  cohortRevenueCents: number;
-  avgLtvCents: number;
-  allTimeAvgLtvCents: number;
   totalCustomers: number;
+  avgRevenuePerCustomerCents: number;
+  allTimeAvgLtvCents: number;
   metaSpendCents: number;
   cacCents: number;
   leadSources: LeadSourceRow[];
@@ -408,26 +409,29 @@ export function MoegoDashboard() {
         <Card>
           <CardContent className="py-4">
             <p className="text-xs text-gray-500 uppercase tracking-wide">
-              New Customers
+              Revenue
             </p>
             <p className="text-3xl font-bold text-gray-900 mt-1">
-              {loading ? "—" : metrics?.newCustomers ?? 0}
+              {loading || !metrics ? "—" : dollars(metrics.revenueCents)}
             </p>
             <p className="text-xs text-gray-400 mt-1">
-              total: {metrics?.totalCustomers ?? 0}
+              {metrics?.orderCount ?? 0} orders &middot;{" "}
+              {metrics?.uniqueCustomers ?? 0} customers
             </p>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="py-4">
             <p className="text-xs text-gray-500 uppercase tracking-wide">
-              Avg LTV (cohort)
+              Avg Revenue / Customer
             </p>
             <p className="text-3xl font-bold text-gray-900 mt-1">
-              {loading || !metrics ? "—" : dollars(metrics.avgLtvCents)}
+              {loading || !metrics
+                ? "—"
+                : dollars(metrics.avgRevenuePerCustomerCents)}
             </p>
             <p className="text-xs text-gray-400 mt-1">
-              all-time:{" "}
+              all-time LTV:{" "}
               {metrics ? dollars(metrics.allTimeAvgLtvCents) : "—"}
             </p>
           </CardContent>
@@ -449,13 +453,13 @@ export function MoegoDashboard() {
         <Card>
           <CardContent className="py-4">
             <p className="text-xs text-gray-500 uppercase tracking-wide">
-              Cohort Revenue
+              New Customers
             </p>
             <p className="text-3xl font-bold text-gray-900 mt-1">
-              {loading || !metrics ? "—" : dollars(metrics.cohortRevenueCents)}
+              {loading ? "—" : metrics?.newCustomers ?? 0}
             </p>
             <p className="text-xs text-gray-400 mt-1">
-              paid from new-customer orders
+              total: {metrics?.totalCustomers ?? 0}
             </p>
           </CardContent>
         </Card>
@@ -471,9 +475,8 @@ export function MoegoDashboard() {
             Lead source breakdown
           </h2>
           <p className="text-xs text-gray-500 mt-1">
-            Customers acquired in the selected date range, grouped by
-            MoeGo lead source. Revenue is paidAmount across all orders
-            from those customers.
+            Customers with orders in the selected date range, grouped by
+            MoeGo lead source.
           </p>
         </CardHeader>
         <CardContent className="pt-0">
@@ -490,7 +493,7 @@ export function MoegoDashboard() {
                   <th className="py-2 font-medium">Source</th>
                   <th className="py-2 font-medium text-right">Customers</th>
                   <th className="py-2 font-medium text-right">Revenue</th>
-                  <th className="py-2 font-medium text-right">Avg LTV</th>
+                  <th className="py-2 font-medium text-right">Avg Revenue</th>
                 </tr>
               </thead>
               <tbody>
@@ -507,7 +510,7 @@ export function MoegoDashboard() {
                       {dollars(row.revenueCents)}
                     </td>
                     <td className="py-2 text-right tabular-nums text-gray-700">
-                      {dollars(row.avgLtvCents)}
+                      {dollars(row.avgRevenueCents)}
                     </td>
                   </tr>
                 ))}

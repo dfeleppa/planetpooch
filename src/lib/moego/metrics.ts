@@ -3,34 +3,23 @@ import { prisma } from "@/lib/prisma";
 export type LeadSourceRow = {
   source: string;
   customers: number;
-  /// Total paidAmount across all orders for customers attributed to this
-  /// source — gross lifetime revenue, not per-customer.
   revenueCents: number;
-  /// revenueCents / customers — average LTV for the cohort.
-  avgLtvCents: number;
+  avgRevenueCents: number;
 };
 
 export type MoegoMetrics = {
   windowStart: string;
   windowEnd: string;
+  revenueCents: number;
+  orderCount: number;
+  uniqueCustomers: number;
   newCustomers: number;
-  /// Sum of paidAmount across all orders whose customer was acquired in
-  /// the window. This is the "cohort revenue" used for the windowed LTV.
-  cohortRevenueCents: number;
-  /// cohortRevenueCents / newCustomers. Zero customers → 0.
-  avgLtvCents: number;
-  /// All-time LTV across all customers, regardless of window. Useful as a
-  /// "what's a customer worth to us" baseline alongside the windowed view.
-  allTimeAvgLtvCents: number;
   totalCustomers: number;
-  /// Meta ad spend for the same window, summed from MetaAdInsight.
+  avgRevenuePerCustomerCents: number;
+  allTimeAvgLtvCents: number;
   metaSpendCents: number;
-  /// metaSpendCents / newCustomers. Blended CAC against Meta only —
-  /// non-Meta sources (organic, referral) deflate this; that's expected.
   cacCents: number;
   leadSources: LeadSourceRow[];
-  /// When the last successful sync of each resource finished. Null if
-  /// that resource has never been synced.
   lastSync: {
     customer: string | null;
     order: string | null;
@@ -48,82 +37,77 @@ export async function getMoegoMetrics({
   const windowStart = from;
   const windowEnd = to;
 
-  // ---- customers acquired in window + their orders ----
-  const newCustomers = await prisma.moegoCustomer.findMany({
+  const windowOrders = await prisma.moegoOrder.findMany({
     where: { createdTime: { gte: windowStart, lt: windowEnd } },
-    select: { moegoId: true, leadSource: true },
+    select: { customerMoegoId: true, paidCents: true },
   });
-  const newCustomerIds = newCustomers.map((c) => c.moegoId);
 
-  let cohortRevenueCents = 0;
-  if (newCustomerIds.length > 0) {
-    const cohortRevenue = await prisma.moegoOrder.aggregate({
-      where: { customerMoegoId: { in: newCustomerIds } },
-      _sum: { paidCents: true },
-    });
-    cohortRevenueCents = cohortRevenue._sum.paidCents ?? 0;
-  }
+  const revenueCents = windowOrders.reduce((s, o) => s + o.paidCents, 0);
+  const orderCount = windowOrders.length;
 
-  // ---- all-time LTV baseline ----
-  const [allTimeRevenue, totalCustomers] = await Promise.all([
-    prisma.moegoOrder.aggregate({ _sum: { paidCents: true } }),
-    prisma.moegoCustomer.count(),
-  ]);
+  const uniqueCustomerIds = new Set(
+    windowOrders.map((o) => o.customerMoegoId).filter(Boolean) as string[],
+  );
+  const uniqueCustomers = uniqueCustomerIds.size;
+
+  const avgRevenuePerCustomerCents =
+    uniqueCustomers > 0 ? Math.round(revenueCents / uniqueCustomers) : 0;
+
+  const [newCustomerCount, allTimeRevenue, totalCustomers, metaSpend] =
+    await Promise.all([
+      prisma.moegoCustomer.count({
+        where: { createdTime: { gte: windowStart, lt: windowEnd } },
+      }),
+      prisma.moegoOrder.aggregate({ _sum: { paidCents: true } }),
+      prisma.moegoCustomer.count(),
+      prisma.metaAdInsight.aggregate({
+        where: { date: { gte: windowStart, lt: windowEnd } },
+        _sum: { spendCents: true },
+      }),
+    ]);
+
   const allTimeAvgLtvCents =
     totalCustomers > 0
       ? Math.round((allTimeRevenue._sum.paidCents ?? 0) / totalCustomers)
       : 0;
-
-  // ---- Meta spend in window (sum cents from MetaAdInsight) ----
-  const metaSpend = await prisma.metaAdInsight.aggregate({
-    where: { date: { gte: windowStart, lt: windowEnd } },
-    _sum: { spendCents: true },
-  });
   const metaSpendCents = metaSpend._sum.spendCents ?? 0;
 
-  // ---- lead source breakdown for the window ----
-  // groupBy on the cohort gives us the per-source customer count cheaply.
-  const sourceGroups = await prisma.moegoCustomer.groupBy({
-    by: ["leadSource"],
-    where: { createdTime: { gte: windowStart, lt: windowEnd } },
-    _count: { _all: true },
-  });
-
-  // Revenue per source needs a per-source order roll-up. We get all orders
-  // for the cohort once and bucket in memory — cheaper than N source-keyed
-  // queries when source cardinality is high.
-  const cohortOrders =
-    newCustomerIds.length > 0
-      ? await prisma.moegoOrder.findMany({
-          where: { customerMoegoId: { in: newCustomerIds } },
-          select: { customerMoegoId: true, paidCents: true },
+  // ---- lead source breakdown based on orders in window ----
+  const customerIds = [...uniqueCustomerIds];
+  const customers =
+    customerIds.length > 0
+      ? await prisma.moegoCustomer.findMany({
+          where: { moegoId: { in: customerIds } },
+          select: { moegoId: true, leadSource: true },
         })
       : [];
 
-  const sourceByCustomer = new Map<string, string | null>();
-  for (const c of newCustomers) sourceByCustomer.set(c.moegoId, c.leadSource);
+  const sourceByCustomer = new Map<string, string>();
+  for (const c of customers)
+    sourceByCustomer.set(c.moegoId, c.leadSource ?? "(unattributed)");
 
-  const revenueBySource = new Map<string, number>();
-  for (const o of cohortOrders) {
-    if (!o.customerMoegoId) continue;
-    const source =
-      sourceByCustomer.get(o.customerMoegoId) ?? "(unattributed)";
-    revenueBySource.set(source, (revenueBySource.get(source) ?? 0) + o.paidCents);
+  const sourceAgg = new Map<string, { customers: Set<string>; revenue: number }>();
+  for (const o of windowOrders) {
+    const source = o.customerMoegoId
+      ? sourceByCustomer.get(o.customerMoegoId) ?? "(unattributed)"
+      : "(unattributed)";
+    let entry = sourceAgg.get(source);
+    if (!entry) {
+      entry = { customers: new Set(), revenue: 0 };
+      sourceAgg.set(source, entry);
+    }
+    if (o.customerMoegoId) entry.customers.add(o.customerMoegoId);
+    entry.revenue += o.paidCents;
   }
 
-  const leadSources: LeadSourceRow[] = sourceGroups
-    .map((g) => {
-      const source = g.leadSource ?? "(unattributed)";
-      const customers = g._count._all;
-      const revenueCents = revenueBySource.get(source) ?? 0;
-      return {
-        source,
-        customers,
-        revenueCents,
-        avgLtvCents: customers > 0 ? Math.round(revenueCents / customers) : 0,
-      };
-    })
-    .sort((a, b) => b.customers - a.customers);
+  const leadSources: LeadSourceRow[] = [...sourceAgg.entries()]
+    .map(([source, { customers: custs, revenue }]) => ({
+      source,
+      customers: custs.size,
+      revenueCents: revenue,
+      avgRevenueCents: custs.size > 0 ? Math.round(revenue / custs.size) : 0,
+    }))
+    .sort((a, b) => b.revenueCents - a.revenueCents);
 
   // ---- sync watermarks ----
   const syncRows = await prisma.moegoSyncState.findMany();
@@ -142,19 +126,16 @@ export async function getMoegoMetrics({
   return {
     windowStart: windowStart.toISOString(),
     windowEnd: windowEnd.toISOString(),
-    newCustomers: newCustomers.length,
-    cohortRevenueCents,
-    avgLtvCents:
-      newCustomers.length > 0
-        ? Math.round(cohortRevenueCents / newCustomers.length)
-        : 0,
-    allTimeAvgLtvCents,
+    revenueCents,
+    orderCount,
+    uniqueCustomers,
+    newCustomers: newCustomerCount,
     totalCustomers,
+    avgRevenuePerCustomerCents,
+    allTimeAvgLtvCents,
     metaSpendCents,
     cacCents:
-      newCustomers.length > 0
-        ? Math.round(metaSpendCents / newCustomers.length)
-        : 0,
+      newCustomerCount > 0 ? Math.round(metaSpendCents / newCustomerCount) : 0,
     leadSources,
     lastSync,
   };
