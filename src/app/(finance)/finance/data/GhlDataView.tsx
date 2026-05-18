@@ -394,6 +394,15 @@ export function GhlDataView() {
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [cachedAt, setCachedAt] = useState<string | null>(null);
+  const [services, setServices] = useState<Record<string, string>>({});
+
+  const loadServices = () =>
+    fetch("/api/ghl/data/service")
+      .then((r) => r.json())
+      .then((d: { services: Record<string, string> }) =>
+        setServices(d.services),
+      )
+      .catch(() => {});
 
   const load = (refresh = false) => {
     if (refresh) setRefreshing(true);
@@ -427,7 +436,21 @@ export function GhlDataView() {
       });
   };
 
-  useEffect(() => { load(); }, []);
+  useEffect(() => { load(); loadServices(); }, []);
+
+  const updateService = (opportunityId: string, service: string | null) => {
+    setServices((prev) => {
+      const next = { ...prev };
+      if (service) next[opportunityId] = service;
+      else delete next[opportunityId];
+      return next;
+    });
+    fetch("/api/ghl/data/service", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ opportunityId, service }),
+    }).catch(() => {});
+  };
 
   if (loading) {
     return (
@@ -511,6 +534,62 @@ export function GhlDataView() {
       <SummaryTable title="By Campaign (First Touch)" rows={byCampaign} />
       <SummaryTable title="By Medium (First Touch)" rows={byMedium} />
       <SummaryTable title="By Ad Content (First Touch)" rows={byContent} />
+
+      {/* Per-opportunity table with Service dropdown */}
+      <Card>
+        <CardContent className="p-0">
+          <h3 className="text-sm font-semibold text-gray-700 px-4 pt-4 pb-2">
+            Opportunities
+          </h3>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b text-left text-gray-500">
+                  <th className="px-4 py-2 font-medium">Name</th>
+                  <th className="px-4 py-2 font-medium">Status</th>
+                  <th className="px-4 py-2 font-medium">Source</th>
+                  <th className="px-4 py-2 font-medium text-right">Value</th>
+                  <th className="px-4 py-2 font-medium">Created</th>
+                  <th className="px-4 py-2 font-medium">Service</th>
+                </tr>
+              </thead>
+              <tbody>
+                {opportunities.map((o) => (
+                  <tr
+                    key={o.id}
+                    className="border-b last:border-0 hover:bg-gray-50"
+                  >
+                    <td className="px-4 py-2 font-medium text-gray-900 max-w-[200px] truncate">
+                      {o.name}
+                    </td>
+                    <td className="px-4 py-2 text-gray-600">{o.status || "—"}</td>
+                    <td className="px-4 py-2 text-gray-600">{o.source || "—"}</td>
+                    <td className="px-4 py-2 text-right text-gray-900">
+                      {fmt(o.monetaryValue)}
+                    </td>
+                    <td className="px-4 py-2 text-gray-600">
+                      {new Date(o.createdAt).toLocaleDateString()}
+                    </td>
+                    <td className="px-4 py-2">
+                      <select
+                        value={services[o.id] ?? ""}
+                        onChange={(e) =>
+                          updateService(o.id, e.target.value || null)
+                        }
+                        className="rounded border border-gray-300 bg-white px-2 py-1 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      >
+                        <option value="">—</option>
+                        <option value="mobile">Mobile</option>
+                        <option value="resort">Resort</option>
+                      </select>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
 }

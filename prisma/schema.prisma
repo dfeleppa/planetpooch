@@ -1141,6 +1141,18 @@ model MoegoLead {
   @@index([referralSource])
 }
 
+/// Maps a GHL opportunity to a service line ("mobile" or "resort") so the
+/// finance dashboard can aggregate opportunity data per business segment.
+model GhlOpportunityService {
+  id            String   @id @default(cuid())
+  opportunityId String   @unique
+  service       String   // "mobile" | "resort"
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([service])
+}
+
 /// Per-resource cursor for incremental MoeGo syncs. We pull rows where
 /// `lastUpdatedTime > lastSyncedAt - overlap` and bump the watermark
 /// after a successful run. Resource is one of "customer" | "order" | "lead".

@@ -250,30 +250,56 @@ export function FinanceDashboard({
   );
 
   const fetchMetric = useCallback(async () => {
-    if (!isManual) { setMetric(EMPTY_METRIC); setLoaded(true); return; }
-    try {
-      const res = await fetch(
-        `/api/finance/metrics?business=${business}&from=${from}&to=${to}`,
-      );
-      const json = await res.json();
-      if (json.metric) {
-        const m = json.metric;
-        setMetric({
-          totalRevenue: m.totalRevenue,
-          totalProfit: m.totalProfit,
-          totalCustomers: m.totalCustomers,
-          totalAdSpend: m.totalAdSpend,
-          totalConversions: m.totalConversions,
-          metaAdSpend: m.metaAdSpend,
-          metaRevenue: m.metaRevenue,
-          googleAdSpend: m.googleAdSpend,
-          googleRevenue: m.googleRevenue,
-        });
-      } else {
+    if (isManual) {
+      try {
+        const res = await fetch(
+          `/api/finance/metrics?business=${business}&from=${from}&to=${to}`,
+        );
+        const json = await res.json();
+        if (json.metric) {
+          const m = json.metric;
+          setMetric({
+            totalRevenue: m.totalRevenue,
+            totalProfit: m.totalProfit,
+            totalCustomers: m.totalCustomers,
+            totalAdSpend: m.totalAdSpend,
+            totalConversions: m.totalConversions,
+            metaAdSpend: m.metaAdSpend,
+            metaRevenue: m.metaRevenue,
+            googleAdSpend: m.googleAdSpend,
+            googleRevenue: m.googleRevenue,
+          });
+        } else {
+          setMetric(EMPTY_METRIC);
+        }
+      } catch {
         setMetric(EMPTY_METRIC);
       }
-    } catch {
-      setMetric(EMPTY_METRIC);
+    } else {
+      try {
+        const res = await fetch(
+          `/api/finance/aggregated?business=${business}&from=${from}&to=${to}`,
+        );
+        const json = await res.json();
+        if (json.metric) {
+          const m = json.metric;
+          setMetric({
+            totalRevenue: m.totalRevenue,
+            totalProfit: m.totalProfit,
+            totalCustomers: m.totalCustomers,
+            totalAdSpend: m.totalAdSpend,
+            totalConversions: m.totalConversions,
+            metaAdSpend: m.metaAdSpend,
+            metaRevenue: m.metaRevenue,
+            googleAdSpend: m.googleAdSpend,
+            googleRevenue: m.googleRevenue,
+          });
+        } else {
+          setMetric(EMPTY_METRIC);
+        }
+      } catch {
+        setMetric(EMPTY_METRIC);
+      }
     }
     setLoaded(true);
   }, [business, from, to, isManual]);
