@@ -22,14 +22,14 @@ export async function PUT(req: NextRequest) {
   }
 
   const body = await req.json();
-  const { opportunityId, service } = body as {
-    opportunityId?: string;
+  const { opportunityIds, service } = body as {
+    opportunityIds?: string[];
     service?: string | null;
   };
 
-  if (!opportunityId) {
+  if (!opportunityIds || opportunityIds.length === 0) {
     return NextResponse.json(
-      { error: "opportunityId is required" },
+      { error: "opportunityIds is required" },
       { status: 400 },
     );
   }
@@ -43,16 +43,20 @@ export async function PUT(req: NextRequest) {
 
   if (!service) {
     await prisma.ghlOpportunityService.deleteMany({
-      where: { opportunityId },
+      where: { opportunityId: { in: opportunityIds } },
     });
     return NextResponse.json({ ok: true, service: null });
   }
 
-  await prisma.ghlOpportunityService.upsert({
-    where: { opportunityId },
-    create: { opportunityId, service },
-    update: { service },
-  });
+  await prisma.$transaction(
+    opportunityIds.map((opportunityId) =>
+      prisma.ghlOpportunityService.upsert({
+        where: { opportunityId },
+        create: { opportunityId, service },
+        update: { service },
+      }),
+    ),
+  );
 
   return NextResponse.json({ ok: true, service });
 }

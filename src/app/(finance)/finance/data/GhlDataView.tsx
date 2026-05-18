@@ -118,29 +118,34 @@ function groupBySource(opps: Opportunity[]): SourceGroup[] {
   return groups.sort((a, b) => b.totalValue - a.totalValue);
 }
 
-function groupByAttribution(opps: Opportunity[]): GroupedRow[] {
-  const map = new Map<string, { count: number; total: number }>();
+type CampaignRow = GroupedRow & { opportunityIds: string[] };
+
+function groupByAttribution(opps: Opportunity[]): CampaignRow[] {
+  const map = new Map<string, { count: number; total: number; ids: string[] }>();
   for (const o of opps) {
     if (o.attributions.length === 0) {
-      const entry = map.get("(no attribution)") ?? { count: 0, total: 0 };
+      const entry = map.get("(no attribution)") ?? { count: 0, total: 0, ids: [] };
       entry.count++;
       entry.total += o.monetaryValue;
+      entry.ids.push(o.id);
       map.set("(no attribution)", entry);
       continue;
     }
     const first = o.attributions.find((a) => a.isFirst) ?? o.attributions[0];
     const label = first.utmCampaign || first.utmSource || first.adSource || "(unknown)";
-    const entry = map.get(label) ?? { count: 0, total: 0 };
+    const entry = map.get(label) ?? { count: 0, total: 0, ids: [] };
     entry.count++;
     entry.total += o.monetaryValue;
+    entry.ids.push(o.id);
     map.set(label, entry);
   }
   return Array.from(map.entries())
-    .map(([label, { count, total }]) => ({
+    .map(([label, { count, total, ids }]) => ({
       label,
       count,
       totalValue: total,
       avgValue: count > 0 ? total / count : 0,
+      opportunityIds: ids,
     }))
     .sort((a, b) => b.totalValue - a.totalValue);
 }
@@ -266,6 +271,109 @@ function SummaryTable({
                 )}
               </td>
               <td className="px-4 py-2 text-right">100%</td>
+            </tr>
+          </tfoot>
+        </table>
+      </CardContent>
+    </Card>
+  );
+}
+
+function getCampaignService(
+  row: CampaignRow,
+  services: Record<string, string>,
+): string {
+  const vals = new Set(
+    row.opportunityIds.map((id) => services[id]).filter(Boolean),
+  );
+  if (vals.size === 1) return [...vals][0];
+  return "";
+}
+
+function CampaignTable({
+  rows,
+  services,
+  onServiceChange,
+}: {
+  rows: CampaignRow[];
+  services: Record<string, string>;
+  onServiceChange: (opportunityIds: string[], service: string | null) => void;
+}) {
+  if (rows.length === 0) return null;
+  const grandTotal = rows.reduce((s, r) => s + r.totalValue, 0);
+
+  return (
+    <Card>
+      <CardContent className="p-0">
+        <h3 className="text-sm font-semibold text-gray-700 px-4 pt-4 pb-2">
+          By Campaign (First Touch)
+        </h3>
+        <table className="w-full text-sm">
+          <thead>
+            <tr className="border-b text-left text-gray-500">
+              <th className="px-4 py-2 font-medium">Label</th>
+              <th className="px-4 py-2 font-medium text-right">Count</th>
+              <th className="px-4 py-2 font-medium text-right">Total Value</th>
+              <th className="px-4 py-2 font-medium text-right">Avg Value</th>
+              <th className="px-4 py-2 font-medium text-right">% of Total</th>
+              <th className="px-4 py-2 font-medium">Service</th>
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map((r) => (
+              <tr key={r.label} className="border-b last:border-0 hover:bg-gray-50">
+                <td className="px-4 py-2 font-medium text-gray-900">
+                  {r.label}
+                </td>
+                <td className="px-4 py-2 text-right text-gray-600">
+                  {r.count.toLocaleString()}
+                </td>
+                <td className="px-4 py-2 text-right text-gray-900">
+                  {fmt(r.totalValue)}
+                </td>
+                <td className="px-4 py-2 text-right text-gray-600">
+                  {fmt(r.avgValue)}
+                </td>
+                <td className="px-4 py-2 text-right text-gray-600">
+                  {grandTotal > 0
+                    ? ((r.totalValue / grandTotal) * 100).toFixed(1) + "%"
+                    : "0%"}
+                </td>
+                <td className="px-4 py-2">
+                  <select
+                    value={getCampaignService(r, services)}
+                    onChange={(e) =>
+                      onServiceChange(
+                        r.opportunityIds,
+                        e.target.value || null,
+                      )
+                    }
+                    className="rounded border border-gray-300 bg-white px-2 py-1 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  >
+                    <option value="">—</option>
+                    <option value="mobile">Mobile</option>
+                    <option value="resort">Resort</option>
+                  </select>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+          <tfoot>
+            <tr className="bg-gray-50 font-semibold">
+              <td className="px-4 py-2">Total</td>
+              <td className="px-4 py-2 text-right">
+                {rows.reduce((s, r) => s + r.count, 0).toLocaleString()}
+              </td>
+              <td className="px-4 py-2 text-right">{fmt(grandTotal)}</td>
+              <td className="px-4 py-2 text-right">
+                {fmt(
+                  rows.reduce((s, r) => s + r.count, 0) > 0
+                    ? grandTotal / rows.reduce((s, r) => s + r.count, 0)
+                    : 0
+                )}
+              </td>
+              <td className="px-4 py-2 text-right">100%</td>
+              <td className="px-4 py-2"></td>
             </tr>
           </tfoot>
         </table>
@@ -438,17 +546,22 @@ export function GhlDataView() {
 
   useEffect(() => { load(); loadServices(); }, []);
 
-  const updateService = (opportunityId: string, service: string | null) => {
+  const updateService = (
+    opportunityIds: string[],
+    service: string | null,
+  ) => {
     setServices((prev) => {
       const next = { ...prev };
-      if (service) next[opportunityId] = service;
-      else delete next[opportunityId];
+      for (const id of opportunityIds) {
+        if (service) next[id] = service;
+        else delete next[id];
+      }
       return next;
     });
     fetch("/api/ghl/data/service", {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ opportunityId, service }),
+      body: JSON.stringify({ opportunityIds, service }),
     }).catch(() => {});
   };
 
@@ -531,11 +644,15 @@ export function GhlDataView() {
       {/* Breakdown tables */}
       <SummaryTable title="By Status" rows={byStatus} />
       <SourceTable groups={sourceGroups} />
-      <SummaryTable title="By Campaign (First Touch)" rows={byCampaign} />
+      <CampaignTable
+        rows={byCampaign}
+        services={services}
+        onServiceChange={updateService}
+      />
       <SummaryTable title="By Medium (First Touch)" rows={byMedium} />
       <SummaryTable title="By Ad Content (First Touch)" rows={byContent} />
 
-      {/* Per-opportunity table with Service dropdown */}
+      {/* Per-opportunity table */}
       <Card>
         <CardContent className="p-0">
           <h3 className="text-sm font-semibold text-gray-700 px-4 pt-4 pb-2">
@@ -550,7 +667,6 @@ export function GhlDataView() {
                   <th className="px-4 py-2 font-medium">Source</th>
                   <th className="px-4 py-2 font-medium text-right">Value</th>
                   <th className="px-4 py-2 font-medium">Created</th>
-                  <th className="px-4 py-2 font-medium">Service</th>
                 </tr>
               </thead>
               <tbody>
@@ -569,19 +685,6 @@ export function GhlDataView() {
                     </td>
                     <td className="px-4 py-2 text-gray-600">
                       {new Date(o.createdAt).toLocaleDateString()}
-                    </td>
-                    <td className="px-4 py-2">
-                      <select
-                        value={services[o.id] ?? ""}
-                        onChange={(e) =>
-                          updateService(o.id, e.target.value || null)
-                        }
-                        className="rounded border border-gray-300 bg-white px-2 py-1 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                      >
-                        <option value="">—</option>
-                        <option value="mobile">Mobile</option>
-                        <option value="resort">Resort</option>
-                      </select>
                     </td>
                   </tr>
                 ))}
