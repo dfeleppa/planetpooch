@@ -146,9 +146,10 @@ function parseDate(s: string | undefined): Date | null {
 }
 
 async function upsertCustomerPage(rows: MoegoCustomerRow[]): Promise<number> {
-  if (rows.length === 0) return 0;
+  const valid = rows.filter((r) => parseDate(r.createdTime) !== null);
+  if (valid.length === 0) return 0;
   const now = new Date();
-  const values = rows.map(
+  const values = valid.map(
     (r) =>
       Prisma.sql`(${"cmoego_" + r.id}, ${r.id}, ${customerDisplayName(r)}, ${
         r.email ?? null
@@ -156,7 +157,7 @@ async function upsertCustomerPage(rows: MoegoCustomerRow[]): Promise<number> {
         r.preferredBusinessId ?? null
       }, ${parseDate(r.lastAppointmentDate)}, ${parseDate(
         r.nextAppointmentDate
-      )}, ${readTags(r.tags)}, ${new Date(r.createdTime)}, ${
+      )}, ${readTags(r.tags)}, ${parseDate(r.createdTime)!}, ${
         r.lastUpdatedTime ? new Date(r.lastUpdatedTime) : null
       }, ${now})`
   );
@@ -178,7 +179,7 @@ async function upsertCustomerPage(rows: MoegoCustomerRow[]): Promise<number> {
       "lastUpdatedTime"     = EXCLUDED."lastUpdatedTime",
       "syncedAt"            = EXCLUDED."syncedAt"
   `;
-  return rows.length;
+  return valid.length;
 }
 
 async function syncCustomers(
