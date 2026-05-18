@@ -3,40 +3,34 @@ import { Prisma } from "@prisma/client";
 import { getSession } from "@/lib/auth-helpers";
 import { prisma } from "@/lib/prisma";
 
-type Range = "7d" | "30d" | "90d" | "365d" | "730d" | "all";
-type Bucket = "day" | "week" | "month";
+type Bucket = "day" | "week" | "month" | "quarter" | "year";
 
-const RANGE_VALUES: ReadonlySet<Range> = new Set([
-  "7d",
-  "30d",
-  "90d",
-  "365d",
-  "730d",
-  "all",
+const BUCKET_VALUES: ReadonlySet<Bucket> = new Set([
+  "day",
+  "week",
+  "month",
+  "quarter",
+  "year",
 ]);
 
-/// Server-side allowlist — guarded before splicing into the raw SQL via
-/// Prisma.raw. Validated against the keys of RANGE_BUCKET so a bad
-/// `range` can never escape into the date_trunc argument.
-const BUCKET_VALUES: ReadonlySet<Bucket> = new Set(["day", "week", "month"]);
+/**
+ * Auto-pick bucket granularity from the span length when the caller
+ * doesn't specify one. Aim for ~10–60 buckets so the chart is readable
+ * without scrolling.
+ */
+function autoBucket(spanDays: number): Bucket {
+  if (spanDays <= 60) return "day";
+  if (spanDays <= 180) return "week";
+  if (spanDays <= 730) return "month";
+  if (spanDays <= 3650) return "quarter";
+  return "year";
+}
 
-const RANGE_BUCKET: Record<Range, Bucket> = {
-  "7d": "day",
-  "30d": "day",
-  "90d": "day",
-  "365d": "week",
-  "730d": "month",
-  all: "month",
-};
-
-const RANGE_DAYS: Record<Range, number | null> = {
-  "7d": 7,
-  "30d": 30,
-  "90d": 90,
-  "365d": 365,
-  "730d": 730,
-  all: null,
-};
+function parseDate(s: string | null): Date | null {
+  if (!s) return null;
+  const d = new Date(s);
+  return Number.isNaN(d.getTime()) ? null : d;
+}
 
 type RawRow = {
   bucket: Date;
@@ -47,10 +41,14 @@ type RawRow = {
 /**
  * Per-bucket order revenue and count for /finance/moego's chart.
  *
+ * Params:
+ *   from   YYYY-MM-DD (optional, defaults to 30 days ago)
+ *   to     YYYY-MM-DD (optional, defaults to today)
+ *   bucket day|week|month|quarter|year (optional, auto-picks from span)
+ *
  * We bucket by `createdTime` (when the invoice opened) rather than
  * `salesDatetime` (when payment cleared) so partial-paid / open
- * invoices still appear on the day they're opened. `salesDatetime` is
- * nullable on legacy rows; `createdTime` is required on every row.
+ * invoices still appear on the day they're opened.
  */
 export async function GET(req: NextRequest) {
   const session = await getSession();
@@ -58,36 +56,42 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
-  const rangeRaw = req.nextUrl.searchParams.get("range") ?? "30d";
-  const range: Range = (RANGE_VALUES as Set<string>).has(rangeRaw)
-    ? (rangeRaw as Range)
-    : "30d";
-  const bucket = RANGE_BUCKET[range];
-  const days = RANGE_DAYS[range];
-
-  // Splice bucket literally into the SQL (via Prisma.raw, after the
-  // allowlist check above) instead of binding it as a parameter. Reason:
-  // Postgres treats the GROUP BY / ORDER BY expressions as equivalent
-  // to the SELECT expression only when the parameter references match;
-  // when truncSql is interpolated three times as $1 / $2 / $3, the
-  // planner sees three distinct expressions and rejects the GROUP BY.
-  if (!(BUCKET_VALUES as Set<string>).has(bucket)) {
-    return NextResponse.json({ error: "Invalid bucket" }, { status: 500 });
+  const sp = req.nextUrl.searchParams;
+  const now = new Date();
+  const defaultFrom = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+  const from = parseDate(sp.get("from")) ?? defaultFrom;
+  const to = parseDate(sp.get("to")) ?? now;
+  if (from >= to) {
+    return NextResponse.json(
+      { error: "`from` must be before `to`." },
+      { status: 400 }
+    );
   }
-  const bucketRaw = Prisma.raw(`'${bucket}'`);
 
-  const where = days
-    ? Prisma.sql`WHERE "createdTime" >= now() - (${days}::int * INTERVAL '1 day')`
-    : Prisma.empty;
+  const bucketRaw = sp.get("bucket") ?? "auto";
+  const spanDays = Math.max(
+    1,
+    Math.round((to.getTime() - from.getTime()) / (24 * 60 * 60 * 1000))
+  );
+  const bucket: Bucket =
+    bucketRaw !== "auto" && (BUCKET_VALUES as Set<string>).has(bucketRaw)
+      ? (bucketRaw as Bucket)
+      : autoBucket(spanDays);
+
+  // bucket is allowlisted above, so it's safe to inline as a literal.
+  // We splice via Prisma.raw to avoid the bind-parameter-equality issue
+  // that breaks GROUP BY when the same fragment is interpolated twice.
+  const bucketLit = Prisma.raw(`'${bucket}'`);
 
   try {
     const rows = await prisma.$queryRaw<RawRow[]>`
       SELECT
-        date_trunc(${bucketRaw}, "createdTime") AS bucket,
+        date_trunc(${bucketLit}, "createdTime") AS bucket,
         COALESCE(SUM("paidCents"), 0)::bigint AS "revenueCents",
         COUNT(*)::bigint AS orders
       FROM "MoegoOrder"
-      ${where}
+      WHERE "createdTime" >= ${from}
+        AND "createdTime" <  ${to}
       GROUP BY 1
       ORDER BY 1 ASC
     `;
@@ -99,12 +103,15 @@ export async function GET(req: NextRequest) {
         COALESCE(SUM("paidCents"), 0)::bigint AS "revenueCents",
         COUNT(*)::bigint AS orders
       FROM "MoegoOrder"
-      ${where}
+      WHERE "createdTime" >= ${from}
+        AND "createdTime" <  ${to}
     `;
 
     return NextResponse.json({
-      range,
+      from,
+      to,
       bucket,
+      autoBucket: bucketRaw === "auto",
       buckets: rows.map((r) => ({
         date: r.bucket,
         revenueCents: Number(r.revenueCents),
