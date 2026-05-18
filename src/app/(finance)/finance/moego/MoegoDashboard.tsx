@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { CustomersTable } from "./CustomersTable";
@@ -32,8 +32,21 @@ type MoegoMetrics = {
   };
 };
 
-const WINDOW_OPTIONS = [7, 30, 90, 365] as const;
-type WindowDays = (typeof WINDOW_OPTIONS)[number];
+/// Page-wide quick ranges. Each fills the global From/To pickers; every
+/// panel (KPI tiles, lead source breakdown, revenue chart, customers
+/// table) refetches against the new window.
+const QUICK_RANGES = [
+  { label: "7d", days: 7 },
+  { label: "30d", days: 30 },
+  { label: "90d", days: 90 },
+  { label: "1y", days: 365 },
+  { label: "2y", days: 730 },
+  { label: "All", days: 365 * 10 }, // effectively all history we backfill
+] as const;
+
+function ymd(d: Date): string {
+  return d.toISOString().slice(0, 10);
+}
 
 function dollars(cents: number): string {
   return (cents / 100).toLocaleString("en-US", {
@@ -60,7 +73,17 @@ type DiscoveredCompany = {
   country?: string;};
 
 export function MoegoDashboard() {
-  const [days, setDays] = useState<WindowDays>(30);
+  // Page-wide date range; drives the KPI tiles, lead-source breakdown,
+  // revenue chart, and customers table (filtered to customers acquired
+  // in the same window).
+  const today = useMemo(() => ymd(new Date()), []);
+  const thirtyAgo = useMemo(
+    () => ymd(new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)),
+    []
+  );
+  const [from, setFrom] = useState<string>(thirtyAgo);
+  const [to, setTo] = useState<string>(today);
+
   const [metrics, setMetrics] = useState<MoegoMetrics | null>(null);
   const [loading, setLoading] = useState(true);
   const [syncing, setSyncing] = useState(false);
@@ -74,28 +97,41 @@ export function MoegoDashboard() {
     String(new Date().getUTCFullYear())
   );
 
-  const load = useCallback(async (window: WindowDays) => {
-    setLoading(true);
-    setError(null);
-    try {
-      const res = await fetch(`/api/finance/moego/metrics?days=${window}`, {
-        cache: "no-store",
-      });
-      if (!res.ok) {
-        const body = (await res.json().catch(() => ({}))) as { error?: string };
-        throw new Error(body.error ?? `HTTP ${res.status}`);
+  const load = useCallback(
+    async (fromStr: string, toStr: string) => {
+      setLoading(true);
+      setError(null);
+      try {
+        const res = await fetch(
+          `/api/finance/moego/metrics?from=${fromStr}&to=${toStr}`,
+          { cache: "no-store" }
+        );
+        if (!res.ok) {
+          const body = (await res.json().catch(() => ({}))) as {
+            error?: string;
+          };
+          throw new Error(body.error ?? `HTTP ${res.status}`);
+        }
+        setMetrics((await res.json()) as MoegoMetrics);
+      } catch (e) {
+        setError(e instanceof Error ? e.message : "Failed to load metrics");
+      } finally {
+        setLoading(false);
       }
-      setMetrics((await res.json()) as MoegoMetrics);
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to load metrics");
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+    },
+    []
+  );
 
   useEffect(() => {
-    void load(days);
-  }, [days, load]);
+    void load(from, to);
+  }, [from, to, load]);
+
+  function applyQuickRange(days: number) {
+    const t = new Date();
+    const f = new Date(t.getTime() - days * 24 * 60 * 60 * 1000);
+    setFrom(ymd(f));
+    setTo(ymd(t));
+  }
 
   /**
    * Poll a sync endpoint until it reports caughtUp. Shared between the
@@ -146,7 +182,7 @@ export function MoegoDashboard() {
         );
         if (data.caughtUp) break;
       }
-      await load(days);
+      await load(from, to);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Sync failed");
     } finally {
@@ -185,22 +221,52 @@ export function MoegoDashboard() {
 
   return (
     <div>
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-6">
-        <div className="flex gap-1 bg-gray-100 rounded-lg p-1">
-          {WINDOW_OPTIONS.map((w) => (
-            <button
-              key={w}
-              onClick={() => setDays(w)}
-              className={`px-3 py-1.5 text-sm font-medium rounded-md transition-colors ${
-                days === w
-                  ? "bg-white text-gray-900 shadow-sm"
-                  : "text-gray-600 hover:text-gray-900"
-              }`}
-            >
-              {w === 365 ? "1y" : `${w}d`}
-            </button>
-          ))}
+      <div className="flex flex-col gap-3 mb-6">
+        <div className="flex flex-wrap items-end gap-3">
+          <div className="flex flex-col gap-1">
+            <span className="text-xs font-medium text-gray-700 uppercase tracking-wide">
+              From
+            </span>
+            <input
+              type="date"
+              value={from}
+              max={to}
+              onChange={(e) => setFrom(e.target.value)}
+              className="rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+          </div>
+          <div className="flex flex-col gap-1">
+            <span className="text-xs font-medium text-gray-700 uppercase tracking-wide">
+              To
+            </span>
+            <input
+              type="date"
+              value={to}
+              min={from}
+              max={today}
+              onChange={(e) => setTo(e.target.value)}
+              className="rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+          </div>
+          <div className="flex flex-col gap-1">
+            <span className="text-xs font-medium text-gray-700 uppercase tracking-wide">
+              Quick
+            </span>
+            <div className="flex gap-1">
+              {QUICK_RANGES.map((r) => (
+                <button
+                  key={r.label}
+                  onClick={() => applyQuickRange(r.days)}
+                  className="px-2.5 py-1.5 text-xs font-medium rounded-md bg-gray-100 hover:bg-gray-200 text-gray-700"
+                >
+                  {r.label}
+                </button>
+              ))}
+            </div>
+          </div>
         </div>
+      </div>
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-end gap-3 mb-6">
         <div className="flex items-center gap-3 text-xs text-gray-500">
           <span>
             customers synced {relative(metrics?.lastSync.customer ?? null)} ·
@@ -396,7 +462,7 @@ export function MoegoDashboard() {
       </div>
 
       <div className="mb-6">
-        <RevenueChart />
+        <RevenueChart from={from} to={to} />
       </div>
 
       <Card>
@@ -405,9 +471,9 @@ export function MoegoDashboard() {
             Lead source breakdown
           </h2>
           <p className="text-xs text-gray-500 mt-1">
-            Customers acquired in the last {days} days,
-            grouped by MoeGo lead source. Revenue is paidAmount across all
-            orders from those customers.
+            Customers acquired in the selected date range, grouped by
+            MoeGo lead source. Revenue is paidAmount across all orders
+            from those customers.
           </p>
         </CardHeader>
         <CardContent className="pt-0">
@@ -452,7 +518,7 @@ export function MoegoDashboard() {
       </Card>
 
       <div className="mt-6">
-        <CustomersTable />
+        <CustomersTable from={from} to={to} />
       </div>
     </div>
   );
