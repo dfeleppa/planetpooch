@@ -143,7 +143,12 @@ export async function GET(req: NextRequest) {
           where: { createdTime: { gte: from, lt: to } },
         }),
         prisma.metaAdInsight.aggregate({
-          where: { date: { gte: from, lt: to } },
+          where: {
+            date: {
+              gte: new Date(from.toISOString().slice(0, 10)),
+              lt: new Date(to.toISOString().slice(0, 10)),
+            },
+          },
           _sum: { spendCents: true },
         }),
       ]);

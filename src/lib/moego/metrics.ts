@@ -61,7 +61,12 @@ export async function getMoegoMetrics({
       prisma.moegoOrder.aggregate({ _sum: { paidCents: true } }),
       prisma.moegoCustomer.count(),
       prisma.metaAdInsight.aggregate({
-        where: { date: { gte: windowStart, lt: windowEnd } },
+        where: {
+          date: {
+            gte: new Date(windowStart.toISOString().slice(0, 10)),
+            lt: new Date(windowEnd.toISOString().slice(0, 10)),
+          },
+        },
         _sum: { spendCents: true },
       }),
     ]);
