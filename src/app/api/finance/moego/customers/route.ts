@@ -79,18 +79,39 @@ export async function GET(req: NextRequest) {
       ? (dirRaw as Dir)
       : DEFAULT_DIR[sort];
 
+  // Optional acquisition window — when set, only customers created
+  // between [from, to) are returned. Used by the page-wide date range
+  // picker so the table reflects the same cohort as the KPI tiles.
+  const fromRaw = sp.get("from");
+  const toRaw = sp.get("to");
+  const fromDate = fromRaw ? new Date(fromRaw) : null;
+  const toDate = toRaw ? new Date(toRaw) : null;
+  const hasDateFilter =
+    fromDate && toDate && !Number.isNaN(fromDate.getTime()) && !Number.isNaN(toDate.getTime());
+
   const offset = (page - 1) * PAGE_SIZE;
   const like = search ? `%${search}%` : null;
 
-  // Build the WHERE clause conditionally — empty search returns every
-  // customer, otherwise case-insensitive LIKE across name/email/phone.
-  const where = like
-    ? Prisma.sql`WHERE (
+  // Build the WHERE clause conditionally. Combine search + date filter
+  // when both are present.
+  const searchClause = like
+    ? Prisma.sql`(
         lower(c."name") LIKE lower(${like})
         OR lower(c."email") LIKE lower(${like})
         OR c."mainPhoneNumber" LIKE ${like}
       )`
-    : Prisma.empty;
+    : null;
+  const dateClause = hasDateFilter
+    ? Prisma.sql`c."createdTime" >= ${fromDate} AND c."createdTime" < ${toDate}`
+    : null;
+  const where =
+    searchClause && dateClause
+      ? Prisma.sql`WHERE ${searchClause} AND ${dateClause}`
+      : searchClause
+        ? Prisma.sql`WHERE ${searchClause}`
+        : dateClause
+          ? Prisma.sql`WHERE ${dateClause}`
+          : Prisma.empty;
 
   // ORDER BY: pick the column, apply the direction, NULLS-LAST when
   // descending so empty rows don't crowd the top. Tie-break on moegoId

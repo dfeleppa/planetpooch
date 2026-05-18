@@ -11,7 +11,6 @@ export type LeadSourceRow = {
 };
 
 export type MoegoMetrics = {
-  windowDays: number;
   windowStart: string;
   windowEnd: string;
   newCustomers: number;
@@ -39,20 +38,19 @@ export type MoegoMetrics = {
   };
 };
 
-function startOfWindow(days: number): Date {
-  const since = new Date();
-  since.setUTCHours(0, 0, 0, 0);
-  since.setUTCDate(since.getUTCDate() - (days - 1));
-  return since;
-}
-
-export async function getMoegoMetrics(days: number): Promise<MoegoMetrics> {
-  const windowStart = startOfWindow(days);
-  const windowEnd = new Date();
+export async function getMoegoMetrics({
+  from,
+  to,
+}: {
+  from: Date;
+  to: Date;
+}): Promise<MoegoMetrics> {
+  const windowStart = from;
+  const windowEnd = to;
 
   // ---- customers acquired in window + their orders ----
   const newCustomers = await prisma.moegoCustomer.findMany({
-    where: { createdTime: { gte: windowStart } },
+    where: { createdTime: { gte: windowStart, lt: windowEnd } },
     select: { moegoId: true, leadSource: true },
   });
   const newCustomerIds = newCustomers.map((c) => c.moegoId);
@@ -78,7 +76,7 @@ export async function getMoegoMetrics(days: number): Promise<MoegoMetrics> {
 
   // ---- Meta spend in window (sum cents from MetaAdInsight) ----
   const metaSpend = await prisma.metaAdInsight.aggregate({
-    where: { date: { gte: windowStart } },
+    where: { date: { gte: windowStart, lt: windowEnd } },
     _sum: { spendCents: true },
   });
   const metaSpendCents = metaSpend._sum.spendCents ?? 0;
@@ -87,7 +85,7 @@ export async function getMoegoMetrics(days: number): Promise<MoegoMetrics> {
   // groupBy on the cohort gives us the per-source customer count cheaply.
   const sourceGroups = await prisma.moegoCustomer.groupBy({
     by: ["leadSource"],
-    where: { createdTime: { gte: windowStart } },
+    where: { createdTime: { gte: windowStart, lt: windowEnd } },
     _count: { _all: true },
   });
 
@@ -142,7 +140,6 @@ export async function getMoegoMetrics(days: number): Promise<MoegoMetrics> {
   };
 
   return {
-    windowDays: days,
     windowStart: windowStart.toISOString(),
     windowEnd: windowEnd.toISOString(),
     newCustomers: newCustomers.length,

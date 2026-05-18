@@ -69,7 +69,13 @@ function shortDate(iso: string | null): string {
   });
 }
 
-export function CustomersTable() {
+export function CustomersTable({
+  from,
+  to,
+}: {
+  from: string;
+  to: string;
+}) {
   const [page, setPage] = useState(1);
   const [sort, setSort] = useState<Sort>("ltv");
   const [dir, setDir] = useState<Dir>("desc");
@@ -86,11 +92,12 @@ export function CustomersTable() {
     return () => clearTimeout(t);
   }, [search]);
 
-  // Reset to page 1 whenever the filter / sort changes; otherwise a user
-  // on page 5 of one filter sees an empty page after switching.
+  // Reset to page 1 whenever the filter / sort / date range changes;
+  // otherwise a user on page 5 of one filter sees an empty page after
+  // switching.
   useEffect(() => {
     setPage(1);
-  }, [debounced, sort, dir]);
+  }, [debounced, sort, dir, from, to]);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -100,6 +107,8 @@ export function CustomersTable() {
         page: String(page),
         sort,
         dir,
+        from,
+        to,
       });
       if (debounced) params.set("search", debounced);
       const res = await fetch(
@@ -116,7 +125,7 @@ export function CustomersTable() {
     } finally {
       setLoading(false);
     }
-  }, [page, sort, dir, debounced]);
+  }, [page, sort, dir, debounced, from, to]);
 
   useEffect(() => {
     void load();
@@ -147,8 +156,9 @@ export function CustomersTable() {
           <div>
             <h2 className="text-base font-semibold text-gray-900">Customers</h2>
             <p className="text-xs text-gray-500 mt-1">
-              One row per MoeGo customer. LTV is sum of paidAmount across all
-              their orders. Click a column header to sort.
+              Customers acquired in the selected date range. LTV is sum
+              of paidAmount across all their orders (any date). Click a
+              column header to sort.
             </p>
           </div>
           <Input

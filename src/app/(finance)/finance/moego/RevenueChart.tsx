@@ -1,8 +1,7 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
-import { DateInput } from "@/components/ui/DateInput";
 
 type Bucket = "day" | "week" | "month" | "quarter" | "year";
 type BucketChoice = Bucket | "auto";
@@ -30,18 +29,6 @@ const BUCKETS: { value: BucketChoice; label: string }[] = [
   { value: "quarter", label: "Quarter" },
   { value: "year", label: "Year" },
 ];
-
-const QUICK_RANGES: { days: number; label: string }[] = [
-  { days: 7, label: "7d" },
-  { days: 30, label: "30d" },
-  { days: 90, label: "90d" },
-  { days: 365, label: "1y" },
-  { days: 730, label: "2y" },
-];
-
-function ymd(d: Date): string {
-  return d.toISOString().slice(0, 10);
-}
 
 function dollars(cents: number): string {
   return (cents / 100).toLocaleString("en-US", {
@@ -78,14 +65,7 @@ function bucketLabel(iso: string, bucket: Bucket): string {
   });
 }
 
-export function RevenueChart() {
-  const todayYmd = useMemo(() => ymd(new Date()), []);
-  const thirtyAgoYmd = useMemo(
-    () => ymd(new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)),
-    []
-  );
-  const [from, setFrom] = useState(thirtyAgoYmd);
-  const [to, setTo] = useState(todayYmd);
+export function RevenueChart({ from, to }: { from: string; to: string }) {
   const [bucket, setBucket] = useState<BucketChoice>("auto");
   const [data, setData] = useState<ApiResponse | null>(null);
   const [loading, setLoading] = useState(true);
@@ -122,13 +102,6 @@ export function RevenueChart() {
       cancelled = true;
     };
   }, [from, to, bucket]);
-
-  function applyQuickRange(days: number) {
-    const t = new Date();
-    const f = new Date(t.getTime() - days * 24 * 60 * 60 * 1000);
-    setFrom(ymd(f));
-    setTo(ymd(t));
-  }
 
   const max =
     data && data.buckets.length > 0
@@ -177,51 +150,22 @@ export function RevenueChart() {
               {data?.autoBucket ? " (auto)" : ""}.
             </p>
           </div>
-          <div className="flex flex-wrap items-end gap-2">
-            <DateInput
-              label="From"
-              value={from}
-              max={to}
-              onChange={(e) => setFrom(e.target.value)}
-            />
-            <DateInput
-              label="To"
-              value={to}
-              min={from}
-              max={todayYmd}
-              onChange={(e) => setTo(e.target.value)}
-            />
-            <div className="flex flex-col gap-1">
-              <span className="text-sm font-medium text-gray-700">Bucket</span>
-              <div className="flex gap-1 bg-gray-100 rounded-lg p-1">
-                {BUCKETS.map((b) => (
-                  <button
-                    key={b.value}
-                    onClick={() => setBucket(b.value)}
-                    className={`px-2.5 py-1.5 text-xs font-medium rounded-md transition-colors ${
-                      bucket === b.value
-                        ? "bg-white text-gray-900 shadow-sm"
-                        : "text-gray-600 hover:text-gray-900"
-                    }`}
-                  >
-                    {b.label}
-                  </button>
-                ))}
-              </div>
-            </div>
-            <div className="flex flex-col gap-1">
-              <span className="text-sm font-medium text-gray-700">Quick</span>
-              <div className="flex gap-1">
-                {QUICK_RANGES.map((r) => (
-                  <button
-                    key={r.days}
-                    onClick={() => applyQuickRange(r.days)}
-                    className="px-2.5 py-1.5 text-xs font-medium rounded-md bg-gray-100 hover:bg-gray-200 text-gray-700"
-                  >
-                    {r.label}
-                  </button>
-                ))}
-              </div>
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="text-xs font-medium text-gray-700">Bucket</span>
+            <div className="flex gap-1 bg-gray-100 rounded-lg p-1">
+              {BUCKETS.map((b) => (
+                <button
+                  key={b.value}
+                  onClick={() => setBucket(b.value)}
+                  className={`px-2.5 py-1.5 text-xs font-medium rounded-md transition-colors ${
+                    bucket === b.value
+                      ? "bg-white text-gray-900 shadow-sm"
+                      : "text-gray-600 hover:text-gray-900"
+                  }`}
+                >
+                  {b.label}
+                </button>
+              ))}
             </div>
           </div>
         </div>
