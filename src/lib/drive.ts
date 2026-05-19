@@ -212,19 +212,16 @@ type DriveRestriction = {
   } | null;
 };
 
-// Phrases Drive uses while an eSignature request is sent but not yet finished.
-// Anything matched here is treated as NOT signed.
-const IN_PROGRESS_PATTERN =
-  /being signed|in progress|currently being|awaiting signature|awaiting signer|pending signature|sent for signature|in review|waiting for signer/i;
+// Phrases Drive uses when an eSignature request has been completed/finalized.
+// Only files whose reason matches this allowlist are treated as signed.
+const SIGNED_PATTERN =
+  /signed|completed|finalized|executed|all parties/i;
 
 function isFinalizedSignatureRestriction(r: DriveRestriction): boolean {
   if (r.readOnly !== true) return false;
   const reason = r.reason ?? "";
-  // No reason at all → assume terminal lock (signed / mark-as-final). We treat
-  // the absence of an in-progress phrase as the positive signal because Drive
-  // doesn't always populate `reason` with completion text.
-  if (IN_PROGRESS_PATTERN.test(reason)) return false;
-  return true;
+  if (!reason) return false;
+  return SIGNED_PATTERN.test(reason);
 }
 
 export async function isFileSigned(fileId: string): Promise<boolean> {
