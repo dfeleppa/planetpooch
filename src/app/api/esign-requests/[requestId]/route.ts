@@ -214,13 +214,6 @@ export async function DELETE(
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
-  if (request.status !== "CANCELLED") {
-    return NextResponse.json(
-      { error: "Only cancelled requests can be deleted" },
-      { status: 400 }
-    );
-  }
-
   await prisma.esignRequest.delete({ where: { id: requestId } });
 
   return NextResponse.json({ deleted: true });

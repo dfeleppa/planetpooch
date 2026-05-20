@@ -69,6 +69,7 @@ export function EmployeeDocumentsCard({
   const [editingIssue, setEditingIssue] = useState<EmployeeDocumentCategory | null>(null);
   const [issueNote, setIssueNote] = useState("");
   const [issueBusy, setIssueBusy] = useState(false);
+  const [deletingDocId, setDeletingDocId] = useState<string | null>(null);
 
   const isOther = category === "OTHER";
   const canSubmit =
@@ -119,6 +120,26 @@ export function EmployeeDocumentsCard({
       setError(err instanceof Error ? err.message : "Failed to resolve issue");
     } finally {
       setIssueBusy(false);
+    }
+  }
+
+  async function deleteDocument(docId: string) {
+    const ok = window.confirm("Delete this document? The file will also be removed from Drive.");
+    if (!ok) return;
+    setDeletingDocId(docId);
+    setError("");
+    try {
+      const res = await fetch(`/api/employees/${employeeId}/documents/${docId}`, {
+        method: "DELETE",
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Failed to delete");
+      setDocuments(documents.filter((d) => d.id !== docId));
+      router.refresh();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to delete document");
+    } finally {
+      setDeletingDocId(null);
     }
   }
 
@@ -399,14 +420,26 @@ export function EmployeeDocumentsCard({
                   {doc.uploadedBy?.name ?? "(removed)"} on {formatDateTime(doc.uploadedAt)}
                 </div>
               </div>
-              <a
-                href={`https://drive.google.com/file/d/${doc.driveFileId}/view`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-sm text-blue-600 hover:underline shrink-0"
-              >
-                Open ↗
-              </a>
+              <div className="flex items-center gap-2 shrink-0">
+                <a
+                  href={`https://drive.google.com/file/d/${doc.driveFileId}/view`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-sm text-blue-600 hover:underline"
+                >
+                  Open ↗
+                </a>
+                {!isTerminated && (
+                  <Button
+                    size="sm"
+                    variant="danger"
+                    onClick={() => deleteDocument(doc.id)}
+                    disabled={deletingDocId === doc.id}
+                  >
+                    {deletingDocId === doc.id ? "Deleting…" : "Delete"}
+                  </Button>
+                )}
+              </div>
             </li>
           ))}
         </ul>

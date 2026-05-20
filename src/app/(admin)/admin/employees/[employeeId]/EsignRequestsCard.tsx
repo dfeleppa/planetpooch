@@ -332,18 +332,16 @@ export function EsignRequestsCard({
                         : "Delete file"}
                     </Button>
                   )}
-                  {r.status === "CANCELLED" && (
-                    <Button
-                      size="sm"
-                      variant="danger"
-                      onClick={() => transition(r.id, "delete")}
-                      disabled={busyId === r.id}
-                    >
-                      {busyId === r.id && busyAction === "delete"
-                        ? "Deleting…"
-                        : "Delete"}
-                    </Button>
-                  )}
+                  <Button
+                    size="sm"
+                    variant="danger"
+                    onClick={() => transition(r.id, "delete")}
+                    disabled={busyId === r.id}
+                  >
+                    {busyId === r.id && busyAction === "delete"
+                      ? "Deleting…"
+                      : "Delete"}
+                  </Button>
                 </div>
               </li>
             );
