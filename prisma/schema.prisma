@@ -220,8 +220,10 @@ model User {
   availability EmployeeAvailability[]
 
   // Document uploads
-  employeeDocuments EmployeeDocument[] @relation("DocumentSubject")
-  documentsUploaded EmployeeDocument[] @relation("DocumentUploader")
+  employeeDocuments      EmployeeDocument[]      @relation("DocumentSubject")
+  documentsUploaded      EmployeeDocument[]      @relation("DocumentUploader")
+  documentIssuesSubject  EmployeeDocumentIssue[] @relation("DocumentIssueSubject")
+  documentIssuesFlagged  EmployeeDocumentIssue[] @relation("DocumentIssueFlagged")
 
   // Org chart relation
   orgPosition OrgPosition? @relation("UserPosition")
@@ -745,6 +747,22 @@ model EmployeeDocument {
 
   @@index([userId])
   @@index([category])
+}
+
+model EmployeeDocumentIssue {
+  id          String                   @id @default(cuid())
+  userId      String
+  category    EmployeeDocumentCategory
+  note        String
+  flaggedById String?
+  createdAt   DateTime                 @default(now())
+  updatedAt   DateTime                 @updatedAt
+
+  user      User  @relation("DocumentIssueSubject", fields: [userId], references: [id], onDelete: Cascade)
+  flaggedBy User? @relation("DocumentIssueFlagged", fields: [flaggedById], references: [id], onDelete: SetNull)
+
+  @@unique([userId, category])
+  @@index([userId])
 }
 
 // ============================================================

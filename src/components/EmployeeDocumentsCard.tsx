@@ -24,11 +24,19 @@ interface DocumentRow {
   uploadedBy: { id: string; name: string } | null;
 }
 
+interface DocumentIssue {
+  id: string;
+  category: EmployeeDocumentCategory;
+  note: string;
+  flaggedBy: { id: string; name: string } | null;
+}
+
 interface Props {
   employeeId: string;
   hasDriveFolder: boolean;
   isTerminated?: boolean;
   handbookSigned: boolean;
+  initialIssues: DocumentIssue[];
   initialDocuments: DocumentRow[];
 }
 
@@ -46,16 +54,21 @@ export function EmployeeDocumentsCard({
   hasDriveFolder,
   isTerminated = false,
   handbookSigned,
+  initialIssues,
   initialDocuments,
 }: Props) {
   const router = useRouter();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [documents, setDocuments] = useState(initialDocuments);
+  const [issues, setIssues] = useState(initialIssues);
   const [category, setCategory] = useState<EmployeeDocumentCategory>("I9");
   const [customName, setCustomName] = useState("");
   const [file, setFile] = useState<File | null>(null);
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState("");
+  const [editingIssue, setEditingIssue] = useState<EmployeeDocumentCategory | null>(null);
+  const [issueNote, setIssueNote] = useState("");
+  const [issueBusy, setIssueBusy] = useState(false);
 
   const isOther = category === "OTHER";
   const canSubmit =
@@ -64,6 +77,50 @@ export function EmployeeDocumentsCard({
     !!file &&
     (!isOther || customName.trim().length > 0) &&
     !uploading;
+
+  const issueMap = new Map(issues.map((i) => [i.category, i]));
+
+  async function saveIssue(cat: EmployeeDocumentCategory) {
+    if (!issueNote.trim()) return;
+    setIssueBusy(true);
+    setError("");
+    try {
+      const res = await fetch(`/api/employees/${employeeId}/document-issues`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ category: cat, note: issueNote.trim() }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Failed to save");
+      setIssues(issues.filter((i) => i.category !== cat).concat(data));
+      setEditingIssue(null);
+      setIssueNote("");
+      router.refresh();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to save issue");
+    } finally {
+      setIssueBusy(false);
+    }
+  }
+
+  async function resolveIssue(cat: EmployeeDocumentCategory) {
+    setIssueBusy(true);
+    setError("");
+    try {
+      const res = await fetch(
+        `/api/employees/${employeeId}/document-issues?category=${cat}`,
+        { method: "DELETE" }
+      );
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Failed to resolve");
+      setIssues(issues.filter((i) => i.category !== cat));
+      router.refresh();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to resolve issue");
+    } finally {
+      setIssueBusy(false);
+    }
+  }
 
   const uploadedCategories = new Set(documents.map((d) => d.category));
   const requiredStatus = REQUIRED_CATEGORIES.map((cat) => ({
@@ -121,26 +178,95 @@ export function EmployeeDocumentsCard({
             </span>
           </div>
           <ul className="space-y-1">
-            {requiredStatus.map((item) => (
-              <li key={item.category} className="flex items-center gap-2 text-sm">
-                <span
-                  aria-hidden
-                  className={
-                    item.uploaded
-                      ? "inline-flex h-4 w-4 items-center justify-center rounded-full bg-green-100 text-green-700 text-xs"
-                      : "inline-flex h-4 w-4 items-center justify-center rounded-full bg-gray-200 text-gray-500 text-xs"
-                  }
-                >
-                  {item.uploaded ? "✓" : "·"}
-                </span>
-                <span className={item.uploaded ? "text-gray-900" : "text-gray-600"}>
-                  {item.label}
-                </span>
-                <span className={item.uploaded ? "text-xs text-green-700" : "text-xs text-gray-400"}>
-                  {item.uploaded ? "Uploaded" : "Not uploaded"}
-                </span>
-              </li>
-            ))}
+            {requiredStatus.map((item) => {
+              const issue = issueMap.get(item.category);
+              const isEditing = editingIssue === item.category;
+              return (
+                <li key={item.category} className="py-1">
+                  <div className="flex items-center gap-2 text-sm">
+                    <span
+                      aria-hidden
+                      className={
+                        issue
+                          ? "inline-flex h-4 w-4 items-center justify-center rounded-full bg-red-100 text-red-700 text-xs"
+                          : item.uploaded
+                            ? "inline-flex h-4 w-4 items-center justify-center rounded-full bg-green-100 text-green-700 text-xs"
+                            : "inline-flex h-4 w-4 items-center justify-center rounded-full bg-gray-200 text-gray-500 text-xs"
+                      }
+                    >
+                      {issue ? "!" : item.uploaded ? "✓" : "·"}
+                    </span>
+                    <span className={item.uploaded ? "text-gray-900" : "text-gray-600"}>
+                      {item.label}
+                    </span>
+                    <span className={
+                      issue
+                        ? "text-xs text-red-600"
+                        : item.uploaded ? "text-xs text-green-700" : "text-xs text-gray-400"
+                    }>
+                      {issue ? "Issue" : item.uploaded ? "Uploaded" : "Not uploaded"}
+                    </span>
+                    {!isTerminated && !isEditing && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setEditingIssue(item.category);
+                          setIssueNote(issue?.note ?? "");
+                        }}
+                        className="ml-auto text-xs text-gray-400 hover:text-gray-600"
+                      >
+                        {issue ? "Edit issue" : "Flag issue"}
+                      </button>
+                    )}
+                  </div>
+                  {issue && !isEditing && (
+                    <div className="ml-6 mt-1 flex items-start gap-2 text-xs text-red-700 bg-red-50 border border-red-200 rounded px-2 py-1">
+                      <span className="flex-1">{issue.note}</span>
+                      {!isTerminated && (
+                        <button
+                          type="button"
+                          onClick={() => resolveIssue(item.category)}
+                          disabled={issueBusy}
+                          className="shrink-0 text-red-500 hover:text-red-700 underline"
+                        >
+                          Resolve
+                        </button>
+                      )}
+                    </div>
+                  )}
+                  {isEditing && (
+                    <div className="ml-6 mt-1 flex items-center gap-2">
+                      <input
+                        type="text"
+                        value={issueNote}
+                        onChange={(e) => setIssueNote(e.target.value)}
+                        placeholder="Describe the issue…"
+                        className="flex-1 rounded border border-gray-300 px-2 py-1 text-xs focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        autoFocus
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") saveIssue(item.category);
+                          if (e.key === "Escape") { setEditingIssue(null); setIssueNote(""); }
+                        }}
+                      />
+                      <Button
+                        size="sm"
+                        onClick={() => saveIssue(item.category)}
+                        disabled={issueBusy || !issueNote.trim()}
+                      >
+                        Save
+                      </Button>
+                      <button
+                        type="button"
+                        onClick={() => { setEditingIssue(null); setIssueNote(""); }}
+                        className="text-xs text-gray-400 hover:text-gray-600"
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  )}
+                </li>
+              );
+            })}
             <li
               className={
                 handbookSigned

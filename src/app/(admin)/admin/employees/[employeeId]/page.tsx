@@ -92,7 +92,7 @@ export default async function EmployeeDetailPage({ params }: { params: Promise<{
     include: { lesson: { select: { title: true } } },
   });
 
-  const [signableDocuments, esignRequests, availability, employeeDocuments] = await Promise.all([
+  const [signableDocuments, esignRequests, availability, employeeDocuments, documentIssues] = await Promise.all([
     prisma.signableDocument.findMany({
       where: { isActive: true },
       orderBy: { name: "asc" },
@@ -115,6 +115,12 @@ export default async function EmployeeDetailPage({ params }: { params: Promise<{
       orderBy: { uploadedAt: "desc" },
       include: {
         uploadedBy: { select: { id: true, name: true } },
+      },
+    }),
+    prisma.employeeDocumentIssue.findMany({
+      where: { userId: employeeId },
+      include: {
+        flaggedBy: { select: { id: true, name: true } },
       },
     }),
   ]);
@@ -244,6 +250,12 @@ export default async function EmployeeDetailPage({ params }: { params: Promise<{
           hasDriveFolder={!!employee.driveFolderId}
           isTerminated={isTerminated}
           handbookSigned={handbookSigned}
+          initialIssues={documentIssues.map((i) => ({
+            id: i.id,
+            category: i.category,
+            note: i.note,
+            flaggedBy: i.flaggedBy,
+          }))}
           initialDocuments={employeeDocuments.map((d) => ({
             id: d.id,
             category: d.category,

@@ -191,6 +191,7 @@ export default async function DashboardPage() {
             hasDriveFolder={!!user.driveFolderId}
             isTerminated={!!user.terminatedAt}
             handbookSigned={handbookSigned}
+            initialIssues={[]}
             initialDocuments={employeeDocuments.map((d) => ({
               id: d.id,
               category: d.category,
