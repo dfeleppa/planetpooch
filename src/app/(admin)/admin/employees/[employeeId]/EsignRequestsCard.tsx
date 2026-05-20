@@ -12,7 +12,8 @@ type TransitionAction =
   | "mark_signed"
   | "cancel"
   | "check_signature"
-  | "delete_file";
+  | "delete_file"
+  | "delete";
 
 interface SignableDocument {
   id: string;
@@ -106,11 +107,30 @@ export function EsignRequestsCard({
       if (!ok) return;
     }
 
+    if (action === "delete") {
+      const ok = window.confirm(
+        "Permanently delete this eSign request? This can't be undone."
+      );
+      if (!ok) return;
+    }
+
     setBusyId(requestId);
     setBusyAction(action);
     setError("");
     setInfo("");
     try {
+      if (action === "delete") {
+        const res = await fetch(`/api/esign-requests/${requestId}`, {
+          method: "DELETE",
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || "Failed to delete");
+        setRequests(requests.filter((r) => r.id !== requestId));
+        setInfo("eSign request deleted.");
+        router.refresh();
+        return;
+      }
+
       const res = await fetch(`/api/esign-requests/${requestId}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
@@ -303,13 +323,25 @@ export function EsignRequestsCard({
                   {r.status === "CANCELLED" && r.signedFileDriveId && (
                     <Button
                       size="sm"
-                      variant="danger"
+                      variant="ghost"
                       onClick={() => transition(r.id, "delete_file")}
                       disabled={busyId === r.id}
                     >
                       {busyId === r.id && busyAction === "delete_file"
                         ? "Deleting…"
                         : "Delete file"}
+                    </Button>
+                  )}
+                  {r.status === "CANCELLED" && (
+                    <Button
+                      size="sm"
+                      variant="danger"
+                      onClick={() => transition(r.id, "delete")}
+                      disabled={busyId === r.id}
+                    >
+                      {busyId === r.id && busyAction === "delete"
+                        ? "Deleting…"
+                        : "Delete"}
                     </Button>
                   )}
                 </div>

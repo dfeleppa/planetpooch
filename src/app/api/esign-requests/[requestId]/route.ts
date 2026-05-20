@@ -182,3 +182,46 @@ export async function PATCH(
     { status: 400 }
   );
 }
+
+/**
+ * DELETE — permanently remove a CANCELLED eSign request.
+ * Also deletes the Drive file if one is still attached.
+ */
+export async function DELETE(
+  req: NextRequest,
+  { params }: { params: Promise<{ requestId: string }> }
+) {
+  const session = await getSession();
+  if (!session?.user || !isManagerOrAbove(session.user.role)) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
+
+  const sessionUser = session.user as { role: Role; company: Company | null };
+  const { requestId } = await params;
+
+  const request = await prisma.esignRequest.findUnique({
+    where: { id: requestId },
+    include: {
+      user: { select: { id: true, role: true, company: true } },
+    },
+  });
+  if (!request) {
+    return NextResponse.json({ error: "Request not found" }, { status: 404 });
+  }
+
+  const companyFilter = getCompanyFilter(sessionUser.role, sessionUser.company);
+  if (companyFilter.company && request.user.company !== companyFilter.company) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
+
+  if (request.status !== "CANCELLED") {
+    return NextResponse.json(
+      { error: "Only cancelled requests can be deleted" },
+      { status: 400 }
+    );
+  }
+
+  await prisma.esignRequest.delete({ where: { id: requestId } });
+
+  return NextResponse.json({ deleted: true });
+}
