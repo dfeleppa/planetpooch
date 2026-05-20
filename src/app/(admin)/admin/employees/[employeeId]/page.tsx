@@ -51,6 +51,7 @@ export default async function EmployeeDetailPage({ params }: { params: Promise<{
       phone: true,
       hireDate: true,
       driveFolderId: true,
+      ssCardNotNeeded: true,
       createdAt: true,
       lastLoginAt: true,
       terminatedAt: true,
@@ -250,6 +251,7 @@ export default async function EmployeeDetailPage({ params }: { params: Promise<{
           hasDriveFolder={!!employee.driveFolderId}
           isTerminated={isTerminated}
           handbookSigned={handbookSigned}
+          ssCardNotNeeded={employee.ssCardNotNeeded}
           initialIssues={documentIssues.map((i) => ({
             id: i.id,
             category: i.category,

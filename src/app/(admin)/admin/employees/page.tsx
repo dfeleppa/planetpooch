@@ -178,6 +178,7 @@ export default async function AdminEmployeesPage({
       createdAt: true,
       terminatedAt: true,
       terminationReason: true,
+      ssCardNotNeeded: true,
     },
   });
 
@@ -244,7 +245,8 @@ export default async function AdminEmployeesPage({
     const atRisk = hasTraining && pct < 50 && tenure > 21;
     const isDone = hasTraining && pct === 100;
     const isNotStarted = hasTraining && completed === 0;
-    const requiredDocsUploaded = requiredDocCategories.get(emp.id)?.size ?? 0;
+    const uploadedCats = requiredDocCategories.get(emp.id) ?? new Set();
+    const requiredDocsUploaded = uploadedCats.size + (emp.ssCardNotNeeded && !uploadedCats.has("SS_CARD") ? 1 : 0);
     return {
       ...emp,
       completed,
