@@ -172,6 +172,7 @@ model User {
   phone              String?
   managerId          String?
   driveFolderId      String?   // Google Drive folder for this employee's signed docs
+  ssCardNotNeeded    Boolean   @default(false)
 
   // Termination — null = active employee. When set, blocks login and excludes
   // the user from active employee listings. Reactivation clears all three.

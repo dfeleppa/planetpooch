@@ -36,6 +36,7 @@ interface Props {
   hasDriveFolder: boolean;
   isTerminated?: boolean;
   handbookSigned: boolean;
+  ssCardNotNeeded: boolean;
   initialIssues: DocumentIssue[];
   initialDocuments: DocumentRow[];
 }
@@ -54,6 +55,7 @@ export function EmployeeDocumentsCard({
   hasDriveFolder,
   isTerminated = false,
   handbookSigned,
+  ssCardNotNeeded: initialSsCardNotNeeded,
   initialIssues,
   initialDocuments,
 }: Props) {
@@ -70,6 +72,8 @@ export function EmployeeDocumentsCard({
   const [issueNote, setIssueNote] = useState("");
   const [issueBusy, setIssueBusy] = useState(false);
   const [deletingDocId, setDeletingDocId] = useState<string | null>(null);
+  const [ssCardNotNeeded, setSsCardNotNeeded] = useState(initialSsCardNotNeeded);
+  const [ssCardBusy, setSsCardBusy] = useState(false);
 
   const isOther = category === "OTHER";
   const canSubmit =
@@ -143,14 +147,37 @@ export function EmployeeDocumentsCard({
     }
   }
 
+  async function toggleSsCardNotNeeded() {
+    setSsCardBusy(true);
+    setError("");
+    try {
+      const res = await fetch(`/api/employees/${employeeId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ssCardNotNeeded: !ssCardNotNeeded }),
+      });
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || "Failed to update");
+      }
+      setSsCardNotNeeded(!ssCardNotNeeded);
+      router.refresh();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to update");
+    } finally {
+      setSsCardBusy(false);
+    }
+  }
+
   const uploadedCategories = new Set(documents.map((d) => d.category));
   const requiredStatus = REQUIRED_CATEGORIES.map((cat) => ({
     category: cat,
     label: DOCUMENT_CATEGORY_LABELS[cat],
     uploaded: uploadedCategories.has(cat),
+    notNeeded: cat === "SS_CARD" && ssCardNotNeeded,
   }));
   const missingCount =
-    requiredStatus.filter((r) => !r.uploaded).length + (handbookSigned ? 0 : 1);
+    requiredStatus.filter((r) => !r.uploaded && !r.notNeeded).length + (handbookSigned ? 0 : 1);
 
   async function upload(e: React.FormEvent) {
     e.preventDefault();
@@ -210,34 +237,52 @@ export function EmployeeDocumentsCard({
                       className={
                         issue
                           ? "inline-flex h-4 w-4 items-center justify-center rounded-full bg-red-100 text-red-700 text-xs"
-                          : item.uploaded
+                          : item.uploaded || item.notNeeded
                             ? "inline-flex h-4 w-4 items-center justify-center rounded-full bg-green-100 text-green-700 text-xs"
                             : "inline-flex h-4 w-4 items-center justify-center rounded-full bg-gray-200 text-gray-500 text-xs"
                       }
                     >
-                      {issue ? "!" : item.uploaded ? "✓" : "·"}
+                      {issue ? "!" : (item.uploaded || item.notNeeded) ? "✓" : "·"}
                     </span>
-                    <span className={item.uploaded ? "text-gray-900" : "text-gray-600"}>
+                    <span className={(item.uploaded || item.notNeeded) ? "text-gray-900" : "text-gray-600"}>
                       {item.label}
                     </span>
                     <span className={
                       issue
                         ? "text-xs text-red-600"
-                        : item.uploaded ? "text-xs text-green-700" : "text-xs text-gray-400"
+                        : item.notNeeded
+                          ? "text-xs text-green-700"
+                          : item.uploaded ? "text-xs text-green-700" : "text-xs text-gray-400"
                     }>
-                      {issue ? "Issue" : item.uploaded ? "Uploaded" : "Not uploaded"}
+                      {issue ? "Issue" : item.notNeeded ? "Not needed" : item.uploaded ? "Uploaded" : "Not uploaded"}
                     </span>
                     {!isTerminated && !isEditing && (
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setEditingIssue(item.category);
-                          setIssueNote(issue?.note ?? "");
-                        }}
-                        className="ml-auto text-xs text-gray-400 hover:text-gray-600"
-                      >
-                        {issue ? "Edit issue" : "Flag issue"}
-                      </button>
+                      <div className="ml-auto flex items-center gap-2">
+                        {item.category === "SS_CARD" && (
+                          <button
+                            type="button"
+                            onClick={toggleSsCardNotNeeded}
+                            disabled={ssCardBusy}
+                            className={
+                              ssCardNotNeeded
+                                ? "text-xs px-2 py-0.5 rounded-full bg-green-100 text-green-700 hover:bg-green-200"
+                                : "text-xs px-2 py-0.5 rounded-full bg-gray-100 text-gray-500 hover:bg-gray-200"
+                            }
+                          >
+                            {ssCardBusy ? "Saving…" : ssCardNotNeeded ? "Marked not needed" : "Not needed"}
+                          </button>
+                        )}
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setEditingIssue(item.category);
+                            setIssueNote(issue?.note ?? "");
+                          }}
+                          className="text-xs text-gray-400 hover:text-gray-600"
+                        >
+                          {issue ? "Edit issue" : "Flag issue"}
+                        </button>
+                      </div>
                     )}
                   </div>
                   {issue && !isEditing && (

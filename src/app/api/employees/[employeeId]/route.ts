@@ -211,6 +211,7 @@ export async function PATCH(
     if ("jobTitle" in body) data.jobTitle = body.jobTitle?.trim() || null;
     if ("department" in body) data.department = body.department?.trim() || null;
     if ("hireDate" in body) data.hireDate = body.hireDate ? new Date(body.hireDate) : null;
+    if ("ssCardNotNeeded" in body) data.ssCardNotNeeded = !!body.ssCardNotNeeded;
 
     if ("company" in body && !callerIsScopedTier) {
       // Scoped tiers (MANAGER, Front Desk) cannot change company. SUPER_ADMIN

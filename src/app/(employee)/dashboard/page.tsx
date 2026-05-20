@@ -34,6 +34,7 @@ export default async function DashboardPage() {
         phone: true,
         hireDate: true,
         driveFolderId: true,
+        ssCardNotNeeded: true,
         terminatedAt: true,
       },
     }),
@@ -191,6 +192,7 @@ export default async function DashboardPage() {
             hasDriveFolder={!!user.driveFolderId}
             isTerminated={!!user.terminatedAt}
             handbookSigned={handbookSigned}
+            ssCardNotNeeded={user.ssCardNotNeeded}
             initialIssues={[]}
             initialDocuments={employeeDocuments.map((d) => ({
               id: d.id,
