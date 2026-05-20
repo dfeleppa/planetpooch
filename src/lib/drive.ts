@@ -191,35 +191,46 @@ export async function copyFileToFolder(
  *
  * Drive applies `contentRestrictions[].readOnly: true` BOTH when an eSignature
  * request is sent (locking the file while signers review) AND when all
- * signers complete it. The two states differ only in the `reason` text.
+ * signers complete it.
  *
- * Strategy: the file is signed if it's read-only AND the reason text does NOT
- * match a known in-progress phrase. This is permissive (anything read-only
- * that isn't explicitly mid-signing counts as final), but it matches reality:
- * almost every read-only state on a Drive file IS terminal (signed, "marked
- * as final", approved). The one common transient state is eSignature's
- * "currently being signed" lock, which we explicitly reject.
+ * Strategy: use the `systemRestricted` field to identify eSignature-applied
+ * restrictions (only eSignature sets this). For system restrictions, use a
+ * denylist — treat as signed unless the reason matches a known in-progress
+ * phrase. For non-system restrictions (manual locks), use an allowlist — only
+ * treat as signed if the reason explicitly says so.
  *
- * Every check logs the reason so we can broaden IN_PROGRESS_PATTERN if a new
- * in-progress phrase appears. Returns false in stub mode; rethrows on API errors.
+ * This avoids both false positives (manual read-only locks ≠ signed) and false
+ * negatives (unknown eSignature completion reason text still detected).
  */
 type DriveRestriction = {
   readOnly?: boolean | null;
   reason?: string | null;
+  systemRestricted?: boolean | null;
   restrictingUser?: {
     displayName?: string | null;
     emailAddress?: string | null;
   } | null;
 };
 
-// Phrases Drive uses when an eSignature request has been completed/finalized.
-// Only files whose reason matches this allowlist are treated as signed.
+// Phrases Drive uses while an eSignature request is still in progress.
+const IN_PROGRESS_PATTERN =
+  /being signed|in progress|currently being|awaiting signature|awaiting signer|pending signature|sent for signature|in review|waiting for signer/i;
+
+// Phrases that indicate a non-system restriction is a completed signature.
 const SIGNED_PATTERN =
   /signed|completed|finalized|executed|all parties/i;
 
 function isFinalizedSignatureRestriction(r: DriveRestriction): boolean {
   if (r.readOnly !== true) return false;
+
   const reason = r.reason ?? "";
+
+  // System-restricted = applied by eSignature. Signed unless explicitly in-progress.
+  if (r.systemRestricted === true) {
+    return !IN_PROGRESS_PATTERN.test(reason);
+  }
+
+  // Non-system restriction: only count as signed with an explicit completion phrase.
   if (!reason) return false;
   return SIGNED_PATTERN.test(reason);
 }
@@ -231,15 +242,13 @@ export async function isFileSigned(fileId: string): Promise<boolean> {
   const res = await drive.files.get({
     fileId,
     fields:
-      "contentRestrictions(readOnly,reason,restrictingUser(displayName,emailAddress))",
+      "contentRestrictions(readOnly,reason,systemRestricted,restrictingUser(displayName,emailAddress))",
     supportsAllDrives: true,
   });
 
   const restrictions = (res.data.contentRestrictions ?? []) as DriveRestriction[];
   const finalized = restrictions.some(isFinalizedSignatureRestriction);
 
-  // Always log the raw restriction data when readOnly is set — invaluable for
-  // tuning IN_PROGRESS_PATTERN against real Drive responses.
   if (restrictions.some((r) => r.readOnly === true)) {
     console.info("[drive.isFileSigned]", {
       fileId,
