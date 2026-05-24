@@ -1046,6 +1046,35 @@ model FinanceMetric {
   @@index([periodStart, periodEnd])
 }
 
+// Weekly KPI reports per business segment. One weekStart = one report; both
+// the "Last Week — Actuals" and "Next Week — Forecast" metrics live as distinct
+// metricKey rows under the same weekStart (the section is defined in
+// src/lib/kpis.ts, not stored). value/average/target are the display number
+// scaled x100 (2 implied decimals) so money stays integer — currency
+// 40452.88 -> 4045288, percent 67.2 -> 6720, count/avg 231.4 -> 23140.
+enum KpiSegment {
+  MOBILE_GROOMING
+  BOARDING
+  TRAINING
+  DAYCARE
+  IN_HOUSE_GROOMING
+}
+
+model KpiWeeklyValue {
+  id        String     @id @default(cuid())
+  segment   KpiSegment
+  weekStart DateTime   @db.Date
+  metricKey String
+  value     Int?
+  average   Int?
+  target    Int?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([segment, weekStart, metricKey])
+}
+
 // ============================================================
 // MoeGo CRM Models
 // ============================================================
