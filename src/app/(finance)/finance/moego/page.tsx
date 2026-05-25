@@ -1,8 +1,10 @@
 import { requireSuperAdmin } from "@/lib/auth-helpers";
+import { listMoegoBusinesses } from "@/lib/moego/businesses";
 import { MoegoDashboard } from "./MoegoDashboard";
 
 export default async function MoegoPage() {
   await requireSuperAdmin();
+  const businesses = await listMoegoBusinesses();
   return (
     <div>
       <div className="mb-6">
@@ -12,7 +14,7 @@ export default async function MoegoPage() {
           leads) and joined with Meta ad spend.
         </p>
       </div>
-      <MoegoDashboard />
+      <MoegoDashboard businesses={businesses} />
     </div>
   );
 }
