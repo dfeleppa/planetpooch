@@ -30,15 +30,17 @@ export type MoegoMetrics = {
 export async function getMoegoMetrics({
   from,
   to,
+  businessId,
 }: {
   from: Date;
   to: Date;
+  businessId: string;
 }): Promise<MoegoMetrics> {
   const windowStart = from;
   const windowEnd = to;
 
   const windowOrders = await prisma.moegoOrder.findMany({
-    where: { createdTime: { gte: windowStart, lt: windowEnd } },
+    where: { createdTime: { gte: windowStart, lt: windowEnd }, businessId },
     select: { customerMoegoId: true, paidCents: true },
   });
 
@@ -53,13 +55,29 @@ export async function getMoegoMetrics({
   const avgRevenuePerCustomerCents =
     uniqueCustomers > 0 ? Math.round(revenueCents / uniqueCustomers) : 0;
 
-  const [newCustomerCount, allTimeRevenue, totalCustomers, metaSpend] =
+  // Customer counts are scoped "by where they transacted": a customer counts
+  // for this business only if they have an order here. New customers = those
+  // acquired (createdTime) in the window who also transacted at this business.
+  const [newCustomerRows, allTimeRevenue, totalCustomerRows, newCustomerAccountCount, metaSpend] =
     await Promise.all([
+      prisma.$queryRaw<{ n: number }[]>`
+        SELECT COUNT(DISTINCT c."moegoId")::int AS n
+        FROM "MoegoCustomer" c
+        JOIN "MoegoOrder" o ON o."customerMoegoId" = c."moegoId"
+        WHERE c."createdTime" >= ${windowStart} AND c."createdTime" < ${windowEnd}
+          AND o."businessId" = ${businessId}
+      `,
+      prisma.moegoOrder.aggregate({ _sum: { paidCents: true }, where: { businessId } }),
+      prisma.$queryRaw<{ n: number }[]>`
+        SELECT COUNT(DISTINCT "customerMoegoId")::int AS n
+        FROM "MoegoOrder"
+        WHERE "businessId" = ${businessId} AND "customerMoegoId" IS NOT NULL
+      `,
+      // Account-wide new customers — only used for the account-wide CAC tile,
+      // since Meta spend (MetaAdInsight) isn't attributable to a business.
       prisma.moegoCustomer.count({
         where: { createdTime: { gte: windowStart, lt: windowEnd } },
       }),
-      prisma.moegoOrder.aggregate({ _sum: { paidCents: true } }),
-      prisma.moegoCustomer.count(),
       prisma.metaAdInsight.aggregate({
         where: {
           date: {
@@ -70,6 +88,9 @@ export async function getMoegoMetrics({
         _sum: { spendCents: true },
       }),
     ]);
+
+  const newCustomerCount = newCustomerRows[0]?.n ?? 0;
+  const totalCustomers = totalCustomerRows[0]?.n ?? 0;
 
   const allTimeAvgLtvCents =
     totalCustomers > 0
@@ -140,7 +161,9 @@ export async function getMoegoMetrics({
     allTimeAvgLtvCents,
     metaSpendCents,
     cacCents:
-      newCustomerCount > 0 ? Math.round(metaSpendCents / newCustomerCount) : 0,
+      newCustomerAccountCount > 0
+        ? Math.round(metaSpendCents / newCustomerAccountCount)
+        : 0,
     leadSources,
     lastSync,
   };

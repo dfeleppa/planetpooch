@@ -67,6 +67,10 @@ export async function GET(req: NextRequest) {
   }
 
   const sp = req.nextUrl.searchParams;
+  const business = sp.get("business");
+  if (!business) {
+    return NextResponse.json({ error: "`business` is required." }, { status: 400 });
+  }
   const page = Math.min(Math.max(1, Number(sp.get("page") ?? 1)), MAX_PAGE);
   const search = sp.get("search")?.trim() ?? "";
   const sortRaw = sp.get("sort") ?? "ltv";
@@ -152,7 +156,7 @@ export async function GET(req: NextRequest) {
       COALESCE(SUM(o."paidCents"), 0) AS "revenueCents",
       MAX(o."createdTime")       AS "lastOrderTime"
     FROM "MoegoCustomer" c
-    LEFT JOIN "MoegoOrder" o ON o."customerMoegoId" = c."moegoId"
+    JOIN "MoegoOrder" o ON o."customerMoegoId" = c."moegoId" AND o."businessId" = ${business}
     ${where}
     GROUP BY c."id"
     ${orderBy}
@@ -161,9 +165,13 @@ export async function GET(req: NextRequest) {
   `;
 
   const totalRow = await prisma.$queryRaw<{ total: bigint }[]>`
-    SELECT COUNT(*)::bigint AS total
-    FROM "MoegoCustomer" c
-    ${where}
+    SELECT COUNT(*)::bigint AS total FROM (
+      SELECT c."id"
+      FROM "MoegoCustomer" c
+      JOIN "MoegoOrder" o ON o."customerMoegoId" = c."moegoId" AND o."businessId" = ${business}
+      ${where}
+      GROUP BY c."id"
+    ) t
   `;
   const total = Number(totalRow[0]?.total ?? 0);
 
