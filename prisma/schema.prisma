@@ -1049,9 +1049,10 @@ model FinanceMetric {
 // Weekly KPI reports per business segment. One weekStart = one report; both
 // the "Last Week — Actuals" and "Next Week — Forecast" metrics live as distinct
 // metricKey rows under the same weekStart (the section is defined in
-// src/lib/kpis.ts, not stored). value/average/target are the display number
-// scaled x100 (2 implied decimals) so money stays integer — currency
-// 40452.88 -> 4045288, percent 67.2 -> 6720, count/avg 231.4 -> 23140.
+// src/lib/kpis.ts, not stored). value is the display number scaled x100
+// (2 implied decimals) so money stays integer — currency 40452.88 -> 4045288,
+// percent 67.2 -> 6720, count 289 -> 28900. Per-week actuals/forecast only;
+// target & average are standing values resolved from KpiStandingValue.
 enum KpiSegment {
   MOBILE_GROOMING
   BOARDING
@@ -1066,13 +1067,36 @@ model KpiWeeklyValue {
   weekStart DateTime   @db.Date
   metricKey String
   value     Int?
-  average   Int?
-  target    Int?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   @@unique([segment, weekStart, metricKey])
+}
+
+// Effective-dated standing values for a metric's target and average. A row
+// means "from effectiveWeekStart onward, this field is `amount`" until a later
+// row supersedes it. The value shown for any week is the latest row whose
+// effectiveWeekStart <= that week — so edits apply from the edited week forward
+// in perpetuity, never rewriting earlier weeks. amount is scaled x100 (null
+// clears the field going forward).
+enum KpiStandingField {
+  TARGET
+  AVERAGE
+}
+
+model KpiStandingValue {
+  id                 String           @id @default(cuid())
+  segment            KpiSegment
+  metricKey          String
+  field              KpiStandingField
+  effectiveWeekStart DateTime         @db.Date
+  amount             Int?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([segment, metricKey, field, effectiveWeekStart], map: "kpi_standing_unique")
 }
 
 // ============================================================

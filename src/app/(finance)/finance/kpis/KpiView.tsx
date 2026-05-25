@@ -84,7 +84,7 @@ export function KpiView({
   async function save() {
     setSaving(true);
     try {
-      const values = segmentDef.metrics.map((m) => ({
+      const metrics = segmentDef.metrics.map((m) => ({
         metricKey: m.key,
         value: draft[m.key]?.value ?? null,
         average: draft[m.key]?.average ?? null,
@@ -93,7 +93,7 @@ export function KpiView({
       const res = await fetch("/api/finance/kpis", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ segment, weekStart: week, values }),
+        body: JSON.stringify({ segment, weekStart: week, metrics }),
       });
       if (!res.ok) {
         const json = await res.json().catch(() => ({}));
@@ -136,6 +136,13 @@ export function KpiView({
             </Button>
           ))}
       </div>
+
+      {editing && (
+        <p className="-mt-3 mb-6 text-xs text-gray-500">
+          Value is saved for this week only. Target and average apply from this week forward
+          until you change them again.
+        </p>
+      )}
 
       {!hasMetrics ? (
         <Card>
