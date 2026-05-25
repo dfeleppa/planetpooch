@@ -1,8 +1,9 @@
 import { requireSuperAdmin } from "@/lib/auth-helpers";
 import { prisma } from "@/lib/prisma";
 import { KpiSegment } from "@prisma/client";
-import { DEFAULT_SEGMENT, isValidSegment } from "@/lib/kpis";
+import { DEFAULT_SEGMENT, getSegmentDef, isValidSegment } from "@/lib/kpis";
 import { currentWeekStart, fromWeekParam, isValidWeekParam, toWeekParam } from "@/lib/week";
+import { resolveStandingAmount, type StandingRow } from "@/lib/kpi-standing";
 import { KpiView, type KpiCell } from "./KpiView";
 
 export default async function KpisPage({
@@ -30,14 +31,29 @@ export default async function KpisPage({
 
   const week = toWeekParam(weekStart);
 
-  const rows = await prisma.kpiWeeklyValue.findMany({
-    where: { segment, weekStart },
-    select: { metricKey: true, value: true, average: true, target: true },
-  });
+  const [valueRows, standingRows] = await Promise.all([
+    prisma.kpiWeeklyValue.findMany({
+      where: { segment, weekStart },
+      select: { metricKey: true, value: true },
+    }),
+    prisma.kpiStandingValue.findMany({
+      where: { segment, effectiveWeekStart: { lte: weekStart } },
+      select: { metricKey: true, field: true, amount: true, effectiveWeekStart: true },
+    }),
+  ]);
 
+  const valueByKey = new Map(valueRows.map((r) => [r.metricKey, r.value]));
+  const standing = standingRows as StandingRow[];
+
+  // value comes from this week's row; target/average are resolved from the
+  // latest standing value in effect on or before this week.
   const data: Record<string, KpiCell> = {};
-  for (const row of rows) {
-    data[row.metricKey] = { value: row.value, average: row.average, target: row.target };
+  for (const metric of getSegmentDef(segment).metrics) {
+    data[metric.key] = {
+      value: valueByKey.get(metric.key) ?? null,
+      target: resolveStandingAmount(standing, metric.key, "TARGET", weekStart),
+      average: resolveStandingAmount(standing, metric.key, "AVERAGE", weekStart),
+    };
   }
 
   return (
