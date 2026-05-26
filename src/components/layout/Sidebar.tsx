@@ -49,7 +49,6 @@ const frontDeskNav: NavItem[] = [
 const sharedNav: NavItem[] = [
   { href: "/maintenance", label: "Maintenance", icon: "⚙" },
   { href: "/maintenance/inventory", label: "Inventory", icon: "▦" },
-  { href: "/tasks", label: "Tasks", icon: "✓" },
 ];
 
 const marketingNav: NavItem[] = [
@@ -64,6 +63,7 @@ const financeNav: NavItem[] = [
   { href: "/finance/data", label: "Data", icon: "◈" },
   { href: "/finance/moego", label: "MoeGo", icon: "◉" },
   { href: "/finance/kpis", label: "KPIs", icon: "▦" },
+  { href: "/tasks", label: "Tasks", icon: "✓" },
 ];
 
 const ROLE_LABELS: Record<string, string> = {
@@ -254,9 +254,9 @@ export function Sidebar() {
             })}
           </div>
 
-          {/* Tools */}
+          {/* Maintenance */}
           {!isCollapsed ? (
-            <div className="px-2.5 pt-1 text-[10px] font-medium uppercase tracking-[0.08em] text-pp-ink-4">Tools</div>
+            <div className="px-2.5 pt-1 text-[10px] font-medium uppercase tracking-[0.08em] text-pp-ink-4">Maintenance</div>
           ) : (
             <div className="mx-1.5 h-px bg-pp-line" />
           )}
