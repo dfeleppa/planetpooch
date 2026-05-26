@@ -34,6 +34,10 @@ export type KpiCell = {
   target: number | null;
 };
 
+// "week" edits value + average; "targets" edits only targets. Targets can be
+// changed *only* via the targets mode.
+type EditMode = "week" | "targets" | null;
+
 const SELECT_CLS =
   "rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:opacity-50 disabled:bg-gray-50";
 
@@ -52,26 +56,26 @@ export function KpiView({
   const pathname = usePathname();
   const segmentDef = getSegmentDef(segment);
 
-  const [editing, setEditing] = useState(false);
+  const [mode, setMode] = useState<EditMode>(null);
   const [draft, setDraft] = useState<Record<string, KpiCell>>({});
   const [saving, setSaving] = useState(false);
 
   // Leave edit mode whenever the server data changes (segment/week switch).
   useEffect(() => {
-    setEditing(false);
+    setMode(null);
   }, [segment, week]);
 
   function navigate(nextSegment: string, nextWeek: string) {
     router.push(`${pathname}?segment=${nextSegment}&week=${nextWeek}`);
   }
 
-  function startEdit() {
+  function startEdit(nextMode: Exclude<EditMode, null>) {
     const seed: Record<string, KpiCell> = {};
     for (const metric of segmentDef.metrics) {
       seed[metric.key] = data[metric.key] ?? { value: null, average: null, target: null };
     }
     setDraft(seed);
-    setEditing(true);
+    setMode(nextMode);
   }
 
   function updateDraft(metricKey: string, field: keyof KpiCell, scaled: number | null) {
@@ -100,7 +104,7 @@ export function KpiView({
         alert(json.error ?? "Failed to save KPIs");
         return;
       }
-      setEditing(false);
+      setMode(null);
       router.refresh();
     } finally {
       setSaving(false);
@@ -121,26 +125,37 @@ export function KpiView({
       <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between mb-6">
         <WeekPicker week={week} onChange={(w) => navigate(segment, w)} />
         {hasMetrics &&
-          (editing ? (
+          (mode ? (
             <div className="flex gap-2">
-              <Button variant="secondary" onClick={() => setEditing(false)} disabled={saving}>
+              <Button variant="secondary" onClick={() => setMode(null)} disabled={saving}>
                 Cancel
               </Button>
               <Button onClick={save} disabled={saving}>
-                {saving ? "Saving…" : "Save"}
+                {saving ? "Saving…" : mode === "targets" ? "Save targets" : "Save week"}
               </Button>
             </div>
           ) : (
-            <Button variant="secondary" onClick={startEdit}>
-              Edit week
-            </Button>
+            <div className="flex gap-2">
+              <Button variant="secondary" onClick={() => startEdit("week")}>
+                Edit week
+              </Button>
+              <Button variant="secondary" onClick={() => startEdit("targets")}>
+                Edit targets
+              </Button>
+            </div>
           ))}
       </div>
 
-      {editing && (
+      {mode === "week" && (
         <p className="-mt-3 mb-6 text-xs text-gray-500">
-          Value is saved for this week only. Target and average apply from this week forward
-          until you change them again.
+          Value is saved for this week only; average applies from this week forward. Targets are
+          edited separately.
+        </p>
+      )}
+      {mode === "targets" && (
+        <p className="-mt-3 mb-6 text-xs text-gray-500">
+          Targets apply from this week forward, in perpetuity until you change them again. Past
+          weeks are not affected.
         </p>
       )}
 
@@ -176,26 +191,29 @@ export function KpiView({
                   </TableHead>
                   <TableBody>
                     {metrics.map((metric, idx) => {
-                      const cell = editing
-                        ? draft[metric.key]
-                        : data[metric.key];
+                      const cell = mode ? draft[metric.key] : data[metric.key];
                       return (
                         <TableRow key={metric.key}>
                           <TableCell className="text-gray-400">{idx + 1}</TableCell>
                           <TableCell className="font-medium">{metric.label}</TableCell>
-                          {(["value", "average", "target"] as const).map((field) => (
-                            <TableCell key={field} className="text-right tabular-nums">
-                              {editing ? (
-                                <KpiInput
-                                  format={metric.format}
-                                  scaled={cell?.[field] ?? null}
-                                  onChange={(v) => updateDraft(metric.key, field, v)}
-                                />
-                              ) : (
-                                formatKpiValue(cell?.[field], metric.format)
-                              )}
-                            </TableCell>
-                          ))}
+                          {(["value", "average", "target"] as const).map((field) => {
+                            const editable =
+                              (mode === "week" && field !== "target") ||
+                              (mode === "targets" && field === "target");
+                            return (
+                              <TableCell key={field} className="text-right tabular-nums">
+                                {editable ? (
+                                  <KpiInput
+                                    format={metric.format}
+                                    scaled={cell?.[field] ?? null}
+                                    onChange={(v) => updateDraft(metric.key, field, v)}
+                                  />
+                                ) : (
+                                  formatKpiValue(cell?.[field], metric.format)
+                                )}
+                              </TableCell>
+                            );
+                          })}
                         </TableRow>
                       );
                     })}
