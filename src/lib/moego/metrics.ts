@@ -1,5 +1,13 @@
 import { prisma } from "@/lib/prisma";
 
+/**
+ * Order statuses that represent real, collected money. CREATED orders are
+ * unpaid drafts (paidCents ≈ 0) and REMOVED orders are voided — including
+ * either in revenue/LTV inflates order and customer counts without adding
+ * real money. Revenue math is scoped to these statuses everywhere.
+ */
+export const REVENUE_ORDER_STATUSES = ["COMPLETED", "PROCESSING"] as const;
+
 export type LeadSourceRow = {
   source: string;
   customers: number;
@@ -37,10 +45,19 @@ export async function getMoegoMetrics({
   const windowStart = from;
   const windowEnd = to;
 
-  const windowOrders = await prisma.moegoOrder.findMany({
-    where: { createdTime: { gte: windowStart, lt: windowEnd } },
-    select: { customerMoegoId: true, paidCents: true },
-  });
+  // Revenue is attributed to *when the money landed* — salesDatetime,
+  // falling back to completedTime, then the invoice's createdTime — not to
+  // when the invoice was opened. Scoped to revenue-bearing statuses so
+  // unpaid drafts and voided orders don't pad the window.
+  const windowOrders = await prisma.$queryRaw<
+    { customerMoegoId: string | null; paidCents: number }[]
+  >`
+    SELECT "customerMoegoId", "paidCents"
+    FROM "MoegoOrder"
+    WHERE "status" = ANY(${[...REVENUE_ORDER_STATUSES]})
+      AND COALESCE("salesDatetime", "completedTime", "createdTime") >= ${windowStart}
+      AND COALESCE("salesDatetime", "completedTime", "createdTime") < ${windowEnd}
+  `;
 
   const revenueCents = windowOrders.reduce((s, o) => s + o.paidCents, 0);
   const orderCount = windowOrders.length;
@@ -53,12 +70,16 @@ export async function getMoegoMetrics({
   const avgRevenuePerCustomerCents =
     uniqueCustomers > 0 ? Math.round(revenueCents / uniqueCustomers) : 0;
 
-  const [newCustomerCount, allTimeRevenue, totalCustomers, metaSpend] =
+  const [newCustomerCount, allTimeRevenueRows, totalCustomers, metaSpend] =
     await Promise.all([
       prisma.moegoCustomer.count({
         where: { createdTime: { gte: windowStart, lt: windowEnd } },
       }),
-      prisma.moegoOrder.aggregate({ _sum: { paidCents: true } }),
+      prisma.$queryRaw<{ sum: bigint }[]>`
+        SELECT COALESCE(SUM("paidCents"), 0)::bigint AS sum
+        FROM "MoegoOrder"
+        WHERE "status" = ANY(${[...REVENUE_ORDER_STATUSES]})
+      `,
       prisma.moegoCustomer.count(),
       prisma.metaAdInsight.aggregate({
         where: {
@@ -71,10 +92,9 @@ export async function getMoegoMetrics({
       }),
     ]);
 
+  const allTimeRevenueCents = Number(allTimeRevenueRows[0]?.sum ?? 0);
   const allTimeAvgLtvCents =
-    totalCustomers > 0
-      ? Math.round((allTimeRevenue._sum.paidCents ?? 0) / totalCustomers)
-      : 0;
+    totalCustomers > 0 ? Math.round(allTimeRevenueCents / totalCustomers) : 0;
   const metaSpendCents = metaSpend._sum.spendCents ?? 0;
 
   // ---- lead source breakdown based on orders in window ----

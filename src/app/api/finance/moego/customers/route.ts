@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { Prisma } from "@prisma/client";
 import { getSession } from "@/lib/auth-helpers";
 import { prisma } from "@/lib/prisma";
+import { REVENUE_ORDER_STATUSES } from "@/lib/moego/metrics";
 
 const PAGE_SIZE = 50;
 const MAX_PAGE = 1000;
@@ -150,9 +151,11 @@ export async function GET(req: NextRequest) {
       c."createdTime",
       COUNT(o."id")              AS "orderCount",
       COALESCE(SUM(o."paidCents"), 0) AS "revenueCents",
-      MAX(o."createdTime")       AS "lastOrderTime"
+      MAX(COALESCE(o."salesDatetime", o."completedTime", o."createdTime")) AS "lastOrderTime"
     FROM "MoegoCustomer" c
-    LEFT JOIN "MoegoOrder" o ON o."customerMoegoId" = c."moegoId"
+    LEFT JOIN "MoegoOrder" o
+      ON o."customerMoegoId" = c."moegoId"
+      AND o."status" = ANY(${[...REVENUE_ORDER_STATUSES]})
     ${where}
     GROUP BY c."id"
     ${orderBy}
