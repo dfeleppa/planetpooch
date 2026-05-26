@@ -72,9 +72,11 @@ function shortDate(iso: string | null): string {
 export function CustomersTable({
   from,
   to,
+  business,
 }: {
   from: string;
   to: string;
+  business: string;
 }) {
   const [page, setPage] = useState(1);
   const [sort, setSort] = useState<Sort>("ltv");
@@ -97,9 +99,14 @@ export function CustomersTable({
   // switching.
   useEffect(() => {
     setPage(1);
-  }, [debounced, sort, dir, from, to]);
+  }, [debounced, sort, dir, from, to, business]);
 
   const load = useCallback(async () => {
+    if (!business) {
+      setData(null);
+      setLoading(false);
+      return;
+    }
     setLoading(true);
     setError(null);
     try {
@@ -109,6 +116,7 @@ export function CustomersTable({
         dir,
         from,
         to,
+        business,
       });
       if (debounced) params.set("search", debounced);
       const res = await fetch(
@@ -125,7 +133,7 @@ export function CustomersTable({
     } finally {
       setLoading(false);
     }
-  }, [page, sort, dir, debounced, from, to]);
+  }, [page, sort, dir, debounced, from, to, business]);
 
   useEffect(() => {
     void load();
@@ -156,9 +164,9 @@ export function CustomersTable({
           <div>
             <h2 className="text-base font-semibold text-gray-900">Customers</h2>
             <p className="text-xs text-gray-500 mt-1">
-              Customers acquired in the selected date range. LTV is sum
-              of paidAmount across all their orders (any date). Click a
-              column header to sort.
+              Customers acquired in the selected date range who transacted at
+              this business. Orders and LTV count only this business&apos;s
+              orders. Click a column header to sort.
             </p>
           </div>
           <Input

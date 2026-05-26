@@ -57,6 +57,10 @@ export async function GET(req: NextRequest) {
   }
 
   const sp = req.nextUrl.searchParams;
+  const business = sp.get("business");
+  if (!business) {
+    return NextResponse.json({ error: "`business` is required." }, { status: 400 });
+  }
   const now = new Date();
   const defaultFrom = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
   const from = parseDate(sp.get("from")) ?? defaultFrom;
@@ -92,6 +96,7 @@ export async function GET(req: NextRequest) {
       FROM "MoegoOrder"
       WHERE "createdTime" >= ${from}
         AND "createdTime" <  ${to}
+        AND "businessId" = ${business}
       GROUP BY 1
       ORDER BY 1 ASC
     `;
@@ -105,6 +110,7 @@ export async function GET(req: NextRequest) {
       FROM "MoegoOrder"
       WHERE "createdTime" >= ${from}
         AND "createdTime" <  ${to}
+        AND "businessId" = ${business}
     `;
 
     return NextResponse.json({

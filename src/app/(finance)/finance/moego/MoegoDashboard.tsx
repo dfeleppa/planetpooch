@@ -3,8 +3,11 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Tabs } from "@/components/ui/Tabs";
 import { CustomersTable } from "./CustomersTable";
 import { RevenueChart } from "./RevenueChart";
+
+type BusinessOption = { id: string; label: string };
 
 type LeadSourceRow = {
   source: string;
@@ -73,7 +76,11 @@ type DiscoveredCompany = {
   name?: string;
   country?: string;};
 
-export function MoegoDashboard() {
+export function MoegoDashboard({ businesses }: { businesses: BusinessOption[] }) {
+  // Selected business. No combined view — every panel is scoped to one
+  // business at a time.
+  const [business, setBusiness] = useState<string>(businesses[0]?.id ?? "");
+
   // Page-wide date range; drives the KPI tiles, lead-source breakdown,
   // revenue chart, and customers table (filtered to customers acquired
   // in the same window).
@@ -99,12 +106,17 @@ export function MoegoDashboard() {
   );
 
   const load = useCallback(
-    async (fromStr: string, toStr: string) => {
+    async (fromStr: string, toStr: string, businessStr: string) => {
+      if (!businessStr) {
+        setMetrics(null);
+        setLoading(false);
+        return;
+      }
       setLoading(true);
       setError(null);
       try {
         const res = await fetch(
-          `/api/finance/moego/metrics?from=${fromStr}&to=${toStr}`,
+          `/api/finance/moego/metrics?from=${fromStr}&to=${toStr}&business=${encodeURIComponent(businessStr)}`,
           { cache: "no-store" }
         );
         if (!res.ok) {
@@ -124,8 +136,8 @@ export function MoegoDashboard() {
   );
 
   useEffect(() => {
-    void load(from, to);
-  }, [from, to, load]);
+    void load(from, to, business);
+  }, [from, to, business, load]);
 
   function applyQuickRange(days: number) {
     const t = new Date();
@@ -183,7 +195,7 @@ export function MoegoDashboard() {
         );
         if (data.caughtUp) break;
       }
-      await load(from, to);
+      await load(from, to, business);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Sync failed");
     } finally {
@@ -222,6 +234,18 @@ export function MoegoDashboard() {
 
   return (
     <div>
+      {businesses.length > 0 ? (
+        <Tabs
+          tabs={businesses.map((b) => ({ id: b.id, label: b.label }))}
+          activeTab={business}
+          onChange={setBusiness}
+          className="mb-6"
+        />
+      ) : (
+        <div className="mb-6 p-3 rounded-lg bg-amber-50 border border-amber-200 text-sm text-amber-800">
+          No MoeGo businesses found yet. Run a sync below to populate order data.
+        </div>
+      )}
       <div className="flex flex-col gap-3 mb-6">
         <div className="flex flex-wrap items-end gap-3">
           <div className="flex flex-col gap-1">
@@ -439,13 +463,13 @@ export function MoegoDashboard() {
         <Card>
           <CardContent className="py-4">
             <p className="text-xs text-gray-500 uppercase tracking-wide">
-              CAC (Meta blended)
+              CAC (Meta, account-wide)
             </p>
             <p className="text-3xl font-bold text-gray-900 mt-1">
               {loading || !metrics ? "—" : dollars(metrics.cacCents)}
             </p>
             <p className="text-xs text-gray-400 mt-1">
-              Meta spend:{" "}
+              Meta spend (all businesses):{" "}
               {metrics ? dollars(metrics.metaSpendCents) : "—"}
             </p>
           </CardContent>
@@ -466,7 +490,7 @@ export function MoegoDashboard() {
       </div>
 
       <div className="mb-6">
-        <RevenueChart from={from} to={to} />
+        <RevenueChart from={from} to={to} business={business} />
       </div>
 
       <Card>
@@ -521,7 +545,7 @@ export function MoegoDashboard() {
       </Card>
 
       <div className="mt-6">
-        <CustomersTable from={from} to={to} />
+        <CustomersTable from={from} to={to} business={business} />
       </div>
     </div>
   );

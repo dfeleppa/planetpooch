@@ -63,6 +63,7 @@ const financeNav: NavItem[] = [
   { href: "/finance", label: "Dashboard", icon: "$" },
   { href: "/finance/data", label: "Data", icon: "◈" },
   { href: "/finance/moego", label: "MoeGo", icon: "◉" },
+  { href: "/finance/kpis", label: "KPIs", icon: "▦" },
 ];
 
 const ROLE_LABELS: Record<string, string> = {

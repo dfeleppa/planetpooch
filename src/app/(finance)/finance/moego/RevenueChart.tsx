@@ -65,19 +65,32 @@ function bucketLabel(iso: string, bucket: Bucket): string {
   });
 }
 
-export function RevenueChart({ from, to }: { from: string; to: string }) {
+export function RevenueChart({
+  from,
+  to,
+  business,
+}: {
+  from: string;
+  to: string;
+  business: string;
+}) {
   const [bucket, setBucket] = useState<BucketChoice>("auto");
   const [data, setData] = useState<ApiResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    if (!business) {
+      setData(null);
+      setLoading(false);
+      return;
+    }
     let cancelled = false;
     async function load() {
       setLoading(true);
       setError(null);
       try {
-        const params = new URLSearchParams({ from, to, bucket });
+        const params = new URLSearchParams({ from, to, bucket, business });
         const res = await fetch(
           `/api/finance/moego/revenue?${params.toString()}`,
           { cache: "no-store" }
@@ -101,7 +114,7 @@ export function RevenueChart({ from, to }: { from: string; to: string }) {
     return () => {
       cancelled = true;
     };
-  }, [from, to, bucket]);
+  }, [from, to, bucket, business]);
 
   const max =
     data && data.buckets.length > 0
