@@ -47,14 +47,15 @@ export async function getMoegoMetrics({
   const windowStart = from;
   const windowEnd = to;
 
-  // Revenue is attributed to *when the money landed* — salesDatetime,
-  // falling back to completedTime, then the invoice's createdTime — not to
-  // when the invoice was opened. Scoped to this business and to revenue-
-  // bearing statuses so unpaid drafts and voided orders don't pad the window.
+  // "Net sales" = subtotal − discounts (excludes tax & tips), matching
+  // MoeGo's sales report. Attributed to *when the money landed* —
+  // salesDatetime, falling back to completedTime, then createdTime — and
+  // scoped to this business and revenue-bearing statuses so unpaid drafts
+  // and voided orders don't pad the window.
   const windowOrders = await prisma.$queryRaw<
-    { customerMoegoId: string | null; paidCents: number }[]
+    { customerMoegoId: string | null; netCents: number }[]
   >`
-    SELECT "customerMoegoId", "paidCents"
+    SELECT "customerMoegoId", ("subTotalCents" - "discountCents") AS "netCents"
     FROM "MoegoOrder"
     WHERE "businessId" = ${businessId}
       AND "status" = ANY(${[...REVENUE_ORDER_STATUSES]})
@@ -62,7 +63,7 @@ export async function getMoegoMetrics({
       AND COALESCE("salesDatetime", "completedTime", "createdTime") < ${windowEnd}
   `;
 
-  const revenueCents = windowOrders.reduce((s, o) => s + o.paidCents, 0);
+  const revenueCents = windowOrders.reduce((s, o) => s + o.netCents, 0);
   const orderCount = windowOrders.length;
 
   const uniqueCustomerIds = new Set(
@@ -93,7 +94,7 @@ export async function getMoegoMetrics({
         AND o."status" = ANY(${[...REVENUE_ORDER_STATUSES]})
     `,
     prisma.$queryRaw<{ sum: bigint }[]>`
-      SELECT COALESCE(SUM("paidCents"), 0)::bigint AS sum
+      SELECT COALESCE(SUM("subTotalCents" - "discountCents"), 0)::bigint AS sum
       FROM "MoegoOrder"
       WHERE "businessId" = ${businessId}
         AND "status" = ANY(${[...REVENUE_ORDER_STATUSES]})
@@ -153,7 +154,7 @@ export async function getMoegoMetrics({
       sourceAgg.set(source, entry);
     }
     if (o.customerMoegoId) entry.customers.add(o.customerMoegoId);
-    entry.revenue += o.paidCents;
+    entry.revenue += o.netCents;
   }
 
   const leadSources: LeadSourceRow[] = [...sourceAgg.entries()]
