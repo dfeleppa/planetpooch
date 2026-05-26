@@ -104,7 +104,7 @@ export function RevenueChart({
         if (!cancelled) setData((await res.json()) as ApiResponse);
       } catch (e) {
         if (!cancelled) {
-          setError(e instanceof Error ? e.message : "Failed to load revenue");
+          setError(e instanceof Error ? e.message : "Failed to load net sales");
         }
       } finally {
         if (!cancelled) setLoading(false);
@@ -156,9 +156,9 @@ export function RevenueChart({
       <CardHeader>
         <div className="flex flex-col gap-3">
           <div>
-            <h2 className="text-base font-semibold text-gray-900">Revenue</h2>
+            <h2 className="text-base font-semibold text-gray-900">Net Sales</h2>
             <p className="text-xs text-gray-500 mt-1">
-              Paid amount across all orders, bucketed by{" "}
+              Subtotal minus discounts (excludes tax &amp; tips), bucketed by{" "}
               <span className="font-medium">{data?.bucket ?? bucket}</span>
               {data?.autoBucket ? " (auto)" : ""}.
             </p>
@@ -192,7 +192,7 @@ export function RevenueChart({
         <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 mb-4">
           <div>
             <p className="text-xs text-gray-500 uppercase tracking-wide">
-              Total revenue
+              Total net sales
             </p>
             <p className="text-2xl font-bold text-gray-900">
               {loading || !data ? "—" : dollars(data.total.revenueCents)}
@@ -223,7 +223,7 @@ export function RevenueChart({
           <p className="text-sm text-gray-400 py-6 text-center">Loading…</p>
         ) : !data || data.buckets.length === 0 ? (
           <p className="text-sm text-gray-400 py-6 text-center">
-            No revenue in this range.
+            No net sales in this range.
           </p>
         ) : (
           <div className="w-full overflow-x-auto">

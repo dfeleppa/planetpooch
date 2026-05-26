@@ -433,7 +433,7 @@ export function MoegoDashboard({ businesses }: { businesses: BusinessOption[] })
         <Card>
           <CardContent className="py-4">
             <p className="text-xs text-gray-500 uppercase tracking-wide">
-              Revenue
+              Net Sales
             </p>
             <p className="text-3xl font-bold text-gray-900 mt-1">
               {loading || !metrics ? "—" : dollars(metrics.revenueCents)}
@@ -447,7 +447,7 @@ export function MoegoDashboard({ businesses }: { businesses: BusinessOption[] })
         <Card>
           <CardContent className="py-4">
             <p className="text-xs text-gray-500 uppercase tracking-wide">
-              Avg Revenue / Customer
+              Avg Net Sales / Customer
             </p>
             <p className="text-3xl font-bold text-gray-900 mt-1">
               {loading || !metrics
@@ -516,8 +516,8 @@ export function MoegoDashboard({ businesses }: { businesses: BusinessOption[] })
                 <tr className="text-left text-xs text-gray-500 uppercase tracking-wide border-b border-gray-200">
                   <th className="py-2 font-medium">Source</th>
                   <th className="py-2 font-medium text-right">Customers</th>
-                  <th className="py-2 font-medium text-right">Revenue</th>
-                  <th className="py-2 font-medium text-right">Avg Revenue</th>
+                  <th className="py-2 font-medium text-right">Net Sales</th>
+                  <th className="py-2 font-medium text-right">Avg Net Sales</th>
                 </tr>
               </thead>
               <tbody>
