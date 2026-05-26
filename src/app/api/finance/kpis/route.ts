@@ -50,8 +50,9 @@ export async function POST(req: NextRequest) {
   }
 
   const week = fromWeekParam(weekStart);
-  // First-ever set of a target/average backfills the previous 4 weeks; an edit
-  // on an even older week takes effect from that week instead.
+  // Averages backfill the previous 4 weeks the first time they're set; an edit
+  // on an even older week takes effect from that week instead. Targets never
+  // backfill — they apply strictly from the edited week forward.
   const backfillFloor = addWeeks(currentWeekStart(), -4);
   const firstSetEffective = week.getTime() < backfillFloor.getTime() ? week : backfillFloor;
 
@@ -81,7 +82,8 @@ export async function POST(req: NextRequest) {
 
     // Target & average are standing values: only write when the submitted value
     // differs from what's already in effect at this week, and apply it from the
-    // edited week forward (or backfilled on the very first set).
+    // edited week forward. Averages backfill the prior 4 weeks on first set;
+    // targets never backfill (always effective from the edited week).
     const fields: Array<[KpiStandingField, number | null]> = [
       [KpiStandingField.TARGET, m.target],
       [KpiStandingField.AVERAGE, m.average],
@@ -89,7 +91,9 @@ export async function POST(req: NextRequest) {
     for (const [field, submitted] of fields) {
       const resolved = resolveStandingAmount(standingRows, m.metricKey, field, week);
       if (submitted === resolved) continue;
-      const effective = hasStanding(standingRows, m.metricKey, field) ? week : firstSetEffective;
+      const backfills =
+        field === KpiStandingField.AVERAGE && !hasStanding(standingRows, m.metricKey, field);
+      const effective = backfills ? firstSetEffective : week;
       ops.push(
         prisma.kpiStandingValue.upsert({
           where: {
