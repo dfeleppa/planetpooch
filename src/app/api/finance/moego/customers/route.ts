@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { Prisma } from "@prisma/client";
 import { getSession } from "@/lib/auth-helpers";
 import { prisma } from "@/lib/prisma";
+import { REVENUE_ORDER_STATUSES } from "@/lib/moego/metrics";
 
 const PAGE_SIZE = 50;
 const MAX_PAGE = 1000;
@@ -154,9 +155,12 @@ export async function GET(req: NextRequest) {
       c."createdTime",
       COUNT(o."id")              AS "orderCount",
       COALESCE(SUM(o."paidCents"), 0) AS "revenueCents",
-      MAX(o."createdTime")       AS "lastOrderTime"
+      MAX(COALESCE(o."salesDatetime", o."completedTime", o."createdTime")) AS "lastOrderTime"
     FROM "MoegoCustomer" c
-    JOIN "MoegoOrder" o ON o."customerMoegoId" = c."moegoId" AND o."businessId" = ${business}
+    JOIN "MoegoOrder" o
+      ON o."customerMoegoId" = c."moegoId"
+      AND o."businessId" = ${business}
+      AND o."status" = ANY(${[...REVENUE_ORDER_STATUSES]})
     ${where}
     GROUP BY c."id"
     ${orderBy}
@@ -168,7 +172,10 @@ export async function GET(req: NextRequest) {
     SELECT COUNT(*)::bigint AS total FROM (
       SELECT c."id"
       FROM "MoegoCustomer" c
-      JOIN "MoegoOrder" o ON o."customerMoegoId" = c."moegoId" AND o."businessId" = ${business}
+      JOIN "MoegoOrder" o
+        ON o."customerMoegoId" = c."moegoId"
+        AND o."businessId" = ${business}
+        AND o."status" = ANY(${[...REVENUE_ORDER_STATUSES]})
       ${where}
       GROUP BY c."id"
     ) t
