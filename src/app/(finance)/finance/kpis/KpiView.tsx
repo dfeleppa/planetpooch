@@ -148,14 +148,14 @@ export function KpiView({
 
       {mode === "week" && (
         <p className="-mt-3 mb-6 text-xs text-gray-500">
-          Value is saved for this week only; average applies from this week forward. Targets are
-          edited separately.
+          Value is saved for this week only. Targets and averages are edited separately.
         </p>
       )}
       {mode === "targets" && (
         <p className="-mt-3 mb-6 text-xs text-gray-500">
-          Targets apply from this week forward, in perpetuity until you change them again. Past
-          weeks are not affected.
+          Targets and averages apply from this week forward, in perpetuity until you change them
+          again — past weeks are not affected — and also fill the matching Next Week — Forecast
+          rows.
         </p>
       )}
 
@@ -191,25 +191,35 @@ export function KpiView({
                   </TableHead>
                   <TableBody>
                     {metrics.map((metric, idx) => {
-                      const cell = mode ? draft[metric.key] : data[metric.key];
+                      const isMirror = Boolean(metric.mirrorsKey);
                       return (
                         <TableRow key={metric.key}>
                           <TableCell className="text-gray-400">{idx + 1}</TableCell>
                           <TableCell className="font-medium">{metric.label}</TableCell>
                           {(["value", "average", "target"] as const).map((field) => {
+                            // value is edited in "week" mode; target & average in
+                            // "targets" mode. Forecast (mirror) rows derive their
+                            // target/average from their source, so they're never
+                            // directly editable — they preview the source's live draft.
                             const editable =
-                              (mode === "week" && field !== "target") ||
-                              (mode === "targets" && field === "target");
+                              (mode === "week" && field === "value") ||
+                              (mode === "targets" && field !== "value" && !isMirror);
+                            const scaled =
+                              isMirror && field !== "value"
+                                ? (mode === "targets"
+                                    ? draft[metric.mirrorsKey ?? metric.key]?.[field]
+                                    : data[metric.key]?.[field]) ?? null
+                                : (mode ? draft[metric.key] : data[metric.key])?.[field] ?? null;
                             return (
                               <TableCell key={field} className="text-right tabular-nums">
                                 {editable ? (
                                   <KpiInput
                                     format={metric.format}
-                                    scaled={cell?.[field] ?? null}
+                                    scaled={scaled}
                                     onChange={(v) => updateDraft(metric.key, field, v)}
                                   />
                                 ) : (
-                                  formatKpiValue(cell?.[field], metric.format)
+                                  formatKpiValue(scaled, metric.format)
                                 )}
                               </TableCell>
                             );

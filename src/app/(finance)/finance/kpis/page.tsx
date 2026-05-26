@@ -46,13 +46,15 @@ export default async function KpisPage({
   const standing = standingRows as StandingRow[];
 
   // value comes from this week's row; target/average are resolved from the
-  // latest standing value in effect on or before this week.
+  // latest standing value in effect on or before this week. Forecast metrics
+  // mirror their Actuals counterpart's target/average via mirrorsKey.
   const data: Record<string, KpiCell> = {};
   for (const metric of getSegmentDef(segment).metrics) {
+    const sourceKey = metric.mirrorsKey ?? metric.key;
     data[metric.key] = {
       value: valueByKey.get(metric.key) ?? null,
-      target: resolveStandingAmount(standing, metric.key, "TARGET", weekStart),
-      average: resolveStandingAmount(standing, metric.key, "AVERAGE", weekStart),
+      target: resolveStandingAmount(standing, sourceKey, "TARGET", weekStart),
+      average: resolveStandingAmount(standing, sourceKey, "AVERAGE", weekStart),
     };
   }
 

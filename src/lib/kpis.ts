@@ -8,6 +8,10 @@ export interface KpiMetricDef {
   label: string;
   section: KpiSection;
   format: KpiFormat;
+  // When set, this metric's target & average mirror the named metric's
+  // (used for FORECAST rows that share the Actuals goal). Mirrored metrics
+  // are read-only for target/average and resolve from their source.
+  mirrorsKey?: string;
 }
 
 export interface KpiSegmentDef {
@@ -35,11 +39,11 @@ export const KPI_SEGMENTS: KpiSegmentDef[] = [
       { key: "new_clients_serviced", label: "New clients serviced", section: "ACTUALS", format: "number" },
       { key: "avg_rebook_rate", label: "Average rebook rate", section: "ACTUALS", format: "percent" },
       { key: "total_revenue", label: "Total revenue (net of fees & taxes)", section: "ACTUALS", format: "currency" },
-      { key: "routes_planned", label: "Routes planned", section: "FORECAST", format: "number" },
-      { key: "dogs_scheduled", label: "Dogs scheduled", section: "FORECAST", format: "number" },
-      { key: "clients_scheduled", label: "Clients scheduled", section: "FORECAST", format: "number" },
-      { key: "new_clients_scheduled", label: "New clients scheduled", section: "FORECAST", format: "number" },
-      { key: "total_expected_revenue", label: "Total expected revenue (net of fees & taxes)", section: "FORECAST", format: "currency" },
+      { key: "routes_planned", label: "Routes planned", section: "FORECAST", format: "number", mirrorsKey: "routes_completed" },
+      { key: "dogs_scheduled", label: "Dogs scheduled", section: "FORECAST", format: "number", mirrorsKey: "dogs_serviced" },
+      { key: "clients_scheduled", label: "Clients scheduled", section: "FORECAST", format: "number", mirrorsKey: "clients_serviced" },
+      { key: "new_clients_scheduled", label: "New clients scheduled", section: "FORECAST", format: "number", mirrorsKey: "new_clients_serviced" },
+      { key: "total_expected_revenue", label: "Total expected revenue (net of fees & taxes)", section: "FORECAST", format: "currency", mirrorsKey: "total_revenue" },
     ],
   },
   { key: "BOARDING", label: "Boarding", metrics: [] },
@@ -56,6 +60,13 @@ export function getSegmentDef(key: string | undefined | null): KpiSegmentDef {
 
 export function isValidSegment(key: string): key is KpiSegment {
   return KPI_SEGMENTS.some((s) => s.key === key);
+}
+
+export function getMetricDef(
+  segment: KpiSegment,
+  metricKey: string,
+): KpiMetricDef | undefined {
+  return getSegmentDef(segment).metrics.find((m) => m.key === metricKey);
 }
 
 // True when metricKey is part of the given segment's definition — guards the
