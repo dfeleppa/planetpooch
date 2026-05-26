@@ -154,7 +154,7 @@ export async function GET(req: NextRequest) {
       c."tags",
       c."createdTime",
       COUNT(o."id")              AS "orderCount",
-      COALESCE(SUM(o."paidCents"), 0) AS "revenueCents",
+      COALESCE(SUM(o."subTotalCents" - o."discountCents"), 0) AS "revenueCents",
       MAX(COALESCE(o."salesDatetime", o."completedTime", o."createdTime")) AS "lastOrderTime"
     FROM "MoegoCustomer" c
     JOIN "MoegoOrder" o

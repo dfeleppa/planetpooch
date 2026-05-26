@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { Prisma } from "@prisma/client";
 import { getSession } from "@/lib/auth-helpers";
 import { prisma } from "@/lib/prisma";
+import { REVENUE_ORDER_STATUSES } from "@/lib/moego/metrics";
 
 type Bucket = "day" | "week" | "month" | "quarter" | "year";
 
@@ -46,9 +47,10 @@ type RawRow = {
  *   to     YYYY-MM-DD (optional, defaults to today)
  *   bucket day|week|month|quarter|year (optional, auto-picks from span)
  *
- * We bucket by `createdTime` (when the invoice opened) rather than
- * `salesDatetime` (when payment cleared) so partial-paid / open
- * invoices still appear on the day they're opened.
+ * Revenue is "net sales" = subtotal − discounts (excludes tax & tips),
+ * bucketed by when the sale landed (salesDatetime → completedTime →
+ * createdTime) and scoped to revenue-bearing statuses, so the chart
+ * matches the KPI tiles and MoeGo's sales report.
  */
 export async function GET(req: NextRequest) {
   const session = await getSession();
@@ -90,13 +92,14 @@ export async function GET(req: NextRequest) {
   try {
     const rows = await prisma.$queryRaw<RawRow[]>`
       SELECT
-        date_trunc(${bucketLit}, "createdTime") AS bucket,
-        COALESCE(SUM("paidCents"), 0)::bigint AS "revenueCents",
+        date_trunc(${bucketLit}, COALESCE("salesDatetime", "completedTime", "createdTime")) AS bucket,
+        COALESCE(SUM("subTotalCents" - "discountCents"), 0)::bigint AS "revenueCents",
         COUNT(*)::bigint AS orders
       FROM "MoegoOrder"
-      WHERE "createdTime" >= ${from}
-        AND "createdTime" <  ${to}
+      WHERE COALESCE("salesDatetime", "completedTime", "createdTime") >= ${from}
+        AND COALESCE("salesDatetime", "completedTime", "createdTime") <  ${to}
         AND "businessId" = ${business}
+        AND "status" = ANY(${[...REVENUE_ORDER_STATUSES]})
       GROUP BY 1
       ORDER BY 1 ASC
     `;
@@ -105,12 +108,13 @@ export async function GET(req: NextRequest) {
       { revenueCents: bigint; orders: bigint }[]
     >`
       SELECT
-        COALESCE(SUM("paidCents"), 0)::bigint AS "revenueCents",
+        COALESCE(SUM("subTotalCents" - "discountCents"), 0)::bigint AS "revenueCents",
         COUNT(*)::bigint AS orders
       FROM "MoegoOrder"
-      WHERE "createdTime" >= ${from}
-        AND "createdTime" <  ${to}
+      WHERE COALESCE("salesDatetime", "completedTime", "createdTime") >= ${from}
+        AND COALESCE("salesDatetime", "completedTime", "createdTime") <  ${to}
         AND "businessId" = ${business}
+        AND "status" = ANY(${[...REVENUE_ORDER_STATUSES]})
     `;
 
     return NextResponse.json({
