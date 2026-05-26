@@ -3,9 +3,9 @@ import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/auth-helpers";
 import { Role, KpiSegment, KpiStandingField, Prisma } from "@prisma/client";
-import { isValidMetricKey } from "@/lib/kpis";
-import { addWeeks, currentWeekStart, fromWeekParam } from "@/lib/week";
-import { hasStanding, resolveStandingAmount, type StandingRow } from "@/lib/kpi-standing";
+import { getMetricDef, isValidMetricKey } from "@/lib/kpis";
+import { fromWeekParam } from "@/lib/week";
+import { resolveStandingAmount, type StandingRow } from "@/lib/kpi-standing";
 
 function isSuperAdmin(role: string) {
   return role === Role.SUPER_ADMIN || role === Role.ADMIN;
@@ -50,11 +50,6 @@ export async function POST(req: NextRequest) {
   }
 
   const week = fromWeekParam(weekStart);
-  // Averages backfill the previous 4 weeks the first time they're set; an edit
-  // on an even older week takes effect from that week instead. Targets never
-  // backfill — they apply strictly from the edited week forward.
-  const backfillFloor = addWeeks(currentWeekStart(), -4);
-  const firstSetEffective = week.getTime() < backfillFloor.getTime() ? week : backfillFloor;
 
   const [existingValues, standing] = await Promise.all([
     prisma.kpiWeeklyValue.findMany({ where: { segment, weekStart: week }, select: { metricKey: true } }),
@@ -80,10 +75,12 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Target & average are standing values: only write when the submitted value
-    // differs from what's already in effect at this week, and apply it from the
-    // edited week forward. Averages backfill the prior 4 weeks on first set;
-    // targets never backfill (always effective from the edited week).
+    // Target & average are standing values, applied strictly from the edited
+    // week forward (never backfilled — past weeks are untouched), and only
+    // written when the submitted value differs from what's already in effect.
+    // Mirrored (forecast) metrics derive their target/average from their
+    // source, so we never store standing values on them.
+    if (getMetricDef(segment, m.metricKey)?.mirrorsKey) continue;
     const fields: Array<[KpiStandingField, number | null]> = [
       [KpiStandingField.TARGET, m.target],
       [KpiStandingField.AVERAGE, m.average],
@@ -91,9 +88,6 @@ export async function POST(req: NextRequest) {
     for (const [field, submitted] of fields) {
       const resolved = resolveStandingAmount(standingRows, m.metricKey, field, week);
       if (submitted === resolved) continue;
-      const backfills =
-        field === KpiStandingField.AVERAGE && !hasStanding(standingRows, m.metricKey, field);
-      const effective = backfills ? firstSetEffective : week;
       ops.push(
         prisma.kpiStandingValue.upsert({
           where: {
@@ -101,11 +95,11 @@ export async function POST(req: NextRequest) {
               segment,
               metricKey: m.metricKey,
               field,
-              effectiveWeekStart: effective,
+              effectiveWeekStart: week,
             },
           },
           update: { amount: submitted },
-          create: { segment, metricKey: m.metricKey, field, effectiveWeekStart: effective, amount: submitted },
+          create: { segment, metricKey: m.metricKey, field, effectiveWeekStart: week, amount: submitted },
         }),
       );
     }
