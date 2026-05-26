@@ -447,6 +447,36 @@ export async function syncAll(options: SyncOptions = {}): Promise<SyncResult> {
   const rkey = (base: "customer" | "order" | "lead") =>
     window ? `${base}:${window.tag}` : base;
 
+  // A windowed (year) sync is meant to be a *resync*: re-triggering it
+  // should re-pull the window, not no-op. But once a window has fully
+  // drained, its cursors sit at `targetEnd`, so the loop below would see
+  // nothing "behind" and return immediately. When every windowed cursor
+  // is already caught up, clear them so this run restarts at window.start.
+  // This is safe against the dashboard's continuation polls: an in-progress
+  // resync always has at least one resource still behind (that's exactly
+  // why `caughtUp` is false and the client keeps polling), so this only
+  // fires on a fresh re-trigger — never mid-drain.
+  if (window) {
+    const completedNow = {
+      customer: await getCompletedThrough(rkey("customer"), initialDefault),
+      order: await getCompletedThrough(rkey("order"), initialDefault),
+      lead: await getCompletedThrough(rkey("lead"), initialDefault),
+    };
+    const alreadyCaughtUp =
+      completedNow.customer >= targetEnd &&
+      completedNow.order >= targetEnd &&
+      completedNow.lead >= targetEnd;
+    if (alreadyCaughtUp) {
+      await prisma.moegoSyncState.deleteMany({
+        where: {
+          resource: {
+            in: [rkey("customer"), rkey("order"), rkey("lead")],
+          },
+        },
+      });
+    }
+  }
+
   // /v1/orders:list and /v1/leads:list require a non-empty businessIds
   // array. Discover once per invocation rather than caching: it's a
   // single small page and ensures new businesses get picked up
