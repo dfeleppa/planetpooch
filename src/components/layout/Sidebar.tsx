@@ -101,6 +101,9 @@ export function Sidebar() {
     : isFrontDesk
     ? frontDeskNav
     : employeeNav;
+  // The admin navs (super admin / manager / front desk) are the HR links;
+  // the plain employee nav (Dashboard / Modules / Search) is not.
+  const isAdminNav = nav !== employeeNav;
 
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -230,8 +233,13 @@ export function Sidebar() {
         )}
 
         <nav className="mt-4 flex flex-1 flex-col gap-4 overflow-y-auto">
-          {/* Primary nav */}
-          <div className="flex flex-col gap-px">
+          {/* Human Resources — admin navs only (plain employee nav has no header) */}
+          {isAdminNav && !isCollapsed && (
+            <div className="px-2.5 pt-1 text-[10px] font-medium uppercase tracking-[0.08em] text-pp-ink-4">
+              Human Resources
+            </div>
+          )}
+          <div className={cn("flex flex-col gap-px", isAdminNav && !isCollapsed && "-mt-2")}>
             {nav.map((item) => {
               const active = isActive(item.href);
               return (
