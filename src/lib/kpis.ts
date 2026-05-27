@@ -56,6 +56,8 @@ export const KPI_SEGMENTS: KpiSegmentDef[] = [
       { key: "package_sales", label: "Package sales", section: "ACTUALS", format: "currency" },
       { key: "addon_sales", label: "Addon sales", section: "ACTUALS", format: "currency" },
       { key: "payroll_hours", label: "Payroll hours", section: "ACTUALS", format: "number" },
+      { key: "unique_clients", label: "Unique clients", section: "ACTUALS", format: "number" },
+      { key: "avg_visits", label: "Average number of visits", section: "ACTUALS", format: "number" },
     ],
   },
   { key: "IN_HOUSE_GROOMING", label: "In-House Grooming", metrics: [] },
