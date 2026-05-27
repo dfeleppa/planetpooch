@@ -216,6 +216,7 @@ model User {
   // eSignature relations
   esignRequests          EsignRequest[] @relation("EsignSigner")
   esignRequestsRequested EsignRequest[] @relation("EsignRequester")
+  esignRequestsVerified  EsignRequest[] @relation("EsignVerifier")
 
   // Availability (recurring weekly schedule)
   availability EmployeeAvailability[]
@@ -700,15 +701,16 @@ model SignableDocument {
 }
 
 /// One row per (employee, document) signing request. Status flips from SENT
-/// to SIGNED when the admin confirms the employee has signed (manual today;
-/// will be replaced by a Google eSignature webhook later). The actual signed
-/// file lives in the employee's Drive folder — `signedFileDriveId` points at
-/// it so the UI can render a "View signed copy" link.
+/// to SIGNED when an admin manually verifies the employee has signed and
+/// records who confirmed it via `verifiedById`. The actual signed file lives
+/// in the employee's Drive folder — `signedFileDriveId` points at it so the UI
+/// can render a "View signed copy" link.
 model EsignRequest {
   id                 String             @id @default(cuid())
   userId             String             // The employee who needs to sign
   signableDocumentId String
   requestedById      String?            // Admin who initiated the request
+  verifiedById       String?            // Admin who manually verified the signature
   signedFileDriveId  String?            // Copy in the employee's Drive folder
   status             EsignRequestStatus @default(SENT)
   sentAt             DateTime           @default(now())
@@ -720,6 +722,7 @@ model EsignRequest {
   user             User             @relation("EsignSigner", fields: [userId], references: [id], onDelete: Cascade)
   signableDocument SignableDocument @relation(fields: [signableDocumentId], references: [id], onDelete: Restrict)
   requestedBy      User?            @relation("EsignRequester", fields: [requestedById], references: [id], onDelete: SetNull)
+  verifiedBy       User?            @relation("EsignVerifier", fields: [verifiedById], references: [id], onDelete: SetNull)
 
   @@index([userId])
   @@index([signableDocumentId])

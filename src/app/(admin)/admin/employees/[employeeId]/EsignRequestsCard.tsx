@@ -11,7 +11,6 @@ type EsignStatus = "SENT" | "SIGNED" | "CANCELLED";
 type TransitionAction =
   | "mark_signed"
   | "cancel"
-  | "check_signature"
   | "delete_file"
   | "delete";
 
@@ -30,6 +29,7 @@ interface EsignRequest {
   signedFileDriveId: string | null;
   signableDocument: { id: string; name: string };
   requestedBy: { id: string; name: string };
+  verifiedBy: { id: string; name: string } | null;
 }
 
 function driveFileUrl(fileId: string | null): string | null {
@@ -139,16 +139,11 @@ export function EsignRequestsCard({
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Failed to update");
 
-      const updated: EsignRequest =
-        action === "check_signature" ? data.request : data;
+      const updated: EsignRequest = data;
       setRequests(requests.map((r) => (r.id === requestId ? updated : r)));
 
-      if (action === "check_signature") {
-        setInfo(
-          data.signatureDetected
-            ? "Signature confirmed in Drive — request marked signed."
-            : "Not signed in Drive yet. Try again once the employee signs."
-        );
+      if (action === "mark_signed") {
+        setInfo("Signature verified — request marked signed.");
       } else if (action === "delete_file") {
         setInfo("Drive file deleted.");
       }
@@ -232,9 +227,9 @@ export function EsignRequestsCard({
             </div>
             <p className="text-xs text-gray-500">
               Create the document in Drive and start the signature request
-              there, then paste the file&apos;s share URL or ID here. Use
-              &ldquo;Check signature&rdquo; once they sign — or
-              &ldquo;Mark signed&rdquo; as a manual override.
+              there, then paste the file&apos;s share URL or ID here. Once the
+              employee has signed, confirm it yourself with &ldquo;Verify &amp;
+              mark signed&rdquo;.
             </p>
           </div>
         )}
@@ -271,7 +266,11 @@ export function EsignRequestsCard({
                   <div className="text-xs text-gray-500 mt-0.5">
                     Prepared by {r.requestedBy.name} on {formatDateTime(r.sentAt)}
                     {r.status === "SIGNED" && r.signedAt && (
-                      <> · Signed {formatDateTime(r.signedAt)}</>
+                      <>
+                        {" "}
+                        · Signed {formatDateTime(r.signedAt)}
+                        {r.verifiedBy && <> · Verified by {r.verifiedBy.name}</>}
+                      </>
                     )}
                     {r.status === "CANCELLED" && r.cancelledAt && (
                       <> · Cancelled {formatDateTime(r.cancelledAt)}</>
@@ -293,22 +292,12 @@ export function EsignRequestsCard({
                     <>
                       <Button
                         size="sm"
-                        variant="secondary"
-                        onClick={() => transition(r.id, "check_signature")}
-                        disabled={busyId === r.id}
-                      >
-                        {busyId === r.id && busyAction === "check_signature"
-                          ? "Checking…"
-                          : "Check signature"}
-                      </Button>
-                      <Button
-                        size="sm"
                         onClick={() => transition(r.id, "mark_signed")}
                         disabled={busyId === r.id}
                       >
                         {busyId === r.id && busyAction === "mark_signed"
                           ? "Saving…"
-                          : "Mark signed"}
+                          : "Verify & mark signed"}
                       </Button>
                       <Button
                         size="sm"

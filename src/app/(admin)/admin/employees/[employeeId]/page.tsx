@@ -105,6 +105,7 @@ export default async function EmployeeDetailPage({ params }: { params: Promise<{
       include: {
         signableDocument: { select: { id: true, name: true } },
         requestedBy: { select: { id: true, name: true } },
+        verifiedBy: { select: { id: true, name: true } },
       },
     }),
     prisma.employeeAvailability.findMany({
@@ -316,6 +317,7 @@ export default async function EmployeeDetailPage({ params }: { params: Promise<{
             signedFileDriveId: r.signedFileDriveId,
             signableDocument: r.signableDocument,
             requestedBy: r.requestedBy ?? { id: "", name: "(removed)" },
+            verifiedBy: r.verifiedBy,
           }))}
         />
       </div>
