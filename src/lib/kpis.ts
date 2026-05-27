@@ -48,7 +48,16 @@ export const KPI_SEGMENTS: KpiSegmentDef[] = [
   },
   { key: "BOARDING", label: "Boarding", metrics: [] },
   { key: "TRAINING", label: "Training", metrics: [] },
-  { key: "DAYCARE", label: "Daycare", metrics: [] },
+  {
+    key: "DAYCARE",
+    label: "Daycare",
+    metrics: [
+      { key: "avg_daily_occupancy", label: "Average daily occupancy", section: "ACTUALS", format: "number" },
+      { key: "package_sales", label: "Package sales", section: "ACTUALS", format: "currency" },
+      { key: "addon_sales", label: "Addon sales", section: "ACTUALS", format: "currency" },
+      { key: "payroll_hours", label: "Payroll hours", section: "ACTUALS", format: "number" },
+    ],
+  },
   { key: "IN_HOUSE_GROOMING", label: "In-House Grooming", metrics: [] },
 ];
 
