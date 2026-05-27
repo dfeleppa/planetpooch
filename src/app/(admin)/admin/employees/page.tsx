@@ -4,7 +4,6 @@ import Link from "next/link";
 import { formatDate } from "@/lib/utils";
 import { Company, Prisma, Role } from "@prisma/client";
 import { EmployeeFilters } from "./EmployeeFilters";
-import { CheckPendingEsignaturesButton } from "./CheckPendingEsignaturesButton";
 import { REQUIRED_DOCUMENT_CATEGORIES } from "@/lib/employee-documents";
 
 const COMPANY_LABELS: Record<Company, string> = {
@@ -184,18 +183,6 @@ export default async function AdminEmployeesPage({
 
   const totalLessons = await prisma.lesson.count();
 
-  const pendingEsignCount =
-    tab === "active"
-      ? await prisma.esignRequest.count({
-          where: {
-            status: "SENT",
-            ...(companyFilter.company
-              ? { user: { company: companyFilter.company } }
-              : {}),
-          },
-        })
-      : 0;
-
   const completions = await prisma.lessonCompletion.findMany({
     where: { isCompleted: true, userId: { in: employees.map((e) => e.id) } },
     select: { userId: true },
@@ -338,7 +325,6 @@ export default async function AdminEmployeesPage({
         </div>
         {tab === "active" && (
           <div className="flex flex-wrap items-start gap-3">
-            <CheckPendingEsignaturesButton pendingCount={pendingEsignCount} />
             <Link href="/admin/employees/new" className="pp-btn pp-btn-primary">
               + Add Employee
             </Link>
