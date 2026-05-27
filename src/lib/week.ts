@@ -1,4 +1,4 @@
-// Week helpers for KPI reports. A "week" is identified by its Monday at
+// Week helpers for KPI reports. A "week" is identified by its Sunday at
 // 00:00 UTC. Everything is computed in UTC because the weekStart column is a
 // Prisma @db.Date, which round-trips as a UTC-midnight Date — using local-time
 // constructors/getters here would shift the day by one for users west of UTC.
@@ -7,22 +7,20 @@ const MS_PER_DAY = 86_400_000;
 
 export function weekStartOf(date: Date): Date {
   const d = new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()));
-  const day = d.getUTCDay(); // 0 = Sun … 6 = Sat
-  const diff = day === 0 ? -6 : 1 - day; // shift back to Monday
-  d.setUTCDate(d.getUTCDate() + diff);
+  d.setUTCDate(d.getUTCDate() - d.getUTCDay()); // shift back to Sunday (0 = Sun)
   return d;
 }
 
-export function addWeeks(monday: Date, weeks: number): Date {
-  return new Date(monday.getTime() + weeks * 7 * MS_PER_DAY);
+export function addWeeks(weekStart: Date, weeks: number): Date {
+  return new Date(weekStart.getTime() + weeks * 7 * MS_PER_DAY);
 }
 
 export function currentWeekStart(): Date {
   return weekStartOf(new Date());
 }
 
-export function toWeekParam(monday: Date): string {
-  return monday.toISOString().slice(0, 10);
+export function toWeekParam(weekStart: Date): string {
+  return weekStart.toISOString().slice(0, 10);
 }
 
 export function fromWeekParam(value: string): Date {
@@ -33,8 +31,8 @@ export function isValidWeekParam(value: string | undefined | null): value is str
   return !!value && /^\d{4}-\d{2}-\d{2}$/.test(value) && !Number.isNaN(Date.parse(value));
 }
 
-export function formatWeekLabel(monday: Date): string {
-  return `Week of ${monday.toLocaleDateString("en-US", {
+export function formatWeekLabel(weekStart: Date): string {
+  return `Week of ${weekStart.toLocaleDateString("en-US", {
     timeZone: "UTC",
     month: "long",
     day: "numeric",
@@ -42,15 +40,15 @@ export function formatWeekLabel(monday: Date): string {
   })}`;
 }
 
-// The Sunday that ends the week, for compact range labels like "May 18 – 24".
-export function formatWeekRange(monday: Date): string {
-  const sunday = new Date(monday.getTime() + 6 * MS_PER_DAY);
-  const start = monday.toLocaleDateString("en-US", { timeZone: "UTC", month: "short", day: "numeric" });
-  const end = sunday.toLocaleDateString("en-US", { timeZone: "UTC", month: "short", day: "numeric", year: "numeric" });
+// The Saturday that ends the week, for compact range labels like "May 17 – 23".
+export function formatWeekRange(weekStart: Date): string {
+  const saturday = new Date(weekStart.getTime() + 6 * MS_PER_DAY);
+  const start = weekStart.toLocaleDateString("en-US", { timeZone: "UTC", month: "short", day: "numeric" });
+  const end = saturday.toLocaleDateString("en-US", { timeZone: "UTC", month: "short", day: "numeric", year: "numeric" });
   return `${start} – ${end}`;
 }
 
-// Most-recent-first list of the last `n` Mondays (including the current week).
+// Most-recent-first list of the last `n` week-starts (including the current week).
 export function recentWeeks(n = 12): Date[] {
   const start = currentWeekStart();
   return Array.from({ length: n }, (_, i) => addWeeks(start, -i));
@@ -74,15 +72,15 @@ export function monthsForYear(): number[] {
   return Array.from({ length: 12 }, (_, m) => m);
 }
 
-// Mondays whose Monday falls within the given year + month (0-based).
+// Week-start Sundays that fall within the given year + month (0-based).
 export function weeksInMonth(year: number, month: number): Date[] {
   const firstOfMonth = new Date(Date.UTC(year, month, 1));
-  let monday = weekStartOf(firstOfMonth);
-  if (monday.getTime() < firstOfMonth.getTime()) monday = addWeeks(monday, 1);
+  let weekStart = weekStartOf(firstOfMonth);
+  if (weekStart.getTime() < firstOfMonth.getTime()) weekStart = addWeeks(weekStart, 1);
   const out: Date[] = [];
-  while (monday.getUTCFullYear() === year && monday.getUTCMonth() === month) {
-    out.push(monday);
-    monday = addWeeks(monday, 1);
+  while (weekStart.getUTCFullYear() === year && weekStart.getUTCMonth() === month) {
+    out.push(weekStart);
+    weekStart = addWeeks(weekStart, 1);
   }
   return out;
 }
