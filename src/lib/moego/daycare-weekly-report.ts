@@ -51,9 +51,9 @@ function serviceKey(appointment: MoegoAppointmentRow): string {
   return serviceNames(appointment).join(",") || "(no service)";
 }
 
-function isTrainingOnly(appointment: MoegoAppointmentRow): boolean {
+function hasTrainingFreeService(appointment: MoegoAppointmentRow): boolean {
   const names = serviceNames(appointment);
-  return names.length > 0 && names.every((name) => name === TRAINING_FREE_SERVICE);
+  return names.includes(TRAINING_FREE_SERVICE);
 }
 
 function fallbackAppointmentNetCents(appointment: MoegoAppointmentRow): number {
@@ -130,7 +130,7 @@ export async function buildWeeklyDaycareServiceReport(options?: {
   const appointments = await listFinishedDaycareAppointments(start, end, businessId);
 
   const nonTrainingAppointments = appointments.filter((appointment) => {
-    return !isTrainingOnly(appointment);
+    return !hasTrainingFreeService(appointment);
   });
   const orderIds = nonTrainingAppointments
     .map((appointment) => appointment.orderId)
@@ -144,7 +144,7 @@ export async function buildWeeklyDaycareServiceReport(options?: {
   for (const appointment of appointments) {
     const key = appointment.customerId ?? `appointment:${appointment.id}`;
     const client = clients.get(key) ?? { training: 0, nonTraining: 0 };
-    if (isTrainingOnly(appointment)) {
+    if (hasTrainingFreeService(appointment)) {
       client.training++;
       clients.set(key, client);
       continue;
