@@ -6,7 +6,8 @@
       "Bash(npx create-next-app@latest classroom-app --typescript --tailwind --app --src-dir --eslint --use-npm --no-git --import-alias \"@/*\")",
       "Bash(npx prisma *)",
       "mcp__b57372c5-e809-4273-8fe7-98e8991dd905__list_teams",
-      "mcp__b57372c5-e809-4273-8fe7-98e8991dd905__list_projects"
+      "mcp__b57372c5-e809-4273-8fe7-98e8991dd905__list_projects",
+      "mcp__b57372c5-e809-4273-8fe7-98e8991dd905__list_deployments"
     ]
   },
   "enableAllProjectMcpServers": true,
