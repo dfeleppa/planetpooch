@@ -294,6 +294,39 @@ export type MoegoOrderRow = {
   completedTime?: string;
 };
 
+export type MoegoAppointmentServiceDetail = {
+  id?: string;
+  name?: string;
+  price?: MoegoMoney;
+  serviceItemType?: string;
+  serviceType?: string;
+  category?: string;
+};
+
+export type MoegoAppointmentPetServiceDetail = {
+  serviceDetails?: MoegoAppointmentServiceDetail[];
+};
+
+export type MoegoAppointmentRow = {
+  id: string;
+  businessId?: string;
+  customerId?: string;
+  orderId?: string;
+  status?: string;
+  totalAmount?: MoegoMoney;
+  paidAmount?: MoegoMoney;
+  refundAmount?: MoegoMoney;
+  duration?: {
+    startTime?: string;
+    endTime?: string;
+  };
+  petServiceDetails?: MoegoAppointmentPetServiceDetail[];
+  createdTime?: string;
+  lastUpdatedTime?: string;
+  checkInTime?: string;
+  checkOutTime?: string;
+};
+
 export type MoegoLeadRow = {
   id: string;
   name?: string;
@@ -379,6 +412,24 @@ export function streamOrders(
   return listPages<"orders", MoegoOrderRow>(
     "/orders:list",
     "orders",
+    filters,
+    { businessIds }
+  );
+}
+
+export function streamAppointments(
+  filters: {
+    startTime?: { startTime: string; endTime: string };
+    endTime?: { startTime: string; endTime: string };
+    lastUpdatedTime?: { startTime: string; endTime: string };
+    statuses?: string[];
+    serviceTypes?: string[];
+  },
+  businessIds: string[]
+): AsyncGenerator<MoegoAppointmentRow[]> {
+  return listPages<"appointments", MoegoAppointmentRow>(
+    "/appointments:list",
+    "appointments",
     filters,
     { businessIds }
   );
