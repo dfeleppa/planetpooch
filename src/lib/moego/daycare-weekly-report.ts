@@ -32,6 +32,14 @@ export type WeeklyDaycareServiceReport = {
   mixedTrainingClientIds: string[];
 };
 
+export type WeeklyDaycareKpiValues = {
+  weekStart: string;
+  totalNonTrainingAppointments: number;
+  uniqueClients: number;
+  averageVisitsPerClient: number;
+  totalNetSalesCents: number;
+};
+
 function moneyValue(value: number): number {
   return Math.round(value * 100);
 }
@@ -190,29 +198,26 @@ export async function buildWeeklyDaycareServiceReport(options?: {
   };
 }
 
-export async function syncWeeklyDaycareServiceKpis(options?: {
-  today?: Date;
-  businessId?: string;
-}): Promise<WeeklyDaycareServiceReport> {
-  const report = await buildWeeklyDaycareServiceReport(options);
-  const weekStart = new Date(`${report.weekStart}T00:00:00.000Z`);
-
+export async function upsertWeeklyDaycareKpis(
+  values: WeeklyDaycareKpiValues
+): Promise<void> {
+  const weekStart = new Date(`${values.weekStart}T00:00:00.000Z`);
   const rows = [
     {
       metricKey: DAYCARE_KPI_METRICS.totalAppointments,
-      value: numberValue(report.totalNonTrainingAppointments),
+      value: numberValue(values.totalNonTrainingAppointments),
     },
     {
       metricKey: DAYCARE_KPI_METRICS.uniqueClients,
-      value: numberValue(report.uniqueClients),
+      value: numberValue(values.uniqueClients),
     },
     {
       metricKey: DAYCARE_KPI_METRICS.avgVisits,
-      value: numberValue(report.averageVisitsPerClient),
+      value: numberValue(values.averageVisitsPerClient),
     },
     {
       metricKey: DAYCARE_KPI_METRICS.totalNetSales,
-      value: moneyValue(report.totalNetSalesCents / 100),
+      value: moneyValue(values.totalNetSalesCents / 100),
     },
   ];
 
@@ -236,6 +241,21 @@ export async function syncWeeklyDaycareServiceKpis(options?: {
       })
     ) satisfies Prisma.PrismaPromise<unknown>[]
   );
+}
+
+export async function syncWeeklyDaycareServiceKpis(options?: {
+  today?: Date;
+  businessId?: string;
+}): Promise<WeeklyDaycareServiceReport> {
+  const report = await buildWeeklyDaycareServiceReport(options);
+
+  await upsertWeeklyDaycareKpis({
+    weekStart: report.weekStart,
+    totalNonTrainingAppointments: report.totalNonTrainingAppointments,
+    uniqueClients: report.uniqueClients,
+    averageVisitsPerClient: report.averageVisitsPerClient,
+    totalNetSalesCents: report.totalNetSalesCents,
+  });
 
   return report;
 }
