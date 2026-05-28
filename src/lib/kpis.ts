@@ -46,8 +46,24 @@ export const KPI_SEGMENTS: KpiSegmentDef[] = [
       { key: "total_expected_revenue", label: "Total expected revenue (net of fees & taxes)", section: "FORECAST", format: "currency", mirrorsKey: "total_revenue" },
     ],
   },
-  { key: "BOARDING", label: "Boarding", metrics: [] },
-  { key: "TRAINING", label: "Training", metrics: [] },
+  {
+    key: "BOARDING",
+    label: "Boarding",
+    metrics: [
+      { key: "peak_capacity", label: "Peak capacity", section: "ACTUALS", format: "number" },
+      { key: "off_peak_capacity", label: "Off-peak capacity", section: "ACTUALS", format: "number" },
+      { key: "upsells", label: "Upsells", section: "ACTUALS", format: "currency" },
+    ],
+  },
+  {
+    key: "TRAINING",
+    label: "Training",
+    metrics: [
+      { key: "product_sales", label: "Product sales", section: "ACTUALS", format: "currency" },
+      { key: "group_revenue", label: "Group revenue", section: "ACTUALS", format: "currency" },
+      { key: "one_on_one_revenue", label: "1:1 revenue", section: "ACTUALS", format: "currency" },
+    ],
+  },
   {
     key: "DAYCARE",
     label: "Daycare",
@@ -62,7 +78,14 @@ export const KPI_SEGMENTS: KpiSegmentDef[] = [
       { key: "total_net_sales", label: "Total net sales", section: "ACTUALS", format: "currency" },
     ],
   },
-  { key: "IN_HOUSE_GROOMING", label: "In-House Grooming", metrics: [] },
+  {
+    key: "IN_HOUSE_GROOMING",
+    label: "In-House Grooming",
+    metrics: [
+      { key: "revenue", label: "Revenue", section: "ACTUALS", format: "currency" },
+      { key: "upsells", label: "Upsells", section: "ACTUALS", format: "currency" },
+    ],
+  },
 ];
 
 export const DEFAULT_SEGMENT: KpiSegment = "MOBILE_GROOMING";
