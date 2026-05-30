@@ -84,6 +84,7 @@ export const KPI_SEGMENTS: KpiSegmentDef[] = [
     metrics: [
       { key: "revenue", label: "Revenue", section: "ACTUALS", format: "currency" },
       { key: "upsells", label: "Upsells", section: "ACTUALS", format: "currency" },
+      { key: "total_pets_serviced", label: "Total Pets Serviced", section: "ACTUALS", format: "number" },
     ],
   },
 ];
