@@ -3,10 +3,8 @@ import { prisma } from "@/lib/prisma";
 import { addWeeks, toWeekParam, fromWeekParam } from "@/lib/week";
 import {
   streamAppointments,
-  streamCustomers,
   toCents,
   type MoegoAppointmentRow,
-  type MoegoCustomerRow,
 } from "@/lib/moego/client";
 
 export const MOBILE_GROOMING_BUSINESS_ID = "bizVdfk";
@@ -31,8 +29,7 @@ export type WeeklyMobileGroomingReport = {
   totalNetSalesCents: number;
   appointmentsMissingCustomerId: number;
   appointmentsMissingPetServiceDetails: number;
-  customersMissingUpcomingUrl: number;
-  upcomingLookupErrors: number;
+  futureAppointmentsChecked: number;
 };
 
 function moneyValue(cents: number): number {
@@ -82,84 +79,49 @@ async function listWeeklyAppointments(
   return appointments;
 }
 
-async function listCustomersById(
-  customerIds: Set<string>
-): Promise<MoegoCustomerRow[]> {
-  if (customerIds.size === 0) return [];
-
-  const customers: MoegoCustomerRow[] = [];
-  for await (const page of streamCustomers({})) {
-    for (const customer of page) {
-      if (customerIds.has(customer.id)) customers.push(customer);
-    }
-    if (customers.length === customerIds.size) break;
-  }
-  return customers;
-}
-
-function upcomingToken(customer: MoegoCustomerRow): string | null {
-  if (!customer.upcomingAppointmentsUrl) return null;
-  try {
-    return new URL(customer.upcomingAppointmentsUrl).searchParams.get("id");
-  } catch {
-    return null;
-  }
-}
-
-type UpcomingAppointmentResponse = {
-  data?: {
-    upComingAppoint?: unknown[];
-  };
-};
-
-async function hasUpcomingAppointment(token: string): Promise<boolean> {
-  const res = await fetch(
-    `https://client.moego.pet/api/grooming/appointment/customer/upcoming?id=${encodeURIComponent(token)}`,
-    { cache: "no-store", headers: { Accept: "application/json" } }
-  );
-  if (!res.ok) {
-    throw new Error(`MoeGo upcoming appointments HTTP ${res.status}`);
-  }
-
-  const payload = (await res.json()) as UpcomingAppointmentResponse;
-  return (payload.data?.upComingAppoint ?? []).length > 0;
-}
-
-async function rebookSummary(customerIds: Set<string>): Promise<{
+async function rebookSummary(options: {
+  weekEnd: Date;
+  businessId: string;
+  customerIds: Set<string>;
+}): Promise<{
   rebookedClients: number;
-  customersMissingUpcomingUrl: number;
-  upcomingLookupErrors: number;
+  futureAppointmentsChecked: number;
 }> {
-  const customers = await listCustomersById(customerIds);
-  let rebookedClients = 0;
-  let customersMissingUpcomingUrl = customerIds.size - customers.length;
-  let upcomingLookupErrors = 0;
-  const concurrency = 10;
-
-  for (let i = 0; i < customers.length; i += concurrency) {
-    const batch = customers.slice(i, i + concurrency);
-    const results = await Promise.all(
-      batch.map(async (customer) => {
-        const token = upcomingToken(customer);
-        if (!token) return "missing" as const;
-        try {
-          return (await hasUpcomingAppointment(token))
-            ? ("rebooked" as const)
-            : ("not_rebooked" as const);
-        } catch {
-          return "error" as const;
-        }
-      })
-    );
-
-    for (const result of results) {
-      if (result === "rebooked") rebookedClients++;
-      if (result === "missing") customersMissingUpcomingUrl++;
-      if (result === "error") upcomingLookupErrors++;
-    }
+  if (options.customerIds.size === 0) {
+    return { rebookedClients: 0, futureAppointmentsChecked: 0 };
   }
 
-  return { rebookedClients, customersMissingUpcomingUrl, upcomingLookupErrors };
+  const futureEnd = addWeeks(options.weekEnd, 104);
+  const rebookedCustomerIds = new Set<string>();
+  let futureAppointmentsChecked = 0;
+
+  for await (const page of streamAppointments(
+    {
+      startTime: {
+        startTime: options.weekEnd.toISOString(),
+        endTime: futureEnd.toISOString(),
+      },
+      statuses: ["CONFIRMED", "UNCONFIRMED", "FINISHED"],
+    },
+    [options.businessId]
+  )) {
+    futureAppointmentsChecked += page.length;
+    for (const appointment of page) {
+      if (
+        appointment.customerId &&
+        options.customerIds.has(appointment.customerId)
+      ) {
+        rebookedCustomerIds.add(appointment.customerId);
+      }
+    }
+
+    if (rebookedCustomerIds.size === options.customerIds.size) break;
+  }
+
+  return {
+    rebookedClients: rebookedCustomerIds.size,
+    futureAppointmentsChecked,
+  };
 }
 
 export async function buildWeeklyMobileGroomingReport(options: {
@@ -187,11 +149,11 @@ export async function buildWeeklyMobileGroomingReport(options: {
   const totalNetSalesCents = finishedAppointments.reduce((sum, appointment) => {
     return sum + appointmentNetCents(appointment);
   }, 0);
-  const {
-    rebookedClients,
-    customersMissingUpcomingUrl,
-    upcomingLookupErrors,
-  } = await rebookSummary(clientIds);
+  const { rebookedClients, futureAppointmentsChecked } = await rebookSummary({
+    weekEnd,
+    businessId,
+    customerIds: clientIds,
+  });
   const rebookRatePercent =
     clientIds.size > 0 ? (rebookedClients / clientIds.size) * 100 : 0;
 
@@ -212,8 +174,7 @@ export async function buildWeeklyMobileGroomingReport(options: {
     appointmentsMissingPetServiceDetails: finishedAppointments.filter(
       (appointment) => petServiceDetails(appointment).length === 0
     ).length,
-    customersMissingUpcomingUrl,
-    upcomingLookupErrors,
+    futureAppointmentsChecked,
   };
 }
 

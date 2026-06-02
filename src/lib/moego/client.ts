@@ -14,7 +14,7 @@
  */
 
 const BASE_URL = "https://openapi.moego.pet/v1";
-const PAGE_SIZE = 100;
+const PAGE_SIZE = 500;
 /**
  * Sleep between paginated pages of the SAME resource. MoeGo doesn't
  * publish rate limits; their own example script uses 1s, but that's
