@@ -59,11 +59,11 @@ type DaycareImportReport = {
 };
 
 type BoardingImportReport = {
-  peakCapacity: number;
-  offPeakCapacity: number;
+  nights: number;
   upsellsCents: number;
   totalFinishedBoardingAppointments: number;
   totalRevenueCents: number;
+  nightsByService?: Record<string, number>;
 };
 
 // "week" edits value + average; "targets" edits only targets. Targets can be
@@ -187,8 +187,15 @@ export function KpiView({
         );
       } else if (segment === "BOARDING") {
         const report = json.report as BoardingImportReport;
+        const nightsByService = report.nightsByService
+          ? Object.entries(report.nightsByService)
+              .sort((a, b) => b[1] - a[1])
+              .map(([name, nights]) => `${name}: ${nights}`)
+              .join(", ")
+          : "";
+        const breakdown = nightsByService ? ` (${nightsByService})` : "";
         setImportMessage(
-          `Imported ${report.totalFinishedBoardingAppointments} finished boarding appointments, ${dollars(report.totalRevenueCents)} revenue, ${report.peakCapacity} peak capacity, ${report.offPeakCapacity} off-peak capacity, and ${dollars(report.upsellsCents)} upsells.`
+          `Imported ${report.totalFinishedBoardingAppointments} finished boarding appointments, ${dollars(report.totalRevenueCents)} revenue, ${report.nights} nights${breakdown}, and ${dollars(report.upsellsCents)} upsells.`
         );
       } else {
         const report = json.report as MobileGroomingImportReport;

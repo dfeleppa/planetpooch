@@ -13,8 +13,7 @@ import { PET_RESORT_BUSINESS_ID } from "@/lib/moego/daycare-weekly-report";
 
 const BOARDING_KPI_METRICS = {
   revenue: "revenue",
-  peakCapacity: "peak_capacity",
-  offPeakCapacity: "off_peak_capacity",
+  nights: "nights",
   upsells: "upsells",
 } as const;
 
@@ -42,16 +41,15 @@ export type WeeklyBoardingReport = {
   businessId: string;
   totalFinishedBoardingAppointments: number;
   totalRevenueCents: number;
-  peakCapacity: number;
-  offPeakCapacity: number;
+  nights: number;
   upsellsCents: number;
+  nightsByService: Record<string, number>;
 };
 
 export type WeeklyBoardingKpiValues = {
   weekStart: string;
   totalRevenueCents: number;
-  peakCapacity: number;
-  offPeakCapacity: number;
+  nights: number;
   upsellsCents: number;
 };
 
@@ -89,21 +87,6 @@ function isBoardingService(service: MoegoAppointmentServiceDetail): boolean {
     category.includes("boarding") ||
     category.includes("board")
   );
-}
-
-function isOffPeakBoardingService(service: MoegoAppointmentServiceDetail): boolean {
-  const normalized = normalizeServiceName(service.name);
-  return (
-    normalized.includes("off peak") ||
-    normalized.includes("off-peak") ||
-    normalized.includes("offpeak")
-  );
-}
-
-function isPeakBoardingService(service: MoegoAppointmentServiceDetail): boolean {
-  if (isOffPeakBoardingService(service)) return false;
-  const normalized = normalizeServiceName(service.name);
-  return normalized.includes("peak");
 }
 
 function netLineCents(
@@ -249,8 +232,8 @@ export async function buildWeeklyBoardingReport(options?: {
   ];
   const orderMoney = await ordersById(orderIds, start, end, businessId);
 
-  let peakCapacity = 0;
-  let offPeakCapacity = 0;
+  let nights = 0;
+  const nightsByService = new Map<string, number>();
   let upsellsCents = 0;
   let totalRevenueCents = 0;
 
@@ -267,18 +250,11 @@ export async function buildWeeklyBoardingReport(options?: {
       const netCents = netLineCents(toCents(service.price), appointmentGrossCents, order);
       if (netCents > 0 && isBoardingService(service)) {
         totalRevenueCents += netCents;
+        nights += capacityUnits;
+        const serviceName = service.name?.trim() ?? "(unnamed service)";
+        nightsByService.set(serviceName, (nightsByService.get(serviceName) || 0) + capacityUnits);
       } else if (netCents > 0) {
         upsellsCents += netCents;
-      }
-
-      if (isBoardingService(service)) {
-        if (isOffPeakBoardingService(service)) {
-          offPeakCapacity += capacityUnits;
-        } else if (isPeakBoardingService(service)) {
-          peakCapacity += capacityUnits;
-        } else {
-          peakCapacity += capacityUnits;
-        }
       }
     }
   }
@@ -289,9 +265,11 @@ export async function buildWeeklyBoardingReport(options?: {
     businessId,
     totalFinishedBoardingAppointments: appointments.length,
     totalRevenueCents,
-    peakCapacity,
-    offPeakCapacity,
+    nights,
     upsellsCents,
+    nightsByService: Object.fromEntries(
+      [...nightsByService.entries()].sort(([a], [b]) => a.localeCompare(b))
+    ),
   };
 }
 
@@ -305,12 +283,8 @@ export async function upsertWeeklyBoardingKpis(
       value: moneyValue(values.totalRevenueCents),
     },
     {
-      metricKey: BOARDING_KPI_METRICS.peakCapacity,
-      value: numberValue(values.peakCapacity),
-    },
-    {
-      metricKey: BOARDING_KPI_METRICS.offPeakCapacity,
-      value: numberValue(values.offPeakCapacity),
+      metricKey: BOARDING_KPI_METRICS.nights,
+      value: numberValue(values.nights),
     },
     {
       metricKey: BOARDING_KPI_METRICS.upsells,
@@ -349,8 +323,7 @@ export async function syncWeeklyBoardingKpis(options?: {
   await upsertWeeklyBoardingKpis({
     weekStart: report.weekStart,
     totalRevenueCents: report.totalRevenueCents,
-    peakCapacity: report.peakCapacity,
-    offPeakCapacity: report.offPeakCapacity,
+    nights: report.nights,
     upsellsCents: report.upsellsCents,
   });
 
