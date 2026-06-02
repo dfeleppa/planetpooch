@@ -13,6 +13,7 @@ const MOBILE_GROOMING_KPI_METRICS = {
   avgRebookRate: "avg_rebook_rate",
   clientsServiced: "clients_serviced",
   dogsServiced: "dogs_serviced",
+  newClientsServiced: "new_clients_serviced",
   totalRevenue: "total_revenue",
 } as const;
 
@@ -23,6 +24,7 @@ export type WeeklyMobileGroomingReport = {
   totalAppointments: number;
   finishedAppointments: number;
   uniqueClients: number;
+  newClientsServiced: number;
   dogsServiced: number;
   rebookedClients: number;
   rebookRatePercent: number;
@@ -46,6 +48,12 @@ function percentValue(value: number): number {
 
 function petServiceDetails(appointment: MoegoAppointmentRow) {
   return appointment.petServiceDetails ?? [];
+}
+
+function chunks<T>(items: T[], size: number): T[][] {
+  const out: T[][] = [];
+  for (let i = 0; i < items.length; i += size) out.push(items.slice(i, i + size));
+  return out;
 }
 
 function appointmentNetCents(appointment: MoegoAppointmentRow): number {
@@ -79,6 +87,72 @@ async function listWeeklyAppointments(
   return appointments;
 }
 
+async function customerIdsWithAppointments(options: {
+  businessId: string;
+  customerIds: string[];
+  start: Date;
+  end: Date;
+  statuses: string[];
+}): Promise<{ customerIds: Set<string>; appointmentsChecked: number }> {
+  const matchingCustomerIds = new Set<string>();
+  let appointmentsChecked = 0;
+
+  for await (const page of streamAppointments(
+    {
+      startTime: {
+        startTime: options.start.toISOString(),
+        endTime: options.end.toISOString(),
+      },
+      statuses: options.statuses,
+      customerIds: options.customerIds,
+    },
+    [options.businessId]
+  )) {
+    appointmentsChecked += page.length;
+    for (const appointment of page) {
+      if (
+        appointment.customerId &&
+        options.customerIds.includes(appointment.customerId)
+      ) {
+        matchingCustomerIds.add(appointment.customerId);
+      }
+    }
+
+    if (options.customerIds.every((id) => matchingCustomerIds.has(id))) break;
+  }
+
+  return { customerIds: matchingCustomerIds, appointmentsChecked };
+}
+
+async function priorFinishedCustomerIds(options: {
+  weekStart: Date;
+  businessId: string;
+  customerIds: Set<string>;
+}): Promise<Set<string>> {
+  const priorCustomerIds = new Set<string>();
+  if (options.customerIds.size === 0) return priorCustomerIds;
+
+  const results = await Promise.all(
+    chunks([...options.customerIds], 50).map((customerIds) =>
+      customerIdsWithAppointments({
+        businessId: options.businessId,
+        customerIds,
+        start: new Date("2000-01-01T00:00:00.000Z"),
+        end: options.weekStart,
+        statuses: ["FINISHED"],
+      })
+    )
+  );
+
+  for (const result of results) {
+    for (const customerId of result.customerIds) {
+      priorCustomerIds.add(customerId);
+    }
+  }
+
+  return priorCustomerIds;
+}
+
 async function rebookSummary(options: {
   weekEnd: Date;
   businessId: string;
@@ -93,29 +167,25 @@ async function rebookSummary(options: {
 
   const futureEnd = addWeeks(options.weekEnd, 104);
   const rebookedCustomerIds = new Set<string>();
+
+  const results = await Promise.all(
+    chunks([...options.customerIds], 50).map((customerIds) =>
+      customerIdsWithAppointments({
+        businessId: options.businessId,
+        customerIds,
+        start: options.weekEnd,
+        end: futureEnd,
+        statuses: ["CONFIRMED", "UNCONFIRMED", "FINISHED"],
+      })
+    )
+  );
+
   let futureAppointmentsChecked = 0;
-
-  for await (const page of streamAppointments(
-    {
-      startTime: {
-        startTime: options.weekEnd.toISOString(),
-        endTime: futureEnd.toISOString(),
-      },
-      statuses: ["CONFIRMED", "UNCONFIRMED", "FINISHED"],
-    },
-    [options.businessId]
-  )) {
-    futureAppointmentsChecked += page.length;
-    for (const appointment of page) {
-      if (
-        appointment.customerId &&
-        options.customerIds.has(appointment.customerId)
-      ) {
-        rebookedCustomerIds.add(appointment.customerId);
-      }
+  for (const result of results) {
+    futureAppointmentsChecked += result.appointmentsChecked;
+    for (const customerId of result.customerIds) {
+      rebookedCustomerIds.add(customerId);
     }
-
-    if (rebookedCustomerIds.size === options.customerIds.size) break;
   }
 
   return {
@@ -149,6 +219,14 @@ export async function buildWeeklyMobileGroomingReport(options: {
   const totalNetSalesCents = finishedAppointments.reduce((sum, appointment) => {
     return sum + appointmentNetCents(appointment);
   }, 0);
+  const priorCustomerIds = await priorFinishedCustomerIds({
+    weekStart,
+    businessId,
+    customerIds: clientIds,
+  });
+  const newClientsServiced = [...clientIds].filter(
+    (customerId) => !priorCustomerIds.has(customerId)
+  ).length;
   const { rebookedClients, futureAppointmentsChecked } = await rebookSummary({
     weekEnd,
     businessId,
@@ -164,6 +242,7 @@ export async function buildWeeklyMobileGroomingReport(options: {
     totalAppointments: appointments.length,
     finishedAppointments: finishedAppointments.length,
     uniqueClients: clientIds.size,
+    newClientsServiced,
     dogsServiced,
     rebookedClients,
     rebookRatePercent,
@@ -190,6 +269,10 @@ export async function upsertWeeklyMobileGroomingKpis(
     {
       metricKey: MOBILE_GROOMING_KPI_METRICS.clientsServiced,
       value: numberValue(report.uniqueClients),
+    },
+    {
+      metricKey: MOBILE_GROOMING_KPI_METRICS.newClientsServiced,
+      value: numberValue(report.newClientsServiced),
     },
     {
       metricKey: MOBILE_GROOMING_KPI_METRICS.dogsServiced,

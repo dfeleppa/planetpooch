@@ -425,6 +425,7 @@ export function streamAppointments(
     lastUpdatedTime?: { startTime: string; endTime: string };
     statuses?: string[];
     serviceTypes?: string[];
+    customerIds?: string[];
   },
   businessIds: string[]
 ): AsyncGenerator<MoegoAppointmentRow[]> {
