@@ -53,6 +53,7 @@ type InHouseGroomingImportReport = {
 type DaycareImportReport = {
   totalFinishedAppointments: number;
   totalNonTrainingAppointments: number;
+  halfDayDaycareAppointments: number;
   uniqueClients: number;
   averageVisitsPerClient: number;
   totalNetSalesCents: number;
@@ -188,7 +189,7 @@ export function KpiView({
         const report = json.report as DaycareImportReport;
         setImportMessage(
           withImportedAt(
-            `Imported ${report.totalNonTrainingAppointments} non-training daycare appointments, ${report.uniqueClients} clients, ${report.averageVisitsPerClient.toFixed(2)} average visits, and ${dollars(report.totalNetSalesCents)} net sales from ${report.totalFinishedAppointments} finished daycare appointments.`,
+            `Imported ${report.totalNonTrainingAppointments} full day daycare appointments, ${report.halfDayDaycareAppointments} half day daycare appointments, ${report.uniqueClients} clients, ${report.averageVisitsPerClient.toFixed(2)} average visits, and ${dollars(report.totalNetSalesCents)} net sales from ${report.totalFinishedAppointments} finished daycare appointments.`,
             importedAt
           )
         );

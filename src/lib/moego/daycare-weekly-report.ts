@@ -11,8 +11,11 @@ import { REVENUE_ORDER_STATUSES } from "@/lib/moego/metrics";
 export const PET_RESORT_BUSINESS_ID = "biz3pcO";
 
 const TRAINING_FREE_SERVICE = "Training $0";
+const FREE_FIRST_DAY_SERVICE = "Free first day";
+const HALF_DAY_DAYCARE_SERVICE = "Half day daycare";
 const DAYCARE_KPI_METRICS = {
   totalAppointments: "total_appointments",
+  halfDayDaycare: "half_day_daycare",
   uniqueClients: "unique_clients",
   avgVisits: "avg_visits",
   totalNetSales: "total_net_sales",
@@ -24,6 +27,7 @@ export type WeeklyDaycareServiceReport = {
   businessId: string;
   totalFinishedAppointments: number;
   totalNonTrainingAppointments: number;
+  halfDayDaycareAppointments: number;
   uniqueClients: number;
   averageVisitsPerClient: number;
   totalNetSalesCents: number;
@@ -35,6 +39,7 @@ export type WeeklyDaycareServiceReport = {
 export type WeeklyDaycareKpiValues = {
   weekStart: string;
   totalNonTrainingAppointments: number;
+  halfDayDaycareAppointments?: number;
   uniqueClients: number;
   averageVisitsPerClient: number;
   totalNetSalesCents: number;
@@ -62,6 +67,32 @@ function serviceKey(appointment: MoegoAppointmentRow): string {
 function hasTrainingFreeService(appointment: MoegoAppointmentRow): boolean {
   const names = serviceNames(appointment);
   return names.includes(TRAINING_FREE_SERVICE);
+}
+
+function hasFreeFirstDayService(appointment: MoegoAppointmentRow): boolean {
+  const names = serviceNames(appointment);
+  return names.includes(FREE_FIRST_DAY_SERVICE);
+}
+
+function hasHalfDayDaycareService(appointment: MoegoAppointmentRow): boolean {
+  const names = serviceNames(appointment);
+  return names.includes(HALF_DAY_DAYCARE_SERVICE);
+}
+
+function isDaycareKpiExcludedAppointment(
+  appointment: MoegoAppointmentRow
+): boolean {
+  return (
+    hasTrainingFreeService(appointment) ||
+    hasFreeFirstDayService(appointment) ||
+    hasHalfDayDaycareService(appointment)
+  );
+}
+
+function isPaidDaycareRevenueAppointment(
+  appointment: MoegoAppointmentRow
+): boolean {
+  return !hasTrainingFreeService(appointment) && !hasFreeFirstDayService(appointment);
 }
 
 function fallbackAppointmentNetCents(appointment: MoegoAppointmentRow): number {
@@ -142,9 +173,15 @@ export async function buildWeeklyDaycareServiceReport(options?: {
   const appointments = await listFinishedDaycareAppointments(start, end, businessId);
 
   const nonTrainingAppointments = appointments.filter((appointment) => {
-    return !hasTrainingFreeService(appointment);
+    return !isDaycareKpiExcludedAppointment(appointment);
   });
-  const orderIds = nonTrainingAppointments
+  const halfDayDaycareAppointments = appointments.filter((appointment) => {
+    return hasHalfDayDaycareService(appointment);
+  }).length;
+  const revenueAppointments = appointments.filter((appointment) => {
+    return isPaidDaycareRevenueAppointment(appointment);
+  });
+  const orderIds = revenueAppointments
     .map((appointment) => appointment.orderId)
     .filter((orderId): orderId is string => Boolean(orderId));
   const orderNetSales = await netSalesByOrderId([...new Set(orderIds)]);
@@ -158,6 +195,18 @@ export async function buildWeeklyDaycareServiceReport(options?: {
     const client = clients.get(key) ?? { training: 0, nonTraining: 0 };
     if (hasTrainingFreeService(appointment)) {
       client.training++;
+      clients.set(key, client);
+      continue;
+    }
+    if (hasFreeFirstDayService(appointment)) {
+      clients.set(key, client);
+      continue;
+    }
+    if (hasHalfDayDaycareService(appointment)) {
+      const orderNet = appointment.orderId
+        ? orderNetSales.get(appointment.orderId)
+        : undefined;
+      totalNetSalesCents += orderNet ?? fallbackAppointmentNetCents(appointment);
       clients.set(key, client);
       continue;
     }
@@ -184,6 +233,7 @@ export async function buildWeeklyDaycareServiceReport(options?: {
     businessId,
     totalFinishedAppointments: appointments.length,
     totalNonTrainingAppointments,
+    halfDayDaycareAppointments,
     uniqueClients,
     averageVisitsPerClient:
       uniqueClients > 0 ? totalNonTrainingAppointments / uniqueClients : 0,
@@ -210,6 +260,10 @@ export async function upsertWeeklyDaycareKpis(
     {
       metricKey: DAYCARE_KPI_METRICS.totalAppointments,
       value: numberValue(values.totalNonTrainingAppointments),
+    },
+    {
+      metricKey: DAYCARE_KPI_METRICS.halfDayDaycare,
+      value: numberValue(values.halfDayDaycareAppointments ?? 0),
     },
     {
       metricKey: DAYCARE_KPI_METRICS.uniqueClients,
@@ -257,6 +311,7 @@ export async function syncWeeklyDaycareServiceKpis(options?: {
   await upsertWeeklyDaycareKpis({
     weekStart: report.weekStart,
     totalNonTrainingAppointments: report.totalNonTrainingAppointments,
+    halfDayDaycareAppointments: report.halfDayDaycareAppointments,
     uniqueClients: report.uniqueClients,
     averageVisitsPerClient: report.averageVisitsPerClient,
     totalNetSalesCents: report.totalNetSalesCents,

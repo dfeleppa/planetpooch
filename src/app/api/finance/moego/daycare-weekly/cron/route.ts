@@ -82,6 +82,8 @@ export async function POST(req: NextRequest) {
     "totalNonTrainingAppointments"
   );
   const uniqueClients = readFiniteNumber(body, "uniqueClients");
+  const halfDayDaycareAppointments =
+    readFiniteNumber(body, "halfDayDaycareAppointments") ?? 0;
   const totalNetSalesCents = readFiniteNumber(body, "totalNetSalesCents");
   const averageVisitsPerClient =
     readFiniteNumber(body, "averageVisitsPerClient") ??
@@ -110,6 +112,7 @@ export async function POST(req: NextRequest) {
     await upsertWeeklyDaycareKpis({
       weekStart,
       totalNonTrainingAppointments,
+      halfDayDaycareAppointments,
       uniqueClients,
       averageVisitsPerClient,
       totalNetSalesCents,
@@ -120,6 +123,7 @@ export async function POST(req: NextRequest) {
       weekStart,
       metrics: {
         totalNonTrainingAppointments,
+        halfDayDaycareAppointments,
         uniqueClients,
         averageVisitsPerClient,
         totalNetSalesCents,
