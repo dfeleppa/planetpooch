@@ -54,6 +54,8 @@ type DaycareImportReport = {
   totalFinishedAppointments: number;
   totalNonTrainingAppointments: number;
   halfDayDaycareAppointments: number;
+  averageDailyOccupancy: number;
+  evaluations: number;
   uniqueClients: number;
   averageVisitsPerClient: number;
   totalNetSalesCents: number;
@@ -189,7 +191,7 @@ export function KpiView({
         const report = json.report as DaycareImportReport;
         setImportMessage(
           withImportedAt(
-            `Imported ${report.totalNonTrainingAppointments} full day daycare appointments, ${report.halfDayDaycareAppointments} half day daycare appointments, ${report.uniqueClients} clients, ${report.averageVisitsPerClient.toFixed(2)} average visits, and ${dollars(report.totalNetSalesCents)} net sales from ${report.totalFinishedAppointments} finished daycare appointments.`,
+            `Imported ${report.totalNonTrainingAppointments} full day daycare appointments, ${report.halfDayDaycareAppointments} half day daycare appointments, ${report.averageDailyOccupancy.toFixed(2)} average daily occupancy, ${report.evaluations} evaluations, ${report.uniqueClients} clients, ${report.averageVisitsPerClient.toFixed(2)} average visits, and ${dollars(report.totalNetSalesCents)} net sales from ${report.totalFinishedAppointments} finished daycare appointments.`,
             importedAt
           )
         );
@@ -281,7 +283,7 @@ export function KpiView({
       {mode === "targets" && (
         <p className="-mt-3 mb-6 text-xs text-gray-500">
           Targets and averages apply from this week forward, in perpetuity until you change them
-          again — past weeks are not affected — and also fill the matching Next Week — Forecast
+          again — past weeks are not affected — and also fill the matching {sectionLabel(segment, "FORECAST")}
           rows.
         </p>
       )}
@@ -309,7 +311,7 @@ export function KpiView({
             return (
               <section key={section}>
                 <h2 className="text-xs font-semibold uppercase tracking-wider text-gray-500 mb-2">
-                  {SECTION_LABELS[section]}
+                  {sectionLabel(segment, section)}
                 </h2>
                 <Table>
                   <TableHead>
@@ -388,6 +390,13 @@ function formatImportedAt(date = new Date()): string {
 
 function withImportedAt(message: string, importedAt: string): string {
   return `${message} Imported at ${importedAt}.`;
+}
+
+function sectionLabel(segment: KpiSegment, section: KpiSection): string {
+  if (segment === "DAYCARE" && section === "FORECAST") {
+    return "Future KPI Card";
+  }
+  return SECTION_LABELS[section];
 }
 
 function KpiInput({

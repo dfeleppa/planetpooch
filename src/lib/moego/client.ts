@@ -311,6 +311,11 @@ export type MoegoAppointmentPetServiceDetail = {
     name?: string;
   };
   serviceDetails?: MoegoAppointmentServiceDetail[];
+  evaluationDetails?: {
+    id?: string;
+    name?: string;
+    status?: string;
+  }[];
 };
 
 export type MoegoAppointmentRow = {

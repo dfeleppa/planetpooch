@@ -84,6 +84,12 @@ export async function POST(req: NextRequest) {
   const uniqueClients = readFiniteNumber(body, "uniqueClients");
   const halfDayDaycareAppointments =
     readFiniteNumber(body, "halfDayDaycareAppointments") ?? 0;
+  const averageDailyOccupancy =
+    readFiniteNumber(body, "averageDailyOccupancy") ??
+    (totalNonTrainingAppointments !== null
+      ? (totalNonTrainingAppointments + halfDayDaycareAppointments) / 6
+      : null);
+  const evaluations = readFiniteNumber(body, "evaluations") ?? 0;
   const totalNetSalesCents = readFiniteNumber(body, "totalNetSalesCents");
   const averageVisitsPerClient =
     readFiniteNumber(body, "averageVisitsPerClient") ??
@@ -95,6 +101,7 @@ export async function POST(req: NextRequest) {
     typeof weekStart !== "string" ||
     !/^\d{4}-\d{2}-\d{2}$/.test(weekStart) ||
     totalNonTrainingAppointments === null ||
+    averageDailyOccupancy === null ||
     uniqueClients === null ||
     averageVisitsPerClient === null ||
     totalNetSalesCents === null
@@ -113,6 +120,8 @@ export async function POST(req: NextRequest) {
       weekStart,
       totalNonTrainingAppointments,
       halfDayDaycareAppointments,
+      averageDailyOccupancy,
+      evaluations,
       uniqueClients,
       averageVisitsPerClient,
       totalNetSalesCents,
@@ -124,6 +133,8 @@ export async function POST(req: NextRequest) {
       metrics: {
         totalNonTrainingAppointments,
         halfDayDaycareAppointments,
+        averageDailyOccupancy,
+        evaluations,
         uniqueClients,
         averageVisitsPerClient,
         totalNetSalesCents,

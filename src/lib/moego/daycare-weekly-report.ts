@@ -16,6 +16,8 @@ const HALF_DAY_DAYCARE_SERVICE = "Half day daycare";
 const DAYCARE_KPI_METRICS = {
   totalAppointments: "total_appointments",
   halfDayDaycare: "half_day_daycare",
+  avgDailyOccupancy: "avg_daily_occupancy",
+  evaluations: "evaluations",
   uniqueClients: "unique_clients",
   avgVisits: "avg_visits",
   totalNetSales: "total_net_sales",
@@ -28,6 +30,8 @@ export type WeeklyDaycareServiceReport = {
   totalFinishedAppointments: number;
   totalNonTrainingAppointments: number;
   halfDayDaycareAppointments: number;
+  averageDailyOccupancy: number;
+  evaluations: number;
   uniqueClients: number;
   averageVisitsPerClient: number;
   totalNetSalesCents: number;
@@ -40,6 +44,8 @@ export type WeeklyDaycareKpiValues = {
   weekStart: string;
   totalNonTrainingAppointments: number;
   halfDayDaycareAppointments?: number;
+  averageDailyOccupancy?: number;
+  evaluations?: number;
   uniqueClients: number;
   averageVisitsPerClient: number;
   totalNetSalesCents: number;
@@ -113,7 +119,7 @@ export function previousCompletedWeek(today = new Date()): {
   return { start, end };
 }
 
-async function listFinishedDaycareAppointments(
+async function listDaycareAppointments(
   start: Date,
   end: Date,
   businessId: string
@@ -125,7 +131,6 @@ async function listFinishedDaycareAppointments(
         startTime: start.toISOString(),
         endTime: end.toISOString(),
       },
-      statuses: ["FINISHED"],
       serviceTypes: ["DAYCARE"],
     },
     [businessId]
@@ -133,6 +138,39 @@ async function listFinishedDaycareAppointments(
     appointments.push(...page);
   }
   return appointments;
+}
+
+async function listAppointmentsForEvaluations(
+  start: Date,
+  end: Date,
+  businessId: string
+): Promise<MoegoAppointmentRow[]> {
+  const appointments: MoegoAppointmentRow[] = [];
+  for await (const page of streamAppointments(
+    {
+      startTime: {
+        startTime: start.toISOString(),
+        endTime: end.toISOString(),
+      },
+    },
+    [businessId]
+  )) {
+    appointments.push(...page);
+  }
+  return appointments;
+}
+
+function countEvaluations(appointments: MoegoAppointmentRow[]): number {
+  return appointments
+    .filter((appointment) => appointment.status !== "CANCELED")
+    .reduce((sum, appointment) => {
+      return (
+        sum +
+        (appointment.petServiceDetails ?? []).reduce((petSum, petService) => {
+          return petSum + (petService.evaluationDetails ?? []).length;
+        }, 0)
+      );
+    }, 0);
 }
 
 async function netSalesByOrderId(
@@ -170,7 +208,13 @@ export async function buildWeeklyDaycareServiceReport(options?: {
     : previousCompletedWeek(options?.today).start;
   const end = addWeeks(start, 1);
   const businessId = options?.businessId ?? PET_RESORT_BUSINESS_ID;
-  const appointments = await listFinishedDaycareAppointments(start, end, businessId);
+  const [allDaycareAppointments, evaluationAppointments] = await Promise.all([
+    listDaycareAppointments(start, end, businessId),
+    listAppointmentsForEvaluations(start, end, businessId),
+  ]);
+  const appointments = allDaycareAppointments.filter(
+    (appointment) => appointment.status === "FINISHED"
+  );
 
   const nonTrainingAppointments = appointments.filter((appointment) => {
     return !isDaycareKpiExcludedAppointment(appointment);
@@ -226,6 +270,9 @@ export async function buildWeeklyDaycareServiceReport(options?: {
   const clientRows = [...clients.entries()];
   const uniqueClients = clientRows.filter(([, row]) => row.nonTraining > 0).length;
   const totalNonTrainingAppointments = nonTrainingAppointments.length;
+  const averageDailyOccupancy =
+    (totalNonTrainingAppointments + halfDayDaycareAppointments) / 6;
+  const evaluations = countEvaluations(evaluationAppointments);
 
   return {
     weekStart: toWeekParam(start),
@@ -234,6 +281,8 @@ export async function buildWeeklyDaycareServiceReport(options?: {
     totalFinishedAppointments: appointments.length,
     totalNonTrainingAppointments,
     halfDayDaycareAppointments,
+    averageDailyOccupancy,
+    evaluations,
     uniqueClients,
     averageVisitsPerClient:
       uniqueClients > 0 ? totalNonTrainingAppointments / uniqueClients : 0,
@@ -264,6 +313,19 @@ export async function upsertWeeklyDaycareKpis(
     {
       metricKey: DAYCARE_KPI_METRICS.halfDayDaycare,
       value: numberValue(values.halfDayDaycareAppointments ?? 0),
+    },
+    {
+      metricKey: DAYCARE_KPI_METRICS.avgDailyOccupancy,
+      value: numberValue(
+        values.averageDailyOccupancy ??
+          (values.totalNonTrainingAppointments +
+            (values.halfDayDaycareAppointments ?? 0)) /
+            6
+      ),
+    },
+    {
+      metricKey: DAYCARE_KPI_METRICS.evaluations,
+      value: numberValue(values.evaluations ?? 0),
     },
     {
       metricKey: DAYCARE_KPI_METRICS.uniqueClients,
@@ -312,6 +374,8 @@ export async function syncWeeklyDaycareServiceKpis(options?: {
     weekStart: report.weekStart,
     totalNonTrainingAppointments: report.totalNonTrainingAppointments,
     halfDayDaycareAppointments: report.halfDayDaycareAppointments,
+    averageDailyOccupancy: report.averageDailyOccupancy,
+    evaluations: report.evaluations,
     uniqueClients: report.uniqueClients,
     averageVisitsPerClient: report.averageVisitsPerClient,
     totalNetSalesCents: report.totalNetSalesCents,
