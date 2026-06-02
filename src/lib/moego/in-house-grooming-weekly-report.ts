@@ -197,7 +197,7 @@ export async function buildWeeklyInHouseGroomingReport(options?: {
   const addonCounts = new Map<string, number>();
   let totalNetSalesCents = 0;
   let upsellsCents = 0;
-  let totalPetsServiced = 0;
+  const totalPetsServiced = new Set<string>();
 
   for (const appointment of groomingAppointments) {
     const allLines = serviceDetails(appointment);
@@ -211,7 +211,8 @@ export async function buildWeeklyInHouseGroomingReport(options?: {
 
     for (const petService of appointment.petServiceDetails ?? []) {
       if ((petService.serviceDetails ?? []).some(isGroomingService)) {
-        totalPetsServiced++;
+        const petId = petService.petId ?? petService.petName;
+        totalPetsServiced.add(petId ?? appointment.id);
       }
     }
 
@@ -235,7 +236,7 @@ export async function buildWeeklyInHouseGroomingReport(options?: {
     businessId,
     totalFinishedAppointments: appointments.length,
     groomingAppointments: groomingAppointments.length,
-    totalPetsServiced,
+    totalPetsServiced: totalPetsServiced.size,
     totalNetSalesCents,
     upsellsCents,
     serviceCounts: Object.fromEntries(
