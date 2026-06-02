@@ -1,6 +1,6 @@
 import { KpiSegment, Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
-import { addWeeks, toWeekParam, weekStartOf } from "@/lib/week";
+import { addWeeks, fromWeekParam, toWeekParam, weekStartOf } from "@/lib/week";
 import {
   streamAppointments,
   toCents,
@@ -131,9 +131,13 @@ async function netSalesByOrderId(
 
 export async function buildWeeklyDaycareServiceReport(options?: {
   today?: Date;
+  weekStart?: string;
   businessId?: string;
 }): Promise<WeeklyDaycareServiceReport> {
-  const { start, end } = previousCompletedWeek(options?.today);
+  const start = options?.weekStart
+    ? fromWeekParam(options.weekStart)
+    : previousCompletedWeek(options?.today).start;
+  const end = addWeeks(start, 1);
   const businessId = options?.businessId ?? PET_RESORT_BUSINESS_ID;
   const appointments = await listFinishedDaycareAppointments(start, end, businessId);
 
@@ -245,6 +249,7 @@ export async function upsertWeeklyDaycareKpis(
 
 export async function syncWeeklyDaycareServiceKpis(options?: {
   today?: Date;
+  weekStart?: string;
   businessId?: string;
 }): Promise<WeeklyDaycareServiceReport> {
   const report = await buildWeeklyDaycareServiceReport(options);
