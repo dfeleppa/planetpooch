@@ -32,7 +32,8 @@ export function isValidWeekParam(value: string | undefined | null): value is str
 }
 
 export function formatWeekLabel(weekStart: Date): string {
-  return `Week of ${weekStart.toLocaleDateString("en-US", {
+  const saturday = new Date(weekStart.getTime() + 6 * MS_PER_DAY);
+  return `Week ending ${saturday.toLocaleDateString("en-US", {
     timeZone: "UTC",
     month: "long",
     day: "numeric",

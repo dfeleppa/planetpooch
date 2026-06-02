@@ -34,6 +34,13 @@ export type KpiCell = {
   target: number | null;
 };
 
+type MobileGroomingImportReport = {
+  finishedAppointments: number;
+  uniqueClients: number;
+  dogsServiced: number;
+  totalNetSalesCents: number;
+};
+
 // "week" edits value + average; "targets" edits only targets. Targets can be
 // changed *only* via the targets mode.
 type EditMode = "week" | "targets" | null;
@@ -59,10 +66,13 @@ export function KpiView({
   const [mode, setMode] = useState<EditMode>(null);
   const [draft, setDraft] = useState<Record<string, KpiCell>>({});
   const [saving, setSaving] = useState(false);
+  const [importingMoego, setImportingMoego] = useState(false);
+  const [importMessage, setImportMessage] = useState<string | null>(null);
 
   // Leave edit mode whenever the server data changes (segment/week switch).
   useEffect(() => {
     setMode(null);
+    setImportMessage(null);
   }, [segment, week]);
 
   function navigate(nextSegment: string, nextWeek: string) {
@@ -111,7 +121,34 @@ export function KpiView({
     }
   }
 
+  async function importMobileGroomingActuals() {
+    setImportingMoego(true);
+    setImportMessage(null);
+    try {
+      const res = await fetch("/api/finance/kpis/moego-mobile-grooming", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ weekStart: week }),
+      });
+      const json = (await res.json().catch(() => ({}))) as {
+        error?: string;
+        report?: MobileGroomingImportReport;
+      };
+      if (!res.ok || !json.report) {
+        setImportMessage(json.error ?? "Failed to import MoeGo actuals");
+        return;
+      }
+      setImportMessage(
+        `Imported ${json.report.uniqueClients} clients, ${json.report.dogsServiced} dogs, and ${dollars(json.report.totalNetSalesCents)} net revenue from ${json.report.finishedAppointments} finished appointments.`
+      );
+      router.refresh();
+    } finally {
+      setImportingMoego(false);
+    }
+  }
+
   const hasMetrics = segmentDef.metrics.length > 0;
+  const canImportMobileGrooming = segment === "MOBILE_GROOMING" && hasMetrics;
 
   return (
     <div>
@@ -136,6 +173,15 @@ export function KpiView({
             </div>
           ) : (
             <div className="flex gap-2">
+              {canImportMobileGrooming && (
+                <Button
+                  variant="secondary"
+                  onClick={importMobileGroomingActuals}
+                  disabled={importingMoego}
+                >
+                  {importingMoego ? "Importing…" : "Import MoeGo actuals"}
+                </Button>
+              )}
               <Button variant="secondary" onClick={() => startEdit("week")}>
                 Edit week
               </Button>
@@ -157,6 +203,11 @@ export function KpiView({
           again — past weeks are not affected — and also fill the matching Next Week — Forecast
           rows.
         </p>
+      )}
+      {importMessage && (
+        <div className="-mt-3 mb-6 rounded-lg border border-blue-100 bg-blue-50 px-3 py-2 text-sm text-blue-900">
+          {importMessage}
+        </div>
       )}
 
       {!hasMetrics ? (
@@ -236,6 +287,14 @@ export function KpiView({
       )}
     </div>
   );
+}
+
+function dollars(cents: number): string {
+  return (cents / 100).toLocaleString("en-US", {
+    style: "currency",
+    currency: "USD",
+    maximumFractionDigits: 0,
+  });
 }
 
 function KpiInput({
