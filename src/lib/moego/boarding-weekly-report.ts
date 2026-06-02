@@ -20,8 +20,11 @@ const BOARDING_KPI_METRICS = {
 const BOARDING_SERVICE_NAMES = [
   "classic group play",
   "classic 1 on 1",
+  "classic platinum",
+  "classic silver",
   "express a group play",
   "express a 1 on 1",
+  "express a platinum",
   "express b group play",
   "express b 1 on 1",
   "full day daycare",
@@ -71,7 +74,8 @@ function normalizeServiceName(name: string | undefined): string {
   return (name ?? "")
     .toLowerCase()
     .replace(/[\u00a0\u1680\u180e\u2000-\u200a\u2028\u2029\u202f\u205f\u3000]+/g, " ")
-    .replace(/[/&(),]/g, " ")
+    .replace(/[/&(),$]/g, " ")
+    .replace(/-/g, " ")
     .replace(/\s+/g, " ")
     .trim();
 }
@@ -81,11 +85,18 @@ function isBoardingService(service: MoegoAppointmentServiceDetail): boolean {
   const category = (service.category ?? "").toLowerCase();
   if (BOARDING_SERVICE_NAME_SET.has(name)) return true;
 
+  const hasGroupOrOneOnOne =
+    /(group play|1\s*on\s*1|1on1|1-1)/.test(name);
+  const isPlayOrSolo = /(^|\s)(express|classic|luxury|xl)(\s+a)?\s+/.test(name) && hasGroupOrOneOnOne;
+
   return (
     name.includes("boarding") ||
     name.includes("board") ||
     category.includes("boarding") ||
-    category.includes("board")
+    category.includes("board") ||
+    isPlayOrSolo ||
+    /(^|\s)full day (?:daycare|enrichment activity)/.test(name) ||
+    /(^|\s)half day daycare/.test(name)
   );
 }
 
