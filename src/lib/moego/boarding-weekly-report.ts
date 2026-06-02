@@ -265,9 +265,12 @@ export async function buildWeeklyBoardingReport(options?: {
 
     for (const service of lines) {
       const netCents = netLineCents(toCents(service.price), appointmentGrossCents, order);
-      if (netCents > 0) {
+      if (netCents > 0 && isBoardingService(service)) {
         totalRevenueCents += netCents;
+      } else if (netCents > 0) {
+        upsellsCents += netCents;
       }
+
       if (isBoardingService(service)) {
         if (isOffPeakBoardingService(service)) {
           offPeakCapacity += capacityUnits;
@@ -276,8 +279,6 @@ export async function buildWeeklyBoardingReport(options?: {
         } else {
           peakCapacity += capacityUnits;
         }
-      } else if (netCents > 0) {
-        upsellsCents += netCents;
       }
     }
   }
