@@ -59,18 +59,17 @@ function serviceDetails(appointment: MoegoAppointmentRow): MoegoAppointmentServi
 }
 
 function isGroomingLine(service: MoegoAppointmentServiceDetail): boolean {
-  if (service.serviceItemType !== "GROOMING") return false;
   const category = service.category?.toLowerCase() ?? "";
   const name = service.name?.toLowerCase() ?? "";
-  return (
-    category.includes("groom") ||
-    name.includes("groom") ||
-    name.includes("nail trim")
-  );
+  const groomingTextMatch =
+    category.includes("groom") || name.includes("groom") || name.includes("nail trim");
+
+  return groomingTextMatch || service.serviceItemType === "GROOMING";
 }
 
 function isGroomingService(service: MoegoAppointmentServiceDetail): boolean {
-  return isGroomingLine(service) && service.serviceType === "SERVICE";
+  const type = service.serviceType?.toUpperCase();
+  return isGroomingLine(service) && (!type || type === "SERVICE");
 }
 
 function isGroomingAddon(service: MoegoAppointmentServiceDetail): boolean {
