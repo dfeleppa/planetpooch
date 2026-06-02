@@ -39,11 +39,7 @@ export const KPI_SEGMENTS: KpiSegmentDef[] = [
       { key: "new_clients_serviced", label: "New clients serviced", section: "ACTUALS", format: "number" },
       { key: "avg_rebook_rate", label: "Average rebook rate", section: "ACTUALS", format: "percent" },
       { key: "total_revenue", label: "Total revenue (net of fees & taxes)", section: "ACTUALS", format: "currency" },
-      { key: "routes_planned", label: "Routes planned", section: "FORECAST", format: "number", mirrorsKey: "routes_completed" },
-      { key: "dogs_scheduled", label: "Dogs scheduled", section: "FORECAST", format: "number", mirrorsKey: "dogs_serviced" },
-      { key: "clients_scheduled", label: "Clients scheduled", section: "FORECAST", format: "number", mirrorsKey: "clients_serviced" },
-      { key: "new_clients_scheduled", label: "New clients scheduled", section: "FORECAST", format: "number", mirrorsKey: "new_clients_serviced" },
-      { key: "total_expected_revenue", label: "Total expected revenue (net of fees & taxes)", section: "FORECAST", format: "currency", mirrorsKey: "total_revenue" },
+
     ],
   },
   {
@@ -51,8 +47,8 @@ export const KPI_SEGMENTS: KpiSegmentDef[] = [
     label: "Boarding",
     metrics: [
       { key: "revenue", label: "Revenue", section: "ACTUALS", format: "currency" },
-      { key: "nights", label: "Nights", section: "ACTUALS", format: "number" },
-      { key: "upsells", label: "Upsells", section: "ACTUALS", format: "currency" },
+      { key: "nights", label: "Nights", section: "FORECAST", format: "number" },
+      { key: "upsells", label: "Upsells", section: "FORECAST", format: "currency" },
     ],
   },
   {
