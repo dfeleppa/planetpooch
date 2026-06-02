@@ -17,6 +17,19 @@ const IN_HOUSE_GROOMING_KPI_METRICS = {
   totalPetsServiced: "total_pets_serviced",
 } as const;
 
+const KNOWN_IN_HOUSE_GROOMING_AMOUNTS = new Set([
+  "55",
+  "75",
+  "95",
+  "100",
+  "105",
+  "115",
+  "135",
+  "155",
+  "195",
+  "235",
+]);
+
 export type WeeklyInHouseGroomingReport = {
   weekStart: string;
   weekEnd: string;
@@ -80,9 +93,12 @@ function isSpecialGroomingService(serviceName: string): boolean {
   const hasNP = suffix.includes("np");
   const hasT = suffix.includes("t");
 
+  if (!KNOWN_IN_HOUSE_GROOMING_AMOUNTS.has(amount)) return false;
+
   return (
-    (amount === "135" || amount === "155") && hasNP ||
-    amount === "55" && hasT
+    hasNP ||
+    hasT ||
+    /groom/.test(normalized)
   );
 }
 
@@ -95,7 +111,7 @@ function isGroomingLine(service: MoegoAppointmentServiceDetail): boolean {
   return (
     hasGroomText ||
     isSpecialGroomingService(name) ||
-    (service.serviceItemType === "GROOMING" && service.serviceType === "SERVICE")
+    service.serviceItemType === "GROOMING"
   );
 }
 
