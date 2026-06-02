@@ -211,7 +211,7 @@ export async function buildWeeklyInHouseGroomingReport(options?: {
 
     for (const petService of appointment.petServiceDetails ?? []) {
       if ((petService.serviceDetails ?? []).some(isGroomingService)) {
-        const petId = petService.petId ?? petService.petName;
+        const petId = petService.pet?.id ?? petService.pet?.name;
         totalPetsServiced.add(petId ?? appointment.id);
       }
     }

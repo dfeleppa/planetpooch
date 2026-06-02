@@ -306,6 +306,10 @@ export type MoegoAppointmentServiceDetail = {
 };
 
 export type MoegoAppointmentPetServiceDetail = {
+  pet?: {
+    id?: string;
+    name?: string;
+  };
   serviceDetails?: MoegoAppointmentServiceDetail[];
 };
 
