@@ -49,6 +49,14 @@ type InHouseGroomingImportReport = {
   upsellsCents: number;
 };
 
+type DaycareImportReport = {
+  totalFinishedAppointments: number;
+  totalNonTrainingAppointments: number;
+  uniqueClients: number;
+  averageVisitsPerClient: number;
+  totalNetSalesCents: number;
+};
+
 
 // "week" edits value + average; "targets" edits only targets. Targets can be
 // changed *only* via the targets mode.
@@ -137,7 +145,9 @@ export function KpiView({
       const endpoint =
         segment === "IN_HOUSE_GROOMING"
           ? "/api/finance/kpis/moego-in-house-grooming"
-          : "/api/finance/kpis/moego-mobile-grooming";
+          : segment === "DAYCARE"
+            ? "/api/finance/kpis/moego-daycare"
+            : "/api/finance/kpis/moego-mobile-grooming";
       const res = await fetch(endpoint, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -145,7 +155,10 @@ export function KpiView({
       });
       const json = (await res.json().catch(() => ({}))) as {
         error?: string;
-        report?: MobileGroomingImportReport | InHouseGroomingImportReport;
+        report?:
+          | MobileGroomingImportReport
+          | InHouseGroomingImportReport
+          | DaycareImportReport;
       };
       if (!res.ok || !json.report) {
         setImportMessage(json.error ?? "Failed to import MoeGo actuals");
@@ -155,6 +168,11 @@ export function KpiView({
         const report = json.report as InHouseGroomingImportReport;
         setImportMessage(
           `Imported ${report.totalPetsServiced} pets serviced, ${dollars(report.totalNetSalesCents)} grooming revenue, and ${dollars(report.upsellsCents)} upsells from ${report.groomingAppointments} finished grooming appointments.`
+        );
+      } else if (segment === "DAYCARE") {
+        const report = json.report as DaycareImportReport;
+        setImportMessage(
+          `Imported ${report.totalNonTrainingAppointments} non-training daycare appointments, ${report.uniqueClients} clients, ${report.averageVisitsPerClient.toFixed(2)} average visits, and ${dollars(report.totalNetSalesCents)} net sales from ${report.totalFinishedAppointments} finished daycare appointments.`
         );
       } else {
         const report = json.report as MobileGroomingImportReport;
@@ -170,7 +188,9 @@ export function KpiView({
 
   const hasMetrics = segmentDef.metrics.length > 0;
   const canImportMoego =
-    (segment === "MOBILE_GROOMING" || segment === "IN_HOUSE_GROOMING") &&
+    (segment === "MOBILE_GROOMING" ||
+      segment === "IN_HOUSE_GROOMING" ||
+      segment === "DAYCARE") &&
     hasMetrics;
 
   return (
