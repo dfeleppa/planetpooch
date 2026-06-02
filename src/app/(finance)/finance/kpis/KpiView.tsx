@@ -175,15 +175,22 @@ export function KpiView({
         setImportMessage(json.error ?? "Failed to import MoeGo actuals");
         return;
       }
+      const importedAt = formatImportedAt();
       if (segment === "IN_HOUSE_GROOMING") {
         const report = json.report as InHouseGroomingImportReport;
         setImportMessage(
-          `Imported ${report.totalPetsServiced} pets serviced, ${dollars(report.totalNetSalesCents)} grooming revenue, and ${dollars(report.upsellsCents)} upsells from ${report.groomingAppointments} finished grooming appointments.`
+          withImportedAt(
+            `Imported ${report.totalPetsServiced} pets serviced, ${dollars(report.totalNetSalesCents)} grooming revenue, and ${dollars(report.upsellsCents)} upsells from ${report.groomingAppointments} finished grooming appointments.`,
+            importedAt
+          )
         );
       } else if (segment === "DAYCARE") {
         const report = json.report as DaycareImportReport;
         setImportMessage(
-          `Imported ${report.totalNonTrainingAppointments} non-training daycare appointments, ${report.uniqueClients} clients, ${report.averageVisitsPerClient.toFixed(2)} average visits, and ${dollars(report.totalNetSalesCents)} net sales from ${report.totalFinishedAppointments} finished daycare appointments.`
+          withImportedAt(
+            `Imported ${report.totalNonTrainingAppointments} non-training daycare appointments, ${report.uniqueClients} clients, ${report.averageVisitsPerClient.toFixed(2)} average visits, and ${dollars(report.totalNetSalesCents)} net sales from ${report.totalFinishedAppointments} finished daycare appointments.`,
+            importedAt
+          )
         );
       } else if (segment === "BOARDING") {
         const report = json.report as BoardingImportReport;
@@ -195,12 +202,18 @@ export function KpiView({
           : "";
         const breakdown = nightsByService ? ` (${nightsByService})` : "";
         setImportMessage(
-          `Imported ${report.totalFinishedBoardingAppointments} finished boarding appointments, ${dollars(report.totalRevenueCents)} revenue, ${report.nights} nights${breakdown}, and ${dollars(report.upsellsCents)} upsells.`
+          withImportedAt(
+            `Imported ${report.totalFinishedBoardingAppointments} finished boarding appointments, ${dollars(report.totalRevenueCents)} revenue, ${report.nights} nights${breakdown}, and ${dollars(report.upsellsCents)} upsells.`,
+            importedAt
+          )
         );
       } else {
         const report = json.report as MobileGroomingImportReport;
         setImportMessage(
-          `Imported ${report.uniqueClients} clients, ${report.newClientsServiced} new clients, ${report.dogsServiced} dogs, ${report.rebookRatePercent.toFixed(1)}% rebook rate, and ${dollars(report.totalNetSalesCents)} net revenue from ${report.finishedAppointments} finished appointments.`
+          withImportedAt(
+            `Imported ${report.uniqueClients} clients, ${report.newClientsServiced} new clients, ${report.dogsServiced} dogs, ${report.rebookRatePercent.toFixed(1)}% rebook rate, and ${dollars(report.totalNetSalesCents)} net revenue from ${report.finishedAppointments} finished appointments.`,
+            importedAt
+          )
         );
       }
       router.refresh();
@@ -362,6 +375,18 @@ function dollars(cents: number): string {
     currency: "USD",
     maximumFractionDigits: 0,
   });
+}
+
+function formatImportedAt(date = new Date()): string {
+  return new Intl.DateTimeFormat("en-US", {
+    dateStyle: "medium",
+    timeStyle: "short",
+    timeZoneName: "short",
+  }).format(date);
+}
+
+function withImportedAt(message: string, importedAt: string): string {
+  return `${message} Imported at ${importedAt}.`;
 }
 
 function KpiInput({
