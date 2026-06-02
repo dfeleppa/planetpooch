@@ -17,10 +17,17 @@ const IN_HOUSE_GROOMING_KPI_METRICS = {
   totalPetsServiced: "total_pets_serviced",
 } as const;
 
+const PLANET_POOCH_BUSINESS_ID = "bizVdfk";
+const IN_HOUSE_GROOMING_BUSINESS_IDS = [
+  PET_RESORT_BUSINESS_ID,
+  PLANET_POOCH_BUSINESS_ID,
+];
+
 export type WeeklyInHouseGroomingReport = {
   weekStart: string;
   weekEnd: string;
   businessId: string;
+  businessIds: string[];
   totalFinishedAppointments: number;
   groomingAppointments: number;
   totalPetsServiced: number;
@@ -144,7 +151,7 @@ function netLineCents(
 async function listFinishedAppointments(
   start: Date,
   end: Date,
-  businessId: string
+  businessIds: string[]
 ): Promise<MoegoAppointmentRow[]> {
   const appointments: MoegoAppointmentRow[] = [];
   for await (const page of streamAppointments(
@@ -155,7 +162,7 @@ async function listFinishedAppointments(
       },
       statuses: ["FINISHED"],
     },
-    [businessId]
+    businessIds
   )) {
     appointments.push(...page);
   }
@@ -166,7 +173,7 @@ async function ordersById(
   orderIds: string[],
   start: Date,
   end: Date,
-  businessId: string
+  businessIds: string[]
 ): Promise<Map<string, OrderMoney>> {
   if (orderIds.length === 0) return new Map();
 
@@ -182,7 +189,7 @@ async function ordersById(
         endTime: lookupEnd.toISOString(),
       },
     },
-    [businessId]
+    businessIds
   )) {
     for (const order of page) {
       if (!wanted.has(order.id)) continue;
@@ -203,13 +210,23 @@ export async function buildWeeklyInHouseGroomingReport(options?: {
   weekStart?: string;
   today?: Date;
   businessId?: string;
+  businessIds?: string[];
 }): Promise<WeeklyInHouseGroomingReport> {
   const start = options?.weekStart
     ? fromWeekParam(options.weekStart)
     : previousCompletedWeek(options?.today).start;
   const end = addWeeks(start, 1);
-  const businessId = options?.businessId ?? PET_RESORT_BUSINESS_ID;
-  const appointments = await listFinishedAppointments(start, end, businessId);
+  const businessIds =
+    options?.businessIds?.length && options.businessIds.length > 0
+      ? options.businessIds
+      : options?.businessId
+        ? [options.businessId]
+        : IN_HOUSE_GROOMING_BUSINESS_IDS;
+  const normalizedBusinessIds = [
+    ...new Set(businessIds.filter(Boolean)),
+  ];
+
+  const appointments = await listFinishedAppointments(start, end, normalizedBusinessIds);
   const groomingAppointments = appointments.filter((appointment) =>
     serviceDetails(appointment).some(isGroomingLine)
   );
@@ -220,7 +237,7 @@ export async function buildWeeklyInHouseGroomingReport(options?: {
         .filter((orderId): orderId is string => Boolean(orderId))
     ),
   ];
-  const orderMoney = await ordersById(orderIds, start, end, businessId);
+  const orderMoney = await ordersById(orderIds, start, end, normalizedBusinessIds);
 
   const serviceCounts = new Map<string, number>();
   const addonCounts = new Map<string, number>();
@@ -262,7 +279,8 @@ export async function buildWeeklyInHouseGroomingReport(options?: {
   return {
     weekStart: toWeekParam(start),
     weekEnd: toWeekParam(new Date(end.getTime() - 24 * 60 * 60 * 1000)),
-    businessId,
+    businessId: normalizedBusinessIds[0] ?? PET_RESORT_BUSINESS_ID,
+    businessIds: normalizedBusinessIds,
     totalFinishedAppointments: appointments.length,
     groomingAppointments: groomingAppointments.length,
     totalPetsServiced: totalPetsServiced.size,
@@ -325,6 +343,7 @@ export async function syncWeeklyInHouseGroomingKpis(options?: {
   weekStart?: string;
   today?: Date;
   businessId?: string;
+  businessIds?: string[];
 }): Promise<WeeklyInHouseGroomingReport> {
   const report = await buildWeeklyInHouseGroomingReport(options);
 

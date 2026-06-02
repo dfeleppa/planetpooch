@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from "next/server";
 import { Role } from "@prisma/client";
 import { getSession } from "@/lib/auth-helpers";
 import { isValidWeekParam } from "@/lib/week";
-import { PET_RESORT_BUSINESS_ID } from "@/lib/moego/daycare-weekly-report";
 import { syncWeeklyInHouseGroomingKpis } from "@/lib/moego/in-house-grooming-weekly-report";
 import { MoegoApiError, MoegoConfigError } from "@/lib/moego/client";
 
@@ -36,7 +35,6 @@ export async function POST(req: NextRequest) {
   try {
     const report = await syncWeeklyInHouseGroomingKpis({
       weekStart,
-      businessId: PET_RESORT_BUSINESS_ID,
     });
 
     return NextResponse.json({ ok: true, report });
