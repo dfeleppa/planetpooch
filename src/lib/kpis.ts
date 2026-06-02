@@ -70,7 +70,7 @@ export const KPI_SEGMENTS: KpiSegmentDef[] = [
       { key: "evaluations", label: "Evaluations", section: "ACTUALS", format: "number" },
       { key: "unique_clients", label: "Unique clients", section: "ACTUALS", format: "number" },
       { key: "avg_visits", label: "Average number of visits", section: "ACTUALS", format: "number" },
-      { key: "total_net_sales", label: "Total net sales", section: "ACTUALS", format: "currency" },
+      { key: "total_net_sales", label: "Total net sales", section: "FORECAST", format: "currency" },
       { key: "package_sales", label: "Package sales", section: "FORECAST", format: "currency" },
       { key: "addon_sales", label: "Addon sales", section: "FORECAST", format: "currency" },
       { key: "payroll_hours", label: "Payroll hours", section: "FORECAST", format: "number" },
