@@ -163,7 +163,6 @@ async function listFinishedBoardingAppointments(
         endTime: end.toISOString(),
       },
       statuses: ["FINISHED"],
-      serviceTypes: ["BOARDING"],
     },
     [businessId]
   )) {
