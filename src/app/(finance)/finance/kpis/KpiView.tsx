@@ -70,6 +70,13 @@ type BoardingImportReport = {
   nightsByService?: Record<string, number>;
 };
 
+type TrainingImportReport = {
+  totalFinishedTrainingAppointments: number;
+  productSalesCents: number;
+  groupRevenueCents: number;
+  oneOnOneRevenueCents: number;
+};
+
 // "week" edits value + average; "targets" edits only targets. Targets can be
 // changed *only* via the targets mode.
 type EditMode = "week" | "targets" | null;
@@ -161,6 +168,8 @@ export function KpiView({
             ? "/api/finance/kpis/moego-daycare"
             : segment === "BOARDING"
               ? "/api/finance/kpis/moego-boarding"
+              : segment === "TRAINING"
+                ? "/api/finance/kpis/moego-training"
               : "/api/finance/kpis/moego-mobile-grooming";
       const res = await fetch(endpoint, {
         method: "POST",
@@ -173,7 +182,8 @@ export function KpiView({
           | MobileGroomingImportReport
           | InHouseGroomingImportReport
           | DaycareImportReport
-          | BoardingImportReport;
+          | BoardingImportReport
+          | TrainingImportReport;
       };
       if (!res.ok || !json.report) {
         setImportMessage(json.error ?? "Failed to import MoeGo actuals");
@@ -193,6 +203,16 @@ export function KpiView({
         setImportMessage(
           withImportedAt(
             `Imported ${report.totalNonTrainingAppointments} full day daycare appointments, ${report.halfDayDaycareAppointments} half day daycare appointments, ${report.fullDayEnrichmentActivityAppointments} full day enrichment activity appointments, ${report.averageDailyOccupancy.toFixed(2)} average daily occupancy, ${report.evaluations} evaluations, ${report.uniqueClients} clients, ${report.averageVisitsPerClient.toFixed(2)} average visits, and ${dollars(report.totalNetSalesCents)} net sales from ${report.totalFinishedAppointments} finished daycare appointments.`,
+            importedAt
+          )
+        );
+      } else if (segment === "TRAINING") {
+        const report = json.report as TrainingImportReport;
+        setImportMessage(
+          withImportedAt(
+            `Imported ${dollars(report.productSalesCents)} product sales, ${dollars(
+              report.groupRevenueCents
+            )} group training revenue, and ${dollars(report.oneOnOneRevenueCents)} one-on-one training revenue from ${report.totalFinishedTrainingAppointments} finished training appointments.`,
             importedAt
           )
         );
@@ -231,7 +251,8 @@ export function KpiView({
     (segment === "MOBILE_GROOMING" ||
       segment === "BOARDING" ||
       segment === "IN_HOUSE_GROOMING" ||
-      segment === "DAYCARE") &&
+      segment === "DAYCARE" ||
+      segment === "TRAINING") &&
     hasMetrics;
 
   return (
