@@ -42,6 +42,14 @@ type MobileGroomingImportReport = {
   totalNetSalesCents: number;
 };
 
+type InHouseGroomingImportReport = {
+  groomingAppointments: number;
+  totalPetsServiced: number;
+  totalNetSalesCents: number;
+  upsellsCents: number;
+};
+
+
 // "week" edits value + average; "targets" edits only targets. Targets can be
 // changed *only* via the targets mode.
 type EditMode = "week" | "targets" | null;
@@ -122,26 +130,38 @@ export function KpiView({
     }
   }
 
-  async function importMobileGroomingActuals() {
+  async function importMoegoActuals() {
     setImportingMoego(true);
     setImportMessage(null);
     try {
-      const res = await fetch("/api/finance/kpis/moego-mobile-grooming", {
+      const endpoint =
+        segment === "IN_HOUSE_GROOMING"
+          ? "/api/finance/kpis/moego-in-house-grooming"
+          : "/api/finance/kpis/moego-mobile-grooming";
+      const res = await fetch(endpoint, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ weekStart: week }),
       });
       const json = (await res.json().catch(() => ({}))) as {
         error?: string;
-        report?: MobileGroomingImportReport;
+        report?: MobileGroomingImportReport | InHouseGroomingImportReport;
       };
       if (!res.ok || !json.report) {
         setImportMessage(json.error ?? "Failed to import MoeGo actuals");
         return;
       }
-      setImportMessage(
-        `Imported ${json.report.uniqueClients} clients, ${json.report.dogsServiced} dogs, ${json.report.rebookRatePercent.toFixed(1)}% rebook rate, and ${dollars(json.report.totalNetSalesCents)} net revenue from ${json.report.finishedAppointments} finished appointments.`
-      );
+      if (segment === "IN_HOUSE_GROOMING") {
+        const report = json.report as InHouseGroomingImportReport;
+        setImportMessage(
+          `Imported ${report.totalPetsServiced} pets serviced, ${dollars(report.totalNetSalesCents)} grooming revenue, and ${dollars(report.upsellsCents)} upsells from ${report.groomingAppointments} finished grooming appointments.`
+        );
+      } else {
+        const report = json.report as MobileGroomingImportReport;
+        setImportMessage(
+          `Imported ${report.uniqueClients} clients, ${report.dogsServiced} dogs, ${report.rebookRatePercent.toFixed(1)}% rebook rate, and ${dollars(report.totalNetSalesCents)} net revenue from ${report.finishedAppointments} finished appointments.`
+        );
+      }
       router.refresh();
     } finally {
       setImportingMoego(false);
@@ -149,7 +169,9 @@ export function KpiView({
   }
 
   const hasMetrics = segmentDef.metrics.length > 0;
-  const canImportMobileGrooming = segment === "MOBILE_GROOMING" && hasMetrics;
+  const canImportMoego =
+    (segment === "MOBILE_GROOMING" || segment === "IN_HOUSE_GROOMING") &&
+    hasMetrics;
 
   return (
     <div>
@@ -174,10 +196,10 @@ export function KpiView({
             </div>
           ) : (
             <div className="flex gap-2">
-              {canImportMobileGrooming && (
+              {canImportMoego && (
                 <Button
                   variant="secondary"
-                  onClick={importMobileGroomingActuals}
+                  onClick={importMoegoActuals}
                   disabled={importingMoego}
                 >
                   {importingMoego ? "Importing…" : "Import MoeGo actuals"}

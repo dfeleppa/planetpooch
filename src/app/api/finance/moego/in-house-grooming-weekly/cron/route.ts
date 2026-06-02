@@ -1,5 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
-import { upsertWeeklyInHouseGroomingKpis } from "@/lib/moego/in-house-grooming-weekly-report";
+import {
+  syncWeeklyInHouseGroomingKpis,
+  upsertWeeklyInHouseGroomingKpis,
+} from "@/lib/moego/in-house-grooming-weekly-report";
+import { MoegoApiError, MoegoConfigError } from "@/lib/moego/client";
 
 export const maxDuration = 120;
 
@@ -17,6 +21,37 @@ function requireCronAuth(req: NextRequest): NextResponse | null {
   }
 
   return null;
+}
+
+/**
+ * Weekly in-house grooming KPI sync. Writes the previous completed
+ * Sunday-Saturday report into KpiWeeklyValue for IN_HOUSE_GROOMING.
+ */
+export async function GET(req: NextRequest) {
+  const authError = requireCronAuth(req);
+  if (authError) return authError;
+
+  try {
+    const report = await syncWeeklyInHouseGroomingKpis();
+    return NextResponse.json({ ok: true, report });
+  } catch (err) {
+    if (err instanceof MoegoConfigError) {
+      return NextResponse.json({ error: err.message }, { status: 503 });
+    }
+    if (err instanceof MoegoApiError) {
+      return NextResponse.json(
+        { error: `MoeGo API: ${err.message}` },
+        { status: err.status }
+      );
+    }
+
+    const message = err instanceof Error ? err.message : String(err);
+    console.error("In-house grooming weekly KPI sync failed:", err);
+    return NextResponse.json(
+      { error: `In-house grooming weekly KPI sync failed: ${message}` },
+      { status: 500 }
+    );
+  }
 }
 
 function readFiniteNumber(
@@ -43,6 +78,7 @@ export async function POST(req: NextRequest) {
 
   const weekStart = body.weekStart;
   const totalNetSalesCents = readFiniteNumber(body, "totalNetSalesCents");
+  const upsellsCents = readFiniteNumber(body, "upsellsCents") ?? 0;
   const totalPetsServiced = readFiniteNumber(body, "totalPetsServiced");
 
   if (
@@ -64,6 +100,7 @@ export async function POST(req: NextRequest) {
     await upsertWeeklyInHouseGroomingKpis({
       weekStart,
       totalNetSalesCents,
+      upsellsCents,
       totalPetsServiced,
     });
 
@@ -72,6 +109,7 @@ export async function POST(req: NextRequest) {
       weekStart,
       metrics: {
         totalNetSalesCents,
+        upsellsCents,
         totalPetsServiced,
       },
     });
