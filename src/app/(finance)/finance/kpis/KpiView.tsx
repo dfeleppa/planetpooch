@@ -329,7 +329,23 @@ export function KpiView({
         <div className="flex flex-col gap-8">
           {SECTION_ORDER.map((section) => {
             const metrics = segmentDef.metrics.filter((m) => m.section === section);
-            if (metrics.length === 0) return null;
+            if (metrics.length === 0) {
+              if (!showsUnavailableForecast(segment, section)) return null;
+              return (
+                <section key={section}>
+                  <h2 className="text-xs font-semibold uppercase tracking-wider text-gray-500 mb-2">
+                    {sectionLabel(segment, section)}
+                  </h2>
+                  <Card>
+                    <CardContent className="py-8">
+                      <p className="text-center text-sm font-medium text-gray-500">
+                        Not Available
+                      </p>
+                    </CardContent>
+                  </Card>
+                </section>
+              );
+            }
             return (
               <section key={section}>
                 <h2 className="text-xs font-semibold uppercase tracking-wider text-gray-500 mb-2">
@@ -419,6 +435,10 @@ function sectionLabel(segment: KpiSegment, section: KpiSection): string {
     return "Future KPI Card";
   }
   return SECTION_LABELS[section];
+}
+
+function showsUnavailableForecast(segment: KpiSegment, section: KpiSection): boolean {
+  return section === "FORECAST" && (segment === "BOARDING" || segment === "DAYCARE");
 }
 
 function KpiInput({
