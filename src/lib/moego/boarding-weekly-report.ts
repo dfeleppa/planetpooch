@@ -18,6 +18,24 @@ const BOARDING_KPI_METRICS = {
   upsells: "upsells",
 } as const;
 
+const BOARDING_SERVICE_NAMES = [
+  "classic group play",
+  "classic 1 on 1",
+  "express a group play",
+  "express a 1 on 1",
+  "express b group play",
+  "express b 1 on 1",
+  "full day daycare",
+  "full day enrichment activity",
+  "half day daycare",
+  "luxury group play",
+  "luxury 1 on 1",
+  "xl group play",
+  "xl 1 on 1",
+] as const;
+
+const BOARDING_SERVICE_NAME_SET = new Set<string>(BOARDING_SERVICE_NAMES);
+
 export type WeeklyBoardingReport = {
   weekStart: string;
   weekEnd: string;
@@ -63,6 +81,8 @@ function normalizeServiceName(name: string | undefined): string {
 function isBoardingService(service: MoegoAppointmentServiceDetail): boolean {
   const name = normalizeServiceName(service.name);
   const category = (service.category ?? "").toLowerCase();
+  if (BOARDING_SERVICE_NAME_SET.has(name)) return true;
+
   return (
     name.includes("boarding") ||
     name.includes("board") ||
