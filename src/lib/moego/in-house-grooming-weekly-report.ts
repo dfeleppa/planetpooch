@@ -67,13 +67,17 @@ function isGroomingLine(service: MoegoAppointmentServiceDetail): boolean {
   return groomingTextMatch || service.serviceItemType === "GROOMING";
 }
 
+function isNailTrimLine(service: MoegoAppointmentServiceDetail): boolean {
+  const name = service.name?.toLowerCase() ?? "";
+  return name.includes("nail trim");
+}
+
 function isGroomingService(service: MoegoAppointmentServiceDetail): boolean {
-  const type = service.serviceType?.toUpperCase();
-  return isGroomingLine(service) && (!type || type === "SERVICE");
+  return isGroomingLine(service) && !isNailTrimLine(service);
 }
 
 function isGroomingAddon(service: MoegoAppointmentServiceDetail): boolean {
-  return isGroomingLine(service) && service.serviceType === "ADDON";
+  return isNailTrimLine(service) && isGroomingLine(service);
 }
 
 function addCount(counts: Map<string, number>, name: string | undefined) {
