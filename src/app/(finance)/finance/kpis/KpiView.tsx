@@ -63,6 +63,7 @@ type BoardingImportReport = {
   offPeakCapacity: number;
   upsellsCents: number;
   totalFinishedBoardingAppointments: number;
+  totalRevenueCents: number;
 };
 
 // "week" edits value + average; "targets" edits only targets. Targets can be
@@ -187,7 +188,7 @@ export function KpiView({
       } else if (segment === "BOARDING") {
         const report = json.report as BoardingImportReport;
         setImportMessage(
-          `Imported ${report.totalFinishedBoardingAppointments} finished boarding appointments, ${report.peakCapacity} peak capacity, ${report.offPeakCapacity} off-peak capacity, and ${dollars(report.upsellsCents)} upsells.`
+          `Imported ${report.totalFinishedBoardingAppointments} finished boarding appointments, ${dollars(report.totalRevenueCents)} revenue, ${report.peakCapacity} peak capacity, ${report.offPeakCapacity} off-peak capacity, and ${dollars(report.upsellsCents)} upsells.`
         );
       } else {
         const report = json.report as MobileGroomingImportReport;

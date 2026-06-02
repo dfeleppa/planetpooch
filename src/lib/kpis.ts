@@ -50,6 +50,7 @@ export const KPI_SEGMENTS: KpiSegmentDef[] = [
     key: "BOARDING",
     label: "Boarding",
     metrics: [
+      { key: "revenue", label: "Revenue", section: "ACTUALS", format: "currency" },
       { key: "peak_capacity", label: "Peak capacity", section: "ACTUALS", format: "number" },
       { key: "off_peak_capacity", label: "Off-peak capacity", section: "ACTUALS", format: "number" },
       { key: "upsells", label: "Upsells", section: "ACTUALS", format: "currency" },

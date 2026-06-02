@@ -12,6 +12,7 @@ import { REVENUE_ORDER_STATUSES } from "@/lib/moego/metrics";
 import { PET_RESORT_BUSINESS_ID } from "@/lib/moego/daycare-weekly-report";
 
 const BOARDING_KPI_METRICS = {
+  revenue: "revenue",
   peakCapacity: "peak_capacity",
   offPeakCapacity: "off_peak_capacity",
   upsells: "upsells",
@@ -22,6 +23,7 @@ export type WeeklyBoardingReport = {
   weekEnd: string;
   businessId: string;
   totalFinishedBoardingAppointments: number;
+  totalRevenueCents: number;
   peakCapacity: number;
   offPeakCapacity: number;
   upsellsCents: number;
@@ -29,6 +31,7 @@ export type WeeklyBoardingReport = {
 
 export type WeeklyBoardingKpiValues = {
   weekStart: string;
+  totalRevenueCents: number;
   peakCapacity: number;
   offPeakCapacity: number;
   upsellsCents: number;
@@ -230,6 +233,7 @@ export async function buildWeeklyBoardingReport(options?: {
   let peakCapacity = 0;
   let offPeakCapacity = 0;
   let upsellsCents = 0;
+  let totalRevenueCents = 0;
 
   for (const appointment of appointments) {
     const lines = serviceLines(appointment);
@@ -242,6 +246,9 @@ export async function buildWeeklyBoardingReport(options?: {
 
     for (const service of lines) {
       const netCents = netLineCents(toCents(service.price), appointmentGrossCents, order);
+      if (netCents > 0) {
+        totalRevenueCents += netCents;
+      }
       if (isBoardingService(service)) {
         if (isOffPeakBoardingService(service)) {
           offPeakCapacity += capacityUnits;
@@ -261,6 +268,7 @@ export async function buildWeeklyBoardingReport(options?: {
     weekEnd: toWeekParam(new Date(end.getTime() - 24 * 60 * 60 * 1000)),
     businessId,
     totalFinishedBoardingAppointments: appointments.length,
+    totalRevenueCents,
     peakCapacity,
     offPeakCapacity,
     upsellsCents,
@@ -272,6 +280,10 @@ export async function upsertWeeklyBoardingKpis(
 ): Promise<void> {
   const weekStart = new Date(`${values.weekStart}T00:00:00.000Z`);
   const rows = [
+    {
+      metricKey: BOARDING_KPI_METRICS.revenue,
+      value: moneyValue(values.totalRevenueCents),
+    },
     {
       metricKey: BOARDING_KPI_METRICS.peakCapacity,
       value: numberValue(values.peakCapacity),
@@ -316,6 +328,7 @@ export async function syncWeeklyBoardingKpis(options?: {
   const report = await buildWeeklyBoardingReport(options);
   await upsertWeeklyBoardingKpis({
     weekStart: report.weekStart,
+    totalRevenueCents: report.totalRevenueCents,
     peakCapacity: report.peakCapacity,
     offPeakCapacity: report.offPeakCapacity,
     upsellsCents: report.upsellsCents,
