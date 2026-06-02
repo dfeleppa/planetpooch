@@ -102,7 +102,17 @@ function isSpecialGroomingService(serviceName: string): boolean {
   );
 }
 
+function isTrainingService(service: MoegoAppointmentServiceDetail): boolean {
+  const category = service.category?.toLowerCase() ?? "";
+  const name = service.name?.toLowerCase() ?? "";
+  return category.includes("training") || name.includes("training");
+}
+
 function isGroomingLine(service: MoegoAppointmentServiceDetail): boolean {
+  if (isTrainingService(service)) {
+    return false;
+  }
+
   const category = service.category?.toLowerCase() ?? "";
   const name = service.name?.toLowerCase() ?? "";
   const hasGroomText =
