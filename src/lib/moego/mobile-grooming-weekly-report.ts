@@ -3,9 +3,12 @@ import { prisma } from "@/lib/prisma";
 import { addWeeks, toWeekParam, fromWeekParam } from "@/lib/week";
 import {
   streamAppointments,
+  streamOrders,
   toCents,
   type MoegoAppointmentRow,
+  type MoegoOrderRow,
 } from "@/lib/moego/client";
+import { REVENUE_ORDER_STATUSES } from "@/lib/moego/metrics";
 
 export const MOBILE_GROOMING_BUSINESS_ID = "bizVdfk";
 
@@ -30,7 +33,11 @@ export type WeeklyMobileGroomingReport = {
   rebookRatePercent: number;
   totalNetSalesCents: number;
   appointmentsMissingCustomerId: number;
+  appointmentsMissingOrderId: number;
   appointmentsMissingPetServiceDetails: number;
+  revenueOrderCount: number;
+  revenueOrdersIgnored: number;
+  revenueOrdersMissing: number;
   futureAppointmentsChecked: number;
 };
 
@@ -56,13 +63,17 @@ function chunks<T>(items: T[], size: number): T[][] {
   return out;
 }
 
-function appointmentNetCents(appointment: MoegoAppointmentRow): number {
-  const detailTotal = petServiceDetails(appointment)
-    .flatMap((petService) => petService.serviceDetails ?? [])
-    .reduce((sum, service) => sum + toCents(service.price), 0);
+function orderNetSalesCents(order: MoegoOrderRow): number {
+  return Math.max(
+    0,
+    toCents(order.subTotalAmount) - toCents(order.discountAmount)
+  );
+}
 
-  if (detailTotal > 0) return detailTotal;
-  return toCents(appointment.totalAmount);
+function isRevenueOrder(order: MoegoOrderRow): boolean {
+  return REVENUE_ORDER_STATUSES.includes(
+    order.status as (typeof REVENUE_ORDER_STATUSES)[number]
+  );
 }
 
 async function listWeeklyAppointments(
@@ -85,6 +96,65 @@ async function listWeeklyAppointments(
   }
 
   return appointments;
+}
+
+async function orderRevenueSummary(options: {
+  businessId: string;
+  orderIds: string[];
+}): Promise<{
+  totalNetSalesCents: number;
+  revenueOrderCount: number;
+  revenueOrdersIgnored: number;
+  revenueOrdersMissing: number;
+}> {
+  const uniqueOrderIds = [...new Set(options.orderIds)];
+  if (uniqueOrderIds.length === 0) {
+    return {
+      totalNetSalesCents: 0,
+      revenueOrderCount: 0,
+      revenueOrdersIgnored: 0,
+      revenueOrdersMissing: 0,
+    };
+  }
+
+  const foundOrderIds = new Set<string>();
+  let totalNetSalesCents = 0;
+  let revenueOrderCount = 0;
+  let revenueOrdersIgnored = 0;
+
+  for (const orderIds of chunks(uniqueOrderIds, 50)) {
+    const orderIdSet = new Set(orderIds);
+    for await (const page of streamOrders(
+      { ids: orderIds },
+      [options.businessId]
+    )) {
+      for (const order of page) {
+        if (
+          !order.id ||
+          !orderIdSet.has(order.id) ||
+          foundOrderIds.has(order.id)
+        ) {
+          continue;
+        }
+
+        foundOrderIds.add(order.id);
+        if (!isRevenueOrder(order)) {
+          revenueOrdersIgnored++;
+          continue;
+        }
+
+        totalNetSalesCents += orderNetSalesCents(order);
+        revenueOrderCount++;
+      }
+    }
+  }
+
+  return {
+    totalNetSalesCents,
+    revenueOrderCount,
+    revenueOrdersIgnored,
+    revenueOrdersMissing: uniqueOrderIds.length - foundOrderIds.size,
+  };
 }
 
 async function customerIdsWithAppointments(options: {
@@ -216,9 +286,18 @@ export async function buildWeeklyMobileGroomingReport(options: {
     return sum + petServiceDetails(appointment).length;
   }, 0);
 
-  const totalNetSalesCents = finishedAppointments.reduce((sum, appointment) => {
-    return sum + appointmentNetCents(appointment);
-  }, 0);
+  const orderIds = finishedAppointments
+    .map((appointment) => appointment.orderId)
+    .filter((id): id is string => Boolean(id));
+  const {
+    totalNetSalesCents,
+    revenueOrderCount,
+    revenueOrdersIgnored,
+    revenueOrdersMissing,
+  } = await orderRevenueSummary({
+    businessId,
+    orderIds,
+  });
   const priorCustomerIds = await priorFinishedCustomerIds({
     weekStart,
     businessId,
@@ -250,9 +329,15 @@ export async function buildWeeklyMobileGroomingReport(options: {
     appointmentsMissingCustomerId: finishedAppointments.filter(
       (appointment) => !appointment.customerId
     ).length,
+    appointmentsMissingOrderId: finishedAppointments.filter(
+      (appointment) => !appointment.orderId
+    ).length,
     appointmentsMissingPetServiceDetails: finishedAppointments.filter(
       (appointment) => petServiceDetails(appointment).length === 0
     ).length,
+    revenueOrderCount,
+    revenueOrdersIgnored,
+    revenueOrdersMissing,
     futureAppointmentsChecked,
   };
 }

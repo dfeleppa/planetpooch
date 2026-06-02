@@ -289,6 +289,7 @@ export type MoegoOrderRow = {
   taxAmount?: MoegoMoney;
   discountAmount?: MoegoMoney;
   tipsAmount?: MoegoMoney;
+  extraFeeAmount?: MoegoMoney;
   createdTime: string;
   lastUpdatedTime?: string;
   salesDatetime?: string;
@@ -407,7 +408,10 @@ export function streamCustomers(filters: {
 }
 
 export function streamOrders(
-  filters: { lastUpdatedTime?: { startTime: string; endTime: string } },
+  filters: {
+    ids?: string[];
+    lastUpdatedTime?: { startTime: string; endTime: string };
+  },
   businessIds: string[]
 ): AsyncGenerator<MoegoOrderRow[]> {
   return listPages<"orders", MoegoOrderRow>(
