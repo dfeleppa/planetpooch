@@ -270,6 +270,7 @@ export type MoegoCustomerRow = {
   preferredBusinessId?: string;
   lastAppointmentDate?: string;
   nextAppointmentDate?: string;
+  upcomingAppointmentsUrl?: string;
   tags?: MoegoCustomerTag[];
   createdTime: string; // ISO 8601
   lastUpdatedTime?: string;

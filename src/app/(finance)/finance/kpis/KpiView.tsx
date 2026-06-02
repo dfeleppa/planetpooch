@@ -38,6 +38,7 @@ type MobileGroomingImportReport = {
   finishedAppointments: number;
   uniqueClients: number;
   dogsServiced: number;
+  rebookRatePercent: number;
   totalNetSalesCents: number;
 };
 
@@ -139,7 +140,7 @@ export function KpiView({
         return;
       }
       setImportMessage(
-        `Imported ${json.report.uniqueClients} clients, ${json.report.dogsServiced} dogs, and ${dollars(json.report.totalNetSalesCents)} net revenue from ${json.report.finishedAppointments} finished appointments.`
+        `Imported ${json.report.uniqueClients} clients, ${json.report.dogsServiced} dogs, ${json.report.rebookRatePercent.toFixed(1)}% rebook rate, and ${dollars(json.report.totalNetSalesCents)} net revenue from ${json.report.finishedAppointments} finished appointments.`
       );
       router.refresh();
     } finally {
