@@ -10,9 +10,17 @@ import { REVENUE_ORDER_STATUSES } from "@/lib/moego/metrics";
 
 export const PET_RESORT_BUSINESS_ID = "biz3pcO";
 
-const TRAINING_FREE_SERVICE = "Training $0";
-const FREE_FIRST_DAY_SERVICE = "Free first day";
-const HALF_DAY_DAYCARE_SERVICE = "Half day daycare";
+const TRAINING_FREE_SERVICE = normalizeServiceName("Training $0");
+const FREE_FIRST_DAY_SERVICE = normalizeServiceName("Free first day");
+const HALF_DAY_DAYCARE_SERVICE = normalizeServiceName("Half day daycare");
+const FULL_DAY_DAYCARE_SERVICE = normalizeServiceName("Full day daycare");
+const FULL_DAY_ENRICHMENT_ACTIVITY_SERVICE =
+  normalizeServiceName("Full day enrichment activity");
+const ALLOWED_DAYCARE_REVENUE_SERVICES = new Set([
+  FULL_DAY_DAYCARE_SERVICE.toLowerCase(),
+  HALF_DAY_DAYCARE_SERVICE.toLowerCase(),
+  FULL_DAY_ENRICHMENT_ACTIVITY_SERVICE.toLowerCase(),
+]);
 const DAYCARE_KPI_METRICS = {
   totalAppointments: "total_appointments",
   halfDayDaycare: "half_day_daycare",
@@ -23,6 +31,23 @@ const DAYCARE_KPI_METRICS = {
   totalNetSales: "total_net_sales",
 } as const;
 
+function normalizeServiceName(name: string | undefined): string {
+  return (name ?? "")
+    .toLowerCase()
+    .replace(/[\u00a0\u1680\u180e\u2000-\u200a\u2028\u2029\u202f\u205f\u3000]+/g, " ")
+    .replace(/[/&(),$]/g, " ")
+    .replace(/-/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function normalizedServiceNames(appointment: MoegoAppointmentRow): string[] {
+  return (appointment.petServiceDetails ?? [])
+    .flatMap((petService) => petService.serviceDetails ?? [])
+    .map((service) => normalizeServiceName(service.name))
+    .filter((name): name is string => Boolean(name));
+}
+
 export type WeeklyDaycareServiceReport = {
   weekStart: string;
   weekEnd: string;
@@ -30,6 +55,7 @@ export type WeeklyDaycareServiceReport = {
   totalFinishedAppointments: number;
   totalNonTrainingAppointments: number;
   halfDayDaycareAppointments: number;
+  fullDayEnrichmentActivityAppointments: number;
   averageDailyOccupancy: number;
   evaluations: number;
   uniqueClients: number;
@@ -44,6 +70,7 @@ export type WeeklyDaycareKpiValues = {
   weekStart: string;
   totalNonTrainingAppointments: number;
   halfDayDaycareAppointments?: number;
+  fullDayEnrichmentActivityAppointments?: number;
   averageDailyOccupancy?: number;
   evaluations?: number;
   uniqueClients: number;
@@ -71,34 +98,43 @@ function serviceKey(appointment: MoegoAppointmentRow): string {
 }
 
 function hasTrainingFreeService(appointment: MoegoAppointmentRow): boolean {
-  const names = serviceNames(appointment);
+  const names = normalizedServiceNames(appointment);
   return names.includes(TRAINING_FREE_SERVICE);
 }
 
 function hasFreeFirstDayService(appointment: MoegoAppointmentRow): boolean {
-  const names = serviceNames(appointment);
+  const names = normalizedServiceNames(appointment);
   return names.includes(FREE_FIRST_DAY_SERVICE);
 }
 
 function hasHalfDayDaycareService(appointment: MoegoAppointmentRow): boolean {
-  const names = serviceNames(appointment);
+  const names = normalizedServiceNames(appointment);
   return names.includes(HALF_DAY_DAYCARE_SERVICE);
 }
 
-function isDaycareKpiExcludedAppointment(
-  appointment: MoegoAppointmentRow
-): boolean {
-  return (
-    hasTrainingFreeService(appointment) ||
-    hasFreeFirstDayService(appointment) ||
-    hasHalfDayDaycareService(appointment)
-  );
+function hasFullDayEnrichmentActivityService(appointment: MoegoAppointmentRow): boolean {
+  const names = normalizedServiceNames(appointment);
+  return names.includes(FULL_DAY_ENRICHMENT_ACTIVITY_SERVICE);
+}
+
+function hasFullDayDaycareService(appointment: MoegoAppointmentRow): boolean {
+  const names = normalizedServiceNames(appointment);
+  return names.includes(FULL_DAY_DAYCARE_SERVICE);
+}
+
+function hasAllowedDaycareNetSalesService(appointment: MoegoAppointmentRow): boolean {
+  const names = normalizedServiceNames(appointment);
+  return names.some((name) => ALLOWED_DAYCARE_REVENUE_SERVICES.has(name));
 }
 
 function isPaidDaycareRevenueAppointment(
   appointment: MoegoAppointmentRow
 ): boolean {
-  return !hasTrainingFreeService(appointment) && !hasFreeFirstDayService(appointment);
+  return (
+    !hasTrainingFreeService(appointment) &&
+    !hasFreeFirstDayService(appointment) &&
+    hasAllowedDaycareNetSalesService(appointment)
+  );
 }
 
 function fallbackAppointmentNetCents(appointment: MoegoAppointmentRow): number {
@@ -216,11 +252,14 @@ export async function buildWeeklyDaycareServiceReport(options?: {
     (appointment) => appointment.status === "FINISHED"
   );
 
-  const nonTrainingAppointments = appointments.filter((appointment) => {
-    return !isDaycareKpiExcludedAppointment(appointment);
-  });
+  const fullDayDaycareAppointments = appointments.filter((appointment) => {
+    return hasFullDayDaycareService(appointment);
+  }).length;
   const halfDayDaycareAppointments = appointments.filter((appointment) => {
     return hasHalfDayDaycareService(appointment);
+  }).length;
+  const fullDayEnrichmentActivityAppointments = appointments.filter((appointment) => {
+    return hasFullDayEnrichmentActivityService(appointment);
   }).length;
   const revenueAppointments = appointments.filter((appointment) => {
     return isPaidDaycareRevenueAppointment(appointment);
@@ -237,6 +276,7 @@ export async function buildWeeklyDaycareServiceReport(options?: {
   for (const appointment of appointments) {
     const key = appointment.customerId ?? `appointment:${appointment.id}`;
     const client = clients.get(key) ?? { training: 0, nonTraining: 0 };
+    const shouldCountNetSales = isPaidDaycareRevenueAppointment(appointment);
     if (hasTrainingFreeService(appointment)) {
       client.training++;
       clients.set(key, client);
@@ -250,7 +290,9 @@ export async function buildWeeklyDaycareServiceReport(options?: {
       const orderNet = appointment.orderId
         ? orderNetSales.get(appointment.orderId)
         : undefined;
-      totalNetSalesCents += orderNet ?? fallbackAppointmentNetCents(appointment);
+      if (shouldCountNetSales) {
+        totalNetSalesCents += orderNet ?? fallbackAppointmentNetCents(appointment);
+      }
       clients.set(key, client);
       continue;
     }
@@ -261,17 +303,21 @@ export async function buildWeeklyDaycareServiceReport(options?: {
     const service = serviceKey(appointment);
     serviceCounts.set(service, (serviceCounts.get(service) ?? 0) + 1);
 
-    const orderNet = appointment.orderId
-      ? orderNetSales.get(appointment.orderId)
-      : undefined;
-    totalNetSalesCents += orderNet ?? fallbackAppointmentNetCents(appointment);
+    if (shouldCountNetSales) {
+      const orderNet = appointment.orderId
+        ? orderNetSales.get(appointment.orderId)
+        : undefined;
+      totalNetSalesCents += orderNet ?? fallbackAppointmentNetCents(appointment);
+    }
   }
 
   const clientRows = [...clients.entries()];
   const uniqueClients = clientRows.filter(([, row]) => row.nonTraining > 0).length;
-  const totalNonTrainingAppointments = nonTrainingAppointments.length;
+  const totalNonTrainingAppointments = fullDayDaycareAppointments;
   const averageDailyOccupancy =
-    (totalNonTrainingAppointments + halfDayDaycareAppointments) / 6;
+    (totalNonTrainingAppointments +
+      halfDayDaycareAppointments +
+      fullDayEnrichmentActivityAppointments) / 6;
   const evaluations = countEvaluations(evaluationAppointments);
 
   return {
@@ -281,6 +327,7 @@ export async function buildWeeklyDaycareServiceReport(options?: {
     totalFinishedAppointments: appointments.length,
     totalNonTrainingAppointments,
     halfDayDaycareAppointments,
+    fullDayEnrichmentActivityAppointments,
     averageDailyOccupancy,
     evaluations,
     uniqueClients,
@@ -319,8 +366,9 @@ export async function upsertWeeklyDaycareKpis(
       value: numberValue(
         values.averageDailyOccupancy ??
           (values.totalNonTrainingAppointments +
-            (values.halfDayDaycareAppointments ?? 0)) /
-            6
+            (values.halfDayDaycareAppointments ?? 0) +
+            (values.fullDayEnrichmentActivityAppointments ?? 0)) /
+              6
       ),
     },
     {
@@ -374,6 +422,7 @@ export async function syncWeeklyDaycareServiceKpis(options?: {
     weekStart: report.weekStart,
     totalNonTrainingAppointments: report.totalNonTrainingAppointments,
     halfDayDaycareAppointments: report.halfDayDaycareAppointments,
+    fullDayEnrichmentActivityAppointments: report.fullDayEnrichmentActivityAppointments,
     averageDailyOccupancy: report.averageDailyOccupancy,
     evaluations: report.evaluations,
     uniqueClients: report.uniqueClients,

@@ -84,10 +84,14 @@ export async function POST(req: NextRequest) {
   const uniqueClients = readFiniteNumber(body, "uniqueClients");
   const halfDayDaycareAppointments =
     readFiniteNumber(body, "halfDayDaycareAppointments") ?? 0;
+  const fullDayEnrichmentActivityAppointments =
+    readFiniteNumber(body, "fullDayEnrichmentActivityAppointments") ?? 0;
   const averageDailyOccupancy =
     readFiniteNumber(body, "averageDailyOccupancy") ??
     (totalNonTrainingAppointments !== null
-      ? (totalNonTrainingAppointments + halfDayDaycareAppointments) / 6
+      ? (totalNonTrainingAppointments +
+          halfDayDaycareAppointments +
+          fullDayEnrichmentActivityAppointments) / 6
       : null);
   const evaluations = readFiniteNumber(body, "evaluations") ?? 0;
   const totalNetSalesCents = readFiniteNumber(body, "totalNetSalesCents");
@@ -120,6 +124,7 @@ export async function POST(req: NextRequest) {
       weekStart,
       totalNonTrainingAppointments,
       halfDayDaycareAppointments,
+      fullDayEnrichmentActivityAppointments,
       averageDailyOccupancy,
       evaluations,
       uniqueClients,
@@ -133,6 +138,7 @@ export async function POST(req: NextRequest) {
       metrics: {
         totalNonTrainingAppointments,
         halfDayDaycareAppointments,
+        fullDayEnrichmentActivityAppointments,
         averageDailyOccupancy,
         evaluations,
         uniqueClients,
