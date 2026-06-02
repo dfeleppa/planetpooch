@@ -61,10 +61,13 @@ function serviceDetails(appointment: MoegoAppointmentRow): MoegoAppointmentServi
 function isGroomingLine(service: MoegoAppointmentServiceDetail): boolean {
   const category = service.category?.toLowerCase() ?? "";
   const name = service.name?.toLowerCase() ?? "";
-  const groomingTextMatch =
+  const hasGroomText =
     category.includes("groom") || name.includes("groom") || name.includes("nail trim");
 
-  return groomingTextMatch || service.serviceItemType === "GROOMING";
+  return (
+    hasGroomText ||
+    (service.serviceItemType === "GROOMING" && service.serviceType === "SERVICE")
+  );
 }
 
 function isNailTrimLine(service: MoegoAppointmentServiceDetail): boolean {
