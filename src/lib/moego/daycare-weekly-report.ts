@@ -286,34 +286,27 @@ export async function buildWeeklyDaycareServiceReport(options?: {
       clients.set(key, client);
       continue;
     }
-    if (hasHalfDayDaycareService(appointment)) {
-      const orderNet = appointment.orderId
-        ? orderNetSales.get(appointment.orderId)
-        : undefined;
-      if (shouldCountNetSales) {
-        totalNetSalesCents += orderNet ?? fallbackAppointmentNetCents(appointment);
-      }
-      clients.set(key, client);
-      continue;
-    }
-
-    client.nonTraining++;
-    clients.set(key, client);
-
-    const service = serviceKey(appointment);
-    serviceCounts.set(service, (serviceCounts.get(service) ?? 0) + 1);
-
     if (shouldCountNetSales) {
       const orderNet = appointment.orderId
         ? orderNetSales.get(appointment.orderId)
         : undefined;
       totalNetSalesCents += orderNet ?? fallbackAppointmentNetCents(appointment);
     }
+
+    if (shouldCountNetSales) {
+      client.nonTraining++;
+      const service = serviceKey(appointment);
+      serviceCounts.set(service, (serviceCounts.get(service) ?? 0) + 1);
+    }
+
+    clients.set(key, client);
   }
 
   const clientRows = [...clients.entries()];
   const uniqueClients = clientRows.filter(([, row]) => row.nonTraining > 0).length;
   const totalNonTrainingAppointments = fullDayDaycareAppointments;
+  const averageVisitsPerClient =
+    uniqueClients > 0 ? revenueAppointments.length / uniqueClients : 0;
   const averageDailyOccupancy =
     (totalNonTrainingAppointments +
       halfDayDaycareAppointments +
@@ -331,8 +324,7 @@ export async function buildWeeklyDaycareServiceReport(options?: {
     averageDailyOccupancy,
     evaluations,
     uniqueClients,
-    averageVisitsPerClient:
-      uniqueClients > 0 ? totalNonTrainingAppointments / uniqueClients : 0,
+    averageVisitsPerClient,
     totalNetSalesCents,
     serviceCounts: Object.fromEntries(
       [...serviceCounts.entries()].sort(([a], [b]) => a.localeCompare(b))
