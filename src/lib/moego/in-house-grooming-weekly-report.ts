@@ -58,6 +58,19 @@ function serviceDetails(appointment: MoegoAppointmentRow): MoegoAppointmentServi
   );
 }
 
+function normalizeServiceName(name: string | undefined): string {
+  return (name ?? "").toLowerCase().replace(/\s+/g, " ").trim();
+}
+
+function isSpecialGroomingService(serviceName: string): boolean {
+  const normalized = normalizeServiceName(serviceName);
+  return (
+    /\bgroom\s*\$?\s*135\s*np\s*t\b/.test(normalized) ||
+    /\bgroom\s*\$?\s*155\s*np\s*t\b/.test(normalized) ||
+    /\bgroom\s*55\s*t\b/.test(normalized)
+  );
+}
+
 function isGroomingLine(service: MoegoAppointmentServiceDetail): boolean {
   const category = service.category?.toLowerCase() ?? "";
   const name = service.name?.toLowerCase() ?? "";
@@ -66,6 +79,7 @@ function isGroomingLine(service: MoegoAppointmentServiceDetail): boolean {
 
   return (
     hasGroomText ||
+    isSpecialGroomingService(name) ||
     (service.serviceItemType === "GROOMING" && service.serviceType === "SERVICE")
   );
 }
