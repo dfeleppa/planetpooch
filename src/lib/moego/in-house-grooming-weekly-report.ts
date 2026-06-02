@@ -59,15 +59,30 @@ function serviceDetails(appointment: MoegoAppointmentRow): MoegoAppointmentServi
 }
 
 function normalizeServiceName(name: string | undefined): string {
-  return (name ?? "").toLowerCase().replace(/\s+/g, " ").trim();
+  const normalized = (name ?? "")
+    .normalize("NFKC")
+    .toLowerCase()
+    .replace(/[\u00a0\u1680\u180e\u2000-\u200a\u2028\u2029\u202f\u205f\u3000]+/g, " ")
+    .replace(/[/&(),]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+  return normalized;
 }
 
 function isSpecialGroomingService(serviceName: string): boolean {
   const normalized = normalizeServiceName(serviceName);
+  const compact = normalized.replace(/[^a-z0-9$]+/g, "");
+  const match = compact.match(/groom\$?(\d{2,4})(.*)/i);
+  if (!match) return false;
+
+  const amount = match[1];
+  const suffix = match[2] ?? "";
+  const hasNP = suffix.includes("np");
+  const hasT = suffix.includes("t");
+
   return (
-    /\bgroom\s*\$?\s*135\s*np\s*t\b/.test(normalized) ||
-    /\bgroom\s*\$?\s*155\s*np\s*t\b/.test(normalized) ||
-    /\bgroom\s*55\s*t\b/.test(normalized)
+    (amount === "135" || amount === "155") && hasNP ||
+    amount === "55" && hasT
   );
 }
 
