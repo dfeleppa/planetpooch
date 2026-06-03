@@ -99,10 +99,6 @@ function addCount(counts: Map<string, number>, name: string | undefined) {
   counts.set(key, (counts.get(key) ?? 0) + 1);
 }
 
-function orderNetSalesCents(order: OrderMoney): number {
-  return Math.max(0, order.subTotalCents - order.discountCents);
-}
-
 function isRevenueOrder(order: OrderMoney | undefined): order is OrderMoney {
   if (
     !order ||
@@ -113,6 +109,21 @@ function isRevenueOrder(order: OrderMoney | undefined): order is OrderMoney {
     return false;
   }
   return true;
+}
+
+function netLineCents(
+  lineGrossCents: number,
+  appointmentGrossCents: number,
+  order: OrderMoney
+): number {
+  const baseGrossCents =
+    appointmentGrossCents > 0 ? appointmentGrossCents : order.subTotalCents;
+  if (baseGrossCents <= 0) return lineGrossCents;
+
+  const discountShare = Math.round(
+    (lineGrossCents / baseGrossCents) * order.discountCents
+  );
+  return Math.max(0, lineGrossCents - discountShare);
 }
 
 function parseDate(value: string | undefined): Date | null {
@@ -239,6 +250,11 @@ export async function buildWeeklyInHouseGroomingReport(options?: {
     const order = appointment.orderId
       ? orderMoney.get(appointment.orderId)
       : undefined;
+    if (!order) continue;
+    const appointmentGrossCents = allLines.reduce(
+      (sum, service) => sum + toCents(service.price),
+      0
+    );
 
     for (const petService of appointment.petServiceDetails ?? []) {
       if ((petService.serviceDetails ?? []).some(isGroomingService)) {
@@ -249,16 +265,16 @@ export async function buildWeeklyInHouseGroomingReport(options?: {
 
     for (const service of allLines) {
       if (isGroomingService(service)) {
+        totalNetSalesCents += netLineCents(
+          toCents(service.price),
+          appointmentGrossCents,
+          order
+        );
         addCount(serviceCounts, service.name);
       }
     }
 
-    if (
-      appointment.orderId &&
-      order &&
-      !countedOrderIds.has(appointment.orderId)
-    ) {
-      totalNetSalesCents += orderNetSalesCents(order);
+    if (appointment.orderId) {
       countedOrderIds.add(appointment.orderId);
     }
   }
