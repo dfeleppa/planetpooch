@@ -17,19 +17,6 @@ const IN_HOUSE_GROOMING_KPI_METRICS = {
   totalPetsServiced: "total_pets_serviced",
 } as const;
 
-const KNOWN_IN_HOUSE_GROOMING_AMOUNTS = new Set([
-  "55",
-  "75",
-  "95",
-  "100",
-  "105",
-  "115",
-  "135",
-  "155",
-  "195",
-  "235",
-]);
-
 export type WeeklyInHouseGroomingReport = {
   weekStart: string;
   weekEnd: string;
@@ -82,26 +69,6 @@ function normalizeServiceName(name: string | undefined): string {
   return normalized;
 }
 
-function isSpecialGroomingService(serviceName: string): boolean {
-  const normalized = normalizeServiceName(serviceName);
-  const compact = normalized.replace(/[^a-z0-9$]+/g, "");
-  const match = compact.match(/groom\$?(\d{2,4})(.*)/i);
-  if (!match) return false;
-
-  const amount = match[1];
-  const suffix = match[2] ?? "";
-  const hasNP = suffix.includes("np");
-  const hasT = suffix.includes("t");
-
-  if (!KNOWN_IN_HOUSE_GROOMING_AMOUNTS.has(amount)) return false;
-
-  return (
-    hasNP ||
-    hasT ||
-    /groom/.test(normalized)
-  );
-}
-
 function isTrainingService(service: MoegoAppointmentServiceDetail): boolean {
   const category = service.category?.toLowerCase() ?? "";
   const name = service.name?.toLowerCase() ?? "";
@@ -113,29 +80,11 @@ function isGroomingLine(service: MoegoAppointmentServiceDetail): boolean {
     return false;
   }
 
-  const category = service.category?.toLowerCase() ?? "";
-  const name = service.name?.toLowerCase() ?? "";
-  const hasGroomText =
-    category.includes("groom") || name.includes("groom") || name.includes("nail trim");
-
-  return (
-    hasGroomText ||
-    isSpecialGroomingService(name) ||
-    service.serviceItemType === "GROOMING"
-  );
-}
-
-function isNailTrimLine(service: MoegoAppointmentServiceDetail): boolean {
-  const name = service.name?.toLowerCase() ?? "";
-  return name.includes("nail trim");
+  return normalizeServiceName(service.name).includes("groom");
 }
 
 function isGroomingService(service: MoegoAppointmentServiceDetail): boolean {
-  return isGroomingLine(service) && !isNailTrimLine(service);
-}
-
-function isGroomingAddon(service: MoegoAppointmentServiceDetail): boolean {
-  return isNailTrimLine(service) && isGroomingLine(service);
+  return isGroomingLine(service);
 }
 
 function addCount(counts: Map<string, number>, name: string | undefined) {
@@ -251,7 +200,7 @@ export async function buildWeeklyInHouseGroomingReport(options?: {
   const serviceCounts = new Map<string, number>();
   const addonCounts = new Map<string, number>();
   let totalNetSalesCents = 0;
-  let upsellsCents = 0;
+  const upsellsCents = 0;
   const totalPetsServiced = new Set<string>();
 
   for (const appointment of groomingAppointments) {
@@ -278,9 +227,6 @@ export async function buildWeeklyInHouseGroomingReport(options?: {
       if (isGroomingService(service)) {
         totalNetSalesCents += netCents;
         addCount(serviceCounts, service.name);
-      } else if (isGroomingAddon(service)) {
-        upsellsCents += netCents;
-        addCount(addonCounts, service.name);
       }
     }
   }
