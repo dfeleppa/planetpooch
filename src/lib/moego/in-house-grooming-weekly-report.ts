@@ -23,12 +23,15 @@ export type WeeklyInHouseGroomingReport = {
   businessId: string;
   totalFinishedAppointments: number;
   groomingAppointments: number;
+  groomingAppointmentsInSalesWindow: number;
   totalPetsServiced: number;
   totalNetSalesCents: number;
   upsellsCents: number;
+  ordersInSalesWindow: number;
   serviceCounts: Record<string, number>;
   addonCounts: Record<string, number>;
   appointmentsMissingOrder: number;
+  appointmentsMissingSalesDatetime: number;
 };
 
 export type WeeklyInHouseGroomingKpiValues = {
@@ -42,6 +45,7 @@ type OrderMoney = {
   subTotalCents: number;
   discountCents: number;
   status?: string;
+  salesDatetime?: string;
 };
 
 function moneyValue(cents: number): number {
@@ -92,28 +96,36 @@ function addCount(counts: Map<string, number>, name: string | undefined) {
   counts.set(key, (counts.get(key) ?? 0) + 1);
 }
 
-function netLineCents(
-  lineGrossCents: number,
-  appointmentGrossCents: number,
-  order?: OrderMoney
-): number {
+function orderNetSalesCents(order: OrderMoney): number {
+  return Math.max(0, order.subTotalCents - order.discountCents);
+}
+
+function isRevenueOrder(order: OrderMoney | undefined): order is OrderMoney {
   if (
     !order ||
     !REVENUE_ORDER_STATUSES.includes(
       order.status as (typeof REVENUE_ORDER_STATUSES)[number]
     )
   ) {
-    return lineGrossCents;
+    return false;
   }
+  return true;
+}
 
-  const baseGrossCents =
-    appointmentGrossCents > 0 ? appointmentGrossCents : order.subTotalCents;
-  if (baseGrossCents <= 0) return lineGrossCents;
+function parseDate(value: string | undefined): Date | null {
+  if (!value) return null;
+  const parsed = new Date(value);
+  return Number.isNaN(parsed.getTime()) ? null : parsed;
+}
 
-  const discountShare = Math.round(
-    (lineGrossCents / baseGrossCents) * order.discountCents
-  );
-  return Math.max(0, lineGrossCents - discountShare);
+function isSalesDatetimeInWindow(
+  order: OrderMoney | undefined,
+  start: Date,
+  end: Date
+): order is OrderMoney {
+  if (!isRevenueOrder(order)) return false;
+  const salesDatetime = parseDate(order.salesDatetime);
+  return Boolean(salesDatetime && salesDatetime >= start && salesDatetime < end);
 }
 
 async function listFinishedAppointments(
@@ -139,23 +151,16 @@ async function listFinishedAppointments(
 
 async function ordersById(
   orderIds: string[],
-  start: Date,
-  end: Date,
   businessId: string
 ): Promise<Map<string, OrderMoney>> {
   if (orderIds.length === 0) return new Map();
 
   const wanted = new Set(orderIds);
   const found = new Map<string, OrderMoney>();
-  const lookupStart = addWeeks(start, -12);
-  const lookupEnd = addWeeks(end, 12);
 
   for await (const page of streamOrders(
     {
-      lastUpdatedTime: {
-        startTime: lookupStart.toISOString(),
-        endTime: lookupEnd.toISOString(),
-      },
+      ids: [...wanted],
     },
     [businessId]
   )) {
@@ -165,6 +170,7 @@ async function ordersById(
         status: order.status,
         subTotalCents: toCents(order.subTotalAmount),
         discountCents: toCents(order.discountAmount),
+        salesDatetime: order.salesDatetime,
       });
     }
 
@@ -195,20 +201,24 @@ export async function buildWeeklyInHouseGroomingReport(options?: {
         .filter((orderId): orderId is string => Boolean(orderId))
     ),
   ];
-  const orderMoney = await ordersById(orderIds, start, end, businessId);
+  const orderMoney = await ordersById(orderIds, businessId);
 
   const serviceCounts = new Map<string, number>();
   const addonCounts = new Map<string, number>();
   let totalNetSalesCents = 0;
   const upsellsCents = 0;
   const totalPetsServiced = new Set<string>();
+  let appointmentsMissingSalesDatetime = 0;
+  const countedOrderIds = new Set<string>();
+  const groomingAppointmentsInSalesWindow = groomingAppointments.filter((appointment) => {
+    if (!appointment.orderId) return false;
+    const order = orderMoney.get(appointment.orderId);
+    if (!parseDate(order?.salesDatetime)) appointmentsMissingSalesDatetime++;
+    return isSalesDatetimeInWindow(order, start, end);
+  });
 
-  for (const appointment of groomingAppointments) {
+  for (const appointment of groomingAppointmentsInSalesWindow) {
     const allLines = serviceDetails(appointment);
-    const appointmentGrossCents = allLines.reduce(
-      (sum, service) => sum + toCents(service.price),
-      0
-    );
     const order = appointment.orderId
       ? orderMoney.get(appointment.orderId)
       : undefined;
@@ -221,13 +231,18 @@ export async function buildWeeklyInHouseGroomingReport(options?: {
     }
 
     for (const service of allLines) {
-      const grossCents = toCents(service.price);
-      const netCents = netLineCents(grossCents, appointmentGrossCents, order);
-
       if (isGroomingService(service)) {
-        totalNetSalesCents += netCents;
         addCount(serviceCounts, service.name);
       }
+    }
+
+    if (
+      appointment.orderId &&
+      order &&
+      !countedOrderIds.has(appointment.orderId)
+    ) {
+      totalNetSalesCents += orderNetSalesCents(order);
+      countedOrderIds.add(appointment.orderId);
     }
   }
 
@@ -237,9 +252,11 @@ export async function buildWeeklyInHouseGroomingReport(options?: {
     businessId,
     totalFinishedAppointments: appointments.length,
     groomingAppointments: groomingAppointments.length,
+    groomingAppointmentsInSalesWindow: groomingAppointmentsInSalesWindow.length,
     totalPetsServiced: totalPetsServiced.size,
     totalNetSalesCents,
     upsellsCents,
+    ordersInSalesWindow: countedOrderIds.size,
     serviceCounts: Object.fromEntries(
       [...serviceCounts.entries()].sort(([a], [b]) => a.localeCompare(b))
     ),
@@ -249,6 +266,7 @@ export async function buildWeeklyInHouseGroomingReport(options?: {
     appointmentsMissingOrder: groomingAppointments.filter(
       (appointment) => !appointment.orderId
     ).length,
+    appointmentsMissingSalesDatetime,
   };
 }
 

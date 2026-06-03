@@ -45,9 +45,11 @@ type MobileGroomingImportReport = {
 
 type InHouseGroomingImportReport = {
   groomingAppointments: number;
+  groomingAppointmentsInSalesWindow: number;
   totalPetsServiced: number;
   totalNetSalesCents: number;
   upsellsCents: number;
+  ordersInSalesWindow: number;
 };
 
 type DaycareImportReport = {
@@ -72,8 +74,10 @@ type BoardingImportReport = {
 
 type TrainingImportReport = {
   totalFinishedTrainingAppointments: number;
+  trainingAppointmentsInSalesWindow: number;
   groupRevenueCents: number;
   oneOnOneRevenueCents: number;
+  ordersInSalesWindow: number;
 };
 
 // "week" edits value + average; "targets" edits only targets. Targets can be
@@ -193,7 +197,7 @@ export function KpiView({
         const report = json.report as InHouseGroomingImportReport;
         setImportMessage(
           withImportedAt(
-            `Imported ${report.totalPetsServiced} pets serviced, ${dollars(report.totalNetSalesCents)} grooming revenue, and ${dollars(report.upsellsCents)} upsells from ${report.groomingAppointments} finished grooming appointments.`,
+            `Imported ${report.totalPetsServiced} pets serviced, ${dollars(report.totalNetSalesCents)} grooming net sales, and ${dollars(report.upsellsCents)} upsells from ${report.ordersInSalesWindow} grooming sales in the selected week.`,
             importedAt
           )
         );
@@ -209,7 +213,7 @@ export function KpiView({
         const report = json.report as TrainingImportReport;
         setImportMessage(
           withImportedAt(
-            `Imported ${dollars(report.groupRevenueCents)} group class revenue and ${dollars(report.oneOnOneRevenueCents)} one-on-one training revenue from ${report.totalFinishedTrainingAppointments} finished training appointments. Product sales is N/A for now.`,
+            `Imported ${dollars(report.groupRevenueCents)} group class net sales and ${dollars(report.oneOnOneRevenueCents)} one-on-one training net sales from ${report.ordersInSalesWindow} training sales in the selected week. Product sales is N/A for now.`,
             importedAt
           )
         );

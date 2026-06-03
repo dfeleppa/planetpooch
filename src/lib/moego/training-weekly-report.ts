@@ -22,8 +22,12 @@ export type WeeklyTrainingReport = {
   weekEnd: string;
   businessId: string;
   totalFinishedTrainingAppointments: number;
+  trainingAppointmentsInSalesWindow: number;
   groupRevenueCents: number;
   oneOnOneRevenueCents: number;
+  ordersInSalesWindow: number;
+  appointmentsMissingOrder: number;
+  appointmentsMissingSalesDatetime: number;
   serviceCounts: Record<string, number>;
 };
 
@@ -47,6 +51,7 @@ type OrderMoney = {
   subTotalCents: number;
   discountCents: number;
   status?: string;
+  salesDatetime?: string;
 };
 
 function moneyValue(cents: number): number {
@@ -113,28 +118,36 @@ function addCount(counts: Map<string, number>, name: string | undefined) {
   counts.set(key, (counts.get(key) ?? 0) + 1);
 }
 
-function netLineCents(
-  lineGrossCents: number,
-  appointmentGrossCents: number,
-  order?: OrderMoney
-): number {
+function orderNetSalesCents(order: OrderMoney): number {
+  return Math.max(0, order.subTotalCents - order.discountCents);
+}
+
+function isRevenueOrder(order: OrderMoney | undefined): order is OrderMoney {
   if (
     !order ||
     !REVENUE_ORDER_STATUSES.includes(
       order.status as (typeof REVENUE_ORDER_STATUSES)[number]
     )
   ) {
-    return lineGrossCents;
+    return false;
   }
+  return true;
+}
 
-  const baseGrossCents =
-    appointmentGrossCents > 0 ? appointmentGrossCents : order.subTotalCents;
-  if (baseGrossCents <= 0) return lineGrossCents;
+function parseDate(value: string | undefined): Date | null {
+  if (!value) return null;
+  const parsed = new Date(value);
+  return Number.isNaN(parsed.getTime()) ? null : parsed;
+}
 
-  const discountShare = Math.round(
-    (lineGrossCents / baseGrossCents) * order.discountCents
-  );
-  return Math.max(0, lineGrossCents - discountShare);
+function isSalesDatetimeInWindow(
+  order: OrderMoney | undefined,
+  start: Date,
+  end: Date
+): order is OrderMoney {
+  if (!isRevenueOrder(order)) return false;
+  const salesDatetime = parseDate(order.salesDatetime);
+  return Boolean(salesDatetime && salesDatetime >= start && salesDatetime < end);
 }
 
 async function listFinishedAppointments(
@@ -160,23 +173,16 @@ async function listFinishedAppointments(
 
 async function ordersById(
   orderIds: string[],
-  start: Date,
-  end: Date,
   businessId: string
 ): Promise<Map<string, OrderMoney>> {
   if (orderIds.length === 0) return new Map();
 
   const wanted = new Set(orderIds);
   const found = new Map<string, OrderMoney>();
-  const lookupStart = addWeeks(start, -12);
-  const lookupEnd = addWeeks(end, 12);
 
   for await (const page of streamOrders(
     {
-      lastUpdatedTime: {
-        startTime: lookupStart.toISOString(),
-        endTime: lookupEnd.toISOString(),
-      },
+      ids: [...wanted],
     },
     [businessId]
   )) {
@@ -186,6 +192,7 @@ async function ordersById(
         status: order.status,
         subTotalCents: toCents(order.subTotalAmount),
         discountCents: toCents(order.discountAmount),
+        salesDatetime: order.salesDatetime,
       });
     }
 
@@ -216,34 +223,64 @@ export async function buildWeeklyTrainingReport(options?: {
         .filter((orderId): orderId is string => Boolean(orderId))
     ),
   ];
-  const orderMoney = await ordersById(orderIds, start, end, businessId);
+  const orderMoney = await ordersById(orderIds, businessId);
 
   const serviceCounts = new Map<string, number>();
   let groupRevenueCents = 0;
   let oneOnOneRevenueCents = 0;
+  let appointmentsMissingSalesDatetime = 0;
+  const countedOrderIds = new Set<string>();
+  const trainingAppointmentsInSalesWindow = trainingAppointments.filter((appointment) => {
+    if (!appointment.orderId) return false;
+    const order = orderMoney.get(appointment.orderId);
+    if (!parseDate(order?.salesDatetime)) appointmentsMissingSalesDatetime++;
+    return isSalesDatetimeInWindow(order, start, end);
+  });
 
-  for (const appointment of trainingAppointments) {
+  for (const appointment of trainingAppointmentsInSalesWindow) {
     const lines = serviceDetails(appointment);
-    const appointmentGrossCents = lines.reduce(
-      (sum, service) => sum + toCents(service.price),
+    const orderId = appointment.orderId;
+    const order = orderId ? orderMoney.get(orderId) : undefined;
+    const categorizedLines = lines
+      .map((service) => ({
+        service,
+        grossCents: toCents(service.price),
+        bucket: isGroupTrainingService(service)
+          ? "group"
+          : isOneOnOneTrainingService(service)
+            ? "oneOnOne"
+            : null,
+      }))
+      .filter((line) => isTrainingService(line.service) && line.bucket);
+    const categorizedGrossCents = categorizedLines.reduce(
+      (sum, line) => sum + line.grossCents,
       0
     );
-    const order = appointment.orderId ? orderMoney.get(appointment.orderId) : undefined;
+    const shouldCountRevenue =
+      Boolean(orderId) &&
+      Boolean(order) &&
+      categorizedLines.length > 0 &&
+      (orderId ? !countedOrderIds.has(orderId) : false);
 
     for (const service of lines) {
       if (!isTrainingService(service)) continue;
-
-      const lineGrossCents = toCents(service.price);
-      const netCents = netLineCents(lineGrossCents, appointmentGrossCents, order);
       addCount(serviceCounts, service.name);
+    }
 
-      if (isGroupTrainingService(service)) {
-        groupRevenueCents += netCents;
-      } else if (isOneOnOneTrainingService(service)) {
-        oneOnOneRevenueCents += netCents;
-      } else {
-        // Reserved for future service-classification expansion.
+    if (shouldCountRevenue && orderId && order) {
+      const orderNetCents = orderNetSalesCents(order);
+      for (const line of categorizedLines) {
+        const netCents =
+          categorizedGrossCents > 0
+            ? Math.round((line.grossCents / categorizedGrossCents) * orderNetCents)
+            : Math.round(orderNetCents / categorizedLines.length);
+        if (line.bucket === "group") {
+          groupRevenueCents += netCents;
+        } else if (line.bucket === "oneOnOne") {
+          oneOnOneRevenueCents += netCents;
+        }
       }
+      countedOrderIds.add(orderId);
     }
   }
 
@@ -252,8 +289,14 @@ export async function buildWeeklyTrainingReport(options?: {
     weekEnd: toWeekParam(new Date(end.getTime() - 24 * 60 * 60 * 1000)),
     businessId,
     totalFinishedTrainingAppointments: trainingAppointments.length,
+    trainingAppointmentsInSalesWindow: trainingAppointmentsInSalesWindow.length,
     groupRevenueCents,
     oneOnOneRevenueCents,
+    ordersInSalesWindow: countedOrderIds.size,
+    appointmentsMissingOrder: trainingAppointments.filter(
+      (appointment) => !appointment.orderId
+    ).length,
+    appointmentsMissingSalesDatetime,
     serviceCounts: Object.fromEntries(
       [...serviceCounts.entries()].sort(([a], [b]) => a.localeCompare(b))
     ),
