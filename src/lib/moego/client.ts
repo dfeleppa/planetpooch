@@ -282,6 +282,7 @@ export type MoegoOrderRow = {
   customerId?: string;
   businessId?: string;
   status?: string;
+  title?: string;
   subTotalAmount?: MoegoMoney;
   totalAmount?: MoegoMoney;
   paidAmount?: MoegoMoney;

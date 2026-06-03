@@ -50,7 +50,11 @@ const GROUP_CLASS_KEYWORDS = [
   "puppy",
 ] as const;
 
+const DIRECT_GROUP_TRAINING_ORDER_TITLES = new Set<string>(GROUP_CLASS_KEYWORDS);
+
 type OrderMoney = {
+  id?: string;
+  title?: string;
   subTotalCents: number;
   discountCents: number;
   status?: string;
@@ -114,6 +118,16 @@ function isOneOnOneTrainingService(service: MoegoAppointmentServiceDetail): bool
     /\bone-?on-?one\b/.test(name) ||
     (/training/.test(name) && /\baddon\b/.test(name))
   );
+}
+
+function isDirectGroupTrainingOrder(order: OrderMoney): boolean {
+  const title = normalizeServiceName(order.title);
+  return DIRECT_GROUP_TRAINING_ORDER_TITLES.has(title);
+}
+
+function isDirectOneOnOneTrainingOrder(order: OrderMoney): boolean {
+  const title = normalizeServiceName(order.title);
+  return title.includes("training") && isOneOnOneTrainingService({ name: order.title });
 }
 
 function addCount(counts: Map<string, number>, name: string | undefined) {
@@ -196,6 +210,8 @@ async function ordersById(
     for (const order of page) {
       if (!order.id || !wanted.has(order.id)) continue;
       found.set(order.id, {
+        id: order.id,
+        title: order.title,
         status: order.status,
         subTotalCents: toCents(order.subTotalAmount),
         discountCents: toCents(order.discountAmount),
@@ -209,6 +225,37 @@ async function ordersById(
   return found;
 }
 
+async function listSalesCandidateOrders(
+  start: Date,
+  end: Date,
+  businessId: string
+): Promise<OrderMoney[]> {
+  const orders: OrderMoney[] = [];
+
+  for await (const page of streamOrders(
+    {
+      lastUpdatedTime: {
+        startTime: start.toISOString(),
+        endTime: addWeeks(end, SALES_DATE_CANDIDATE_LOOKAHEAD_WEEKS).toISOString(),
+      },
+    },
+    [businessId]
+  )) {
+    for (const order of page) {
+      orders.push({
+        id: order.id,
+        title: order.title,
+        status: order.status,
+        subTotalCents: toCents(order.subTotalAmount),
+        discountCents: toCents(order.discountAmount),
+        salesDatetime: order.salesDatetime,
+      });
+    }
+  }
+
+  return orders;
+}
+
 export async function buildWeeklyTrainingReport(options?: {
   weekStart?: string;
   today?: Date;
@@ -219,13 +266,14 @@ export async function buildWeeklyTrainingReport(options?: {
     : previousCompletedWeek(options?.today).start;
   const end = addWeeks(start, 1);
   const businessId = options?.businessId ?? PET_RESORT_BUSINESS_ID;
-  const [weeklyAppointments, salesCandidateAppointments] = await Promise.all([
+  const [weeklyAppointments, salesCandidateAppointments, salesCandidateOrders] = await Promise.all([
     listFinishedAppointments(start, end, businessId),
     listFinishedAppointments(
       addWeeks(start, -SALES_DATE_CANDIDATE_LOOKBACK_WEEKS),
       addWeeks(end, SALES_DATE_CANDIDATE_LOOKAHEAD_WEEKS),
       businessId
     ),
+    listSalesCandidateOrders(start, end, businessId),
   ]);
   const trainingAppointments = weeklyAppointments.filter((appointment) =>
     serviceDetails(appointment).some(isTrainingService)
@@ -297,7 +345,25 @@ export async function buildWeeklyTrainingReport(options?: {
           oneOnOneRevenueCents += netCents;
         }
       }
-      countedOrderIds.add(orderId);
+      if (orderNetCents > 0) countedOrderIds.add(orderId);
+    }
+  }
+
+  for (const order of salesCandidateOrders) {
+    if (!order.id || countedOrderIds.has(order.id)) continue;
+    if (!isSalesDatetimeInWindow(order, start, end)) continue;
+
+    const orderNetCents = orderNetSalesCents(order);
+    if (orderNetCents <= 0) continue;
+
+    if (isDirectGroupTrainingOrder(order)) {
+      groupRevenueCents += orderNetCents;
+      countedOrderIds.add(order.id);
+      addCount(serviceCounts, order.title);
+    } else if (isDirectOneOnOneTrainingOrder(order)) {
+      oneOnOneRevenueCents += orderNetCents;
+      countedOrderIds.add(order.id);
+      addCount(serviceCounts, order.title);
     }
   }
 
