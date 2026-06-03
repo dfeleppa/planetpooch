@@ -22,7 +22,6 @@ export type WeeklyTrainingReport = {
   weekEnd: string;
   businessId: string;
   totalFinishedTrainingAppointments: number;
-  productSalesCents: number;
   groupRevenueCents: number;
   oneOnOneRevenueCents: number;
   serviceCounts: Record<string, number>;
@@ -30,10 +29,19 @@ export type WeeklyTrainingReport = {
 
 export type WeeklyTrainingKpiValues = {
   weekStart: string;
-  productSalesCents: number;
   groupRevenueCents: number;
   oneOnOneRevenueCents: number;
 };
+
+const GROUP_CLASS_KEYWORDS = [
+  "akc canine good citizen program",
+  "akc canine good citizen test only",
+  "adolescent",
+  "adult",
+  "advanced",
+  "intermediate",
+  "puppy",
+] as const;
 
 type OrderMoney = {
   subTotalCents: number;
@@ -56,6 +64,7 @@ function normalizeServiceName(name: string | undefined): string {
     .toLowerCase()
     .replace(/[\u00a0\u1680\u180e\u2000-\u200a\u2028\u2029\u202f\u205f\u3000]+/g, " ")
     .replace(/[/&(),$]/g, " ")
+    .replace(/['’]/g, " ")
     .replace(/-/g, " ")
     .replace(/\s+/g, " ")
     .trim();
@@ -69,7 +78,23 @@ function isTrainingService(service: MoegoAppointmentServiceDetail): boolean {
 
 function isGroupTrainingService(service: MoegoAppointmentServiceDetail): boolean {
   const name = normalizeServiceName(service.name);
-  return /\bgroup\b/.test(name) || /\bgroup\s*play\b/.test(name);
+  if (/(^|\s)group(\s+class| class| play| lesson| session)\b/.test(name)) return true;
+  if (/(^|\s)training class\b/.test(name)) return true;
+
+  return (
+    /\bakc\b/.test(name) &&
+    /\bgood\s*citizen\b/.test(name)
+  ) || (
+    /\b(group|class|training)\b/.test(name) &&
+    /\b(adolescent|adult|advanced|intermediate|puppy)\b/.test(name)
+  ) || (
+    /\b(group|class|training)\b/.test(name) &&
+    /\bakc\b/.test(name) &&
+    /\b(canine|good\s*citizen)\b/.test(name)
+  ) || GROUP_CLASS_KEYWORDS.some((word) => {
+    if (!name.includes(word)) return false;
+    return /\b(group|class|training)\b/.test(name);
+  });
 }
 
 function isOneOnOneTrainingService(service: MoegoAppointmentServiceDetail): boolean {
@@ -78,7 +103,8 @@ function isOneOnOneTrainingService(service: MoegoAppointmentServiceDetail): bool
     /\b1\s*on\s*1\b/.test(name) ||
     /\b1\s*:\s*1\b/.test(name) ||
     /\bone[-\s]?on[-\s]?one\b/.test(name) ||
-    /\bone-?on-?one\b/.test(name)
+    /\bone-?on-?one\b/.test(name) ||
+    (/training/.test(name) && /\baddon\b/.test(name))
   );
 }
 
@@ -193,7 +219,6 @@ export async function buildWeeklyTrainingReport(options?: {
   const orderMoney = await ordersById(orderIds, start, end, businessId);
 
   const serviceCounts = new Map<string, number>();
-  let productSalesCents = 0;
   let groupRevenueCents = 0;
   let oneOnOneRevenueCents = 0;
 
@@ -217,7 +242,7 @@ export async function buildWeeklyTrainingReport(options?: {
       } else if (isOneOnOneTrainingService(service)) {
         oneOnOneRevenueCents += netCents;
       } else {
-        productSalesCents += netCents;
+        // Reserved for future service-classification expansion.
       }
     }
   }
@@ -227,7 +252,6 @@ export async function buildWeeklyTrainingReport(options?: {
     weekEnd: toWeekParam(new Date(end.getTime() - 24 * 60 * 60 * 1000)),
     businessId,
     totalFinishedTrainingAppointments: trainingAppointments.length,
-    productSalesCents,
     groupRevenueCents,
     oneOnOneRevenueCents,
     serviceCounts: Object.fromEntries(
@@ -243,7 +267,7 @@ export async function upsertWeeklyTrainingKpis(
   const rows = [
     {
       metricKey: TRAINING_KPI_METRICS.productSales,
-      value: moneyValue(values.productSalesCents),
+      value: null,
     },
     {
       metricKey: TRAINING_KPI_METRICS.groupRevenue,
@@ -286,7 +310,6 @@ export async function syncWeeklyTrainingKpis(options?: {
 
   await upsertWeeklyTrainingKpis({
     weekStart: report.weekStart,
-    productSalesCents: report.productSalesCents,
     groupRevenueCents: report.groupRevenueCents,
     oneOnOneRevenueCents: report.oneOnOneRevenueCents,
   });

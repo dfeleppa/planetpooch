@@ -72,7 +72,6 @@ type BoardingImportReport = {
 
 type TrainingImportReport = {
   totalFinishedTrainingAppointments: number;
-  productSalesCents: number;
   groupRevenueCents: number;
   oneOnOneRevenueCents: number;
 };
@@ -210,9 +209,7 @@ export function KpiView({
         const report = json.report as TrainingImportReport;
         setImportMessage(
           withImportedAt(
-            `Imported ${dollars(report.productSalesCents)} product sales, ${dollars(
-              report.groupRevenueCents
-            )} group training revenue, and ${dollars(report.oneOnOneRevenueCents)} one-on-one training revenue from ${report.totalFinishedTrainingAppointments} finished training appointments.`,
+            `Imported ${dollars(report.groupRevenueCents)} group class revenue and ${dollars(report.oneOnOneRevenueCents)} one-on-one training revenue from ${report.totalFinishedTrainingAppointments} finished training appointments. Product sales is N/A for now.`,
             importedAt
           )
         );
