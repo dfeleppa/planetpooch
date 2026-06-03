@@ -17,6 +17,9 @@ const TRAINING_KPI_METRICS = {
   oneOnOneRevenue: "one_on_one_revenue",
 } as const;
 
+const SALES_DATE_CANDIDATE_LOOKBACK_WEEKS = 26;
+const SALES_DATE_CANDIDATE_LOOKAHEAD_WEEKS = 52;
+
 export type WeeklyTrainingReport = {
   weekStart: string;
   weekEnd: string;
@@ -171,6 +174,10 @@ async function listFinishedAppointments(
   return appointments;
 }
 
+function uniqueAppointments(appointments: MoegoAppointmentRow[]): MoegoAppointmentRow[] {
+  return [...new Map(appointments.map((appointment) => [appointment.id, appointment])).values()];
+}
+
 async function ordersById(
   orderIds: string[],
   businessId: string
@@ -212,13 +219,23 @@ export async function buildWeeklyTrainingReport(options?: {
     : previousCompletedWeek(options?.today).start;
   const end = addWeeks(start, 1);
   const businessId = options?.businessId ?? PET_RESORT_BUSINESS_ID;
-  const appointments = await listFinishedAppointments(start, end, businessId);
-  const trainingAppointments = appointments.filter((appointment) =>
+  const [weeklyAppointments, salesCandidateAppointments] = await Promise.all([
+    listFinishedAppointments(start, end, businessId),
+    listFinishedAppointments(
+      addWeeks(start, -SALES_DATE_CANDIDATE_LOOKBACK_WEEKS),
+      addWeeks(end, SALES_DATE_CANDIDATE_LOOKAHEAD_WEEKS),
+      businessId
+    ),
+  ]);
+  const trainingAppointments = weeklyAppointments.filter((appointment) =>
+    serviceDetails(appointment).some(isTrainingService)
+  );
+  const trainingSalesCandidates = uniqueAppointments(salesCandidateAppointments).filter((appointment) =>
     serviceDetails(appointment).some(isTrainingService)
   );
   const orderIds = [
     ...new Set(
-      trainingAppointments
+      trainingSalesCandidates
         .map((appointment) => appointment.orderId)
         .filter((orderId): orderId is string => Boolean(orderId))
     ),
@@ -230,7 +247,7 @@ export async function buildWeeklyTrainingReport(options?: {
   let oneOnOneRevenueCents = 0;
   let appointmentsMissingSalesDatetime = 0;
   const countedOrderIds = new Set<string>();
-  const trainingAppointmentsInSalesWindow = trainingAppointments.filter((appointment) => {
+  const trainingAppointmentsInSalesWindow = trainingSalesCandidates.filter((appointment) => {
     if (!appointment.orderId) return false;
     const order = orderMoney.get(appointment.orderId);
     if (!parseDate(order?.salesDatetime)) appointmentsMissingSalesDatetime++;

@@ -17,6 +17,9 @@ const IN_HOUSE_GROOMING_KPI_METRICS = {
   totalPetsServiced: "total_pets_serviced",
 } as const;
 
+const SALES_DATE_CANDIDATE_LOOKBACK_WEEKS = 26;
+const SALES_DATE_CANDIDATE_LOOKAHEAD_WEEKS = 52;
+
 export type WeeklyInHouseGroomingReport = {
   weekStart: string;
   weekEnd: string;
@@ -149,6 +152,10 @@ async function listFinishedAppointments(
   return appointments;
 }
 
+function uniqueAppointments(appointments: MoegoAppointmentRow[]): MoegoAppointmentRow[] {
+  return [...new Map(appointments.map((appointment) => [appointment.id, appointment])).values()];
+}
+
 async function ordersById(
   orderIds: string[],
   businessId: string
@@ -190,13 +197,23 @@ export async function buildWeeklyInHouseGroomingReport(options?: {
     : previousCompletedWeek(options?.today).start;
   const end = addWeeks(start, 1);
   const businessId = options?.businessId ?? PET_RESORT_BUSINESS_ID;
-  const appointments = await listFinishedAppointments(start, end, businessId);
-  const groomingAppointments = appointments.filter((appointment) =>
+  const [weeklyAppointments, salesCandidateAppointments] = await Promise.all([
+    listFinishedAppointments(start, end, businessId),
+    listFinishedAppointments(
+      addWeeks(start, -SALES_DATE_CANDIDATE_LOOKBACK_WEEKS),
+      addWeeks(end, SALES_DATE_CANDIDATE_LOOKAHEAD_WEEKS),
+      businessId
+    ),
+  ]);
+  const groomingAppointments = weeklyAppointments.filter((appointment) =>
+    serviceDetails(appointment).some(isGroomingLine)
+  );
+  const groomingSalesCandidates = uniqueAppointments(salesCandidateAppointments).filter((appointment) =>
     serviceDetails(appointment).some(isGroomingLine)
   );
   const orderIds = [
     ...new Set(
-      groomingAppointments
+      groomingSalesCandidates
         .map((appointment) => appointment.orderId)
         .filter((orderId): orderId is string => Boolean(orderId))
     ),
@@ -210,7 +227,7 @@ export async function buildWeeklyInHouseGroomingReport(options?: {
   const totalPetsServiced = new Set<string>();
   let appointmentsMissingSalesDatetime = 0;
   const countedOrderIds = new Set<string>();
-  const groomingAppointmentsInSalesWindow = groomingAppointments.filter((appointment) => {
+  const groomingAppointmentsInSalesWindow = groomingSalesCandidates.filter((appointment) => {
     if (!appointment.orderId) return false;
     const order = orderMoney.get(appointment.orderId);
     if (!parseDate(order?.salesDatetime)) appointmentsMissingSalesDatetime++;
@@ -250,7 +267,7 @@ export async function buildWeeklyInHouseGroomingReport(options?: {
     weekStart: toWeekParam(start),
     weekEnd: toWeekParam(new Date(end.getTime() - 24 * 60 * 60 * 1000)),
     businessId,
-    totalFinishedAppointments: appointments.length,
+    totalFinishedAppointments: weeklyAppointments.length,
     groomingAppointments: groomingAppointments.length,
     groomingAppointmentsInSalesWindow: groomingAppointmentsInSalesWindow.length,
     totalPetsServiced: totalPetsServiced.size,
