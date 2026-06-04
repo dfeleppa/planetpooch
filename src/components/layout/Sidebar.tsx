@@ -38,14 +38,6 @@ const managerNav: NavItem[] = [
   { href: "/admin/audit-log", label: "Audit Log", icon: "≡" },
 ];
 
-// Front Desk Staff nav — module edit + employee edit, no delete and no
-// org-chart/onboarding/audit-log (those still require MANAGER+).
-const frontDeskNav: NavItem[] = [
-  { href: "/admin", label: "Dashboard", icon: "▣" },
-  { href: "/admin/modules", label: "Manage Modules", icon: "❏" },
-  { href: "/admin/employees", label: "Employees", icon: "◉" },
-];
-
 const sharedNav: NavItem[] = [
   { href: "/maintenance", label: "Maintenance", icon: "⚙" },
   { href: "/maintenance/inventory", label: "Inventory", icon: "▦" },
@@ -81,37 +73,30 @@ export function Sidebar() {
   const jobTitle = session?.user?.jobTitle;
   const isSuperAdmin = role === "SUPER_ADMIN" || role === "ADMIN";
   const isManager = role === "MANAGER";
-  const isFrontDesk = jobTitle === "Front Desk Staff";
   // "Manager-tier admin UI" — controls visibility of the Employee View
-  // section. Front Desk sits above floor staff and gets the same admin
-  // chrome (modules + employees) without onboarding/org-chart/audit-log.
-  const isManagerOrAbove = isSuperAdmin || isManager || isFrontDesk;
+  // section.
+  const isManagerOrAbove = isSuperAdmin || isManager;
   const hasMarketingAccess =
     role === "MARKETING" || isSuperAdmin || jobTitle === "CMO";
   // CMO can manage modules — give the same admin nav as SUPER_ADMIN so
   // "Manage Modules" appears alongside the rest of the admin links.
   const canManageModules = isSuperAdmin || jobTitle === "CMO";
 
-  // MANAGER takes precedence over Front Desk if a user happens to have both
-  // — manager nav is broader (org chart, onboarding, audit log).
   const nav = canManageModules
     ? superAdminNav
     : isManager
     ? managerNav
-    : isFrontDesk
-    ? frontDeskNav
     : employeeNav;
-  // The admin navs (super admin / manager / front desk) are the HR links;
+  // The admin navs (super admin / manager) are the HR links;
   // the plain employee nav (Dashboard / Modules / Search) is not.
   const isAdminNav = nav !== employeeNav;
 
-  const [collapsed, setCollapsed] = useState(false);
+  const [collapsed, setCollapsed] = useState(
+    () =>
+      typeof window !== "undefined" &&
+      localStorage.getItem("portal-sidebar-collapsed") === "true"
+  );
   const [mobileOpen, setMobileOpen] = useState(false);
-
-  useEffect(() => {
-    const stored = localStorage.getItem("portal-sidebar-collapsed");
-    if (stored === "true") setCollapsed(true);
-  }, []);
 
   // Close the drawer when the path changes (link click, back button, etc.)
   // without using an effect. Setting state during render is the React 19

@@ -23,7 +23,7 @@ async function loadEmployeeOrForbidden(employeeId: string) {
     sessionUser.jobTitle
   );
   const callerIsScopedTier =
-    sessionUser.role === "MANAGER" || sessionUser.jobTitle === "Front Desk Staff";
+    sessionUser.role === "MANAGER";
 
   const employee = await prisma.user.findUnique({
     where: { id: employeeId },

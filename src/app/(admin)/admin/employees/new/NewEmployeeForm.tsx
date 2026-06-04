@@ -16,7 +16,6 @@ type Company = "GROOMING" | "RESORT" | "CORPORATE";
 interface Props {
   currentRole: Role;
   currentCompany: Company;
-  currentJobTitle: string | null;
   jobTitleOptions: Record<Company, string[]>;
 }
 
@@ -35,8 +34,6 @@ const DEFAULT_JOB_TITLES: Record<Company, string[]> = {
     "Assistant Manager",
     "Training Manager",
     "In-house Groomer",
-    "Front Desk Staff",
-    "Floor Staff",
   ],
   CORPORATE: ["CEO", "DOS", "CMO"],
 };
@@ -85,7 +82,6 @@ function SelectField({
 export function NewEmployeeForm({
   currentRole,
   currentCompany,
-  currentJobTitle,
   jobTitleOptions,
 }: Props) {
   const router = useRouter();
@@ -106,9 +102,8 @@ export function NewEmployeeForm({
   const isSuperAdmin =
     currentRole === "SUPER_ADMIN" || currentRole === "ADMIN";
   const isManager = currentRole === "MANAGER";
-  const isFrontDesk = currentJobTitle === "Front Desk Staff";
-  // Scoped tiers (MANAGER, Front Desk) are locked to their own company.
-  const isScopedTier = isManager || isFrontDesk;
+  // Scoped managers are locked to their own company.
+  const isScopedTier = isManager;
 
   const titleOptions = Array.from(
     new Set([...(jobTitleOptions[company] ?? []), ...DEFAULT_JOB_TITLES[company]])
@@ -351,7 +346,7 @@ export function NewEmployeeForm({
             {/* Role */}
             <SelectField label="Role" value={role} onChange={(v) => setRole(v as Role)}>
               <option value="EMPLOYEE">Employee</option>
-              {!isFrontDesk && <option value="MANAGER">Manager</option>}
+              <option value="MANAGER">Manager</option>
               {isSuperAdmin && <option value="MARKETING">Marketing</option>}
               {isSuperAdmin && <option value="SUPER_ADMIN">Super Admin</option>}
             </SelectField>

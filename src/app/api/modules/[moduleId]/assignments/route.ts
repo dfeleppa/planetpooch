@@ -1,6 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
+import { Company } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { getSession, hasModuleEditAccess } from "@/lib/auth-helpers";
+
+const COMPANY_ORDER: Record<Company, number> = {
+  CORPORATE: 0,
+  GROOMING: 1,
+  RESORT: 2,
+};
 
 /**
  * GET — returns the current job-title and user assignments for a module,
@@ -18,7 +25,7 @@ export async function GET(
 
   const { moduleId } = await params;
 
-  const [mod, allJobTitles] = await Promise.all([
+  const [mod, userJobTitles, orgPositions] = await Promise.all([
     prisma.module.findUnique({
       where: { id: moduleId },
       select: {
@@ -41,9 +48,14 @@ export async function GET(
     }),
     prisma.user.findMany({
       where: { jobTitle: { not: null } },
-      select: { jobTitle: true },
-      distinct: ["jobTitle"],
-      orderBy: { jobTitle: "asc" },
+      select: { jobTitle: true, company: true },
+      distinct: ["jobTitle", "company"],
+      orderBy: [{ company: "asc" }, { jobTitle: "asc" }],
+    }),
+    prisma.orgPosition.findMany({
+      select: { title: true, company: true },
+      distinct: ["title", "company"],
+      orderBy: [{ company: "asc" }, { title: "asc" }],
     }),
   ]);
 
@@ -51,12 +63,28 @@ export async function GET(
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
 
+  const titleCompanies = new Map<string, Company>();
+  for (const position of orgPositions) {
+    if (!position.title.trim()) continue;
+    titleCompanies.set(position.title, position.company ?? "CORPORATE");
+  }
+  for (const row of userJobTitles) {
+    if (!row.jobTitle?.trim() || titleCompanies.has(row.jobTitle)) continue;
+    titleCompanies.set(row.jobTitle, row.company);
+  }
+  const allJobTitles = Array.from(titleCompanies, ([title, company]) => ({
+    title,
+    company,
+  })).sort((a, b) => {
+    const companyDiff = COMPANY_ORDER[a.company] - COMPANY_ORDER[b.company];
+    if (companyDiff !== 0) return companyDiff;
+    return a.title.localeCompare(b.title);
+  });
+
   return NextResponse.json({
     jobTitles: mod.jobTitleAssignments.map((a) => a.jobTitle),
     users: mod.userAssignments.map((a) => a.user),
-    allJobTitles: allJobTitles
-      .map((r) => r.jobTitle)
-      .filter((t): t is string => !!t && t.trim() !== ""),
+    allJobTitles,
   });
 }
 

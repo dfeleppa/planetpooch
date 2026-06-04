@@ -136,7 +136,7 @@ export async function PATCH(
     sessionUser.jobTitle
   );
   const callerIsScopedTier =
-    sessionUser.role === "MANAGER" || sessionUser.jobTitle === "Front Desk Staff";
+    sessionUser.role === "MANAGER";
 
   const { employeeId } = await params;
 
@@ -150,7 +150,7 @@ export async function PATCH(
   if (companyFilter.company && target.company !== companyFilter.company) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
-  // Scoped tiers (MANAGER, Front Desk) can only edit EMPLOYEE-role users.
+  // Scoped MANAGER users can only edit EMPLOYEE-role users.
   if (callerIsScopedTier && target.role !== "EMPLOYEE") {
     return NextResponse.json(
       { error: "You can only edit employees" },
@@ -214,7 +214,7 @@ export async function PATCH(
     if ("ssCardNotNeeded" in body) data.ssCardNotNeeded = !!body.ssCardNotNeeded;
 
     if ("company" in body && !callerIsScopedTier) {
-      // Scoped tiers (MANAGER, Front Desk) cannot change company. SUPER_ADMIN
+      // Scoped MANAGER users cannot change company. SUPER_ADMIN
       // must pick one of the three valid Company values — null is no longer
       // permitted.
       const valid: Company[] = ["GROOMING", "RESORT", "CORPORATE"];
@@ -232,14 +232,6 @@ export async function PATCH(
       const callerIsTopTier =
         sessionUser.role === "SUPER_ADMIN" ||
         sessionUser.role === "ADMIN";
-      // Front Desk Staff cannot change roles at all. They are below MANAGER
-      // in the hierarchy and the form-side never exposes the field.
-      if (sessionUser.jobTitle === "Front Desk Staff" && desired !== target.role) {
-        return NextResponse.json(
-          { error: "Front Desk staff cannot change employee roles" },
-          { status: 403 }
-        );
-      }
       if (
         (desired === "SUPER_ADMIN" || desired === "MARKETING") &&
         !callerIsTopTier

@@ -43,7 +43,7 @@ export default async function EmployeeDetailPage({ params }: { params: Promise<{
     sessionUser.jobTitle
   );
   const callerIsScopedTier =
-    sessionUser.role === "MANAGER" || sessionUser.jobTitle === "Front Desk Staff";
+    sessionUser.role === "MANAGER";
   const { employeeId } = await params;
   const positionWhere = companyFilter.company
     ? { OR: [{ company: companyFilter.company }, { company: null }] }
@@ -367,19 +367,15 @@ export default async function EmployeeDetailPage({ params }: { params: Promise<{
         />
       </div>
 
-      {/* Front Desk Staff cannot end-employment, reactivate, or delete —
-          they'd see an empty Danger Zone card, so omit it entirely. */}
-      {sessionUser.jobTitle !== "Front Desk Staff" && (
-        <div className="mt-6">
-          <DangerZoneCard
-            employeeId={employee.id}
-            employeeName={employee.name}
-            isTerminated={isTerminated}
-            isSuperAdmin={sessionUser.role === "SUPER_ADMIN"}
-            canEndEmployment={true}
-          />
-        </div>
-      )}
+      <div className="mt-6">
+        <DangerZoneCard
+          employeeId={employee.id}
+          employeeName={employee.name}
+          isTerminated={isTerminated}
+          isSuperAdmin={sessionUser.role === "SUPER_ADMIN"}
+          canEndEmployment={true}
+        />
+      </div>
 
       <div className="mt-6">
         <EmployeeModuleAssignments employeeId={employee.id} />

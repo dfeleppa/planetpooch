@@ -36,7 +36,7 @@ const COMPANY_LABELS: Record<Company, string> = {
 
 const DEFAULT_JOB_TITLES: Record<Company, string[]> = {
   GROOMING: ["COO", "Groomer", "Office Staff"],
-  RESORT: ["Facility Manager", "Assistant Manager", "Training Manager", "In-house Groomer", "Front Desk Staff", "Floor Staff"],
+  RESORT: ["Facility Manager", "Assistant Manager", "Training Manager", "In-house Groomer"],
   CORPORATE: ["CEO", "DOS", "CMO"],
 };
 

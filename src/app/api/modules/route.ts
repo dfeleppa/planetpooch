@@ -10,8 +10,8 @@ export async function GET() {
   }
 
   const where: { id?: { in: string[] } } = {};
-  // Manager-tier (and Front Desk Staff, who can edit modules) see all
-  // modules in the picker; everyone else sees only modules visible to them.
+  // Manager-tier users see all modules in the picker; everyone else sees only
+  // modules visible to them.
   if (
     !isManagerOrAbove(session.user.role) &&
     !hasModuleEditAccess(session.user.role, session.user.jobTitle)
@@ -79,7 +79,7 @@ export async function POST(req: NextRequest) {
   const maxOrder = await prisma.module.aggregate({ _max: { order: true } });
   const order = (maxOrder._max.order ?? -1) + 1;
 
-  const module = await prisma.module.create({
+  const createdModule = await prisma.module.create({
     data: {
       title,
       description: description || "",
@@ -89,5 +89,5 @@ export async function POST(req: NextRequest) {
     },
   });
 
-  return NextResponse.json(module, { status: 201 });
+  return NextResponse.json(createdModule, { status: 201 });
 }

@@ -33,9 +33,6 @@ export async function proxy(req: NextRequest) {
     role === "MANAGER" ||
     role === "SUPER_ADMIN" ||
     role === "ADMIN";
-  // "Front Desk Staff" job title sits above floor staff and in-house
-  // grooming, gaining admin-section + module-edit access regardless of role.
-  const isFrontDesk = jobTitle === "Front Desk Staff";
   // CMO job title gets full marketing and module-management access regardless of role.
   const hasMarketingAccess =
     role === "MARKETING" ||
@@ -44,16 +41,15 @@ export async function proxy(req: NextRequest) {
     jobTitle === "CMO";
   const canManageModules =
     role === "SUPER_ADMIN" || role === "ADMIN" || jobTitle === "CMO";
-  const canEditModules = canManageModules || isFrontDesk;
-  const canAccessAdmin = isManagerOrAbove || isFrontDesk;
+  const canEditModules = canManageModules;
+  const canAccessAdmin = isManagerOrAbove;
 
-  // Module management section: top-tier (and CMO) can do anything; Front
-  // Desk can edit but the API enforces no-delete.
+  // Module management section: top-tier admins and CMO can edit.
   if (pathname.startsWith("/admin/modules") && !canEditModules) {
     return NextResponse.redirect(new URL("/admin", req.url));
   }
 
-  // Admin section: MANAGER+, plus Front Desk Staff (employee edit, no delete).
+  // Admin section: MANAGER+.
   if (pathname.startsWith("/admin") && !canAccessAdmin) {
     return NextResponse.redirect(new URL("/dashboard", req.url));
   }

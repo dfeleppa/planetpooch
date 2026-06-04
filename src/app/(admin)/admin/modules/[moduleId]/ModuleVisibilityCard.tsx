@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 
@@ -11,11 +11,24 @@ interface AssignedUser {
   jobTitle: string | null;
 }
 
+type Company = "CORPORATE" | "GROOMING" | "RESORT";
+
+interface JobTitleOption {
+  title: string;
+  company: Company;
+}
+
 interface AssignmentsPayload {
   jobTitles: string[];
   users: AssignedUser[];
-  allJobTitles: string[];
+  allJobTitles: JobTitleOption[];
 }
+
+const COMPANY_GROUPS: { company: Company; label: string }[] = [
+  { company: "CORPORATE", label: "Planet Pooch Corporate" },
+  { company: "GROOMING", label: "Planet Pooch Grooming" },
+  { company: "RESORT", label: "Planet Pooch Pet Resort" },
+];
 
 export function ModuleVisibilityCard({ moduleId }: { moduleId: string }) {
   const [data, setData] = useState<AssignmentsPayload | null>(null);
@@ -23,17 +36,26 @@ export function ModuleVisibilityCard({ moduleId }: { moduleId: string }) {
   const [saving, setSaving] = useState(false);
   const [savedAt, setSavedAt] = useState<Date | null>(null);
 
-  async function load() {
+  const fetchAssignments = useCallback(async () => {
     const res = await fetch(`/api/modules/${moduleId}/assignments`);
-    if (!res.ok) return;
-    const payload: AssignmentsPayload = await res.json();
+    if (!res.ok) return null;
+    return (await res.json()) as AssignmentsPayload;
+  }, [moduleId]);
+
+  function applyPayload(payload: AssignmentsPayload) {
     setData(payload);
     setSelected(new Set(payload.jobTitles));
   }
 
   useEffect(() => {
-    load();
-  }, [moduleId]);
+    let ignore = false;
+    fetchAssignments().then((payload) => {
+      if (!ignore && payload) applyPayload(payload);
+    });
+    return () => {
+      ignore = true;
+    };
+  }, [fetchAssignments]);
 
   function toggle(title: string) {
     setSelected((prev) => {
@@ -54,7 +76,8 @@ export function ModuleVisibilityCard({ moduleId }: { moduleId: string }) {
     setSaving(false);
     if (res.ok) {
       setSavedAt(new Date());
-      load();
+      const payload = await fetchAssignments();
+      if (payload) applyPayload(payload);
     }
   }
 
@@ -72,6 +95,10 @@ export function ModuleVisibilityCard({ moduleId }: { moduleId: string }) {
   const hasChanges =
     selected.size !== data.jobTitles.length ||
     data.jobTitles.some((t) => !selected.has(t));
+  const groupedJobTitles = COMPANY_GROUPS.map((group) => ({
+    ...group,
+    titles: data.allJobTitles.filter((option) => option.company === group.company),
+  })).filter((group) => group.titles.length > 0);
 
   return (
     <Card className="mb-6">
@@ -99,20 +126,29 @@ export function ModuleVisibilityCard({ moduleId }: { moduleId: string }) {
             employee to enable role-based assignment.
           </p>
         ) : (
-          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-            {data.allJobTitles.map((title) => (
-              <label
-                key={title}
-                className="flex items-center gap-2 text-sm text-gray-800 cursor-pointer"
-              >
-                <input
-                  type="checkbox"
-                  checked={selected.has(title)}
-                  onChange={() => toggle(title)}
-                  className="h-4 w-4 rounded border-gray-300"
-                />
-                {title}
-              </label>
+          <div className="space-y-4">
+            {groupedJobTitles.map((group) => (
+              <section key={group.company} className="space-y-2">
+                <h3 className="text-xs font-semibold uppercase tracking-wide text-gray-500">
+                  {group.label}
+                </h3>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
+                  {group.titles.map((option) => (
+                    <label
+                      key={`${option.company}-${option.title}`}
+                      className="flex items-center gap-2 text-sm text-gray-800 cursor-pointer"
+                    >
+                      <input
+                        type="checkbox"
+                        checked={selected.has(option.title)}
+                        onChange={() => toggle(option.title)}
+                        className="h-4 w-4 rounded border-gray-300"
+                      />
+                      {option.title}
+                    </label>
+                  ))}
+                </div>
+              </section>
             ))}
           </div>
         )}

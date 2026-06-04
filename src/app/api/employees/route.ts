@@ -19,9 +19,9 @@ export async function GET(req: NextRequest) {
     jobTitle: string | null;
   };
   const companyFilter = getCompanyFilter(user.role, user.company, user.jobTitle);
-  // MANAGER + Front Desk are scoped tiers — neither can request the `all`
-  // status (which mixes active and terminated across every company).
-  const isScopedTier = user.role === "MANAGER" || user.jobTitle === "Front Desk Staff";
+  // MANAGER is scoped and cannot request the `all` status, which mixes active
+  // and terminated employees across every company.
+  const isScopedTier = user.role === "MANAGER";
 
   // ?status=active|terminated|all (default: active). Scoped tiers can't
   // request 'all' — that's a SUPER_ADMIN view of everyone including past
@@ -200,11 +200,10 @@ export async function POST(req: NextRequest) {
       company: Company;
       jobTitle: string | null;
     };
-    const callerIsFrontDesk = sessionUser.jobTitle === "Front Desk Staff";
-    const callerIsScopedTier = sessionUser.role === "MANAGER" || callerIsFrontDesk;
+    const callerIsScopedTier = sessionUser.role === "MANAGER";
 
-    // Scoped tiers (MANAGER, Front Desk) can only create employees in their
-    // own company. SUPER_ADMIN must pick one of the three companies — there
+    // Scoped MANAGER users can only create employees in their own company.
+    // SUPER_ADMIN must pick one of the three companies — there
     // is no "no company" option anymore; CORPORATE is the explicit value
     // for cross-division employees.
     let assignedCompany: Company;
@@ -256,8 +255,8 @@ export async function POST(req: NextRequest) {
     }
 
     // Only top-tier callers (SUPER_ADMIN / legacy ADMIN) can create
-    // top-tier accounts. MANAGERs can also create MANAGERs (within their own
-    // company, scoped above). Front Desk Staff can only create EMPLOYEEs.
+    // top-tier accounts. MANAGERs can also create MANAGERs within their own
+    // company, scoped above.
     const callerIsTopTier =
       sessionUser.role === "SUPER_ADMIN" ||
       sessionUser.role === "ADMIN";

@@ -560,7 +560,7 @@ function EmptyState({
         <h2 className="text-lg font-semibold text-gray-900">No positions yet</h2>
         <p className="text-gray-500 mt-2 max-w-md mx-auto">
           Start with the standard Planet Pooch org structure (CEO, COO, CMO, Groomer, Office Staff,
-          Facility Manager, Assistant Manager, Front Desk Staff, Floor Staff, DOS)
+          Facility Manager, Assistant Manager, In-house Groomer, DOS)
           — then customize.
         </p>
         {isSuperAdmin ? (

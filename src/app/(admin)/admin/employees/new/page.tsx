@@ -68,7 +68,6 @@ export default async function NewEmployeePage() {
       <NewEmployeeForm
         currentRole={user.role}
         currentCompany={user.company}
-        currentJobTitle={user.jobTitle}
         jobTitleOptions={jobTitleOptions}
       />
     </div>

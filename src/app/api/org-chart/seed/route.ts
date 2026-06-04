@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getSession, isSuperAdmin } from "@/lib/auth-helpers";
-import { Company, Role } from "@prisma/client";
+import { Company } from "@prisma/client";
 
 /**
  * POST — seeds the canonical org chart: Leadership + Grooming + Resort hierarchies.
@@ -110,26 +110,10 @@ export async function POST(req: Request) {
   });
   await prisma.orgPosition.create({
     data: {
-      title: "Front Desk Staff",
-      company: Company.RESORT,
-      parentPositionId: asstMgr.id,
-      order: 0,
-    },
-  });
-  await prisma.orgPosition.create({
-    data: {
-      title: "Floor Staff",
-      company: Company.RESORT,
-      parentPositionId: asstMgr.id,
-      order: 1,
-    },
-  });
-  await prisma.orgPosition.create({
-    data: {
       title: "In-house Groomer",
       company: Company.RESORT,
       parentPositionId: asstMgr.id,
-      order: 2,
+      order: 0,
     },
   });
 

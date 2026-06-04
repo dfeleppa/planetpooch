@@ -30,10 +30,8 @@ export async function requireManager() {
 }
 
 /**
- * Requires manager-tier employee access: MANAGER+, or anyone with the
- * Front Desk Staff job title. Use for /admin/employees pages — Front Desk
- * Staff sit just above floor staff and in-house grooming and can manage
- * employees within their company without delete privileges.
+ * Requires manager-tier employee access: MANAGER+.
+ * Use for /admin/employees pages.
  */
 export async function requireEmployeeManager() {
   const session = await requireAuth();
@@ -70,16 +68,16 @@ export async function requireMarketing() {
 /**
  * Returns a Prisma `where` filter to scope queries to the user's company.
  * SUPER_ADMIN: no filter (sees all companies).
- * MANAGER and Front Desk Staff: filters to their own company.
- * `jobTitle` is optional for backward compatibility with non-employee
- * routes that don't surface Front Desk Staff.
+ * MANAGER: filters to their own company.
+ * `jobTitle` is accepted for backward compatibility with existing callers.
  */
 export function getCompanyFilter(
   role: Role,
   company: Company | null,
-  jobTitle?: string | null
+  _jobTitle?: string | null
 ): { company?: Company } {
-  const scoped = role === "MANAGER" || isFrontDesk(jobTitle);
+  void _jobTitle;
+  const scoped = role === "MANAGER";
   if (scoped && company) {
     return { company };
   }
@@ -106,21 +104,9 @@ export function isSuperAdmin(role: string | undefined | null): boolean {
 }
 
 /**
- * "Front Desk Staff" is a job title that sits above floor staff and in-house
- * grooming. It grants manager-tier employee access and module edit access
- * without delete privileges, regardless of the underlying role.
- */
-export const FRONT_DESK_JOB_TITLE = "Front Desk Staff";
-
-export function isFrontDesk(jobTitle: string | undefined | null): boolean {
-  return jobTitle === FRONT_DESK_JOB_TITLE;
-}
-
-/**
  * True if the user can manage modules and lessons end-to-end including
  * delete. Top-tier admins always qualify, plus anyone with the CMO job
- * title regardless of role. Front Desk Staff are NOT included — they get
- * edit access via `hasModuleEditAccess`, but cannot delete.
+ * title regardless of role.
  */
 export function hasModuleManagementAccess(
   role: string | undefined | null,
@@ -132,30 +118,26 @@ export function hasModuleManagementAccess(
 
 /**
  * True if the user can edit modules, subsections, and lessons (create,
- * update, reorder, assign). Superset of `hasModuleManagementAccess` that
- * also includes Front Desk Staff. Use this for non-delete module operations;
- * use `hasModuleManagementAccess` for delete.
+ * update, reorder, assign). Use `hasModuleManagementAccess` for delete.
  */
 export function hasModuleEditAccess(
   role: string | undefined | null,
   jobTitle?: string | undefined | null
 ): boolean {
-  if (hasModuleManagementAccess(role, jobTitle)) return true;
-  return isFrontDesk(jobTitle);
+  return hasModuleManagementAccess(role, jobTitle);
 }
 
 /**
  * True if the user can manage employee records (view, edit, create).
- * MANAGER+ qualify, plus anyone with the Front Desk Staff job title.
- * Hard delete remains gated by `isSuperAdmin`; end-employment remains
- * gated by `isManagerOrAbove`.
+ * MANAGER+ qualify. Hard delete remains gated by `isSuperAdmin`;
+ * end-employment remains gated by `isManagerOrAbove`.
  */
 export function hasEmployeeManagementAccess(
   role: string | undefined | null,
-  jobTitle?: string | undefined | null
+  _jobTitle?: string | undefined | null
 ): boolean {
-  if (isManagerOrAbove(role)) return true;
-  return isFrontDesk(jobTitle);
+  void _jobTitle;
+  return isManagerOrAbove(role);
 }
 
 /**
