@@ -20,6 +20,16 @@ import { getFileWebLink, isDriveEnabled, isStubId } from "@/lib/drive";
 import { formatDate } from "@/lib/utils";
 import { HANDBOOK_SIGNABLE_NAME } from "@/lib/employee-documents";
 
+const COMPANIES: Company[] = ["GROOMING", "RESORT", "CORPORATE"];
+
+function addTitle(
+  options: Record<Company, Set<string>>,
+  company: Company,
+  title: string
+) {
+  if (title.trim()) options[company].add(title.trim());
+}
+
 export default async function EmployeeDetailPage({ params }: { params: Promise<{ employeeId: string }> }) {
   const session = await requireEmployeeManager();
   const sessionUser = session.user as {
@@ -35,6 +45,9 @@ export default async function EmployeeDetailPage({ params }: { params: Promise<{
   const callerIsScopedTier =
     sessionUser.role === "MANAGER" || sessionUser.jobTitle === "Front Desk Staff";
   const { employeeId } = await params;
+  const positionWhere = companyFilter.company
+    ? { OR: [{ company: companyFilter.company }, { company: null }] }
+    : {};
 
   const employee = await prisma.user.findUnique({
     where: { id: employeeId },
@@ -93,7 +106,14 @@ export default async function EmployeeDetailPage({ params }: { params: Promise<{
     include: { lesson: { select: { title: true } } },
   });
 
-  const [signableDocuments, esignRequests, availability, employeeDocuments, documentIssues] = await Promise.all([
+  const [
+    signableDocuments,
+    esignRequests,
+    availability,
+    employeeDocuments,
+    documentIssues,
+    orgPositions,
+  ] = await Promise.all([
     prisma.signableDocument.findMany({
       where: { isActive: true },
       orderBy: { name: "asc" },
@@ -125,7 +145,31 @@ export default async function EmployeeDetailPage({ params }: { params: Promise<{
         flaggedBy: { select: { id: true, name: true } },
       },
     }),
+    prisma.orgPosition.findMany({
+      where: positionWhere,
+      select: { title: true, company: true },
+      orderBy: [{ company: "asc" }, { title: "asc" }],
+    }),
   ]);
+  const optionSets: Record<Company, Set<string>> = {
+    GROOMING: new Set(),
+    RESORT: new Set(),
+    CORPORATE: new Set(),
+  };
+  for (const pos of orgPositions) {
+    if (pos.company) {
+      addTitle(optionSets, pos.company, pos.title);
+    } else {
+      addTitle(optionSets, "CORPORATE", pos.title);
+      if (companyFilter.company) addTitle(optionSets, companyFilter.company, pos.title);
+    }
+  }
+  const jobTitleOptions = Object.fromEntries(
+    COMPANIES.map((company) => [
+      company,
+      Array.from(optionSets[company]).sort((a, b) => a.localeCompare(b)),
+    ])
+  ) as Record<Company, string[]>;
 
   const availabilityByDay = new Map(availability.map((a) => [a.dayOfWeek, a]));
 
@@ -191,6 +235,7 @@ export default async function EmployeeDetailPage({ params }: { params: Promise<{
           canEditCompany={!callerIsScopedTier}
           canAssignSuperAdmin={sessionUser.role === "SUPER_ADMIN"}
           canEditRole={sessionUser.role === "SUPER_ADMIN"}
+          jobTitleOptions={jobTitleOptions}
         />
       </div>
 

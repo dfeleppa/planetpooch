@@ -6,7 +6,13 @@ import { Company, Role } from "@prisma/client";
 async function loadPosition(positionId: string) {
   return prisma.orgPosition.findUnique({
     where: { id: positionId },
-    select: { id: true, company: true, parentPositionId: true, assignedUserId: true },
+    select: {
+      id: true,
+      title: true,
+      company: true,
+      parentPositionId: true,
+      assignedUserId: true,
+    },
   });
 }
 
@@ -42,6 +48,7 @@ export async function PATCH(
     }
 
     const body = await req.json();
+    const originalTitle = position.title;
     const data: {
       title?: string;
       parentPositionId?: string | null;
@@ -111,18 +118,63 @@ export async function PATCH(
         ) {
           return NextResponse.json({ error: "Forbidden" }, { status: 403 });
         }
-        // Unassign the user from any position they currently hold (schema enforces unique)
-        await prisma.orgPosition.updateMany({
-          where: { assignedUserId: newUserId, NOT: { id: positionId } },
-          data: { assignedUserId: null },
-        });
       }
       data.assignedUserId = newUserId;
     }
 
-    const updated = await prisma.orgPosition.update({
-      where: { id: positionId },
-      data,
+    const updated = await prisma.$transaction(async (tx) => {
+      if (typeof data.title === "string" && data.title !== originalTitle) {
+        await tx.user.updateMany({
+          where: {
+            jobTitle: originalTitle,
+            ...(position.company ? { company: position.company } : {}),
+          },
+          data: { jobTitle: data.title },
+        });
+      }
+
+      if ("assignedUserId" in data && data.assignedUserId) {
+        await tx.orgPosition.updateMany({
+          where: { assignedUserId: data.assignedUserId, NOT: { id: positionId } },
+          data: { assignedUserId: null },
+        });
+      }
+
+      const updatedPosition = await tx.orgPosition.update({
+        where: { id: positionId },
+        data,
+      });
+
+      const parent = updatedPosition.parentPositionId
+        ? await tx.orgPosition.findUnique({
+            where: { id: updatedPosition.parentPositionId },
+            select: { assignedUserId: true },
+          })
+        : null;
+      const managerId = parent?.assignedUserId ?? null;
+
+      if ("assignedUserId" in data && data.assignedUserId) {
+        await tx.user.update({
+          where: { id: data.assignedUserId },
+          data: {
+            jobTitle: updatedPosition.title,
+            managerId:
+              managerId && managerId !== data.assignedUserId ? managerId : null,
+          },
+        });
+      } else if ("parentPositionId" in data && updatedPosition.assignedUserId) {
+        await tx.user.update({
+          where: { id: updatedPosition.assignedUserId },
+          data: {
+            managerId:
+              managerId && managerId !== updatedPosition.assignedUserId
+                ? managerId
+                : null,
+          },
+        });
+      }
+
+      return updatedPosition;
     });
 
     return NextResponse.json(updated);

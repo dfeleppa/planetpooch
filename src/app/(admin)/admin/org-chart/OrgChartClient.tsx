@@ -49,7 +49,7 @@ export function OrgChartClient({
   isSuperAdmin,
 }: Props) {
   const [positions, setPositions] = useState<Position[]>(initialPositions);
-  const [users] = useState<UserOption[]>(initialUsers);
+  const [users, setUsers] = useState<UserOption[]>(initialUsers);
   const [view, setView] = useState<CompanyView>(
     canViewBothCompanies ? "BOTH" : (lockedCompany as CompanyView) ?? "BOTH"
   );
@@ -88,10 +88,6 @@ export function OrgChartClient({
   const crossPositions = useMemo(() => positions.filter((p) => p.company === null), [positions]);
   const groomingPositions = useMemo(() => positions.filter((p) => p.company === "GROOMING"), [positions]);
   const resortPositions = useMemo(() => positions.filter((p) => p.company === "RESORT"), [positions]);
-
-  const showGrooming = view === "BOTH" || view === "GROOMING";
-  const showResort = view === "BOTH" || view === "RESORT";
-  const showCross = view === "BOTH";
 
   if (positions.length === 0) {
     return (
@@ -135,6 +131,8 @@ export function OrgChartClient({
 
   async function assignUser(positionId: string, assignedUserId: string | null) {
     const prev = positions;
+    const prevUsers = users;
+    const position = positions.find((p) => p.id === positionId);
     setPositions((p) =>
       p.map((x) => {
         // Unassign user from any other position they held
@@ -146,16 +144,49 @@ export function OrgChartClient({
       })
     );
     const result = await savePatch(positionId, { assignedUserId });
-    if (!result) setPositions(prev);
+    if (!result) {
+      setPositions(prev);
+      setUsers(prevUsers);
+      return;
+    }
+    if (assignedUserId && position) {
+      setUsers((current) =>
+        current.map((u) =>
+          u.id === assignedUserId
+            ? {
+                ...u,
+                jobTitle: position.title,
+                company: position.company ?? u.company,
+              }
+            : u
+        )
+      );
+    }
   }
 
   async function updateTitle(positionId: string, title: string) {
     const prev = positions;
+    const prevUsers = users;
+    const oldPosition = positions.find((p) => p.id === positionId);
     setPositions((p) =>
       p.map((x) => (x.id === positionId ? { ...x, title } : x))
     );
     const result = await savePatch(positionId, { title });
-    if (!result) setPositions(prev);
+    if (!result) {
+      setPositions(prev);
+      setUsers(prevUsers);
+      return;
+    }
+    if (oldPosition) {
+      setUsers((current) =>
+        current.map((u) =>
+          u.jobTitle === oldPosition.title &&
+          (!oldPosition.company || u.company === oldPosition.company)
+            ? { ...u, jobTitle: title }
+            : u
+        )
+      );
+    }
   }
 
   async function deletePosition(positionId: string) {
@@ -334,7 +365,6 @@ export function OrgChartClient({
         <CompanySection
           title="Planet Pooch Org Chart"
           subtitle="CEO and DOS lead both companies. CMO serves both divisions. Grooming and Resort have dedicated operations leaders."
-          company={null}
           positions={positions}
           userById={userById}
           usersByPositionKey={usersByPositionKey}
@@ -360,7 +390,6 @@ export function OrgChartClient({
         <CompanySection
           title={COMPANY_LABELS.GROOMING}
           subtitle="Grooming division (includes shared cross-company leadership)"
-          company="GROOMING"
           positions={[...crossPositions, ...groomingPositions]}
           userById={userById}
           usersByPositionKey={usersByPositionKey}
@@ -386,7 +415,6 @@ export function OrgChartClient({
         <CompanySection
           title={COMPANY_LABELS.RESORT}
           subtitle="Pet resort division (includes shared cross-company leadership)"
-          company="RESORT"
           positions={[...crossPositions, ...resortPositions]}
           userById={userById}
           usersByPositionKey={usersByPositionKey}
@@ -540,7 +568,6 @@ function EmptyState({
 function CompanySection({
   title,
   subtitle,
-  company,
   positions,
   userById,
   usersByPositionKey,
@@ -564,7 +591,6 @@ function CompanySection({
 }: {
   title: string;
   subtitle: string;
-  company: CompanyVal | null;
   positions: Position[];
   userById: Map<string, UserOption>;
   usersByPositionKey: Map<string, UserOption[]>;
@@ -617,7 +643,7 @@ function CompanySection({
 
         {positions.length === 0 ? (
           <p className="text-sm text-gray-500 italic">
-            No positions for this company yet. Click "+ Add Position".
+            No positions for this company yet. Click &quot;+ Add Position&quot;.
           </p>
         ) : (
           <PanZoomViewport zoom={zoom} setZoom={setZoom}>

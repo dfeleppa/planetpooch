@@ -287,19 +287,35 @@ export default async function AdminEmployeesPage({
       where: { ...companyWhere, terminatedAt: null },
     });
 
-  const jobTitleRows = await prisma.user.findMany({
-    where: {
-      ...companyWhere,
-      ...terminationFilter,
-      jobTitle: { not: null },
-    },
-    select: { jobTitle: true },
-    distinct: ["jobTitle"],
-    orderBy: { jobTitle: "asc" },
-  });
-  const jobTitleOptions = jobTitleRows
-    .map((r) => r.jobTitle)
-    .filter((t): t is string => !!t);
+  const orgPositionWhere =
+    companyWhere.company
+      ? { OR: [{ company: companyWhere.company }, { company: null }] }
+      : {};
+  const [jobTitleRows, orgTitleRows] = await Promise.all([
+    prisma.user.findMany({
+      where: {
+        ...companyWhere,
+        ...terminationFilter,
+        jobTitle: { not: null },
+      },
+      select: { jobTitle: true },
+      distinct: ["jobTitle"],
+      orderBy: { jobTitle: "asc" },
+    }),
+    prisma.orgPosition.findMany({
+      where: orgPositionWhere,
+      select: { title: true },
+      distinct: ["title"],
+      orderBy: { title: "asc" },
+    }),
+  ]);
+  const jobTitleOptions = Array.from(
+    new Set(
+      [...jobTitleRows.map((r) => r.jobTitle), ...orgTitleRows.map((r) => r.title)].filter(
+        (t): t is string => !!t && t.trim() !== ""
+      )
+    )
+  ).sort((a, b) => a.localeCompare(b));
 
   const sortOptions = SORT_OPTIONS.filter((o) => o.tabs.includes(tab));
 

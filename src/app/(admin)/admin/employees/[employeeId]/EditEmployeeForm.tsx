@@ -25,6 +25,7 @@ interface Props {
   canEditCompany: boolean;
   canAssignSuperAdmin: boolean;
   canEditRole: boolean;
+  jobTitleOptions: Record<Company, string[]>;
 }
 
 const COMPANY_LABELS: Record<Company, string> = {
@@ -33,13 +34,19 @@ const COMPANY_LABELS: Record<Company, string> = {
   CORPORATE: "Planet Pooch Corporate",
 };
 
-const JOB_TITLES: Record<Company, string[]> = {
+const DEFAULT_JOB_TITLES: Record<Company, string[]> = {
   GROOMING: ["COO", "Groomer", "Office Staff"],
   RESORT: ["Facility Manager", "Assistant Manager", "Training Manager", "In-house Groomer", "Front Desk Staff", "Floor Staff"],
   CORPORATE: ["CEO", "DOS", "CMO"],
 };
 
-export function EditEmployeeForm({ employee, canEditCompany, canAssignSuperAdmin, canEditRole }: Props) {
+export function EditEmployeeForm({
+  employee,
+  canEditCompany,
+  canAssignSuperAdmin,
+  canEditRole,
+  jobTitleOptions,
+}: Props) {
   const router = useRouter();
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -59,7 +66,9 @@ export function EditEmployeeForm({ employee, canEditCompany, canAssignSuperAdmin
     employee.hireDate ? employee.hireDate.slice(0, 10) : ""
   );
 
-  const titleOptions = JOB_TITLES[company];
+  const titleOptions = Array.from(
+    new Set([...(jobTitleOptions[company] ?? []), ...DEFAULT_JOB_TITLES[company]])
+  ).sort((a, b) => a.localeCompare(b));
   const isCustom = customTitle || (jobTitle && !titleOptions.includes(jobTitle));
 
   function cancel() {

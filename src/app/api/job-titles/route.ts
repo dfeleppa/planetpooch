@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { getSession, isManagerOrAbove } from "@/lib/auth-helpers";
+import { getSession, getCompanyFilter, isManagerOrAbove } from "@/lib/auth-helpers";
+import { Company, Role } from "@prisma/client";
 
 export async function GET() {
   const session = await getSession();
@@ -8,16 +9,29 @@ export async function GET() {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
-  const rows = await prisma.user.findMany({
-    where: { jobTitle: { not: null } },
-    select: { jobTitle: true },
-    distinct: ["jobTitle"],
-    orderBy: { jobTitle: "asc" },
-  });
+  const sessionUser = session.user as { role: Role; company: Company | null };
+  const companyFilter = getCompanyFilter(sessionUser.role, sessionUser.company);
+  const positionWhere = companyFilter.company
+    ? { OR: [{ company: companyFilter.company }, { company: null }] }
+    : {};
 
-  const titles = rows
-    .map((r) => r.jobTitle)
+  const [userRows, positionRows] = await Promise.all([
+    prisma.user.findMany({
+      where: { ...companyFilter, jobTitle: { not: null } },
+      select: { jobTitle: true },
+      distinct: ["jobTitle"],
+      orderBy: { jobTitle: "asc" },
+    }),
+    prisma.orgPosition.findMany({
+      where: positionWhere,
+      select: { title: true },
+      distinct: ["title"],
+      orderBy: { title: "asc" },
+    }),
+  ]);
+
+  const titles = [...userRows.map((r) => r.jobTitle), ...positionRows.map((r) => r.title)]
     .filter((t): t is string => !!t && t.trim() !== "");
 
-  return NextResponse.json(titles);
+  return NextResponse.json(Array.from(new Set(titles)).sort((a, b) => a.localeCompare(b)));
 }

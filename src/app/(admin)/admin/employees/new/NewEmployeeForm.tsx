@@ -17,6 +17,7 @@ interface Props {
   currentRole: Role;
   currentCompany: Company;
   currentJobTitle: string | null;
+  jobTitleOptions: Record<Company, string[]>;
 }
 
 const COMPANY_LABELS: Record<Company, string> = {
@@ -27,25 +28,27 @@ const COMPANY_LABELS: Record<Company, string> = {
 
 // Job titles grouped by company. CORPORATE is the home for cross-division
 // leadership (CEO, DOS, CMO) that previously had no company assignment.
-const JOB_TITLES: Record<Company, { title: string; suggestedRole: Role }[]> = {
-  GROOMING: [
-    { title: "COO", suggestedRole: "MANAGER" },
-    { title: "Groomer", suggestedRole: "EMPLOYEE" },
-    { title: "Office Staff", suggestedRole: "EMPLOYEE" },
-  ],
+const DEFAULT_JOB_TITLES: Record<Company, string[]> = {
+  GROOMING: ["COO", "Groomer", "Office Staff"],
   RESORT: [
-    { title: "Facility Manager", suggestedRole: "MANAGER" },
-    { title: "Assistant Manager", suggestedRole: "MANAGER" },
-    { title: "Training Manager", suggestedRole: "MANAGER" },
-    { title: "In-house Groomer", suggestedRole: "EMPLOYEE" },
-    { title: "Front Desk Staff", suggestedRole: "EMPLOYEE" },
-    { title: "Floor Staff", suggestedRole: "EMPLOYEE" },
+    "Facility Manager",
+    "Assistant Manager",
+    "Training Manager",
+    "In-house Groomer",
+    "Front Desk Staff",
+    "Floor Staff",
   ],
-  CORPORATE: [
-    { title: "CEO", suggestedRole: "SUPER_ADMIN" },
-    { title: "DOS", suggestedRole: "SUPER_ADMIN" },
-    { title: "CMO", suggestedRole: "MANAGER" },
-  ],
+  CORPORATE: ["CEO", "DOS", "CMO"],
+};
+
+const SUGGESTED_ROLE_BY_TITLE: Record<string, Role> = {
+  COO: "MANAGER",
+  "Facility Manager": "MANAGER",
+  "Assistant Manager": "MANAGER",
+  "Training Manager": "MANAGER",
+  CEO: "SUPER_ADMIN",
+  DOS: "SUPER_ADMIN",
+  CMO: "MANAGER",
 };
 
 function SelectField({
@@ -79,7 +82,12 @@ function SelectField({
   );
 }
 
-export function NewEmployeeForm({ currentRole, currentCompany, currentJobTitle }: Props) {
+export function NewEmployeeForm({
+  currentRole,
+  currentCompany,
+  currentJobTitle,
+  jobTitleOptions,
+}: Props) {
   const router = useRouter();
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
@@ -102,7 +110,14 @@ export function NewEmployeeForm({ currentRole, currentCompany, currentJobTitle }
   // Scoped tiers (MANAGER, Front Desk) are locked to their own company.
   const isScopedTier = isManager || isFrontDesk;
 
-  const titleOptions = JOB_TITLES[company];
+  const titleOptions = Array.from(
+    new Set([...(jobTitleOptions[company] ?? []), ...DEFAULT_JOB_TITLES[company]])
+  )
+    .sort((a, b) => a.localeCompare(b))
+    .map((title) => ({
+      title,
+      suggestedRole: SUGGESTED_ROLE_BY_TITLE[title] ?? "EMPLOYEE",
+    }));
   const isCustomTitle = jobTitle === "__custom__";
   const effectiveJobTitle = isCustomTitle ? customJobTitle : jobTitle;
 
