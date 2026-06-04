@@ -138,7 +138,7 @@ function RoleCard({ step }: { step: CareerStep }) {
       )}
     >
       <div className="text-sm font-bold">{step.title}</div>
-      <div className="mt-1 text-xs font-medium">{step.modules.join(" · ")}</div>
+      <ModuleList modules={step.modules} className="mt-1 items-center" />
     </div>
   );
 }
@@ -147,12 +147,22 @@ function ModuleCard({ step, className }: { step: CareerStep; className?: string 
   return (
     <div
       className={cn(
-        "flex min-h-[46px] w-full max-w-[420px] flex-col justify-center rounded-lg border border-[#df9b85] bg-[#fcede6] px-4 py-2.5 text-left text-[#7a2e18]",
+        "flex min-h-[54px] w-full max-w-[420px] flex-col justify-center rounded-lg border border-[#df9b85] bg-[#fcede6] px-4 py-2.5 text-left text-[#7a2e18]",
         className
       )}
     >
       <div className="text-sm font-bold">{step.title}</div>
-      <div className="mt-0.5 text-xs font-medium text-[#9a3918]">{step.modules.join(" · ")}</div>
+      <ModuleList modules={step.modules} className="mt-1 text-[#9a3918]" />
+    </div>
+  );
+}
+
+function ModuleList({ modules, className }: { modules: string[]; className?: string }) {
+  return (
+    <div className={cn("flex flex-col gap-0.5 text-xs font-medium leading-tight", className)}>
+      {modules.map((module) => (
+        <span key={module}>{module}</span>
+      ))}
     </div>
   );
 }
