@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useRef, useState } from "react";
+import Link from "next/link";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 
@@ -64,6 +65,9 @@ export function OrgChartClient({
   const [assignModalFor, setAssignModalFor] = useState<Position | null>(null);
   const [createModalCompany, setCreateModalCompany] = useState<CompanyVal | "CROSS" | null>(null);
   const [editingPos, setEditingPos] = useState<Position | null>(null);
+  const [collapsedPositionIds, setCollapsedPositionIds] = useState<Set<string>>(
+    () => new Set()
+  );
 
   const userById = useMemo(() => {
     const m = new Map<string, UserOption>();
@@ -266,6 +270,15 @@ export function OrgChartClient({
     if (sourceId) updateParent(sourceId, null);
   }
 
+  function togglePositionExpanded(positionId: string) {
+    setCollapsedPositionIds((current) => {
+      const next = new Set(current);
+      if (next.has(positionId)) next.delete(positionId);
+      else next.add(positionId);
+      return next;
+    });
+  }
+
   return (
     <div className="space-y-6">
       {/* Controls */}
@@ -385,6 +398,8 @@ export function OrgChartClient({
           zoom={zoom}
           setZoom={setZoom}
           onAdd={() => setCreateModalCompany("CROSS")}
+          collapsedPositionIds={collapsedPositionIds}
+          onToggleExpanded={togglePositionExpanded}
         />
       ) : view === "GROOMING" ? (
         <CompanySection
@@ -410,6 +425,8 @@ export function OrgChartClient({
           zoom={zoom}
           setZoom={setZoom}
           onAdd={() => setCreateModalCompany("GROOMING")}
+          collapsedPositionIds={collapsedPositionIds}
+          onToggleExpanded={togglePositionExpanded}
         />
       ) : (
         <CompanySection
@@ -435,6 +452,8 @@ export function OrgChartClient({
           zoom={zoom}
           setZoom={setZoom}
           onAdd={() => setCreateModalCompany("RESORT")}
+          collapsedPositionIds={collapsedPositionIds}
+          onToggleExpanded={togglePositionExpanded}
         />
       )}
 
@@ -588,6 +607,8 @@ function CompanySection({
   layout,
   zoom,
   setZoom,
+  collapsedPositionIds,
+  onToggleExpanded,
 }: {
   title: string;
   subtitle: string;
@@ -611,6 +632,8 @@ function CompanySection({
   layout: "LIST" | "CHART";
   zoom: number;
   setZoom: (z: number | ((z: number) => number)) => void;
+  collapsedPositionIds: Set<string>;
+  onToggleExpanded: (positionId: string) => void;
 }) {
   const ids = new Set(positions.map((p) => p.id));
   const roots = positions.filter((p) => !p.parentPositionId || !ids.has(p.parentPositionId));
@@ -667,6 +690,8 @@ function CompanySection({
                 onAssign={onAssign}
                 onEdit={onEdit}
                 onDelete={onDelete}
+                collapsedPositionIds={collapsedPositionIds}
+                onToggleExpanded={onToggleExpanded}
               />
             ))}
           </div>
@@ -686,6 +711,8 @@ function CompanySection({
             onAssign={onAssign}
             onEdit={onEdit}
             onDelete={onDelete}
+            collapsedPositionIds={collapsedPositionIds}
+            onToggleExpanded={onToggleExpanded}
           />
         )}
           </PanZoomViewport>
@@ -715,6 +742,8 @@ function PositionNode({
   onAssign,
   onEdit,
   onDelete,
+  collapsedPositionIds,
+  onToggleExpanded,
 }: {
   node: Position;
   allPositions: Position[];
@@ -731,6 +760,8 @@ function PositionNode({
   onAssign: (pos: Position) => void;
   onEdit: (pos: Position) => void;
   onDelete: (positionId: string) => void;
+  collapsedPositionIds: Set<string>;
+  onToggleExpanded: (positionId: string) => void;
 }) {
   const children = allPositions.filter((p) => p.parentPositionId === node.id);
   const assigned = node.assignedUserId ? userById.get(node.assignedUserId) : null;
@@ -747,6 +778,8 @@ function PositionNode({
   const people = Array.from(peopleMap.values());
   const hasPeople = people.length > 0;
   const isEmpty = !hasPeople;
+  const hasExpandableContent = children.length > 0 || (showNames && hasPeople);
+  const isExpanded = !collapsedPositionIds.has(node.id);
 
   // Color by whether empty or filled
   const cardBg = isEmpty
@@ -775,6 +808,11 @@ function PositionNode({
         style={{ marginLeft: depth * 24 }}
       >
         <span className="text-gray-400 text-xs select-none">⋮⋮</span>
+        <ExpandToggle
+          isExpanded={isExpanded}
+          canExpand={hasExpandableContent}
+          onToggle={() => onToggleExpanded(node.id)}
+        />
 
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 flex-wrap">
@@ -812,7 +850,7 @@ function PositionNode({
         </div>
       </div>
 
-      {(children.length > 0 || (showNames && hasPeople)) && (
+      {hasExpandableContent && isExpanded && (
         <div className="mt-1 space-y-1 border-l-2 border-gray-200 ml-4">
           {showNames &&
             people.map((u) => (
@@ -842,6 +880,8 @@ function PositionNode({
               onAssign={onAssign}
               onEdit={onEdit}
               onDelete={onDelete}
+              collapsedPositionIds={collapsedPositionIds}
+              onToggleExpanded={onToggleExpanded}
             />
           ))}
         </div>
@@ -869,6 +909,8 @@ function OrgChartTree({
   onAssign,
   onEdit,
   onDelete,
+  collapsedPositionIds,
+  onToggleExpanded,
 }: {
   roots: Position[];
   allPositions: Position[];
@@ -884,6 +926,8 @@ function OrgChartTree({
   onAssign: (pos: Position) => void;
   onEdit: (pos: Position) => void;
   onDelete: (positionId: string) => void;
+  collapsedPositionIds: Set<string>;
+  onToggleExpanded: (positionId: string) => void;
 }) {
   return (
     <div>
@@ -927,6 +971,8 @@ function OrgChartTree({
             onAssign={onAssign}
             onEdit={onEdit}
             onDelete={onDelete}
+            collapsedPositionIds={collapsedPositionIds}
+            onToggleExpanded={onToggleExpanded}
           />
         ))}
       </ul>
@@ -949,6 +995,8 @@ function ChartNode({
   onAssign,
   onEdit,
   onDelete,
+  collapsedPositionIds,
+  onToggleExpanded,
 }: {
   node: Position;
   allPositions: Position[];
@@ -964,6 +1012,8 @@ function ChartNode({
   onAssign: (pos: Position) => void;
   onEdit: (pos: Position) => void;
   onDelete: (positionId: string) => void;
+  collapsedPositionIds: Set<string>;
+  onToggleExpanded: (positionId: string) => void;
 }) {
   const children = allPositions.filter((p) => p.parentPositionId === node.id);
   const assigned = node.assignedUserId ? userById.get(node.assignedUserId) : null;
@@ -981,6 +1031,8 @@ function ChartNode({
   const people = Array.from(peopleMap.values());
   const hasPeople = people.length > 0;
   const isEmpty = !hasPeople;
+  const hasExpandableContent = children.length > 0 || (showNames && hasPeople);
+  const isExpanded = !collapsedPositionIds.has(node.id);
 
   const cardBg = isEmpty
     ? "bg-white border-dashed border-gray-300"
@@ -1007,6 +1059,11 @@ function ChartNode({
         } ${isDragOver ? "ring-2 ring-blue-500 ring-offset-1" : ""}`}
       >
         <div className="flex items-center gap-1.5 flex-wrap">
+          <ExpandToggle
+            isExpanded={isExpanded}
+            canExpand={hasExpandableContent}
+            onToggle={() => onToggleExpanded(node.id)}
+          />
           <span className="text-sm font-semibold text-gray-900 truncate">{node.title}</span>
           <CompanyTag company={node.company} />
           {isEmpty ? (
@@ -1034,7 +1091,7 @@ function ChartNode({
         </div>
       </div>
 
-      {(children.length > 0 || (showNames && hasPeople)) && (
+      {hasExpandableContent && isExpanded && (
         <ul>
           {showNames &&
             people.map((u) => (
@@ -1059,6 +1116,8 @@ function ChartNode({
               onAssign={onAssign}
               onEdit={onEdit}
               onDelete={onDelete}
+              collapsedPositionIds={collapsedPositionIds}
+              onToggleExpanded={onToggleExpanded}
             />
           ))}
         </ul>
@@ -1142,6 +1201,7 @@ function PanZoomViewport({
 }
 
 function EmployeeChip({ user }: { user: UserOption }) {
+  const [open, setOpen] = useState(false);
   const initials =
     user.name
       .split(/\s+/)
@@ -1151,18 +1211,44 @@ function EmployeeChip({ user }: { user: UserOption }) {
       .join("")
       .toUpperCase() || "?";
   return (
-    <div className="w-48 px-3 py-2 rounded-lg border border-emerald-300 bg-emerald-50 shadow-sm">
-      <div className="flex items-center gap-2">
-        <div className="flex-shrink-0 w-8 h-8 rounded-full bg-gradient-to-br from-emerald-400 to-emerald-600 text-white text-xs font-semibold flex items-center justify-center">
-          {initials}
+    <div
+      className="relative w-48"
+      onMouseDown={(e) => e.stopPropagation()}
+      onClick={(e) => e.stopPropagation()}
+    >
+      <button
+        type="button"
+        onClick={() => setOpen((value) => !value)}
+        aria-expanded={open}
+        className="w-full px-3 py-2 rounded-lg border border-emerald-300 bg-emerald-50 shadow-sm text-left transition hover:border-emerald-500 hover:bg-emerald-100 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-1"
+      >
+        <div className="flex items-center gap-2">
+          <div className="flex-shrink-0 w-8 h-8 rounded-full bg-gradient-to-br from-emerald-400 to-emerald-600 text-white text-xs font-semibold flex items-center justify-center">
+            {initials}
+          </div>
+          <div className="min-w-0 flex-1">
+            <div className="text-sm font-semibold text-gray-900 truncate">{user.name}</div>
+            {user.jobTitle && (
+              <div className="text-[11px] text-gray-600 truncate">{user.jobTitle}</div>
+            )}
+          </div>
         </div>
-        <div className="min-w-0 flex-1">
-          <div className="text-sm font-semibold text-gray-900 truncate">{user.name}</div>
-          {user.jobTitle && (
-            <div className="text-[11px] text-gray-600 truncate">{user.jobTitle}</div>
-          )}
+      </button>
+      {open && (
+        <div className="absolute left-0 top-full z-50 mt-1 w-56 overflow-hidden rounded-lg border border-gray-200 bg-white shadow-lg">
+          <div className="px-3 py-2 border-b border-gray-100">
+            <p className="text-sm font-semibold text-gray-900 truncate">{user.name}</p>
+            <p className="text-xs text-gray-500 truncate">{user.email}</p>
+          </div>
+          <Link
+            href={`/admin/employees/${user.id}`}
+            className="block px-3 py-2 text-sm text-gray-700 hover:bg-gray-50"
+            onClick={() => setOpen(false)}
+          >
+            Open employee page
+          </Link>
         </div>
-      </div>
+      )}
     </div>
   );
 }
@@ -1193,6 +1279,41 @@ function CompanyTag({ company }: { company: CompanyVal | null }) {
     <span className="text-[10px] bg-indigo-100 text-indigo-800 px-1.5 py-0.5 rounded font-medium">
       Corporate
     </span>
+  );
+}
+
+function ExpandToggle({
+  isExpanded,
+  canExpand,
+  onToggle,
+}: {
+  isExpanded: boolean;
+  canExpand: boolean;
+  onToggle: () => void;
+}) {
+  if (!canExpand) {
+    return <span className="w-5 flex-shrink-0" aria-hidden="true" />;
+  }
+
+  return (
+    <button
+      type="button"
+      title={isExpanded ? "Collapse role" : "Expand role"}
+      aria-label={isExpanded ? "Collapse role" : "Expand role"}
+      aria-expanded={isExpanded}
+      onMouseDown={(e) => {
+        e.preventDefault();
+        e.stopPropagation();
+      }}
+      onClick={(e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        onToggle();
+      }}
+      className="w-5 h-5 flex flex-shrink-0 items-center justify-center rounded text-xs text-gray-500 transition hover:bg-white/70 hover:text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
+    >
+      {isExpanded ? "▾" : "▸"}
+    </button>
   );
 }
 
