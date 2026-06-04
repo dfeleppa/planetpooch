@@ -16,6 +16,7 @@ interface NavItem {
 const employeeNav: NavItem[] = [
   { href: "/dashboard", label: "Dashboard", icon: "▣" },
   { href: "/modules", label: "Modules", icon: "❏" },
+  { href: "/career", label: "Career", icon: "↗" },
   { href: "/search", label: "Search", icon: "⌕" },
 ];
 
