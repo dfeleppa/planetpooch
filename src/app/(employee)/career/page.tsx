@@ -66,30 +66,28 @@ export default async function CareerPage() {
 
         <div className="hidden lg:block">
           {topDownSteps.map((step, index) => {
-            const showModuleCard = step.title !== "Daycare Associate";
-
             return (
               <div key={step.title}>
-                <div className="grid grid-cols-[290px_28px_1fr] gap-x-0">
+                <div className="grid grid-cols-[290px_96px_1fr] gap-x-0">
                   <div className="flex justify-center">
                     <RoleCard step={step} />
                   </div>
-                  <div className="flex min-h-[66px] items-center">
-                    {showModuleCard ? <div className="h-px w-full border-t border-dashed border-pp-line-2" /> : null}
-                  </div>
-                  <div className="flex min-h-[66px] items-center">
-                    {showModuleCard ? <ModuleCard step={step} /> : null}
-                  </div>
+                  <div aria-hidden />
+                  <div aria-hidden />
                 </div>
 
                 {index < topDownSteps.length - 1 ? (
-                  <div className="grid grid-cols-[290px_28px_1fr] gap-x-0">
-                    <div className="flex h-14 flex-col items-center justify-center">
-                      <div className="h-10 border-l border-pp-ink-4" />
-                      <span className="-mt-2 text-lg leading-none text-pp-ink-4">^</span>
+                  <div className="grid grid-cols-[290px_96px_1fr] gap-x-0">
+                    <div className="relative col-span-2 h-20">
+                      <div className="absolute left-[145px] top-1/2 h-px w-[calc(100%-145px)] border-t border-dashed border-pp-line-2" />
+                      <div className="absolute left-[145px] top-0 flex h-full -translate-x-1/2 flex-col items-center justify-center">
+                        <div className="h-14 border-l border-pp-ink-4" />
+                        <span className="-mt-2 text-lg leading-none text-pp-ink-4">^</span>
+                      </div>
                     </div>
-                    <div aria-hidden />
-                    <div aria-hidden />
+                    <div className="flex h-20 items-center">
+                      <ModuleCard step={step} />
+                    </div>
                   </div>
                 ) : null}
               </div>
@@ -99,13 +97,14 @@ export default async function CareerPage() {
 
         <div className="grid gap-3 lg:hidden">
           {topDownSteps.map((step, index) => {
-            const showModuleCard = step.title !== "Daycare Associate";
             return (
               <div key={step.title}>
                 <RoleCard step={step} />
-                {showModuleCard ? <ModuleCard step={step} className="mt-2" /> : null}
                 {index < topDownSteps.length - 1 ? (
-                  <div className="flex h-8 items-center justify-center text-lg leading-none text-pp-ink-4">^</div>
+                  <>
+                    <div className="flex h-8 items-center justify-center text-lg leading-none text-pp-ink-4">^</div>
+                    <ModuleCard step={step} className="mt-1" />
+                  </>
                 ) : null}
               </div>
             );
