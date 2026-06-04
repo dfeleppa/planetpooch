@@ -81,8 +81,7 @@ export default async function CareerPage() {
                     <div className="relative col-span-2 h-20">
                       <div className="absolute left-[145px] top-1/2 h-px w-[calc(100%-145px)] border-t border-dashed border-pp-line-2" />
                       <div className="absolute left-[145px] top-0 flex h-full -translate-x-1/2 flex-col items-center justify-center">
-                        <div className="h-14 border-l border-pp-ink-4" />
-                        <span className="-mt-2 text-lg leading-none text-pp-ink-4">^</span>
+                        <VerticalArrow className="h-16" />
                       </div>
                     </div>
                     <div className="flex h-20 items-center">
@@ -102,7 +101,9 @@ export default async function CareerPage() {
                 <RoleCard step={step} />
                 {index < topDownSteps.length - 1 ? (
                   <>
-                    <div className="flex h-8 items-center justify-center text-lg leading-none text-pp-ink-4">^</div>
+                    <div className="flex h-10 items-center justify-center">
+                      <VerticalArrow className="h-9" />
+                    </div>
                     <ModuleCard step={step} className="mt-1" />
                   </>
                 ) : null}
@@ -153,5 +154,19 @@ function ModuleCard({ step, className }: { step: CareerStep; className?: string 
       <div className="text-sm font-bold">{step.title}</div>
       <div className="mt-0.5 text-xs font-medium text-[#9a3918]">{step.modules.join(" · ")}</div>
     </div>
+  );
+}
+
+function VerticalArrow({ className }: { className?: string }) {
+  return (
+    <svg
+      aria-hidden
+      viewBox="0 0 24 64"
+      className={cn("w-6 text-pp-ink-4", className)}
+      fill="none"
+    >
+      <path d="M12 62V8" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
+      <path d="M6.5 14 12 7l5.5 7" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
   );
 }
