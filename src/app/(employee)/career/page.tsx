@@ -56,6 +56,29 @@ const careerSteps: CareerStep[] = [
   },
 ];
 
+const advanceSteps = [
+  {
+    title: "Master your current tier",
+    description: "Show up, do the work well, become someone the team counts on.",
+  },
+  {
+    title: "Tell your manager",
+    description: "Let us know you want to grow. We'll work with you.",
+  },
+  {
+    title: "Train into the new skills",
+    description: "Each tier has specific capabilities. We'll teach you - you put in the effort.",
+  },
+  {
+    title: "Earn the trust",
+    description: "Promotions reflect trust. Handle things well and you'll be next.",
+  },
+  {
+    title: "Make it official",
+    description: "When you're ready and a spot opens, we make the move together.",
+  },
+];
+
 export default async function CareerPage() {
   const session = await requireAuth();
   const userId = session.user.id;
@@ -129,36 +152,31 @@ export default async function CareerPage() {
       </header>
 
       <section className="rounded-xl border border-pp-line bg-pp-surface px-4 py-5 shadow-sm sm:px-6">
-        <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
+        <div className="mb-5">
           <div>
             <h2 className="text-base font-semibold text-pp-ink">Role progression</h2>
             <p className="mt-1 text-sm text-pp-ink-3">Complete the red module card to advance into the matching role.</p>
           </div>
-          <div className="flex flex-wrap gap-3 text-xs text-pp-ink-3">
-            <LegendSwatch fill="bg-[#e3f5ef]" border="border-[#75bba7]" label="Associate tiers (1-4)" />
-            <LegendSwatch fill="bg-[#f0eeff]" border="border-[#a99df0]" label="Management roles" />
-            <LegendSwatch fill="bg-[#fff4d8]" border="border-[#d7a531]" label="Active" />
-            <LegendSwatch fill="bg-[#e6f6ea]" border="border-[#69ad7a]" label="Complete" />
-            <LegendSwatch fill="bg-[#f5f5f4]" border="border-[#d6d3d1]" label="Not active" />
-          </div>
         </div>
 
-        <div className="hidden lg:block">
+        <div className="hidden lg:grid lg:grid-cols-[290px_72px_300px_minmax(240px,1fr)] lg:gap-x-4">
+          <div className="col-start-4 row-start-1 row-span-[11]">
+            <HowToAdvance />
+          </div>
+
           {topDownSteps.map((step, index) => {
             return (
-              <div key={step.title}>
-                <div className="grid grid-cols-[290px_96px_1fr] gap-x-0">
-                  <div className="flex justify-center">
-                    <RoleCard step={step} />
-                  </div>
-                  <div aria-hidden />
-                  <div aria-hidden />
+              <div key={step.title} className="contents">
+                <div className="col-start-1 flex justify-center">
+                  <RoleCard step={step} />
                 </div>
+                <div className="col-start-2" aria-hidden />
+                <div className="col-start-3" aria-hidden />
 
                 {index < topDownSteps.length - 1 ? (
-                  <div className="grid grid-cols-[290px_96px_1fr] gap-x-0">
+                  <>
                     <div className="relative col-span-2 h-20">
-                      <div className="absolute left-[145px] top-1/2 h-px w-[calc(100%-145px)] border-t border-dashed border-pp-line-2" />
+                      <div className="absolute left-[145px] right-[-1rem] top-1/2 h-px border-t border-dashed border-pp-line-2" />
                       <div className="absolute left-[145px] top-0 flex h-full -translate-x-1/2 flex-col items-center justify-center">
                         <VerticalArrow className="h-16" />
                       </div>
@@ -166,7 +184,7 @@ export default async function CareerPage() {
                     <div className="flex h-20 items-center">
                       <ModuleCard step={step} />
                     </div>
-                  </div>
+                  </>
                 ) : null}
               </div>
             );
@@ -189,9 +207,45 @@ export default async function CareerPage() {
               </div>
             );
           })}
+          <HowToAdvance className="mt-5" />
         </div>
+
+        <Legend />
       </section>
     </div>
+  );
+}
+
+function Legend() {
+  return (
+    <div className="mt-5 flex flex-wrap justify-end gap-3 border-t border-pp-line pt-4 text-xs text-pp-ink-3">
+      <LegendSwatch fill="bg-[#e5f3ff]" border="border-[#6ba8d8]" label="Associate tiers (1-4)" />
+      <LegendSwatch fill="bg-[#f0eeff]" border="border-[#a99df0]" label="Management roles" />
+      <LegendSwatch fill="bg-[#fff4d8]" border="border-[#d7a531]" label="Active" />
+      <LegendSwatch fill="bg-[#e6f6ea]" border="border-[#69ad7a]" label="Complete" />
+      <LegendSwatch fill="bg-[#f5f5f4]" border="border-[#d6d3d1]" label="Not active" />
+    </div>
+  );
+}
+
+function HowToAdvance({ className }: { className?: string }) {
+  return (
+    <aside className={cn("border-t border-pp-line pt-4 text-pp-ink lg:border-l lg:border-t-0 lg:pl-5 lg:pt-0", className)}>
+      <h3 className="text-sm font-bold uppercase tracking-[0.08em] text-pp-ink">How to advance</h3>
+      <ol className="mt-4 grid gap-4">
+        {advanceSteps.map((step, index) => (
+          <li key={step.title} className="grid grid-cols-[1.75rem_1fr] gap-3">
+            <div className="flex h-7 w-7 items-center justify-center rounded-full border border-[#6ba8d8] bg-[#e5f3ff] text-xs font-bold text-[#075985]">
+              {index + 1}
+            </div>
+            <div>
+              <div className="text-sm font-semibold leading-snug text-pp-ink">{step.title}</div>
+              <p className="mt-1 text-xs leading-relaxed text-pp-ink-3">{step.description}</p>
+            </div>
+          </li>
+        ))}
+      </ol>
+    </aside>
   );
 }
 
@@ -213,11 +267,10 @@ function RoleCard({ step }: { step: CareerStepWithStatus }) {
         "flex min-h-[66px] w-full max-w-[260px] flex-col items-center justify-center rounded-lg border px-4 py-3 text-center",
         management
           ? "border-[#a99df0] bg-[#f0eeff] text-[#34308f]"
-          : "border-[#75bba7] bg-[#e3f5ef] text-[#045950]"
+          : "border-[#6ba8d8] bg-[#e5f3ff] text-[#075985]"
       )}
     >
       <div className="text-sm font-bold">{step.title}</div>
-      <ModuleList modules={step.modules} className="mt-1 items-center" />
     </div>
   );
 }
@@ -226,7 +279,7 @@ function ModuleCard({ step, className }: { step: CareerStepWithStatus; className
   return (
     <div
       className={cn(
-        "flex min-h-[54px] w-full max-w-[420px] flex-col justify-center rounded-lg border px-4 py-2.5 text-left",
+        "flex min-h-[54px] w-full max-w-[300px] flex-col justify-center rounded-lg border px-3 py-2.5 text-left",
         step.status === "complete" && "border-[#69ad7a] bg-[#e6f6ea] text-[#246239]",
         step.status === "active" && "border-[#d7a531] bg-[#fff4d8] text-[#7a5312]",
         step.status === "inactive" && "border-[#d6d3d1] bg-[#f5f5f4] text-[#78716c]",
