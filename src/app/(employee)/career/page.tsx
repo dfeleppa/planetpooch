@@ -218,12 +218,16 @@ export default async function CareerPage() {
 
 function Legend() {
   return (
-    <div className="mt-5 flex flex-wrap justify-end gap-3 border-t border-pp-line pt-4 text-xs text-pp-ink-3">
-      <LegendSwatch fill="bg-[#e5f3ff]" border="border-[#6ba8d8]" label="Associate tiers (1-4)" />
-      <LegendSwatch fill="bg-[#f0eeff]" border="border-[#a99df0]" label="Management roles" />
-      <LegendSwatch fill="bg-[#fff4d8]" border="border-[#d7a531]" label="Active" />
-      <LegendSwatch fill="bg-[#e6f6ea]" border="border-[#69ad7a]" label="Complete" />
-      <LegendSwatch fill="bg-[#f5f5f4]" border="border-[#d6d3d1]" label="Not active" />
+    <div className="mt-5 flex flex-wrap items-center justify-between gap-3 border-t border-pp-line pt-4 text-xs text-pp-ink-3">
+      <div className="flex flex-wrap gap-3">
+        <LegendSwatch fill="bg-[#e5f3ff]" border="border-[#6ba8d8]" label="Associate tiers (1-4)" />
+        <LegendSwatch fill="bg-[#f0eeff]" border="border-[#a99df0]" label="Management roles" />
+      </div>
+      <div className="flex flex-wrap gap-3">
+        <LegendSwatch fill="bg-[#fff4d8]" border="border-[#d7a531]" label="Active" />
+        <LegendSwatch fill="bg-[#e6f6ea]" border="border-[#69ad7a]" label="Complete" />
+        <LegendSwatch fill="bg-[#f5f5f4]" border="border-[#d6d3d1]" label="Not active" />
+      </div>
     </div>
   );
 }
