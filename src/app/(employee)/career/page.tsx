@@ -1,48 +1,125 @@
 import { requireAuth } from "@/lib/auth-helpers";
+import { getVisibleModuleIdsForUser } from "@/lib/module-visibility";
+import { prisma } from "@/lib/prisma";
 import { cn } from "@/lib/utils";
 
 type CareerStep = {
   title: string;
   modules: string[];
+  moduleTitleMatches: string[];
   type: "associate" | "management";
+};
+
+type ModuleStatus = "inactive" | "active" | "complete";
+
+type CareerStepWithStatus = CareerStep & {
+  status: ModuleStatus;
+  progressLabel: string;
 };
 
 const careerSteps: CareerStep[] = [
   {
     title: "Daycare Associate",
     modules: ["General", "Daycare", "Boarding", "Enrichment"],
+    moduleTitleMatches: ["daycare associate"],
     type: "associate",
   },
   {
     title: "Resort Associate",
     modules: ["Opening/Closing", "Check-in"],
+    moduleTitleMatches: ["resort associate", "opening closing", "check in"],
     type: "associate",
   },
   {
     title: "Senior Resort Associate",
     modules: ["Front Desk", "Sundays"],
+    moduleTitleMatches: ["senior resort associate", "front desk", "sundays"],
     type: "associate",
   },
   {
     title: "Resort Shift Lead",
     modules: ["Shift Lead", "Evaluation"],
+    moduleTitleMatches: ["resort shift lead", "shift lead", "evaluation"],
     type: "associate",
   },
   {
     title: "Assistant Manager",
     modules: ["SOPs"],
+    moduleTitleMatches: ["assistant manager sops", "assistant manager"],
     type: "management",
   },
   {
     title: "Facility Manager",
     modules: ["FM SOPs"],
+    moduleTitleMatches: ["facility manager fm sops", "facility manager", "fm sops"],
     type: "management",
   },
 ];
 
 export default async function CareerPage() {
-  await requireAuth();
-  const topDownSteps = [...careerSteps].reverse();
+  const session = await requireAuth();
+  const userId = session.user.id;
+
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { jobTitle: true },
+  });
+  const visibleIds = await getVisibleModuleIdsForUser(userId, user?.jobTitle ?? null);
+
+  const [modules, completions] = await Promise.all([
+    prisma.module.findMany({
+      where: { id: { in: [...visibleIds] } },
+      include: {
+        subsections: {
+          include: {
+            lessons: { select: { id: true } },
+          },
+        },
+      },
+    }),
+    prisma.lessonCompletion.findMany({
+      where: { userId, isCompleted: true },
+      select: { lessonId: true },
+    }),
+  ]);
+
+  const completedSet = new Set(completions.map((completion) => completion.lessonId));
+  const moduleProgress = modules.map((mod) => {
+    const lessons = mod.subsections.flatMap((subsection) => subsection.lessons);
+    const completedLessons = lessons.filter((lesson) => completedSet.has(lesson.id)).length;
+
+    return {
+      id: mod.id,
+      normalizedTitle: normalizeModuleTitle(mod.title),
+      totalLessons: lessons.length,
+      completedLessons,
+    };
+  });
+
+  const stepsWithStatus = careerSteps.map((step) => {
+    const matchingModules = moduleProgress.filter((mod) =>
+      step.moduleTitleMatches.some((match) => moduleTitleMatches(mod.normalizedTitle, match)),
+    );
+
+    const totalLessons = matchingModules.reduce((total, mod) => total + mod.totalLessons, 0);
+    const completedLessons = matchingModules.reduce((total, mod) => total + mod.completedLessons, 0);
+    const status: ModuleStatus =
+      totalLessons > 0 && completedLessons === totalLessons
+        ? "complete"
+        : completedLessons > 0
+          ? "active"
+          : "inactive";
+
+    return {
+      ...step,
+      status,
+      progressLabel:
+        totalLessons > 0
+          ? `${completedLessons}/${totalLessons}`
+          : "N/A",
+    };
+  });
+  const topDownSteps = [...stepsWithStatus].reverse();
 
   return (
     <div className="mx-auto flex max-w-6xl flex-col gap-6">
@@ -60,7 +137,9 @@ export default async function CareerPage() {
           <div className="flex flex-wrap gap-3 text-xs text-pp-ink-3">
             <LegendSwatch fill="bg-[#e3f5ef]" border="border-[#75bba7]" label="Associate tiers (1-4)" />
             <LegendSwatch fill="bg-[#f0eeff]" border="border-[#a99df0]" label="Management roles" />
-            <LegendSwatch fill="bg-[#fcede6]" border="border-[#df9b85]" label="Module to complete" />
+            <LegendSwatch fill="bg-[#fff4d8]" border="border-[#d7a531]" label="Active" />
+            <LegendSwatch fill="bg-[#e6f6ea]" border="border-[#69ad7a]" label="Complete" />
+            <LegendSwatch fill="bg-[#f5f5f4]" border="border-[#d6d3d1]" label="Not active" />
           </div>
         </div>
 
@@ -125,7 +204,7 @@ function LegendSwatch({ fill, border, label }: { fill: string; border: string; l
   );
 }
 
-function RoleCard({ step }: { step: CareerStep }) {
+function RoleCard({ step }: { step: CareerStepWithStatus }) {
   const management = step.type === "management";
 
   return (
@@ -143,16 +222,25 @@ function RoleCard({ step }: { step: CareerStep }) {
   );
 }
 
-function ModuleCard({ step, className }: { step: CareerStep; className?: string }) {
+function ModuleCard({ step, className }: { step: CareerStepWithStatus; className?: string }) {
   return (
     <div
       className={cn(
-        "flex min-h-[54px] w-full max-w-[420px] flex-col justify-center rounded-lg border border-[#df9b85] bg-[#fcede6] px-4 py-2.5 text-left text-[#7a2e18]",
+        "flex min-h-[54px] w-full max-w-[420px] flex-col justify-center rounded-lg border px-4 py-2.5 text-left",
+        step.status === "complete" && "border-[#69ad7a] bg-[#e6f6ea] text-[#246239]",
+        step.status === "active" && "border-[#d7a531] bg-[#fff4d8] text-[#7a5312]",
+        step.status === "inactive" && "border-[#d6d3d1] bg-[#f5f5f4] text-[#78716c]",
         className
       )}
     >
-      <div className="text-sm font-bold">{step.title}</div>
-      <ModuleList modules={step.modules} className="mt-1 text-[#9a3918]" />
+      <div className="flex items-center justify-between gap-3">
+        <div className="text-sm font-bold">{step.title}</div>
+        <span className="shrink-0 rounded-full bg-white/70 px-2 py-0.5 text-[11px] font-semibold uppercase leading-tight">
+          {step.status === "complete" ? "Complete" : step.status === "active" ? "Active" : "Not active"}
+        </span>
+      </div>
+      <ModuleList modules={step.modules} className="mt-1" />
+      <div className="mt-1 text-[11px] font-semibold leading-tight opacity-80">{step.progressLabel}</div>
     </div>
   );
 }
@@ -179,4 +267,18 @@ function VerticalArrow({ className }: { className?: string }) {
       <path d="M6.5 14 12 7l5.5 7" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   );
+}
+
+function normalizeModuleTitle(value: string) {
+  return value
+    .toLowerCase()
+    .replace(/&/g, " and ")
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim();
+}
+
+function moduleTitleMatches(normalizedTitle: string, match: string) {
+  const normalizedMatch = normalizeModuleTitle(match);
+
+  return normalizedTitle.includes(normalizedMatch) || normalizedMatch.includes(normalizedTitle);
 }
