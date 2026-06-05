@@ -36,16 +36,43 @@ export function EmployeeModuleAssignments({
   }
 
   async function loadModules() {
-    const res = await fetch(`/api/modules`);
+    const res = await fetch(`/api/employees/${employeeId}/module-assignments?assignable=1`);
     if (res.ok) {
       const data: ModuleSummary[] = await res.json();
       setAllModules(data);
     }
   }
 
+  async function refreshModuleData() {
+    await Promise.all([loadAssignments(), loadModules()]);
+  }
+
   useEffect(() => {
-    loadAssignments();
-    loadModules();
+    let ignore = false;
+
+    async function loadInitialModuleData() {
+      const [assignmentsRes, modulesRes] = await Promise.all([
+        fetch(`/api/employees/${employeeId}/module-assignments`),
+        fetch(`/api/employees/${employeeId}/module-assignments?assignable=1`),
+      ]);
+      if (ignore) return;
+
+      if (assignmentsRes.ok) {
+        const data: AssignmentRow[] = await assignmentsRes.json();
+        if (!ignore) setAssignments(data);
+      }
+
+      if (modulesRes.ok) {
+        const data: ModuleSummary[] = await modulesRes.json();
+        if (!ignore) setAllModules(data);
+      }
+    }
+
+    void loadInitialModuleData();
+
+    return () => {
+      ignore = true;
+    };
   }, [employeeId]);
 
   const assignedIds = useMemo(
@@ -69,7 +96,7 @@ export function EmployeeModuleAssignments({
     setBusy(false);
     if (res.ok) {
       setPicked("");
-      loadAssignments();
+      refreshModuleData();
     }
   }
 
@@ -80,7 +107,7 @@ export function EmployeeModuleAssignments({
       { method: "DELETE" },
     );
     setBusy(false);
-    if (res.ok) loadAssignments();
+    if (res.ok) refreshModuleData();
   }
 
   return (
@@ -126,7 +153,7 @@ export function EmployeeModuleAssignments({
           ) : assignments.length === 0 ? (
             <p className="text-sm text-gray-500">
               No individual assignments. This employee only sees modules
-              assigned to their job title.
+              visible to their job title, company, or everyone.
             </p>
           ) : (
             <ul className="divide-y divide-gray-100 rounded-md border border-gray-100">

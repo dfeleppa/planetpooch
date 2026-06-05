@@ -6,6 +6,7 @@ import {
   getCompanyFilter,
 } from "@/lib/auth-helpers";
 import { Company, Role } from "@prisma/client";
+import { getVisibleModuleIdsForUser } from "@/lib/module-visibility";
 
 async function loadEmployeeOrForbidden(employeeId: string) {
   const session = await getSession();
@@ -27,7 +28,7 @@ async function loadEmployeeOrForbidden(employeeId: string) {
 
   const employee = await prisma.user.findUnique({
     where: { id: employeeId },
-    select: { id: true, role: true, company: true },
+    select: { id: true, role: true, company: true, jobTitle: true },
   });
 
   if (!employee) {
@@ -44,12 +45,28 @@ async function loadEmployeeOrForbidden(employeeId: string) {
 }
 
 export async function GET(
-  _req: NextRequest,
+  req: NextRequest,
   { params }: { params: Promise<{ employeeId: string }> },
 ) {
   const { employeeId } = await params;
   const result = await loadEmployeeOrForbidden(employeeId);
   if ("error" in result) return result.error;
+
+  if (req.nextUrl.searchParams.get("assignable") === "1") {
+    const visibleModuleIds = await getVisibleModuleIdsForUser(
+      result.employee.id,
+      result.employee.jobTitle,
+      result.employee.company,
+    );
+
+    const modules = await prisma.module.findMany({
+      where: { id: { notIn: [...visibleModuleIds] } },
+      orderBy: { order: "asc" },
+      select: { id: true, title: true, icon: true },
+    });
+
+    return NextResponse.json(modules);
+  }
 
   const assignments = await prisma.moduleUserAssignment.findMany({
     where: { userId: employeeId },

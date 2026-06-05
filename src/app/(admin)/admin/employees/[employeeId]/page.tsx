@@ -19,6 +19,7 @@ import { DAYS_OF_WEEK, formatTimeLabel } from "@/lib/availability";
 import { getFileWebLink, isDriveEnabled, isStubId } from "@/lib/drive";
 import { formatDate } from "@/lib/utils";
 import { HANDBOOK_SIGNABLE_NAME } from "@/lib/employee-documents";
+import { getVisibleModuleIdsForUser } from "@/lib/module-visibility";
 
 const COMPANIES: Company[] = ["GROOMING", "RESORT", "CORPORATE"];
 
@@ -77,7 +78,14 @@ export default async function EmployeeDetailPage({ params }: { params: Promise<{
   if (companyFilter.company && employee.company !== companyFilter.company) notFound();
   if (callerIsScopedTier && employee.role !== "EMPLOYEE") notFound();
 
+  const visibleModuleIds = await getVisibleModuleIdsForUser(
+    employee.id,
+    employee.jobTitle,
+    employee.company,
+  );
+
   const modules = await prisma.module.findMany({
+    where: { id: { in: [...visibleModuleIds] } },
     orderBy: { order: "asc" },
     include: {
       subsections: {
