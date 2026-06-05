@@ -1,9 +1,11 @@
 import { prisma } from "@/lib/prisma";
+import { Company } from "@prisma/client";
 
 /**
  * Returns the set of module IDs visible to a user. A module is visible if:
  *   - It has no job-title assignments AND no user assignments (open module), OR
- *   - One of its job-title assignments matches the user's `jobTitle`, OR
+ *   - One of its job-title assignments matches the user's `jobTitle` and
+ *     company, OR
  *   - The user is in its `userAssignments`.
  *
  * Admin/manager views should NOT use this — they see every module regardless.
@@ -11,6 +13,7 @@ import { prisma } from "@/lib/prisma";
 export async function getVisibleModuleIdsForUser(
   userId: string,
   jobTitle: string | null,
+  company?: Company | null,
 ): Promise<Set<string>> {
   const [allModules, openModuleRows, jobTitleRows, userRows] = await Promise.all([
     prisma.module.findMany({ select: { id: true } }),
@@ -23,7 +26,10 @@ export async function getVisibleModuleIdsForUser(
     }),
     jobTitle
       ? prisma.moduleJobTitleAssignment.findMany({
-          where: { jobTitle },
+          where: {
+            jobTitle,
+            OR: [{ company: null }, ...(company ? [{ company }] : [])],
+          },
           select: { moduleId: true },
         })
       : Promise.resolve([] as { moduleId: string }[]),
@@ -48,6 +54,7 @@ export async function isModuleVisibleToUser(
   moduleId: string,
   userId: string,
   jobTitle: string | null,
+  company?: Company | null,
 ): Promise<boolean> {
   const mod = await prisma.module.findUnique({
     where: { id: moduleId },
@@ -61,8 +68,12 @@ export async function isModuleVisibleToUser(
   }
 
   if (jobTitle) {
-    const jt = await prisma.moduleJobTitleAssignment.findUnique({
-      where: { moduleId_jobTitle: { moduleId, jobTitle } },
+    const jt = await prisma.moduleJobTitleAssignment.findFirst({
+      where: {
+        moduleId,
+        jobTitle,
+        OR: [{ company: null }, ...(company ? [{ company }] : [])],
+      },
       select: { id: true },
     });
     if (jt) return true;

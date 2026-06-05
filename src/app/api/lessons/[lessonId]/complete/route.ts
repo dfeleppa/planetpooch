@@ -24,12 +24,13 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ les
     }
     const me = await prisma.user.findUnique({
       where: { id: userId },
-      select: { jobTitle: true },
+      select: { jobTitle: true, company: true },
     });
     const visible = await isModuleVisibleToUser(
       lesson.subsection.module.id,
       userId,
       me?.jobTitle ?? null,
+      me?.company ?? null,
     );
     if (!visible) {
       return NextResponse.json({ error: "Not found" }, { status: 404 });

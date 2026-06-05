@@ -18,7 +18,13 @@ interface JobTitleOption {
   company: Company;
 }
 
+interface VisibilityRole {
+  title: string;
+  company: Company;
+}
+
 interface AssignmentsPayload {
+  roles?: VisibilityRole[];
   jobTitles: string[];
   users: AssignedUser[];
   allJobTitles: JobTitleOption[];
@@ -29,6 +35,28 @@ const COMPANY_GROUPS: { company: Company; label: string }[] = [
   { company: "GROOMING", label: "Planet Pooch Grooming" },
   { company: "RESORT", label: "Planet Pooch Pet Resort" },
 ];
+
+function rolesFromPayload(payload: AssignmentsPayload): VisibilityRole[] {
+  return (
+    payload.roles ??
+    payload.jobTitles.map((title) => ({
+      title,
+      company: "CORPORATE" as Company,
+    }))
+  );
+}
+
+function roleKey(role: VisibilityRole) {
+  return `${role.company}:${role.title}`;
+}
+
+function roleFromKey(key: string): VisibilityRole {
+  const [company, ...titleParts] = key.split(":");
+  return {
+    company: company as Company,
+    title: titleParts.join(":"),
+  };
+}
 
 export function ModuleVisibilityCard({ moduleId }: { moduleId: string }) {
   const [data, setData] = useState<AssignmentsPayload | null>(null);
@@ -44,7 +72,9 @@ export function ModuleVisibilityCard({ moduleId }: { moduleId: string }) {
 
   function applyPayload(payload: AssignmentsPayload) {
     setData(payload);
-    setSelected(new Set(payload.jobTitles));
+    setSelected(
+      new Set(rolesFromPayload(payload).map((role) => roleKey(role))),
+    );
   }
 
   useEffect(() => {
@@ -57,11 +87,12 @@ export function ModuleVisibilityCard({ moduleId }: { moduleId: string }) {
     };
   }, [fetchAssignments]);
 
-  function toggle(title: string) {
+  function toggle(role: VisibilityRole) {
+    const key = roleKey(role);
     setSelected((prev) => {
       const next = new Set(prev);
-      if (next.has(title)) next.delete(title);
-      else next.add(title);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
       return next;
     });
   }
@@ -71,7 +102,7 @@ export function ModuleVisibilityCard({ moduleId }: { moduleId: string }) {
     const res = await fetch(`/api/modules/${moduleId}/assignments`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ jobTitles: Array.from(selected) }),
+      body: JSON.stringify({ roles: Array.from(selected).map(roleFromKey) }),
     });
     setSaving(false);
     if (res.ok) {
@@ -92,9 +123,10 @@ export function ModuleVisibilityCard({ moduleId }: { moduleId: string }) {
   }
 
   const isOpen = selected.size === 0 && data.users.length === 0;
+  const assignedRoles = rolesFromPayload(data);
   const hasChanges =
-    selected.size !== data.jobTitles.length ||
-    data.jobTitles.some((t) => !selected.has(t));
+    selected.size !== assignedRoles.length ||
+    assignedRoles.some((role) => !selected.has(roleKey(role)));
   const groupedJobTitles = COMPANY_GROUPS.map((group) => ({
     ...group,
     titles: data.allJobTitles.filter((option) => option.company === group.company),
@@ -140,8 +172,8 @@ export function ModuleVisibilityCard({ moduleId }: { moduleId: string }) {
                     >
                       <input
                         type="checkbox"
-                        checked={selected.has(option.title)}
-                        onChange={() => toggle(option.title)}
+                        checked={selected.has(roleKey(option))}
+                        onChange={() => toggle(option)}
                         className="h-4 w-4 rounded border-gray-300"
                       />
                       {option.title}

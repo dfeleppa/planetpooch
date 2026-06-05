@@ -27,15 +27,19 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ less
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
 
-  if (!isManagerOrAbove(session.user.role)) {
+  if (
+    !isManagerOrAbove(session.user.role) &&
+    !hasModuleEditAccess(session.user.role, session.user.jobTitle)
+  ) {
     const me = await prisma.user.findUnique({
       where: { id: session.user.id },
-      select: { jobTitle: true },
+      select: { jobTitle: true, company: true },
     });
     const visible = await isModuleVisibleToUser(
       lesson.subsection.module.id,
       session.user.id,
       me?.jobTitle ?? null,
+      me?.company ?? null,
     );
     if (!visible) {
       return NextResponse.json({ error: "Not found" }, { status: 404 });
@@ -81,20 +85,26 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ less
         },
       },
     });
-    const me = !isManagerOrAbove(session.user.role)
+    const me =
+      !isManagerOrAbove(session.user.role) &&
+      !hasModuleEditAccess(session.user.role, session.user.jobTitle)
       ? await prisma.user.findUnique({
           where: { id: session.user.id },
-          select: { jobTitle: true },
+          select: { jobTitle: true, company: true },
         })
       : null;
     for (const candidate of candidates) {
       const firstLessonId = candidate.subsections.flatMap((s) => s.lessons)[0]?.id;
       if (!firstLessonId) continue;
-      if (!isManagerOrAbove(session.user.role)) {
+      if (
+        !isManagerOrAbove(session.user.role) &&
+        !hasModuleEditAccess(session.user.role, session.user.jobTitle)
+      ) {
         const visible = await isModuleVisibleToUser(
           candidate.id,
           session.user.id,
           me?.jobTitle ?? null,
+          me?.company ?? null,
         );
         if (!visible) continue;
       }

@@ -12,9 +12,13 @@ export default async function ModulesPage() {
 
   const me = await prisma.user.findUnique({
     where: { id: userId },
-    select: { jobTitle: true },
+    select: { jobTitle: true, company: true },
   });
-  const visibleIds = await getVisibleModuleIdsForUser(userId, me?.jobTitle ?? null);
+  const visibleIds = await getVisibleModuleIdsForUser(
+    userId,
+    me?.jobTitle ?? null,
+    me?.company ?? null,
+  );
 
   const modules = await prisma.module.findMany({
     where: { id: { in: [...visibleIds] } },

@@ -18,9 +18,13 @@ export async function GET() {
   ) {
     const me = await prisma.user.findUnique({
       where: { id: session.user.id },
-      select: { jobTitle: true },
+      select: { jobTitle: true, company: true },
     });
-    const ids = await getVisibleModuleIdsForUser(session.user.id, me?.jobTitle ?? null);
+    const ids = await getVisibleModuleIdsForUser(
+      session.user.id,
+      me?.jobTitle ?? null,
+      me?.company ?? null,
+    );
     where.id = { in: [...ids] };
   }
 

@@ -9,6 +9,13 @@ const COMPANY_ORDER: Record<Company, number> = {
   RESORT: 2,
 };
 
+const COMPANIES = new Set<Company>(["CORPORATE", "GROOMING", "RESORT"]);
+
+interface VisibilityRole {
+  title: string;
+  company: Company;
+}
+
 /**
  * GET — returns the current job-title and user assignments for a module,
  * along with the full list of distinct job titles in the system so the
@@ -30,7 +37,7 @@ export async function GET(
       where: { id: moduleId },
       select: {
         id: true,
-        jobTitleAssignments: { select: { jobTitle: true } },
+        jobTitleAssignments: { select: { jobTitle: true, company: true } },
         userAssignments: {
           select: {
             user: {
@@ -63,25 +70,45 @@ export async function GET(
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
 
-  const titleCompanies = new Map<string, Company>();
+  const titleCompanies = new Map<string, VisibilityRole>();
   for (const position of orgPositions) {
     if (!position.title.trim()) continue;
-    titleCompanies.set(position.title, position.company ?? "CORPORATE");
+    const company = position.company ?? "CORPORATE";
+    titleCompanies.set(`${position.title}|${company}`, {
+      title: position.title,
+      company,
+    });
   }
   for (const row of userJobTitles) {
-    if (!row.jobTitle?.trim() || titleCompanies.has(row.jobTitle)) continue;
-    titleCompanies.set(row.jobTitle, row.company);
+    if (!row.jobTitle?.trim()) continue;
+    const key = `${row.jobTitle}|${row.company}`;
+    if (titleCompanies.has(key)) continue;
+    titleCompanies.set(key, {
+      title: row.jobTitle,
+      company: row.company,
+    });
   }
-  const allJobTitles = Array.from(titleCompanies, ([title, company]) => ({
-    title,
-    company,
-  })).sort((a, b) => {
+  const allJobTitles = Array.from(titleCompanies.values()).sort((a, b) => {
     const companyDiff = COMPANY_ORDER[a.company] - COMPANY_ORDER[b.company];
     if (companyDiff !== 0) return companyDiff;
     return a.title.localeCompare(b.title);
   });
 
+  const roles = mod.jobTitleAssignments.flatMap((assignment) => {
+    if (assignment.company) {
+      return [{ title: assignment.jobTitle, company: assignment.company }];
+    }
+
+    const matchingRoles = allJobTitles.filter(
+      (option) => option.title === assignment.jobTitle,
+    );
+    return matchingRoles.length > 0
+      ? matchingRoles
+      : [{ title: assignment.jobTitle, company: "CORPORATE" as Company }];
+  });
+
   return NextResponse.json({
+    roles,
     jobTitles: mod.jobTitleAssignments.map((a) => a.jobTitle),
     users: mod.userAssignments.map((a) => a.user),
     allJobTitles,
@@ -90,7 +117,7 @@ export async function GET(
 
 /**
  * PUT — replaces the module's job-title assignments with the supplied list.
- * Body: { jobTitles: string[] }
+ * Body: { roles: { title: string, company: Company }[] }
  *
  * Submitting an empty array makes the module "open" (visible to everyone)
  * unless individual user assignments still grant access.
@@ -106,17 +133,36 @@ export async function PUT(
 
   const { moduleId } = await params;
   const body = await req.json();
-  const raw: unknown = body?.jobTitles;
-  if (!Array.isArray(raw)) {
-    return NextResponse.json({ error: "jobTitles must be an array" }, { status: 400 });
+  const rawRoles: unknown = body?.roles;
+  const rawLegacyJobTitles: unknown = body?.jobTitles;
+
+  if (!Array.isArray(rawRoles) && !Array.isArray(rawLegacyJobTitles)) {
+    return NextResponse.json(
+      { error: "roles must be an array" },
+      { status: 400 },
+    );
   }
-  const jobTitles = Array.from(
-    new Set(
-      raw
-        .filter((v): v is string => typeof v === "string")
-        .map((s) => s.trim())
-        .filter((s) => s !== ""),
-    ),
+
+  const roles: VisibilityRole[] = Array.from(
+    new Map(
+      (Array.isArray(rawRoles)
+        ? rawRoles.flatMap((value): VisibilityRole[] => {
+            if (!value || typeof value !== "object") return [];
+            const role = value as { title?: unknown; company?: unknown };
+            if (typeof role.title !== "string") return [];
+            if (typeof role.company !== "string" || !COMPANIES.has(role.company as Company)) {
+              return [];
+            }
+            const title = role.title.trim();
+            if (!title) return [];
+            return [{ title, company: role.company as Company }];
+          })
+        : (rawLegacyJobTitles as unknown[])
+            .filter((value): value is string => typeof value === "string")
+            .map((title) => ({ title: title.trim(), company: "CORPORATE" as Company }))
+            .filter((role) => role.title !== "")
+      ).map((role) => [`${role.title}|${role.company}`, role]),
+    ).values(),
   );
 
   const mod = await prisma.module.findUnique({
@@ -129,15 +175,22 @@ export async function PUT(
 
   await prisma.$transaction([
     prisma.moduleJobTitleAssignment.deleteMany({ where: { moduleId } }),
-    ...(jobTitles.length > 0
+    ...(roles.length > 0
       ? [
           prisma.moduleJobTitleAssignment.createMany({
-            data: jobTitles.map((jobTitle) => ({ moduleId, jobTitle })),
+            data: roles.map((role) => ({
+              moduleId,
+              jobTitle: role.title,
+              company: role.company,
+            })),
             skipDuplicates: true,
           }),
         ]
       : []),
   ]);
 
-  return NextResponse.json({ jobTitles });
+  return NextResponse.json({
+    roles,
+    jobTitles: roles.map((role) => role.title),
+  });
 }

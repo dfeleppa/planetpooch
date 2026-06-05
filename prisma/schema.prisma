@@ -288,12 +288,14 @@ model ModuleJobTitleAssignment {
   id        String   @id @default(cuid())
   moduleId  String
   jobTitle  String
+  company   Company?
   createdAt DateTime @default(now())
 
   module Module @relation(fields: [moduleId], references: [id], onDelete: Cascade)
 
-  @@unique([moduleId, jobTitle])
+  @@unique([moduleId, jobTitle, company])
   @@index([jobTitle])
+  @@index([jobTitle, company])
 }
 
 /// Individually grants a module to a specific user, on top of any

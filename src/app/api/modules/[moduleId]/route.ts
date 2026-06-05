@@ -1,6 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { getSession, hasModuleEditAccess, hasModuleManagementAccess } from "@/lib/auth-helpers";
+import {
+  getSession,
+  hasModuleEditAccess,
+  hasModuleManagementAccess,
+  isManagerOrAbove,
+} from "@/lib/auth-helpers";
+import { isModuleVisibleToUser } from "@/lib/module-visibility";
 
 export async function GET(req: NextRequest, { params }: { params: Promise<{ moduleId: string }> }) {
   const session = await getSession();
@@ -37,6 +43,25 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ modu
 
   if (!mod) {
     return NextResponse.json({ error: "Not found" }, { status: 404 });
+  }
+
+  if (
+    !isManagerOrAbove(session.user.role) &&
+    !hasModuleEditAccess(session.user.role, session.user.jobTitle)
+  ) {
+    const me = await prisma.user.findUnique({
+      where: { id: session.user.id },
+      select: { jobTitle: true, company: true },
+    });
+    const visible = await isModuleVisibleToUser(
+      moduleId,
+      session.user.id,
+      me?.jobTitle ?? null,
+      me?.company ?? null,
+    );
+    if (!visible) {
+      return NextResponse.json({ error: "Not found" }, { status: 404 });
+    }
   }
 
   const completions = await prisma.lessonCompletion.findMany({
