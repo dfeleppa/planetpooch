@@ -1,6 +1,13 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import {
+  Fragment,
+  useCallback,
+  useEffect,
+  useState,
+  useTransition,
+} from "react";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { Card, CardContent } from "@/components/ui/card";
 
 type Attribution = {
@@ -404,9 +411,8 @@ function SourceTable({ groups }: { groups: SourceGroup[] }) {
           </thead>
           <tbody>
             {groups.map((g) => (
-              <>
+              <Fragment key={g.label}>
                 <tr
-                  key={g.label}
                   className={
                     "border-b last:border-0 hover:bg-gray-50" +
                     (g.children ? " cursor-pointer" : "")
@@ -470,7 +476,7 @@ function SourceTable({ groups }: { groups: SourceGroup[] }) {
                       </td>
                     </tr>
                   ))}
-              </>
+              </Fragment>
             ))}
           </tbody>
           <tfoot>
@@ -497,6 +503,13 @@ function SourceTable({ groups }: { groups: SourceGroup[] }) {
 }
 
 export function GhlDataView() {
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const [isPending, startTransition] = useTransition();
+
+  const from = searchParams.get("from") ?? "";
+  const to = searchParams.get("to") ?? "";
   const [opportunities, setOpportunities] = useState<Opportunity[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -504,20 +517,33 @@ export function GhlDataView() {
   const [cachedAt, setCachedAt] = useState<string | null>(null);
   const [services, setServices] = useState<Record<string, string>>({});
 
-  const loadServices = () =>
+  const loadServices = useCallback(() => {
     fetch("/api/ghl/data/service")
       .then((r) => r.json())
       .then((d: { services: Record<string, string> }) =>
         setServices(d.services),
       )
       .catch(() => {});
+  }, []);
 
-  const load = (refresh = false) => {
+  const dataUrl = useCallback(
+    (refresh = false) => {
+      const params = new URLSearchParams();
+      if (refresh) params.set("refresh", "1");
+      if (from) params.set("from", from);
+      if (to) params.set("to", to);
+
+      const qs = params.toString();
+      return qs ? `/api/ghl/data?${qs}` : "/api/ghl/data";
+    },
+    [from, to],
+  );
+
+  const load = useCallback((refresh = false) => {
     if (refresh) setRefreshing(true);
     else setLoading(true);
 
-    const url = refresh ? "/api/ghl/data?refresh=1" : "/api/ghl/data";
-    fetch(url)
+    fetch(dataUrl(refresh))
       .then(async (res) => {
         if (!res.ok) {
           const body = await res.json().catch(() => ({}));
@@ -542,9 +568,85 @@ export function GhlDataView() {
         setLoading(false);
         setRefreshing(false);
       });
-  };
+  }, [dataUrl]);
 
-  useEffect(() => { load(); loadServices(); }, []);
+  useEffect(() => {
+    let cancelled = false;
+
+    void Promise.resolve().then(() => {
+      if (!cancelled) load();
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [load]);
+
+  useEffect(() => {
+    loadServices();
+  }, [loadServices]);
+
+  function updateDateFilters(patch: Record<string, string | undefined>) {
+    const next = new URLSearchParams(searchParams.toString());
+    for (const [key, value] of Object.entries(patch)) {
+      if (value) next.set(key, value);
+      else next.delete(key);
+    }
+
+    startTransition(() => {
+      const qs = next.toString();
+      router.push(qs ? `${pathname}?${qs}` : pathname, { scroll: false });
+    });
+  }
+
+  const dateControls = (
+    <div className="flex flex-wrap items-end gap-3">
+      <div className="flex flex-col gap-1">
+        <span className="text-xs font-medium text-gray-700 uppercase tracking-wide">
+          From
+        </span>
+        <input
+          type="date"
+          value={from}
+          max={to || undefined}
+          onChange={(e) =>
+            updateDateFilters({ from: e.target.value || undefined })
+          }
+          disabled={isPending}
+          className="rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50"
+          aria-label="Start date"
+        />
+      </div>
+      <div className="flex flex-col gap-1">
+        <span className="text-xs font-medium text-gray-700 uppercase tracking-wide">
+          To
+        </span>
+        <input
+          type="date"
+          value={to}
+          min={from || undefined}
+          onChange={(e) =>
+            updateDateFilters({ to: e.target.value || undefined })
+          }
+          disabled={isPending}
+          className="rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50"
+          aria-label="End date"
+        />
+      </div>
+      {(from || to) && (
+        <button
+          type="button"
+          onClick={() =>
+            updateDateFilters({ from: undefined, to: undefined })
+          }
+          disabled={isPending}
+          className="text-xs text-gray-500 hover:text-gray-700 underline disabled:opacity-50"
+        >
+          Clear dates
+        </button>
+      )}
+    </div>
+  );
 
   const updateService = (
     opportunityIds: string[],
@@ -567,16 +669,22 @@ export function GhlDataView() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center py-20 text-gray-500">
-        Loading GHL opportunity data…
+      <div className="space-y-6">
+        {dateControls}
+        <div className="flex items-center justify-center py-20 text-gray-500">
+          Loading GHL opportunity data...
+        </div>
       </div>
     );
   }
 
   if (error) {
     return (
-      <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-red-700">
-        {error}
+      <div className="space-y-6">
+        {dateControls}
+        <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-red-700">
+          {error}
+        </div>
       </div>
     );
   }
@@ -591,6 +699,8 @@ export function GhlDataView() {
 
   return (
     <div className="space-y-6">
+      {dateControls}
+
       {/* Cache info + refresh */}
       <div className="flex items-center justify-between">
         <p className="text-xs text-gray-400">
