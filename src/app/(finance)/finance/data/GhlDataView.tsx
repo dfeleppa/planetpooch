@@ -3,7 +3,6 @@
 import {
   Fragment,
   useCallback,
-  useEffect,
   useState,
   useTransition,
 } from "react";
@@ -511,7 +510,7 @@ export function GhlDataView() {
   const from = searchParams.get("from") ?? "";
   const to = searchParams.get("to") ?? "";
   const [opportunities, setOpportunities] = useState<Opportunity[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [hasLoaded, setHasLoaded] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [cachedAt, setCachedAt] = useState<string | null>(null);
@@ -540,8 +539,8 @@ export function GhlDataView() {
   );
 
   const load = useCallback((refresh = false) => {
-    if (refresh) setRefreshing(true);
-    else setLoading(true);
+    setRefreshing(true);
+    setError(null);
 
     fetch(dataUrl(refresh))
       .then(async (res) => {
@@ -562,29 +561,14 @@ export function GhlDataView() {
         setOpportunities(d.opportunities);
         setCachedAt(d.cachedAt ?? null);
         setError(null);
+        setHasLoaded(true);
+        loadServices();
       })
       .catch((e: Error) => setError(e.message))
       .finally(() => {
-        setLoading(false);
         setRefreshing(false);
       });
-  }, [dataUrl]);
-
-  useEffect(() => {
-    let cancelled = false;
-
-    void Promise.resolve().then(() => {
-      if (!cancelled) load();
-    });
-
-    return () => {
-      cancelled = true;
-    };
-  }, [load]);
-
-  useEffect(() => {
-    loadServices();
-  }, [loadServices]);
+  }, [dataUrl, loadServices]);
 
   function updateDateFilters(patch: Record<string, string | undefined>) {
     const next = new URLSearchParams(searchParams.toString());
@@ -592,6 +576,11 @@ export function GhlDataView() {
       if (value) next.set(key, value);
       else next.delete(key);
     }
+
+    setHasLoaded(false);
+    setOpportunities([]);
+    setCachedAt(null);
+    setError(null);
 
     startTransition(() => {
       const qs = next.toString();
@@ -612,7 +601,7 @@ export function GhlDataView() {
           onChange={(e) =>
             updateDateFilters({ from: e.target.value || undefined })
           }
-          disabled={isPending}
+          disabled={isPending || refreshing}
           className="rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50"
           aria-label="Start date"
         />
@@ -628,7 +617,7 @@ export function GhlDataView() {
           onChange={(e) =>
             updateDateFilters({ to: e.target.value || undefined })
           }
-          disabled={isPending}
+          disabled={isPending || refreshing}
           className="rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50"
           aria-label="End date"
         />
@@ -639,12 +628,32 @@ export function GhlDataView() {
           onClick={() =>
             updateDateFilters({ from: undefined, to: undefined })
           }
-          disabled={isPending}
+          disabled={isPending || refreshing}
           className="text-xs text-gray-500 hover:text-gray-700 underline disabled:opacity-50"
         >
           Clear dates
         </button>
       )}
+    </div>
+  );
+
+  const refreshControls = (
+    <div className="flex items-center justify-between gap-3">
+      <p className="text-xs text-gray-400">
+        {hasLoaded
+          ? cachedAt
+            ? `Cached ${new Date(cachedAt).toLocaleString()}`
+            : "Live data"
+          : "Choose dates, then refresh to load GHL data."}
+      </p>
+      <button
+        type="button"
+        onClick={() => load(true)}
+        disabled={refreshing || isPending}
+        className="text-xs px-3 py-1.5 rounded border border-gray-300 text-gray-600 hover:bg-gray-50 disabled:opacity-50"
+      >
+        {refreshing ? "Refreshing..." : "Refresh"}
+      </button>
     </div>
   );
 
@@ -667,24 +676,30 @@ export function GhlDataView() {
     }).catch(() => {});
   };
 
-  if (loading) {
+  if (error) {
     return (
       <div className="space-y-6">
         {dateControls}
-        <div className="flex items-center justify-center py-20 text-gray-500">
-          Loading GHL opportunity data...
+        {refreshControls}
+        <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-red-700">
+          {error}
         </div>
       </div>
     );
   }
 
-  if (error) {
+  if (!hasLoaded) {
     return (
       <div className="space-y-6">
         {dateControls}
-        <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-red-700">
-          {error}
-        </div>
+        {refreshControls}
+        <Card>
+          <CardContent className="flex items-center justify-center p-10 text-sm text-gray-500">
+            {refreshing
+              ? "Loading GHL opportunity data..."
+              : "No GHL data loaded yet."}
+          </CardContent>
+        </Card>
       </div>
     );
   }
@@ -701,21 +716,7 @@ export function GhlDataView() {
     <div className="space-y-6">
       {dateControls}
 
-      {/* Cache info + refresh */}
-      <div className="flex items-center justify-between">
-        <p className="text-xs text-gray-400">
-          {cachedAt
-            ? `Cached ${new Date(cachedAt).toLocaleString()}`
-            : "Live data"}
-        </p>
-        <button
-          onClick={() => load(true)}
-          disabled={refreshing}
-          className="text-xs px-3 py-1.5 rounded border border-gray-300 text-gray-600 hover:bg-gray-50 disabled:opacity-50"
-        >
-          {refreshing ? "Refreshing…" : "Refresh"}
-        </button>
-      </div>
+      {refreshControls}
 
       {/* KPI cards */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
