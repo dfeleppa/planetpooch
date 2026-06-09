@@ -4,6 +4,7 @@ import Link from "next/link";
 import { formatDate } from "@/lib/utils";
 import { Company, Prisma, Role } from "@prisma/client";
 import { EmployeeFilters } from "./EmployeeFilters";
+import { RosterShell } from "./RosterShell";
 import { REQUIRED_DOCUMENT_CATEGORIES } from "@/lib/employee-documents";
 
 const COMPANY_LABELS: Record<Company, string> = {
@@ -426,7 +427,7 @@ export default async function AdminEmployeesPage({
       />
 
       {/* Roster */}
-      <div className="pp-roster">
+      <RosterShell>
         <div className="pp-roster-head">
           <div className="pp-rcol pp-rcol-name">Name</div>
           <div className="pp-rcol">Role</div>
@@ -564,7 +565,7 @@ export default async function AdminEmployeesPage({
               : "No employees registered yet."}
           </div>
         )}
-      </div>
+      </RosterShell>
 
       {/* Footer count */}
       <div className="pp-pagination">
