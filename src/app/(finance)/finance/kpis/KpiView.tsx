@@ -57,6 +57,7 @@ type DaycareImportReport = {
   totalNonTrainingAppointments: number;
   halfDayDaycareAppointments: number;
   fullDayEnrichmentActivityAppointments: number;
+  halfDayEnrichmentActivityAppointments: number;
   averageDailyOccupancy: number;
   evaluations: number;
   uniqueClients: number;
@@ -212,7 +213,7 @@ export function KpiView({
         const report = json.report as DaycareImportReport;
         setImportMessage(
           withImportedAt(
-            `Imported ${report.totalNonTrainingAppointments} full day daycare appointments, ${report.halfDayDaycareAppointments} half day daycare appointments, ${report.fullDayEnrichmentActivityAppointments} full day enrichment activity appointments, ${report.averageDailyOccupancy.toFixed(2)} average daily occupancy, ${report.evaluations} evaluations, ${report.uniqueClients} clients, ${report.averageVisitsPerClient.toFixed(2)} average visits, and ${dollars(report.totalNetSalesCents)} net sales from ${report.totalFinishedAppointments} finished daycare appointments.`,
+            `Imported ${report.totalNonTrainingAppointments} full day daycare appointments, ${report.halfDayDaycareAppointments} half day daycare appointments, ${report.fullDayEnrichmentActivityAppointments} full day enrichment activity appointments, ${report.halfDayEnrichmentActivityAppointments} half day enrichment activity appointments, ${report.averageDailyOccupancy.toFixed(2)} average daily occupancy, ${report.evaluations} evaluations, ${report.uniqueClients} clients, ${report.averageVisitsPerClient.toFixed(2)} average visits, and ${dollars(report.totalNetSalesCents)} net sales from ${report.totalFinishedAppointments} finished daycare appointments.`,
             importedAt
           )
         );

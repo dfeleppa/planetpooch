@@ -16,14 +16,19 @@ const HALF_DAY_DAYCARE_SERVICE = normalizeServiceName("Half day daycare");
 const FULL_DAY_DAYCARE_SERVICE = normalizeServiceName("Full day daycare");
 const FULL_DAY_ENRICHMENT_ACTIVITY_SERVICE =
   normalizeServiceName("Full day enrichment activity");
+const HALF_DAY_ENRICHMENT_ACTIVITY_SERVICE =
+  normalizeServiceName("Half day enrichment activity");
 const ALLOWED_DAYCARE_REVENUE_SERVICES = new Set([
   FULL_DAY_DAYCARE_SERVICE.toLowerCase(),
   HALF_DAY_DAYCARE_SERVICE.toLowerCase(),
   FULL_DAY_ENRICHMENT_ACTIVITY_SERVICE.toLowerCase(),
+  HALF_DAY_ENRICHMENT_ACTIVITY_SERVICE.toLowerCase(),
 ]);
 const DAYCARE_KPI_METRICS = {
   totalAppointments: "total_appointments",
   halfDayDaycare: "half_day_daycare",
+  fullDayEnrichmentActivity: "full_day_enrichment_activity",
+  halfDayEnrichmentActivity: "half_day_enrichment_activity",
   avgDailyOccupancy: "avg_daily_occupancy",
   evaluations: "evaluations",
   uniqueClients: "unique_clients",
@@ -56,6 +61,7 @@ export type WeeklyDaycareServiceReport = {
   totalNonTrainingAppointments: number;
   halfDayDaycareAppointments: number;
   fullDayEnrichmentActivityAppointments: number;
+  halfDayEnrichmentActivityAppointments: number;
   averageDailyOccupancy: number;
   evaluations: number;
   uniqueClients: number;
@@ -71,6 +77,7 @@ export type WeeklyDaycareKpiValues = {
   totalNonTrainingAppointments: number;
   halfDayDaycareAppointments?: number;
   fullDayEnrichmentActivityAppointments?: number;
+  halfDayEnrichmentActivityAppointments?: number;
   averageDailyOccupancy?: number;
   evaluations?: number;
   uniqueClients: number;
@@ -115,6 +122,11 @@ function hasHalfDayDaycareService(appointment: MoegoAppointmentRow): boolean {
 function hasFullDayEnrichmentActivityService(appointment: MoegoAppointmentRow): boolean {
   const names = normalizedServiceNames(appointment);
   return names.includes(FULL_DAY_ENRICHMENT_ACTIVITY_SERVICE);
+}
+
+function hasHalfDayEnrichmentActivityService(appointment: MoegoAppointmentRow): boolean {
+  const names = normalizedServiceNames(appointment);
+  return names.includes(HALF_DAY_ENRICHMENT_ACTIVITY_SERVICE);
 }
 
 function hasFullDayDaycareService(appointment: MoegoAppointmentRow): boolean {
@@ -261,6 +273,9 @@ export async function buildWeeklyDaycareServiceReport(options?: {
   const fullDayEnrichmentActivityAppointments = appointments.filter((appointment) => {
     return hasFullDayEnrichmentActivityService(appointment);
   }).length;
+  const halfDayEnrichmentActivityAppointments = appointments.filter((appointment) => {
+    return hasHalfDayEnrichmentActivityService(appointment);
+  }).length;
   const revenueAppointments = appointments.filter((appointment) => {
     return isPaidDaycareRevenueAppointment(appointment);
   });
@@ -310,7 +325,8 @@ export async function buildWeeklyDaycareServiceReport(options?: {
   const averageDailyOccupancy =
     (totalNonTrainingAppointments +
       halfDayDaycareAppointments +
-      fullDayEnrichmentActivityAppointments) / 6;
+      fullDayEnrichmentActivityAppointments +
+      halfDayEnrichmentActivityAppointments) / 6;
   const evaluations = countEvaluations(evaluationAppointments);
 
   return {
@@ -321,6 +337,7 @@ export async function buildWeeklyDaycareServiceReport(options?: {
     totalNonTrainingAppointments,
     halfDayDaycareAppointments,
     fullDayEnrichmentActivityAppointments,
+    halfDayEnrichmentActivityAppointments,
     averageDailyOccupancy,
     evaluations,
     uniqueClients,
@@ -354,12 +371,21 @@ export async function upsertWeeklyDaycareKpis(
       value: numberValue(values.halfDayDaycareAppointments ?? 0),
     },
     {
+      metricKey: DAYCARE_KPI_METRICS.fullDayEnrichmentActivity,
+      value: numberValue(values.fullDayEnrichmentActivityAppointments ?? 0),
+    },
+    {
+      metricKey: DAYCARE_KPI_METRICS.halfDayEnrichmentActivity,
+      value: numberValue(values.halfDayEnrichmentActivityAppointments ?? 0),
+    },
+    {
       metricKey: DAYCARE_KPI_METRICS.avgDailyOccupancy,
       value: numberValue(
         values.averageDailyOccupancy ??
           (values.totalNonTrainingAppointments +
             (values.halfDayDaycareAppointments ?? 0) +
-            (values.fullDayEnrichmentActivityAppointments ?? 0)) /
+            (values.fullDayEnrichmentActivityAppointments ?? 0) +
+            (values.halfDayEnrichmentActivityAppointments ?? 0)) /
               6
       ),
     },
@@ -415,6 +441,7 @@ export async function syncWeeklyDaycareServiceKpis(options?: {
     totalNonTrainingAppointments: report.totalNonTrainingAppointments,
     halfDayDaycareAppointments: report.halfDayDaycareAppointments,
     fullDayEnrichmentActivityAppointments: report.fullDayEnrichmentActivityAppointments,
+    halfDayEnrichmentActivityAppointments: report.halfDayEnrichmentActivityAppointments,
     averageDailyOccupancy: report.averageDailyOccupancy,
     evaluations: report.evaluations,
     uniqueClients: report.uniqueClients,

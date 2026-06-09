@@ -66,6 +66,8 @@ export const KPI_SEGMENTS: KpiSegmentDef[] = [
     metrics: [
       { key: "total_appointments", label: "Full Day Daycare", section: "ACTUALS", format: "number" },
       { key: "half_day_daycare", label: "Half day daycare", section: "ACTUALS", format: "number" },
+      { key: "full_day_enrichment_activity", label: "Full day enrichment activity", section: "ACTUALS", format: "number" },
+      { key: "half_day_enrichment_activity", label: "Half day enrichment activity", section: "ACTUALS", format: "number" },
       { key: "avg_daily_occupancy", label: "Average daily occupancy", section: "ACTUALS", format: "number" },
       { key: "evaluations", label: "Evaluations", section: "ACTUALS", format: "number" },
       { key: "unique_clients", label: "Unique clients", section: "ACTUALS", format: "number" },
