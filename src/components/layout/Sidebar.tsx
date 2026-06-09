@@ -56,7 +56,6 @@ const financeNav: NavItem[] = [
   { href: "/finance/data", label: "Data", icon: "◈" },
   { href: "/finance/moego", label: "MoeGo", icon: "◉" },
   { href: "/finance/kpis", label: "KPIs", icon: "▦" },
-  { href: "/finance/kpis/all", label: "All KPIs", icon: "▤" },
   { href: "/tasks", label: "Tasks", icon: "✓" },
 ];
 

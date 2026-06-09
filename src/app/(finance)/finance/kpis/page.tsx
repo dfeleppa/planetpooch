@@ -1,10 +1,16 @@
 import { requireSuperAdmin } from "@/lib/auth-helpers";
 import { prisma } from "@/lib/prisma";
 import { KpiSegment } from "@prisma/client";
-import { DEFAULT_SEGMENT, getSegmentDef, isValidSegment } from "@/lib/kpis";
+import { DEFAULT_SEGMENT, KPI_SEGMENTS, getSegmentDef, isValidSegment } from "@/lib/kpis";
 import { currentWeekStart, fromWeekParam, isValidWeekParam, toWeekParam } from "@/lib/week";
 import { resolveStandingAmount, type StandingRow } from "@/lib/kpi-standing";
 import { KpiView, type KpiCell } from "./KpiView";
+
+const ALL_TAB = "ALL";
+
+function isAllTab(value: string | undefined): boolean {
+  return value === ALL_TAB;
+}
 
 export default async function KpisPage({
   searchParams,
@@ -14,15 +20,16 @@ export default async function KpisPage({
   await requireSuperAdmin();
   const params = await searchParams;
 
+  const showAll = isAllTab(params.segment);
   const segment: KpiSegment =
-    params.segment && isValidSegment(params.segment) ? params.segment : DEFAULT_SEGMENT;
+    !showAll && params.segment && isValidSegment(params.segment) ? params.segment : DEFAULT_SEGMENT;
 
   let weekStart: Date;
   if (isValidWeekParam(params.week)) {
     weekStart = fromWeekParam(params.week);
   } else {
     const latest = await prisma.kpiWeeklyValue.findFirst({
-      where: { segment },
+      where: showAll ? {} : { segment },
       orderBy: { weekStart: "desc" },
       select: { weekStart: true },
     });
@@ -30,6 +37,50 @@ export default async function KpisPage({
   }
 
   const week = toWeekParam(weekStart);
+
+  if (showAll) {
+    const [valueRows, standingRows] = await Promise.all([
+      prisma.kpiWeeklyValue.findMany({
+        where: { weekStart },
+        select: { segment: true, metricKey: true, value: true },
+      }),
+      prisma.kpiStandingValue.findMany({
+        where: { effectiveWeekStart: { lte: weekStart } },
+        select: { segment: true, metricKey: true, field: true, amount: true, effectiveWeekStart: true },
+      }),
+    ]);
+
+    const allData: Record<string, Record<string, KpiCell>> = {};
+    for (const segDef of KPI_SEGMENTS) {
+      const segValues = valueRows.filter((r) => r.segment === segDef.key);
+      const segStanding = standingRows.filter((r) => r.segment === segDef.key) as StandingRow[];
+      const valueByKey = new Map(segValues.map((r) => [r.metricKey, r.value]));
+
+      const data: Record<string, KpiCell> = {};
+      for (const metric of segDef.metrics) {
+        const sourceKey = metric.mirrorsKey ?? metric.key;
+        data[metric.key] = {
+          value: valueByKey.get(metric.key) ?? null,
+          target: resolveStandingAmount(segStanding, sourceKey, "TARGET", weekStart),
+          average: resolveStandingAmount(segStanding, sourceKey, "AVERAGE", weekStart),
+        };
+      }
+      allData[segDef.key] = data;
+    }
+
+    return (
+      <div>
+        <div className="mb-6">
+          <h1 className="text-2xl font-bold text-gray-900">KPIs</h1>
+          <p className="text-gray-500 mt-1">
+            Weekly key performance indicators by business segment
+          </p>
+        </div>
+
+        <KpiView segment={segment} week={week} data={{}} activeTab={ALL_TAB} allSegmentsData={allData} />
+      </div>
+    );
+  }
 
   const [valueRows, standingRows] = await Promise.all([
     prisma.kpiWeeklyValue.findMany({
@@ -45,9 +96,6 @@ export default async function KpisPage({
   const valueByKey = new Map(valueRows.map((r) => [r.metricKey, r.value]));
   const standing = standingRows as StandingRow[];
 
-  // value comes from this week's row; target/average are resolved from the
-  // latest standing value in effect on or before this week. Forecast metrics
-  // mirror their Actuals counterpart's target/average via mirrorsKey.
   const data: Record<string, KpiCell> = {};
   for (const metric of getSegmentDef(segment).metrics) {
     const sourceKey = metric.mirrorsKey ?? metric.key;
@@ -67,7 +115,7 @@ export default async function KpisPage({
         </p>
       </div>
 
-      <KpiView segment={segment} week={week} data={data} />
+      <KpiView segment={segment} week={week} data={data} activeTab={segment} />
     </div>
   );
 }

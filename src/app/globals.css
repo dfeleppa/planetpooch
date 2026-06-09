@@ -865,3 +865,13 @@ body {
   border-top: 2px solid #e5e7eb;
   margin: 1.5em 0;
 }
+
+@media print {
+  aside,
+  .md\\:sticky {
+    display: none !important;
+  }
+  main {
+    padding: 0 !important;
+  }
+}
