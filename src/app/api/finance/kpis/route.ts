@@ -3,7 +3,11 @@ import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/auth-helpers";
 import { Role, KpiSegment, KpiStandingField, Prisma } from "@prisma/client";
-import { getMetricDef, isValidMetricKey } from "@/lib/kpis";
+import {
+  calculateDaycareDerivedMetricValues,
+  getMetricDef,
+  isValidMetricKey,
+} from "@/lib/kpis";
 import { fromWeekParam } from "@/lib/week";
 import { resolveStandingAmount, type StandingRow } from "@/lib/kpi-standing";
 
@@ -26,6 +30,26 @@ const bodySchema = z.object({
   ),
 });
 
+type SubmittedMetric = z.infer<typeof bodySchema>["metrics"][number];
+
+function withDerivedSubmittedMetrics(
+  segment: KpiSegment,
+  metrics: SubmittedMetric[]
+): SubmittedMetric[] {
+  if (segment !== KpiSegment.DAYCARE) return metrics;
+
+  const values = Object.fromEntries(
+    metrics.map((metric) => [metric.metricKey, metric.value])
+  );
+  const derived = calculateDaycareDerivedMetricValues(values);
+  if (Object.keys(derived).length === 0) return metrics;
+
+  return metrics.map((metric) => {
+    const value = derived[metric.metricKey as keyof typeof derived];
+    return value === undefined ? metric : { ...metric, value };
+  });
+}
+
 export async function POST(req: NextRequest) {
   const session = await getSession();
   if (!session?.user || !isSuperAdmin((session.user as { role: string }).role)) {
@@ -38,7 +62,8 @@ export async function POST(req: NextRequest) {
   }
 
   const segment = parsed.data.segment as KpiSegment;
-  const { weekStart, metrics } = parsed.data;
+  const { weekStart } = parsed.data;
+  const metrics = withDerivedSubmittedMetrics(segment, parsed.data.metrics);
 
   for (const m of metrics) {
     if (!isValidMetricKey(segment, m.metricKey)) {

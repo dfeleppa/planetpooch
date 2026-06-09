@@ -20,6 +20,69 @@ export interface KpiSegmentDef {
   metrics: KpiMetricDef[];
 }
 
+const DAYCARE_VISIT_METRIC_KEYS = [
+  "total_appointments",
+  "half_day_daycare",
+  "full_day_enrichment_activity",
+  "half_day_enrichment_activity",
+] as const;
+
+const DAYCARE_TOTAL_METRIC_KEYS = [
+  ...DAYCARE_VISIT_METRIC_KEYS,
+  "evaluations",
+] as const;
+
+export const DAYCARE_CALCULATED_VALUE_KEYS = [
+  "total_daycare_appointments",
+  "avg_daily_occupancy",
+  "avg_visits",
+] as const;
+
+type KpiValueLookup = Record<string, number | null | undefined>;
+
+function sumScaledMetricValues(
+  values: KpiValueLookup,
+  metricKeys: readonly string[]
+): number | null {
+  let sawValue = false;
+  let sum = 0;
+  for (const key of metricKeys) {
+    const value = values[key];
+    if (value === null || value === undefined) continue;
+    sawValue = true;
+    sum += value;
+  }
+  return sawValue ? sum : null;
+}
+
+export function calculateDaycareDerivedMetricValues(
+  values: KpiValueLookup
+): Partial<Record<(typeof DAYCARE_CALCULATED_VALUE_KEYS)[number], number>> {
+  const visitAppointments = sumScaledMetricValues(values, DAYCARE_VISIT_METRIC_KEYS);
+  const totalAppointments = sumScaledMetricValues(values, DAYCARE_TOTAL_METRIC_KEYS);
+  const uniqueClients = values.unique_clients;
+  const derived: Partial<
+    Record<(typeof DAYCARE_CALCULATED_VALUE_KEYS)[number], number>
+  > = {};
+
+  if (totalAppointments !== null) {
+    derived.total_daycare_appointments = totalAppointments;
+  }
+  if (visitAppointments !== null) {
+    derived.avg_daily_occupancy = Math.round(visitAppointments / 6);
+  }
+  if (
+    visitAppointments !== null &&
+    uniqueClients !== null &&
+    uniqueClients !== undefined &&
+    uniqueClients > 0
+  ) {
+    derived.avg_visits = Math.round((visitAppointments * 100) / uniqueClients);
+  }
+
+  return derived;
+}
+
 // Section labels shown above each table on the page.
 export const SECTION_LABELS: Record<KpiSection, string> = {
   ACTUALS: "Last Week — Actuals",

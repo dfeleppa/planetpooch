@@ -10,8 +10,10 @@ import { Card, CardContent } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { formatKpiValue } from "@/lib/utils";
 import {
+  DAYCARE_CALCULATED_VALUE_KEYS,
   KPI_SEGMENTS,
   SECTION_LABELS,
+  calculateDaycareDerivedMetricValues,
   getSegmentDef,
   type KpiFormat,
   type KpiSection,
@@ -93,6 +95,29 @@ const SELECT_CLS =
 const SECTION_ORDER: KpiSection[] = ["ACTUALS", "FORECAST"];
 
 const ALL_TAB = "ALL";
+const DAYCARE_CALCULATED_VALUE_KEY_SET = new Set<string>(
+  DAYCARE_CALCULATED_VALUE_KEYS
+);
+
+function withDerivedKpiCells(
+  segment: KpiSegment,
+  cells: Record<string, KpiCell>
+): Record<string, KpiCell> {
+  if (segment !== "DAYCARE") return cells;
+
+  const values = Object.fromEntries(
+    Object.entries(cells).map(([key, cell]) => [key, cell.value])
+  );
+  const derived = calculateDaycareDerivedMetricValues(values);
+  if (Object.keys(derived).length === 0) return cells;
+
+  const next = { ...cells };
+  for (const [key, value] of Object.entries(derived)) {
+    if (!next[key]) continue;
+    next[key] = { ...next[key], value };
+  }
+  return next;
+}
 
 export function KpiView({
   segment,
@@ -111,6 +136,19 @@ export function KpiView({
   const pathname = usePathname();
   const segmentDef = getSegmentDef(segment);
   const isAll = activeTab === ALL_TAB;
+  const dataWithDerivedValues = useMemo(
+    () => withDerivedKpiCells(segment, data),
+    [segment, data]
+  );
+  const allSegmentsDataWithDerivedValues = useMemo(() => {
+    if (!allSegmentsData) return undefined;
+    return Object.fromEntries(
+      Object.entries(allSegmentsData).map(([key, cells]) => [
+        key,
+        withDerivedKpiCells(key as KpiSegment, cells),
+      ])
+    );
+  }, [allSegmentsData]);
 
   const [mode, setMode] = useState<EditMode>(null);
   const [draft, setDraft] = useState<Record<string, KpiCell>>({});
@@ -131,7 +169,8 @@ export function KpiView({
   function startEdit(nextMode: Exclude<EditMode, null>) {
     const seed: Record<string, KpiCell> = {};
     for (const metric of segmentDef.metrics) {
-      seed[metric.key] = data[metric.key] ?? { value: null, average: null, target: null };
+      seed[metric.key] =
+        dataWithDerivedValues[metric.key] ?? { value: null, average: null, target: null };
     }
     setDraft(seed);
     setMode(nextMode);
@@ -147,11 +186,12 @@ export function KpiView({
   async function save() {
     setSaving(true);
     try {
+      const draftWithDerivedValues = withDerivedKpiCells(segment, draft);
       const metrics = segmentDef.metrics.map((m) => ({
         metricKey: m.key,
-        value: draft[m.key]?.value ?? null,
-        average: draft[m.key]?.average ?? null,
-        target: draft[m.key]?.target ?? null,
+        value: draftWithDerivedValues[m.key]?.value ?? null,
+        average: draftWithDerivedValues[m.key]?.average ?? null,
+        target: draftWithDerivedValues[m.key]?.target ?? null,
       }));
       const res = await fetch("/api/finance/kpis", {
         method: "POST",
@@ -269,10 +309,10 @@ export function KpiView({
     hasMetrics;
 
   function exportCsv() {
-    if (!allSegmentsData) return;
+    if (!allSegmentsDataWithDerivedValues) return;
     const rows: string[][] = [["Segment", "Section", "KPI", "Value", "Average", "Target"]];
     for (const segDef of KPI_SEGMENTS) {
-      const segData = allSegmentsData[segDef.key];
+      const segData = allSegmentsDataWithDerivedValues[segDef.key];
       if (!segData) continue;
       for (const section of SECTION_ORDER) {
         const metrics = segDef.metrics.filter((m) => m.section === section);
@@ -329,7 +369,7 @@ export function KpiView({
 
           <div className="flex flex-col gap-8 print:gap-4">
             {KPI_SEGMENTS.map((segDef) => {
-              const segData = allSegmentsData?.[segDef.key];
+              const segData = allSegmentsDataWithDerivedValues?.[segDef.key];
               if (!segData || segDef.metrics.length === 0) return null;
               return (
                 <section key={segDef.key}>
@@ -487,6 +527,9 @@ export function KpiView({
                       <TableBody>
                         {metrics.map((metric, idx) => {
                           const isMirror = Boolean(metric.mirrorsKey);
+                          const activeCells = mode
+                            ? withDerivedKpiCells(segment, draft)
+                            : dataWithDerivedValues;
                           return (
                             <TableRow key={metric.key}>
                               <TableCell className="text-gray-400">{idx + 1}</TableCell>
@@ -495,15 +538,19 @@ export function KpiView({
                                 const editable =
                                   (mode === "week" && field === "value") ||
                                   (mode === "targets" && field !== "value" && !isMirror);
+                                const isCalculatedActual =
+                                  field === "value" &&
+                                  segment === "DAYCARE" &&
+                                  DAYCARE_CALCULATED_VALUE_KEY_SET.has(metric.key);
                                 const scaled =
                                   isMirror && field !== "value"
                                     ? (mode === "targets"
                                         ? draft[metric.mirrorsKey ?? metric.key]?.[field]
-                                        : data[metric.key]?.[field]) ?? null
-                                    : (mode ? draft[metric.key] : data[metric.key])?.[field] ?? null;
+                                        : dataWithDerivedValues[metric.key]?.[field]) ?? null
+                                    : activeCells[metric.key]?.[field] ?? null;
                                 return (
                                   <TableCell key={field} className="text-right tabular-nums">
-                                    {editable ? (
+                                    {editable && !isCalculatedActual ? (
                                       <KpiInput
                                         format={metric.format}
                                         scaled={scaled}

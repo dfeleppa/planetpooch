@@ -1,7 +1,13 @@
 import { requireSuperAdmin } from "@/lib/auth-helpers";
 import { prisma } from "@/lib/prisma";
 import { KpiSegment } from "@prisma/client";
-import { DEFAULT_SEGMENT, KPI_SEGMENTS, getSegmentDef, isValidSegment } from "@/lib/kpis";
+import {
+  DEFAULT_SEGMENT,
+  KPI_SEGMENTS,
+  calculateDaycareDerivedMetricValues,
+  getSegmentDef,
+  isValidSegment,
+} from "@/lib/kpis";
 import { currentWeekStart, fromWeekParam, isValidWeekParam, toWeekParam } from "@/lib/week";
 import { resolveStandingAmount, type StandingRow } from "@/lib/kpi-standing";
 import { KpiView, type KpiCell } from "./KpiView";
@@ -10,6 +16,26 @@ const ALL_TAB = "ALL";
 
 function isAllTab(value: string | undefined): boolean {
   return value === ALL_TAB;
+}
+
+function withDerivedKpiCells(
+  segment: KpiSegment,
+  data: Record<string, KpiCell>
+): Record<string, KpiCell> {
+  if (segment !== "DAYCARE") return data;
+
+  const values = Object.fromEntries(
+    Object.entries(data).map(([key, cell]) => [key, cell.value])
+  );
+  const derived = calculateDaycareDerivedMetricValues(values);
+  if (Object.keys(derived).length === 0) return data;
+
+  const next = { ...data };
+  for (const [key, value] of Object.entries(derived)) {
+    if (!next[key]) continue;
+    next[key] = { ...next[key], value };
+  }
+  return next;
 }
 
 export default async function KpisPage({
@@ -65,7 +91,7 @@ export default async function KpisPage({
           average: resolveStandingAmount(segStanding, sourceKey, "AVERAGE", weekStart),
         };
       }
-      allData[segDef.key] = data;
+      allData[segDef.key] = withDerivedKpiCells(segDef.key, data);
     }
 
     return (
@@ -96,7 +122,7 @@ export default async function KpisPage({
   const valueByKey = new Map(valueRows.map((r) => [r.metricKey, r.value]));
   const standing = standingRows as StandingRow[];
 
-  const data: Record<string, KpiCell> = {};
+  let data: Record<string, KpiCell> = {};
   for (const metric of getSegmentDef(segment).metrics) {
     const sourceKey = metric.mirrorsKey ?? metric.key;
     data[metric.key] = {
@@ -105,6 +131,7 @@ export default async function KpisPage({
       average: resolveStandingAmount(standing, sourceKey, "AVERAGE", weekStart),
     };
   }
+  data = withDerivedKpiCells(segment, data);
 
   return (
     <div>
