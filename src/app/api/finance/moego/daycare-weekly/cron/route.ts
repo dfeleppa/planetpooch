@@ -77,10 +77,9 @@ export async function POST(req: NextRequest) {
   }
 
   const weekStart = body.weekStart;
-  const totalNonTrainingAppointments = readFiniteNumber(
-    body,
-    "totalNonTrainingAppointments"
-  );
+  const fullDayDaycareAppointments =
+    readFiniteNumber(body, "fullDayDaycareAppointments") ??
+    readFiniteNumber(body, "totalNonTrainingAppointments");
   const uniqueClients = readFiniteNumber(body, "uniqueClients");
   const halfDayDaycareAppointments =
     readFiniteNumber(body, "halfDayDaycareAppointments") ?? 0;
@@ -88,26 +87,34 @@ export async function POST(req: NextRequest) {
     readFiniteNumber(body, "fullDayEnrichmentActivityAppointments") ?? 0;
   const halfDayEnrichmentActivityAppointments =
     readFiniteNumber(body, "halfDayEnrichmentActivityAppointments") ?? 0;
+  const evaluations = readFiniteNumber(body, "evaluations") ?? 0;
+  const daycareVisitAppointments =
+    (fullDayDaycareAppointments ?? 0) +
+    halfDayDaycareAppointments +
+    fullDayEnrichmentActivityAppointments +
+    halfDayEnrichmentActivityAppointments;
+  const totalDaycareAppointments =
+    readFiniteNumber(body, "totalDaycareAppointments") ??
+    (fullDayDaycareAppointments !== null
+      ? daycareVisitAppointments + evaluations
+      : null);
   const averageDailyOccupancy =
     readFiniteNumber(body, "averageDailyOccupancy") ??
-    (totalNonTrainingAppointments !== null
-      ? (totalNonTrainingAppointments +
-          halfDayDaycareAppointments +
-          fullDayEnrichmentActivityAppointments +
-          halfDayEnrichmentActivityAppointments) / 6
+    (fullDayDaycareAppointments !== null
+      ? daycareVisitAppointments / 6
       : null);
-  const evaluations = readFiniteNumber(body, "evaluations") ?? 0;
   const totalNetSalesCents = readFiniteNumber(body, "totalNetSalesCents");
   const averageVisitsPerClient =
     readFiniteNumber(body, "averageVisitsPerClient") ??
-    (totalNonTrainingAppointments !== null && uniqueClients
-      ? totalNonTrainingAppointments / uniqueClients
+    (fullDayDaycareAppointments !== null && uniqueClients
+      ? daycareVisitAppointments / uniqueClients
       : null);
 
   if (
     typeof weekStart !== "string" ||
     !/^\d{4}-\d{2}-\d{2}$/.test(weekStart) ||
-    totalNonTrainingAppointments === null ||
+    totalDaycareAppointments === null ||
+    fullDayDaycareAppointments === null ||
     averageDailyOccupancy === null ||
     uniqueClients === null ||
     averageVisitsPerClient === null ||
@@ -116,7 +123,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json(
       {
         error:
-          "weekStart, totalNonTrainingAppointments, uniqueClients, averageVisitsPerClient, and totalNetSalesCents are required.",
+          "weekStart, fullDayDaycareAppointments, uniqueClients, averageVisitsPerClient, and totalNetSalesCents are required.",
       },
       { status: 400 }
     );
@@ -125,7 +132,9 @@ export async function POST(req: NextRequest) {
   try {
     await upsertWeeklyDaycareKpis({
       weekStart,
-      totalNonTrainingAppointments,
+      totalDaycareAppointments,
+      totalNonTrainingAppointments: fullDayDaycareAppointments,
+      fullDayDaycareAppointments,
       halfDayDaycareAppointments,
       fullDayEnrichmentActivityAppointments,
       halfDayEnrichmentActivityAppointments,
@@ -140,7 +149,9 @@ export async function POST(req: NextRequest) {
       ok: true,
       weekStart,
       metrics: {
-        totalNonTrainingAppointments,
+        totalDaycareAppointments,
+        totalNonTrainingAppointments: fullDayDaycareAppointments,
+        fullDayDaycareAppointments,
         halfDayDaycareAppointments,
         fullDayEnrichmentActivityAppointments,
         halfDayEnrichmentActivityAppointments,

@@ -25,7 +25,8 @@ const ALLOWED_DAYCARE_REVENUE_SERVICES = new Set([
   HALF_DAY_ENRICHMENT_ACTIVITY_SERVICE.toLowerCase(),
 ]);
 const DAYCARE_KPI_METRICS = {
-  totalAppointments: "total_appointments",
+  totalDaycareAppointments: "total_daycare_appointments",
+  fullDayDaycare: "total_appointments",
   halfDayDaycare: "half_day_daycare",
   fullDayEnrichmentActivity: "full_day_enrichment_activity",
   halfDayEnrichmentActivity: "half_day_enrichment_activity",
@@ -58,7 +59,9 @@ export type WeeklyDaycareServiceReport = {
   weekEnd: string;
   businessId: string;
   totalFinishedAppointments: number;
+  totalDaycareAppointments: number;
   totalNonTrainingAppointments: number;
+  fullDayDaycareAppointments: number;
   halfDayDaycareAppointments: number;
   fullDayEnrichmentActivityAppointments: number;
   halfDayEnrichmentActivityAppointments: number;
@@ -74,7 +77,9 @@ export type WeeklyDaycareServiceReport = {
 
 export type WeeklyDaycareKpiValues = {
   weekStart: string;
-  totalNonTrainingAppointments: number;
+  totalDaycareAppointments?: number;
+  totalNonTrainingAppointments?: number;
+  fullDayDaycareAppointments?: number;
   halfDayDaycareAppointments?: number;
   fullDayEnrichmentActivityAppointments?: number;
   halfDayEnrichmentActivityAppointments?: number;
@@ -134,9 +139,15 @@ function hasFullDayDaycareService(appointment: MoegoAppointmentRow): boolean {
   return names.includes(FULL_DAY_DAYCARE_SERVICE);
 }
 
-function hasAllowedDaycareNetSalesService(appointment: MoegoAppointmentRow): boolean {
+function hasTrackedDaycareAppointmentService(
+  appointment: MoegoAppointmentRow
+): boolean {
   const names = normalizedServiceNames(appointment);
   return names.some((name) => ALLOWED_DAYCARE_REVENUE_SERVICES.has(name));
+}
+
+function hasAllowedDaycareNetSalesService(appointment: MoegoAppointmentRow): boolean {
+  return hasTrackedDaycareAppointmentService(appointment);
 }
 
 function isPaidDaycareRevenueAppointment(
@@ -276,6 +287,13 @@ export async function buildWeeklyDaycareServiceReport(options?: {
   const halfDayEnrichmentActivityAppointments = appointments.filter((appointment) => {
     return hasHalfDayEnrichmentActivityService(appointment);
   }).length;
+  const trackedDaycareAppointments = appointments.filter((appointment) => {
+    return (
+      !hasTrainingFreeService(appointment) &&
+      !hasFreeFirstDayService(appointment) &&
+      hasTrackedDaycareAppointmentService(appointment)
+    );
+  });
   const revenueAppointments = appointments.filter((appointment) => {
     return isPaidDaycareRevenueAppointment(appointment);
   });
@@ -292,6 +310,7 @@ export async function buildWeeklyDaycareServiceReport(options?: {
     const key = appointment.customerId ?? `appointment:${appointment.id}`;
     const client = clients.get(key) ?? { training: 0, nonTraining: 0 };
     const shouldCountNetSales = isPaidDaycareRevenueAppointment(appointment);
+    const shouldCountDaycareVisit = trackedDaycareAppointments.includes(appointment);
     if (hasTrainingFreeService(appointment)) {
       client.training++;
       clients.set(key, client);
@@ -308,8 +327,11 @@ export async function buildWeeklyDaycareServiceReport(options?: {
       totalNetSalesCents += orderNet ?? fallbackAppointmentNetCents(appointment);
     }
 
-    if (shouldCountNetSales) {
+    if (shouldCountDaycareVisit) {
       client.nonTraining++;
+    }
+
+    if (shouldCountNetSales) {
       const service = serviceKey(appointment);
       serviceCounts.set(service, (serviceCounts.get(service) ?? 0) + 1);
     }
@@ -320,21 +342,25 @@ export async function buildWeeklyDaycareServiceReport(options?: {
   const clientRows = [...clients.entries()];
   const uniqueClients = clientRows.filter(([, row]) => row.nonTraining > 0).length;
   const totalNonTrainingAppointments = fullDayDaycareAppointments;
+  const daycareVisitAppointments =
+    fullDayDaycareAppointments +
+    halfDayDaycareAppointments +
+    fullDayEnrichmentActivityAppointments +
+    halfDayEnrichmentActivityAppointments;
   const averageVisitsPerClient =
-    uniqueClients > 0 ? revenueAppointments.length / uniqueClients : 0;
-  const averageDailyOccupancy =
-    (totalNonTrainingAppointments +
-      halfDayDaycareAppointments +
-      fullDayEnrichmentActivityAppointments +
-      halfDayEnrichmentActivityAppointments) / 6;
+    uniqueClients > 0 ? trackedDaycareAppointments.length / uniqueClients : 0;
+  const averageDailyOccupancy = daycareVisitAppointments / 6;
   const evaluations = countEvaluations(evaluationAppointments);
+  const totalDaycareAppointments = daycareVisitAppointments + evaluations;
 
   return {
     weekStart: toWeekParam(start),
     weekEnd: toWeekParam(new Date(end.getTime() - 24 * 60 * 60 * 1000)),
     businessId,
     totalFinishedAppointments: appointments.length,
+    totalDaycareAppointments,
     totalNonTrainingAppointments,
+    fullDayDaycareAppointments,
     halfDayDaycareAppointments,
     fullDayEnrichmentActivityAppointments,
     halfDayEnrichmentActivityAppointments,
@@ -361,37 +387,51 @@ export async function upsertWeeklyDaycareKpis(
   values: WeeklyDaycareKpiValues
 ): Promise<void> {
   const weekStart = new Date(`${values.weekStart}T00:00:00.000Z`);
+  const fullDayDaycareAppointments =
+    values.fullDayDaycareAppointments ?? values.totalNonTrainingAppointments ?? 0;
+  const halfDayDaycareAppointments = values.halfDayDaycareAppointments ?? 0;
+  const fullDayEnrichmentActivityAppointments =
+    values.fullDayEnrichmentActivityAppointments ?? 0;
+  const halfDayEnrichmentActivityAppointments =
+    values.halfDayEnrichmentActivityAppointments ?? 0;
+  const evaluations = values.evaluations ?? 0;
+  const daycareVisitAppointments =
+    fullDayDaycareAppointments +
+    halfDayDaycareAppointments +
+    fullDayEnrichmentActivityAppointments +
+    halfDayEnrichmentActivityAppointments;
+  const totalDaycareAppointments =
+    values.totalDaycareAppointments ?? daycareVisitAppointments + evaluations;
   const rows = [
     {
-      metricKey: DAYCARE_KPI_METRICS.totalAppointments,
-      value: numberValue(values.totalNonTrainingAppointments),
+      metricKey: DAYCARE_KPI_METRICS.totalDaycareAppointments,
+      value: numberValue(totalDaycareAppointments),
+    },
+    {
+      metricKey: DAYCARE_KPI_METRICS.fullDayDaycare,
+      value: numberValue(fullDayDaycareAppointments),
     },
     {
       metricKey: DAYCARE_KPI_METRICS.halfDayDaycare,
-      value: numberValue(values.halfDayDaycareAppointments ?? 0),
+      value: numberValue(halfDayDaycareAppointments),
     },
     {
       metricKey: DAYCARE_KPI_METRICS.fullDayEnrichmentActivity,
-      value: numberValue(values.fullDayEnrichmentActivityAppointments ?? 0),
+      value: numberValue(fullDayEnrichmentActivityAppointments),
     },
     {
       metricKey: DAYCARE_KPI_METRICS.halfDayEnrichmentActivity,
-      value: numberValue(values.halfDayEnrichmentActivityAppointments ?? 0),
+      value: numberValue(halfDayEnrichmentActivityAppointments),
     },
     {
       metricKey: DAYCARE_KPI_METRICS.avgDailyOccupancy,
       value: numberValue(
-        values.averageDailyOccupancy ??
-          (values.totalNonTrainingAppointments +
-            (values.halfDayDaycareAppointments ?? 0) +
-            (values.fullDayEnrichmentActivityAppointments ?? 0) +
-            (values.halfDayEnrichmentActivityAppointments ?? 0)) /
-              6
+        values.averageDailyOccupancy ?? daycareVisitAppointments / 6
       ),
     },
     {
       metricKey: DAYCARE_KPI_METRICS.evaluations,
-      value: numberValue(values.evaluations ?? 0),
+      value: numberValue(evaluations),
     },
     {
       metricKey: DAYCARE_KPI_METRICS.uniqueClients,
@@ -438,7 +478,9 @@ export async function syncWeeklyDaycareServiceKpis(options?: {
 
   await upsertWeeklyDaycareKpis({
     weekStart: report.weekStart,
+    totalDaycareAppointments: report.totalDaycareAppointments,
     totalNonTrainingAppointments: report.totalNonTrainingAppointments,
+    fullDayDaycareAppointments: report.fullDayDaycareAppointments,
     halfDayDaycareAppointments: report.halfDayDaycareAppointments,
     fullDayEnrichmentActivityAppointments: report.fullDayEnrichmentActivityAppointments,
     halfDayEnrichmentActivityAppointments: report.halfDayEnrichmentActivityAppointments,
