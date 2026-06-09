@@ -89,18 +89,25 @@ const SELECT_CLS =
 
 const SECTION_ORDER: KpiSection[] = ["ACTUALS", "FORECAST"];
 
+const ALL_TAB = "ALL";
+
 export function KpiView({
   segment,
   week,
   data,
+  activeTab,
+  allSegmentsData,
 }: {
   segment: KpiSegment;
   week: string;
   data: Record<string, KpiCell>;
+  activeTab?: string;
+  allSegmentsData?: Record<string, Record<string, KpiCell>>;
 }) {
   const router = useRouter();
   const pathname = usePathname();
   const segmentDef = getSegmentDef(segment);
+  const isAll = activeTab === ALL_TAB;
 
   const [mode, setMode] = useState<EditMode>(null);
   const [draft, setDraft] = useState<Record<string, KpiCell>>({});
@@ -112,7 +119,7 @@ export function KpiView({
   useEffect(() => {
     setMode(null);
     setImportMessage(null);
-  }, [segment, week]);
+  }, [segment, week, isAll]);
 
   function navigate(nextSegment: string, nextWeek: string) {
     router.push(`${pathname}?segment=${nextSegment}&week=${nextWeek}`);
@@ -256,156 +263,264 @@ export function KpiView({
       segment === "TRAINING") &&
     hasMetrics;
 
+  function exportCsv() {
+    if (!allSegmentsData) return;
+    const rows: string[][] = [["Segment", "Section", "KPI", "Value", "Average", "Target"]];
+    for (const segDef of KPI_SEGMENTS) {
+      const segData = allSegmentsData[segDef.key];
+      if (!segData) continue;
+      for (const section of SECTION_ORDER) {
+        const metrics = segDef.metrics.filter((m) => m.section === section);
+        for (const metric of metrics) {
+          const cell = segData[metric.key];
+          rows.push([
+            segDef.label,
+            section,
+            metric.label,
+            formatKpiValue(cell?.value ?? null, metric.format),
+            formatKpiValue(cell?.average ?? null, metric.format),
+            formatKpiValue(cell?.target ?? null, metric.format),
+          ]);
+        }
+      }
+    }
+    const csv = rows.map((r) => r.map((c) => `"${c.replace(/"/g, '""')}"`).join(",")).join("\n");
+    const blob = new Blob([csv], { type: "text/csv" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `kpis-all-${week}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
+  const allTabs = [
+    ...KPI_SEGMENTS.map((s) => ({ id: s.key, label: s.label })),
+    { id: ALL_TAB, label: "All" },
+  ];
+
   return (
     <div>
       <Tabs
-        tabs={KPI_SEGMENTS.map((s) => ({ id: s.key, label: s.label }))}
-        activeTab={segment}
+        tabs={allTabs}
+        activeTab={isAll ? ALL_TAB : segment}
         onChange={(id) => navigate(id, week)}
         className="mb-6"
       />
 
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between mb-6">
-        <WeekPicker week={week} onChange={(w) => navigate(segment, w)} />
-        {hasMetrics &&
-          (mode ? (
-            <div className="flex gap-2">
-              <Button variant="secondary" onClick={() => setMode(null)} disabled={saving}>
-                Cancel
+      {isAll ? (
+        <>
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between mb-6">
+            <WeekPicker week={week} onChange={(w) => navigate(ALL_TAB, w)} />
+            <div className="flex gap-2 print:hidden">
+              <Button variant="secondary" onClick={exportCsv}>
+                Export CSV
               </Button>
-              <Button onClick={save} disabled={saving}>
-                {saving ? "Saving…" : mode === "targets" ? "Save targets" : "Save week"}
-              </Button>
-            </div>
-          ) : (
-            <div className="flex gap-2">
-              {canImportMoego && (
-                <Button
-                  variant="secondary"
-                  onClick={importMoegoActuals}
-                  disabled={importingMoego}
-                >
-                  {importingMoego ? "Importing…" : "Import MoeGo actuals"}
-                </Button>
-              )}
-              <Button variant="secondary" onClick={() => startEdit("week")}>
-                Edit week
-              </Button>
-              <Button variant="secondary" onClick={() => startEdit("targets")}>
-                Edit targets
+              <Button variant="secondary" onClick={() => window.print()}>
+                Print / PDF
               </Button>
             </div>
-          ))}
-      </div>
+          </div>
 
-      {mode === "week" && (
-        <p className="-mt-3 mb-6 text-xs text-gray-500">
-          Value is saved for this week only. Targets and averages are edited separately.
-        </p>
-      )}
-      {mode === "targets" && (
-        <p className="-mt-3 mb-6 text-xs text-gray-500">
-          Targets and averages apply from this week forward, in perpetuity until you change them
-          again — past weeks are not affected — and also fill the matching {sectionLabel(segment, "FORECAST")}
-          rows.
-        </p>
-      )}
-      {importMessage && (
-        <div className="-mt-3 mb-6 rounded-lg border border-blue-100 bg-blue-50 px-3 py-2 text-sm text-blue-900">
-          {importMessage}
-        </div>
-      )}
-
-      {!hasMetrics ? (
-        <Card>
-          <CardContent>
-            <EmptyState
-              icon="📊"
-              title={`${segmentDef.label} KPIs coming soon`}
-              description="This segment's KPIs haven't been defined yet. Once they are, weekly data will appear here."
-            />
-          </CardContent>
-        </Card>
-      ) : (
-        <div className="flex flex-col gap-8">
-          {SECTION_ORDER.map((section) => {
-            const metrics = segmentDef.metrics.filter((m) => m.section === section);
-            if (metrics.length === 0) {
-              if (!showsUnavailableForecast(segment, section)) return null;
+          <div className="flex flex-col gap-8 print:gap-4">
+            {KPI_SEGMENTS.map((segDef) => {
+              const segData = allSegmentsData?.[segDef.key];
+              if (!segData || segDef.metrics.length === 0) return null;
               return (
-                <section key={section}>
-                  <h2 className="text-xs font-semibold uppercase tracking-wider text-gray-500 mb-2">
-                    {sectionLabel(segment, section)}
+                <section key={segDef.key}>
+                  <h2 className="text-lg font-semibold text-gray-900 mb-3 print:text-base">
+                    {segDef.label}
                   </h2>
-                  <Card>
-                    <CardContent className="py-8">
-                      <p className="text-center text-sm font-medium text-gray-500">
-                        Not Available
-                      </p>
-                    </CardContent>
-                  </Card>
-                </section>
-              );
-            }
-            return (
-              <section key={section}>
-                <h2 className="text-xs font-semibold uppercase tracking-wider text-gray-500 mb-2">
-                  {sectionLabel(segment, section)}
-                </h2>
-                <Table>
-                  <TableHead>
-                    <tr>
-                      <TableHeader className="w-12">#</TableHeader>
-                      <TableHeader>KPI</TableHeader>
-                      <TableHeader className="text-right">Value</TableHeader>
-                      <TableHeader className="text-right">Average</TableHeader>
-                      <TableHeader className="text-right">Target</TableHeader>
-                    </tr>
-                  </TableHead>
-                  <TableBody>
-                    {metrics.map((metric, idx) => {
-                      const isMirror = Boolean(metric.mirrorsKey);
+                  <div className="flex flex-col gap-4">
+                    {SECTION_ORDER.map((section) => {
+                      const metrics = segDef.metrics.filter((m) => m.section === section);
+                      if (metrics.length === 0) return null;
                       return (
-                        <TableRow key={metric.key}>
-                          <TableCell className="text-gray-400">{idx + 1}</TableCell>
-                          <TableCell className="font-medium">{metric.label}</TableCell>
-                          {(["value", "average", "target"] as const).map((field) => {
-                            // value is edited in "week" mode; target & average in
-                            // "targets" mode. Forecast (mirror) rows derive their
-                            // target/average from their source, so they're never
-                            // directly editable — they preview the source's live draft.
-                            const editable =
-                              (mode === "week" && field === "value") ||
-                              (mode === "targets" && field !== "value" && !isMirror);
-                            const scaled =
-                              isMirror && field !== "value"
-                                ? (mode === "targets"
-                                    ? draft[metric.mirrorsKey ?? metric.key]?.[field]
-                                    : data[metric.key]?.[field]) ?? null
-                                : (mode ? draft[metric.key] : data[metric.key])?.[field] ?? null;
-                            return (
-                              <TableCell key={field} className="text-right tabular-nums">
-                                {editable ? (
-                                  <KpiInput
-                                    format={metric.format}
-                                    scaled={scaled}
-                                    onChange={(v) => updateDraft(metric.key, field, v)}
-                                  />
-                                ) : (
-                                  formatKpiValue(scaled, metric.format)
-                                )}
-                              </TableCell>
-                            );
-                          })}
-                        </TableRow>
+                        <div key={section}>
+                          <h3 className="text-xs font-semibold uppercase tracking-wider text-gray-500 mb-2">
+                            {sectionLabel(segDef.key, section)}
+                          </h3>
+                          <Table>
+                            <TableHead>
+                              <tr>
+                                <TableHeader className="w-12">#</TableHeader>
+                                <TableHeader>KPI</TableHeader>
+                                <TableHeader className="text-right">Value</TableHeader>
+                                <TableHeader className="text-right">Average</TableHeader>
+                                <TableHeader className="text-right">Target</TableHeader>
+                              </tr>
+                            </TableHead>
+                            <TableBody>
+                              {metrics.map((metric, idx) => {
+                                const cell = segData[metric.key];
+                                return (
+                                  <TableRow key={metric.key}>
+                                    <TableCell className="text-gray-400">{idx + 1}</TableCell>
+                                    <TableCell className="font-medium">{metric.label}</TableCell>
+                                    <TableCell className="text-right tabular-nums">
+                                      {formatKpiValue(cell?.value ?? null, metric.format)}
+                                    </TableCell>
+                                    <TableCell className="text-right tabular-nums">
+                                      {formatKpiValue(cell?.average ?? null, metric.format)}
+                                    </TableCell>
+                                    <TableCell className="text-right tabular-nums">
+                                      {formatKpiValue(cell?.target ?? null, metric.format)}
+                                    </TableCell>
+                                  </TableRow>
+                                );
+                              })}
+                            </TableBody>
+                          </Table>
+                        </div>
                       );
                     })}
-                  </TableBody>
-                </Table>
-              </section>
-            );
-          })}
-        </div>
+                  </div>
+                </section>
+              );
+            })}
+          </div>
+        </>
+      ) : (
+        <>
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between mb-6">
+            <WeekPicker week={week} onChange={(w) => navigate(segment, w)} />
+            {hasMetrics &&
+              (mode ? (
+                <div className="flex gap-2">
+                  <Button variant="secondary" onClick={() => setMode(null)} disabled={saving}>
+                    Cancel
+                  </Button>
+                  <Button onClick={save} disabled={saving}>
+                    {saving ? "Saving…" : mode === "targets" ? "Save targets" : "Save week"}
+                  </Button>
+                </div>
+              ) : (
+                <div className="flex gap-2">
+                  {canImportMoego && (
+                    <Button
+                      variant="secondary"
+                      onClick={importMoegoActuals}
+                      disabled={importingMoego}
+                    >
+                      {importingMoego ? "Importing…" : "Import MoeGo actuals"}
+                    </Button>
+                  )}
+                  <Button variant="secondary" onClick={() => startEdit("week")}>
+                    Edit week
+                  </Button>
+                  <Button variant="secondary" onClick={() => startEdit("targets")}>
+                    Edit targets
+                  </Button>
+                </div>
+              ))}
+          </div>
+
+          {mode === "week" && (
+            <p className="-mt-3 mb-6 text-xs text-gray-500">
+              Value is saved for this week only. Targets and averages are edited separately.
+            </p>
+          )}
+          {mode === "targets" && (
+            <p className="-mt-3 mb-6 text-xs text-gray-500">
+              Targets and averages apply from this week forward, in perpetuity until you change them
+              again — past weeks are not affected — and also fill the matching {sectionLabel(segment, "FORECAST")}
+              rows.
+            </p>
+          )}
+          {importMessage && (
+            <div className="-mt-3 mb-6 rounded-lg border border-blue-100 bg-blue-50 px-3 py-2 text-sm text-blue-900">
+              {importMessage}
+            </div>
+          )}
+
+          {!hasMetrics ? (
+            <Card>
+              <CardContent>
+                <EmptyState
+                  icon="📊"
+                  title={`${segmentDef.label} KPIs coming soon`}
+                  description="This segment's KPIs haven't been defined yet. Once they are, weekly data will appear here."
+                />
+              </CardContent>
+            </Card>
+          ) : (
+            <div className="flex flex-col gap-8">
+              {SECTION_ORDER.map((section) => {
+                const metrics = segmentDef.metrics.filter((m) => m.section === section);
+                if (metrics.length === 0) {
+                  if (!showsUnavailableForecast(segment, section)) return null;
+                  return (
+                    <section key={section}>
+                      <h2 className="text-xs font-semibold uppercase tracking-wider text-gray-500 mb-2">
+                        {sectionLabel(segment, section)}
+                      </h2>
+                      <Card>
+                        <CardContent className="py-8">
+                          <p className="text-center text-sm font-medium text-gray-500">
+                            Not Available
+                          </p>
+                        </CardContent>
+                      </Card>
+                    </section>
+                  );
+                }
+                return (
+                  <section key={section}>
+                    <h2 className="text-xs font-semibold uppercase tracking-wider text-gray-500 mb-2">
+                      {sectionLabel(segment, section)}
+                    </h2>
+                    <Table>
+                      <TableHead>
+                        <tr>
+                          <TableHeader className="w-12">#</TableHeader>
+                          <TableHeader>KPI</TableHeader>
+                          <TableHeader className="text-right">Value</TableHeader>
+                          <TableHeader className="text-right">Average</TableHeader>
+                          <TableHeader className="text-right">Target</TableHeader>
+                        </tr>
+                      </TableHead>
+                      <TableBody>
+                        {metrics.map((metric, idx) => {
+                          const isMirror = Boolean(metric.mirrorsKey);
+                          return (
+                            <TableRow key={metric.key}>
+                              <TableCell className="text-gray-400">{idx + 1}</TableCell>
+                              <TableCell className="font-medium">{metric.label}</TableCell>
+                              {(["value", "average", "target"] as const).map((field) => {
+                                const editable =
+                                  (mode === "week" && field === "value") ||
+                                  (mode === "targets" && field !== "value" && !isMirror);
+                                const scaled =
+                                  isMirror && field !== "value"
+                                    ? (mode === "targets"
+                                        ? draft[metric.mirrorsKey ?? metric.key]?.[field]
+                                        : data[metric.key]?.[field]) ?? null
+                                    : (mode ? draft[metric.key] : data[metric.key])?.[field] ?? null;
+                                return (
+                                  <TableCell key={field} className="text-right tabular-nums">
+                                    {editable ? (
+                                      <KpiInput
+                                        format={metric.format}
+                                        scaled={scaled}
+                                        onChange={(v) => updateDraft(metric.key, field, v)}
+                                      />
+                                    ) : (
+                                      formatKpiValue(scaled, metric.format)
+                                    )}
+                                  </TableCell>
+                                );
+                              })}
+                            </TableRow>
+                          );
+                        })}
+                      </TableBody>
+                    </Table>
+                  </section>
+                );
+              })}
+            </div>
+          )}
+        </>
       )}
     </div>
   );
