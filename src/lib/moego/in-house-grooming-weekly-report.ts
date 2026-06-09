@@ -17,8 +17,8 @@ const IN_HOUSE_GROOMING_KPI_METRICS = {
   totalPetsServiced: "total_pets_serviced",
 } as const;
 
-const SALES_DATE_CANDIDATE_LOOKBACK_WEEKS = 26;
-const SALES_DATE_CANDIDATE_LOOKAHEAD_WEEKS = 52;
+const COMPLETED_DATE_CANDIDATE_LOOKBACK_WEEKS = 26;
+const COMPLETED_DATE_CANDIDATE_LOOKAHEAD_WEEKS = 52;
 
 export type WeeklyInHouseGroomingReport = {
   weekStart: string;
@@ -26,15 +26,15 @@ export type WeeklyInHouseGroomingReport = {
   businessId: string;
   totalFinishedAppointments: number;
   groomingAppointments: number;
-  groomingAppointmentsInSalesWindow: number;
+  groomingAppointmentsInCompletedWindow: number;
   totalPetsServiced: number;
   totalNetSalesCents: number;
   upsellsCents: number;
-  ordersInSalesWindow: number;
+  ordersCompletedInWindow: number;
   serviceCounts: Record<string, number>;
   addonCounts: Record<string, number>;
   appointmentsMissingOrder: number;
-  appointmentsMissingSalesDatetime: number;
+  appointmentsMissingCompletedTime: number;
 };
 
 export type WeeklyInHouseGroomingKpiValues = {
@@ -49,6 +49,7 @@ type OrderMoney = {
   discountCents: number;
   status?: string;
   salesDatetime?: string;
+  completedTime?: string;
 };
 
 function moneyValue(cents: number): number {
@@ -132,14 +133,14 @@ function parseDate(value: string | undefined): Date | null {
   return Number.isNaN(parsed.getTime()) ? null : parsed;
 }
 
-function isSalesDatetimeInWindow(
+function isCompletedTimeInWindow(
   order: OrderMoney | undefined,
   start: Date,
   end: Date
 ): order is OrderMoney {
   if (!isRevenueOrder(order)) return false;
-  const salesDatetime = parseDate(order.salesDatetime);
-  return Boolean(salesDatetime && salesDatetime >= start && salesDatetime < end);
+  const completedTime = parseDate(order.completedTime);
+  return Boolean(completedTime && completedTime >= start && completedTime < end);
 }
 
 async function listFinishedAppointments(
@@ -189,6 +190,7 @@ async function ordersById(
         subTotalCents: toCents(order.subTotalAmount),
         discountCents: toCents(order.discountAmount),
         salesDatetime: order.salesDatetime,
+        completedTime: order.completedTime,
       });
     }
 
@@ -211,8 +213,8 @@ export async function buildWeeklyInHouseGroomingReport(options?: {
   const [weeklyAppointments, salesCandidateAppointments] = await Promise.all([
     listFinishedAppointments(start, end, businessId),
     listFinishedAppointments(
-      addWeeks(start, -SALES_DATE_CANDIDATE_LOOKBACK_WEEKS),
-      addWeeks(end, SALES_DATE_CANDIDATE_LOOKAHEAD_WEEKS),
+      addWeeks(start, -COMPLETED_DATE_CANDIDATE_LOOKBACK_WEEKS),
+      addWeeks(end, COMPLETED_DATE_CANDIDATE_LOOKAHEAD_WEEKS),
       businessId
     ),
   ]);
@@ -236,16 +238,16 @@ export async function buildWeeklyInHouseGroomingReport(options?: {
   let totalNetSalesCents = 0;
   const upsellsCents = 0;
   const totalPetsServiced = new Set<string>();
-  let appointmentsMissingSalesDatetime = 0;
+  let appointmentsMissingCompletedTime = 0;
   const countedOrderIds = new Set<string>();
-  const groomingAppointmentsInSalesWindow = groomingSalesCandidates.filter((appointment) => {
+  const groomingAppointmentsInCompletedWindow = groomingSalesCandidates.filter((appointment) => {
     if (!appointment.orderId) return false;
     const order = orderMoney.get(appointment.orderId);
-    if (!parseDate(order?.salesDatetime)) appointmentsMissingSalesDatetime++;
-    return isSalesDatetimeInWindow(order, start, end);
+    if (!parseDate(order?.completedTime)) appointmentsMissingCompletedTime++;
+    return isCompletedTimeInWindow(order, start, end);
   });
 
-  for (const appointment of groomingAppointmentsInSalesWindow) {
+  for (const appointment of groomingAppointmentsInCompletedWindow) {
     const allLines = serviceDetails(appointment);
     const order = appointment.orderId
       ? orderMoney.get(appointment.orderId)
@@ -285,11 +287,11 @@ export async function buildWeeklyInHouseGroomingReport(options?: {
     businessId,
     totalFinishedAppointments: weeklyAppointments.length,
     groomingAppointments: groomingAppointments.length,
-    groomingAppointmentsInSalesWindow: groomingAppointmentsInSalesWindow.length,
+    groomingAppointmentsInCompletedWindow: groomingAppointmentsInCompletedWindow.length,
     totalPetsServiced: totalPetsServiced.size,
     totalNetSalesCents,
     upsellsCents,
-    ordersInSalesWindow: countedOrderIds.size,
+    ordersCompletedInWindow: countedOrderIds.size,
     serviceCounts: Object.fromEntries(
       [...serviceCounts.entries()].sort(([a], [b]) => a.localeCompare(b))
     ),
@@ -299,7 +301,7 @@ export async function buildWeeklyInHouseGroomingReport(options?: {
     appointmentsMissingOrder: groomingAppointments.filter(
       (appointment) => !appointment.orderId
     ).length,
-    appointmentsMissingSalesDatetime,
+    appointmentsMissingCompletedTime,
   };
 }
 

@@ -45,11 +45,11 @@ type MobileGroomingImportReport = {
 
 type InHouseGroomingImportReport = {
   groomingAppointments: number;
-  groomingAppointmentsInSalesWindow: number;
+  groomingAppointmentsInCompletedWindow: number;
   totalPetsServiced: number;
   totalNetSalesCents: number;
   upsellsCents: number;
-  ordersInSalesWindow: number;
+  ordersCompletedInWindow: number;
 };
 
 type DaycareImportReport = {
@@ -204,7 +204,7 @@ export function KpiView({
         const report = json.report as InHouseGroomingImportReport;
         setImportMessage(
           withImportedAt(
-            `Imported ${report.totalPetsServiced} pets serviced, ${dollars(report.totalNetSalesCents)} grooming net sales, and ${dollars(report.upsellsCents)} upsells from ${report.ordersInSalesWindow} grooming sales in the selected week.`,
+            `Imported ${report.totalPetsServiced} pets serviced, ${dollars(report.totalNetSalesCents)} grooming net sales, and ${dollars(report.upsellsCents)} upsells from ${report.ordersCompletedInWindow} completed grooming orders in the selected week.`,
             importedAt
           )
         );
