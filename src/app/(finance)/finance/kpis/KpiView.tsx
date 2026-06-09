@@ -80,6 +80,7 @@ type BoardingImportReport = {
 type TrainingImportReport = {
   totalFinishedTrainingAppointments: number;
   trainingAppointmentsInSalesWindow: number;
+  trainingEvaluations: number;
   groupRevenueCents: number;
   oneOnOneRevenueCents: number;
   ordersInSalesWindow: number;
@@ -265,7 +266,7 @@ export function KpiView({
         const report = json.report as TrainingImportReport;
         setImportMessage(
           withImportedAt(
-            `Imported ${dollars(report.groupRevenueCents)} group class net sales and ${dollars(report.oneOnOneRevenueCents)} one-on-one training net sales from ${report.ordersInSalesWindow} training sales in the selected week. Product sales is N/A for now.`,
+            `Imported ${report.trainingEvaluations} training evaluations, ${dollars(report.groupRevenueCents)} group class net sales, and ${dollars(report.oneOnOneRevenueCents)} one-on-one training net sales from ${report.ordersInSalesWindow} training sales in the selected week. Product sales is N/A for now.`,
             importedAt
           )
         );

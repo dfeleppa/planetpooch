@@ -14,6 +14,7 @@ const TRAINING_FREE_SERVICE = normalizeServiceName("Training $0");
 const FREE_FIRST_DAY_SERVICE = normalizeServiceName("Free first day");
 const HALF_DAY_DAYCARE_SERVICE = normalizeServiceName("Half day daycare");
 const FULL_DAY_DAYCARE_SERVICE = normalizeServiceName("Full day daycare");
+const DAYCARE_EVALUATION_NAME = normalizeServiceName("Evaluation");
 const FULL_DAY_ENRICHMENT_ACTIVITY_SERVICE =
   normalizeServiceName("Full day enrichment activity");
 const HALF_DAY_ENRICHMENT_ACTIVITY_SERVICE =
@@ -226,7 +227,10 @@ function countEvaluations(appointments: MoegoAppointmentRow[]): number {
       return (
         sum +
         (appointment.petServiceDetails ?? []).reduce((petSum, petService) => {
-          return petSum + (petService.evaluationDetails ?? []).length;
+          const daycareEvaluations = (petService.evaluationDetails ?? []).filter(
+            (evaluation) => normalizeServiceName(evaluation.name) === DAYCARE_EVALUATION_NAME
+          );
+          return petSum + daycareEvaluations.length;
         }, 0)
       );
     }, 0);

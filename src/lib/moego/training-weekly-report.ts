@@ -15,8 +15,10 @@ const TRAINING_KPI_METRICS = {
   productSales: "product_sales",
   groupRevenue: "group_revenue",
   oneOnOneRevenue: "one_on_one_revenue",
+  trainingEvaluations: "training_evaluations",
 } as const;
 
+const TRAINING_EVALUATION_NAME = normalizeServiceName("Training Evaluation");
 const SALES_DATE_CANDIDATE_LOOKBACK_WEEKS = 26;
 const SALES_DATE_CANDIDATE_LOOKAHEAD_WEEKS = 52;
 
@@ -26,6 +28,7 @@ export type WeeklyTrainingReport = {
   businessId: string;
   totalFinishedTrainingAppointments: number;
   trainingAppointmentsInSalesWindow: number;
+  trainingEvaluations: number;
   groupRevenueCents: number;
   oneOnOneRevenueCents: number;
   ordersInSalesWindow: number;
@@ -38,6 +41,7 @@ export type WeeklyTrainingKpiValues = {
   weekStart: string;
   groupRevenueCents: number;
   oneOnOneRevenueCents: number;
+  trainingEvaluations?: number;
 };
 
 const GROUP_CLASS_KEYWORDS = [
@@ -80,6 +84,20 @@ function normalizeServiceName(name: string | undefined): string {
     .replace(/-/g, " ")
     .replace(/\s+/g, " ")
     .trim();
+}
+
+function countTrainingEvaluations(appointments: MoegoAppointmentRow[]): number {
+  return appointments.reduce((sum, appointment) => {
+    return (
+      sum +
+      (appointment.petServiceDetails ?? []).reduce((petSum, petService) => {
+        const trainingEvaluations = (petService.evaluationDetails ?? []).filter(
+          (evaluation) => normalizeServiceName(evaluation.name) === TRAINING_EVALUATION_NAME
+        );
+        return petSum + trainingEvaluations.length;
+      }, 0)
+    );
+  }, 0);
 }
 
 function isTrainingService(service: MoegoAppointmentServiceDetail): boolean {
@@ -278,6 +296,7 @@ export async function buildWeeklyTrainingReport(options?: {
   const trainingAppointments = weeklyAppointments.filter((appointment) =>
     serviceDetails(appointment).some(isTrainingService)
   );
+  const trainingEvaluations = countTrainingEvaluations(weeklyAppointments);
   const trainingSalesCandidates = uniqueAppointments(salesCandidateAppointments).filter((appointment) =>
     serviceDetails(appointment).some(isTrainingService)
   );
@@ -373,6 +392,7 @@ export async function buildWeeklyTrainingReport(options?: {
     businessId,
     totalFinishedTrainingAppointments: trainingAppointments.length,
     trainingAppointmentsInSalesWindow: trainingAppointmentsInSalesWindow.length,
+    trainingEvaluations,
     groupRevenueCents,
     oneOnOneRevenueCents,
     ordersInSalesWindow: countedOrderIds.size,
@@ -402,6 +422,10 @@ export async function upsertWeeklyTrainingKpis(
     {
       metricKey: TRAINING_KPI_METRICS.oneOnOneRevenue,
       value: moneyValue(values.oneOnOneRevenueCents),
+    },
+    {
+      metricKey: TRAINING_KPI_METRICS.trainingEvaluations,
+      value: Math.round((values.trainingEvaluations ?? 0) * 100),
     },
   ];
 
@@ -438,6 +462,7 @@ export async function syncWeeklyTrainingKpis(options?: {
     weekStart: report.weekStart,
     groupRevenueCents: report.groupRevenueCents,
     oneOnOneRevenueCents: report.oneOnOneRevenueCents,
+    trainingEvaluations: report.trainingEvaluations,
   });
 
   return report;

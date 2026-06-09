@@ -121,6 +121,7 @@ export const KPI_SEGMENTS: KpiSegmentDef[] = [
       { key: "product_sales", label: "Product sales", section: "ACTUALS", format: "currency" },
       { key: "group_revenue", label: "Group revenue", section: "ACTUALS", format: "currency" },
       { key: "one_on_one_revenue", label: "1:1 revenue", section: "ACTUALS", format: "currency" },
+      { key: "training_evaluations", label: "Training evaluations", section: "ACTUALS", format: "number" },
     ],
   },
   {
