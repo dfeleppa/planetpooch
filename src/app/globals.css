@@ -299,6 +299,9 @@ body {
 }
 
 /* Roster table (Variation A) */
+.pp-employees-page {
+  min-height: 0;
+}
 .pp-roster {
   background: var(--color-pp-surface);
   border: 1px solid var(--color-pp-line);
@@ -358,6 +361,9 @@ body {
   font-weight: 500;
   padding-top: 8px;
   padding-bottom: 8px;
+  position: sticky;
+  top: 0;
+  z-index: 3;
 }
 .pp-row {
   border-bottom: 1px solid var(--color-pp-line-soft);
@@ -584,7 +590,29 @@ body {
   }
 }
 
+@media (min-width: 768px) {
+  .pp-employees-page {
+    height: calc(100dvh - 4rem);
+    overflow: hidden;
+  }
+
+  .pp-employees-page .pp-roster {
+    flex: 1 1 auto;
+    min-height: 260px;
+    overflow: auto;
+  }
+
+  .pp-employees-page .pp-pagination {
+    flex: 0 0 auto;
+    margin-top: -8px;
+  }
+}
+
 @media (max-width: 767px) {
+  .pp-roster-head {
+    position: static;
+  }
+
   /* Page head: stack the title and primary actions */
   .pp-h1 {
     font-size: 22px;

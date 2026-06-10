@@ -72,19 +72,31 @@ function parseProgress(raw: string | undefined): ProgressFilter {
 function prismaOrderBy(sort: SortKey): Prisma.UserOrderByWithRelationInput[] | null {
   switch (sort) {
     case "name":
-      return [{ lastName: "asc" }, { firstName: "asc" }];
+      return [{ firstName: "asc" }, { lastName: "asc" }];
     case "hired-new":
-      return [{ hireDate: { sort: "desc", nulls: "last" } }, { lastName: "asc" }];
+      return [
+        { hireDate: { sort: "desc", nulls: "last" } },
+        { firstName: "asc" },
+        { lastName: "asc" },
+      ];
     case "hired-old":
-      return [{ hireDate: { sort: "asc", nulls: "last" } }, { lastName: "asc" }];
+      return [
+        { hireDate: { sort: "asc", nulls: "last" } },
+        { firstName: "asc" },
+        { lastName: "asc" },
+      ];
     case "terminated-new":
-      return [{ terminatedAt: "desc" }, { lastName: "asc" }];
+      return [{ terminatedAt: "desc" }, { firstName: "asc" }, { lastName: "asc" }];
     case "terminated-old":
-      return [{ terminatedAt: "asc" }, { lastName: "asc" }];
+      return [{ terminatedAt: "asc" }, { firstName: "asc" }, { lastName: "asc" }];
     case "progress-high":
     case "progress-low":
       return null;
   }
+}
+
+function employeeDisplayName(employee: { firstName: string; lastName: string }): string {
+  return `${employee.firstName} ${employee.lastName}`;
 }
 
 function relTime(date: Date): string {
@@ -276,7 +288,7 @@ export default async function AdminEmployeesPage({
     const dir = sort === "progress-high" ? -1 : 1;
     filtered = [...filtered].sort((a, b) => {
       if (a.completed !== b.completed) return (a.completed - b.completed) * dir;
-      return a.name.localeCompare(b.name);
+      return employeeDisplayName(a).localeCompare(employeeDisplayName(b));
     });
   }
 
@@ -329,7 +341,7 @@ export default async function AdminEmployeesPage({
   );
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="pp-employees-page flex flex-col gap-6">
       {/* Page head */}
       <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 sm:gap-6">
         <div>
@@ -457,7 +469,7 @@ export default async function AdminEmployeesPage({
                     href={`/admin/employees/${emp.id}`}
                     className="pp-name pp-name-link"
                   >
-                    {emp.lastName}, {emp.firstName}
+                    {employeeDisplayName(emp)}
                   </Link>
                   {emp.atRisk && <span className="pp-flag pp-flag-warn">At risk</span>}
                   {emp.isDone && <span className="pp-flag pp-flag-ok">Complete</span>}
