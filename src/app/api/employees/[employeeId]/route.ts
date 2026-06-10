@@ -3,6 +3,7 @@ import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { getSession, getCompanyFilter, hasEmployeeManagementAccess, isSuperAdmin } from "@/lib/auth-helpers";
 import { Company, Role } from "@prisma/client";
+import { getVisibleModuleIdsForUser } from "@/lib/module-visibility";
 
 export async function GET(req: NextRequest, { params }: { params: Promise<{ employeeId: string }> }) {
   const session = await getSession();
@@ -34,6 +35,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ empl
       lastName: true,
       role: true,
       company: true,
+      jobTitle: true,
       createdAt: true,
     },
   });
@@ -47,7 +49,14 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ empl
     return NextResponse.json({ error: "Employee not found" }, { status: 404 });
   }
 
+  const visibleModuleIds = await getVisibleModuleIdsForUser(
+    employee.id,
+    employee.jobTitle,
+    employee.company,
+  );
+
   const modules = await prisma.module.findMany({
+    where: { id: { in: [...visibleModuleIds] } },
     orderBy: { order: "asc" },
     include: {
       subsections: {

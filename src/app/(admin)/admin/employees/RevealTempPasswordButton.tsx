@@ -8,11 +8,10 @@ interface Props {
 }
 
 /**
- * Stopgap for super admins until transactional email is configured.
- * Generates a fresh temp password server-side and reveals it once. Each
- * click invalidates the previous value. Server enforces SUPER_ADMIN — this
- * component should still only be rendered for super admins to avoid
- * showing managers a button they can't use.
+ * Super-admin recovery flow. Generates a fresh temp password server-side and
+ * reveals it once. Each click invalidates the previous value. Server enforces
+ * SUPER_ADMIN — this component should still only be rendered for super admins
+ * to avoid showing managers a button they can't use.
  */
 export function RevealTempPasswordButton({ employeeId }: Props) {
   const [generating, setGenerating] = useState(false);

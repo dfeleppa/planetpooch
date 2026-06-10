@@ -85,9 +85,13 @@ export default async function CareerPage() {
 
   const user = await prisma.user.findUnique({
     where: { id: userId },
-    select: { jobTitle: true },
+    select: { jobTitle: true, company: true },
   });
-  const visibleIds = await getVisibleModuleIdsForUser(userId, user?.jobTitle ?? null);
+  const visibleIds = await getVisibleModuleIdsForUser(
+    userId,
+    user?.jobTitle ?? null,
+    user?.company ?? null,
+  );
 
   const [modules, completions] = await Promise.all([
     prisma.module.findMany({

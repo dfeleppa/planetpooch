@@ -7,7 +7,6 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { AvailabilityEditor, type AvailabilityEntry } from "@/components/AvailabilityEditor";
-import { SendWelcomeEmailButton } from "../SendWelcomeEmailButton";
 import { RevealTempPasswordButton } from "../RevealTempPasswordButton";
 
 type Role = "SUPER_ADMIN" | "MANAGER" | "EMPLOYEE" | "MARKETING" | "ADMIN";
@@ -237,33 +236,14 @@ export function NewEmployeeForm({
             </p>
           </div>
 
-          <div className="rounded-lg border border-blue-200 bg-blue-50 p-4">
-            <p className="text-sm font-medium text-blue-900">
-              Send the welcome email
-            </p>
-            <p className="text-xs text-blue-800 mt-1">
-              This generates a temporary password and emails it to the employee
-              along with a link to sign in. They&apos;ll be required to change it
-              on first login. You can resend later from the employee&apos;s page.
-            </p>
-            <div className="mt-3">
-              <SendWelcomeEmailButton
-                employeeId={result.user.id}
-                disabled={!hasRealEmail}
-                disabledHint="No email on file — add one on the employee's page to send a welcome email."
-              />
-            </div>
-          </div>
-
           {isSuperAdmin && (
             <div className="rounded-lg border border-gray-200 bg-gray-50 p-4">
               <p className="text-sm font-medium text-gray-900">
-                Or generate a temp password manually
+                Generate a temp password
               </p>
               <p className="text-xs text-gray-600 mt-1">
-                Use this while transactional email isn&apos;t configured. Share
-                the password securely; generating again invalidates the
-                previous one.
+                Share the password securely. Generating again invalidates the
+                previous temp password.
               </p>
               <div className="mt-3">
                 <RevealTempPasswordButton employeeId={result.user.id} />

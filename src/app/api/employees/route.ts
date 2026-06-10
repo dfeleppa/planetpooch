@@ -6,6 +6,7 @@ import { generateTempPassword } from "@/lib/onboarding";
 import { createEmployeeFolder } from "@/lib/drive";
 import { isValidDayOfWeek, isValidTimeSlot } from "@/lib/availability";
 import { Company, DayOfWeek, Role } from "@prisma/client";
+import { getVisibleModuleIdsForUsers } from "@/lib/module-visibility";
 
 export async function GET(req: NextRequest) {
   const session = await getSession();
@@ -66,6 +67,13 @@ export async function GET(req: NextRequest) {
       },
     },
   });
+  const visibleModuleIdsByEmployee = await getVisibleModuleIdsForUsers(
+    employees.map((emp) => ({
+      id: emp.id,
+      jobTitle: emp.jobTitle,
+      company: emp.company,
+    })),
+  );
 
   const allCompletions = await prisma.lessonCompletion.findMany({
     where: { isCompleted: true },
@@ -85,19 +93,22 @@ export async function GET(req: NextRequest) {
     let totalLessons = 0;
     let totalCompleted = 0;
 
-    const moduleProgress = modules.map((mod) => {
-      const lessons = mod.subsections.flatMap((s) => s.lessons);
-      const total = lessons.length;
-      const completed = lessons.filter((l) => userCompletions.has(l.id)).length;
-      totalLessons += total;
-      totalCompleted += completed;
-      return {
-        moduleId: mod.id,
-        moduleTitle: mod.title,
-        totalLessons: total,
-        completedLessons: completed,
-      };
-    });
+    const visibleModuleIds = visibleModuleIdsByEmployee.get(emp.id) ?? new Set();
+    const moduleProgress = modules
+      .filter((mod) => visibleModuleIds.has(mod.id))
+      .map((mod) => {
+        const lessons = mod.subsections.flatMap((s) => s.lessons);
+        const total = lessons.length;
+        const completed = lessons.filter((l) => userCompletions.has(l.id)).length;
+        totalLessons += total;
+        totalCompleted += completed;
+        return {
+          moduleId: mod.id,
+          moduleTitle: mod.title,
+          totalLessons: total,
+          completedLessons: completed,
+        };
+      });
 
     return {
       ...emp,
@@ -269,9 +280,8 @@ export async function POST(req: NextRequest) {
       assignedRole = "MANAGER";
     }
 
-    // Seed with a random password the admin never sees. Until they click
-    // "Send welcome email" the account effectively can't log in — that flow
-    // resets the password and emails the new value to the employee.
+    // Seed with a random password the admin never sees. Super admins can
+    // generate a temporary password after creation when portal access is needed.
     const seedPassword = generateTempPassword();
     const passwordHash = await bcrypt.hash(seedPassword, 10);
 

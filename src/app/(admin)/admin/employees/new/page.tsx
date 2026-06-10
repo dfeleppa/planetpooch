@@ -61,8 +61,7 @@ export default async function NewEmployeePage() {
         </Link>
         <h1 className="text-2xl font-bold text-gray-900 mt-2">Add Employee</h1>
         <p className="text-gray-500 mt-1">
-          Create a new account. After creation you can email the employee a
-          temporary password and a link to sign in.
+          Create a new employee record and set up their portal access.
         </p>
       </div>
       <NewEmployeeForm

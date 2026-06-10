@@ -41,9 +41,13 @@ export default async function DashboardPage() {
     (async () => {
       const me = await prisma.user.findUnique({
         where: { id: userId },
-        select: { jobTitle: true },
+        select: { jobTitle: true, company: true },
       });
-      const ids = await getVisibleModuleIdsForUser(userId, me?.jobTitle ?? null);
+      const ids = await getVisibleModuleIdsForUser(
+        userId,
+        me?.jobTitle ?? null,
+        me?.company ?? null,
+      );
       return prisma.module.findMany({
         where: { id: { in: [...ids] } },
         orderBy: { order: "asc" },

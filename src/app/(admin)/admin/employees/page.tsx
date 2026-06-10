@@ -6,6 +6,7 @@ import { Company, Prisma, Role } from "@prisma/client";
 import { EmployeeFilters } from "./EmployeeFilters";
 import { RosterShell } from "./RosterShell";
 import { REQUIRED_DOCUMENT_CATEGORIES } from "@/lib/employee-documents";
+import { getVisibleModuleIdsForUsers } from "@/lib/module-visibility";
 
 const COMPANY_LABELS: Record<Company, string> = {
   GROOMING: "Planet Pooch Grooming",
@@ -14,9 +15,9 @@ const COMPANY_LABELS: Record<Company, string> = {
 };
 
 const COMPANY_SHORT: Record<Company, string> = {
-  GROOMING: "PPG",
-  RESORT: "PPR",
-  CORPORATE: "PPC",
+  GROOMING: "Mobile",
+  RESORT: "Resort",
+  CORPORATE: "Corporate",
 };
 
 const ROLE_LABELS: Partial<Record<Role, string>> = {
@@ -194,16 +195,57 @@ export default async function AdminEmployeesPage({
     },
   });
 
-  const totalLessons = await prisma.lesson.count();
+  const visibleModuleIdsByEmployee = await getVisibleModuleIdsForUsers(
+    employees.map((emp) => ({
+      id: emp.id,
+      jobTitle: emp.jobTitle,
+      company: emp.company,
+    })),
+  );
+
+  const modulesForProgress = await prisma.module.findMany({
+    select: {
+      id: true,
+      subsections: {
+        select: {
+          lessons: { select: { id: true } },
+        },
+      },
+    },
+  });
+
+  const lessonIdsByModule = new Map(
+    modulesForProgress.map((mod) => [
+      mod.id,
+      mod.subsections.flatMap((subsection) =>
+        subsection.lessons.map((lesson) => lesson.id),
+      ),
+    ]),
+  );
+
+  const visibleLessonIdsByEmployee = new Map<string, Set<string>>();
+  const totalLessonsByEmployee = new Map<string, number>();
+  for (const emp of employees) {
+    const visibleLessonIds = new Set<string>();
+    for (const moduleId of visibleModuleIdsByEmployee.get(emp.id) ?? []) {
+      for (const lessonId of lessonIdsByModule.get(moduleId) ?? []) {
+        visibleLessonIds.add(lessonId);
+      }
+    }
+    visibleLessonIdsByEmployee.set(emp.id, visibleLessonIds);
+    totalLessonsByEmployee.set(emp.id, visibleLessonIds.size);
+  }
 
   const completions = await prisma.lessonCompletion.findMany({
     where: { isCompleted: true, userId: { in: employees.map((e) => e.id) } },
-    select: { userId: true },
+    select: { userId: true, lessonId: true },
   });
 
   const completionCounts = new Map<string, number>();
   for (const c of completions) {
-    completionCounts.set(c.userId, (completionCounts.get(c.userId) || 0) + 1);
+    if (visibleLessonIdsByEmployee.get(c.userId)?.has(c.lessonId)) {
+      completionCounts.set(c.userId, (completionCounts.get(c.userId) || 0) + 1);
+    }
   }
 
   // Required-doc tracker: count how many distinct REQUIRED categories each
@@ -239,6 +281,7 @@ export default async function AdminEmployeesPage({
 
   const decorated: Decorated[] = employees.map((emp) => {
     const completed = completionCounts.get(emp.id) ?? 0;
+    const totalLessons = totalLessonsByEmployee.get(emp.id) ?? 0;
     const hasTraining = emp.role === "EMPLOYEE" && totalLessons > 0;
     const pct = hasTraining ? Math.round((completed / totalLessons) * 100) : 0;
     const tenure = tenureDays(emp.hireDate, emp.createdAt);
@@ -287,6 +330,7 @@ export default async function AdminEmployeesPage({
   if (sort === "progress-high" || sort === "progress-low") {
     const dir = sort === "progress-high" ? -1 : 1;
     filtered = [...filtered].sort((a, b) => {
+      if (a.pct !== b.pct) return (a.pct - b.pct) * dir;
       if (a.completed !== b.completed) return (a.completed - b.completed) * dir;
       return employeeDisplayName(a).localeCompare(employeeDisplayName(b));
     });
@@ -496,7 +540,7 @@ export default async function AdminEmployeesPage({
                 {emp.hasTraining ? (
                   <span className="pp-mono">
                     {emp.completed}
-                    <span className="pp-mono-dim">/{totalLessons}</span>
+                    <span className="pp-mono-dim">/{totalLessonsByEmployee.get(emp.id) ?? 0}</span>
                   </span>
                 ) : (
                   <span className="pp-mono pp-mono-dim">—</span>

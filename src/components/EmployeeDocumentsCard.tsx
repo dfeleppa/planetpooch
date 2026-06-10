@@ -39,6 +39,7 @@ interface Props {
   ssCardNotNeeded: boolean;
   initialIssues: DocumentIssue[];
   initialDocuments: DocumentRow[];
+  children?: React.ReactNode;
 }
 
 const CATEGORY_OPTIONS: { value: EmployeeDocumentCategory; label: string }[] = [
@@ -58,6 +59,7 @@ export function EmployeeDocumentsCard({
   ssCardNotNeeded: initialSsCardNotNeeded,
   initialIssues,
   initialDocuments,
+  children,
 }: Props) {
   const router = useRouter();
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -488,6 +490,11 @@ export function EmployeeDocumentsCard({
             </li>
           ))}
         </ul>
+        {children && (
+          <div className="border-t border-gray-100 pt-4">
+            {children}
+          </div>
+        )}
       </CardContent>
     </Card>
   );

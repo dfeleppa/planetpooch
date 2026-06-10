@@ -10,7 +10,6 @@ import { Company, Role } from "@prisma/client";
 import { EditEmployeeForm } from "./EditEmployeeForm";
 import { EsignRequestsCard } from "./EsignRequestsCard";
 import { DriveFolderCard } from "./DriveFolderCard";
-import { SendWelcomeEmailButton } from "../SendWelcomeEmailButton";
 import { RevealTempPasswordButton } from "../RevealTempPasswordButton";
 import { EmployeeDocumentsCard } from "@/components/EmployeeDocumentsCard";
 import { DangerZoneCard } from "./DangerZoneCard";
@@ -29,6 +28,14 @@ function addTitle(
   title: string
 ) {
   if (title.trim()) options[company].add(title.trim());
+}
+
+function latestDate(...dates: Array<Date | null | undefined>): Date | null {
+  const timestamps = dates
+    .filter((date): date is Date => date instanceof Date)
+    .map((date) => date.getTime());
+  if (timestamps.length === 0) return null;
+  return new Date(Math.max(...timestamps));
 }
 
 export default async function EmployeeDetailPage({ params }: { params: Promise<{ employeeId: string }> }) {
@@ -180,6 +187,20 @@ export default async function EmployeeDetailPage({ params }: { params: Promise<{
   ) as Record<Company, string[]>;
 
   const availabilityByDay = new Map(availability.map((a) => [a.dayOfWeek, a]));
+  const availabilityRows = DAYS_OF_WEEK.map((day) => {
+    const entry = availabilityByDay.get(day.value);
+    return {
+      day: day.label,
+      value: entry
+        ? `${formatTimeLabel(entry.startTime)} – ${formatTimeLabel(entry.endTime)}`
+        : "Unavailable",
+      isAvailable: !!entry,
+    };
+  });
+  const latestTrackedActivityAt = latestDate(
+    employee.lastLoginAt,
+    recentAudit[0]?.timestamp,
+  );
 
   const driveFolderWebLink = employee.driveFolderId
     ? await getFileWebLink(employee.driveFolderId)
@@ -244,6 +265,7 @@ export default async function EmployeeDetailPage({ params }: { params: Promise<{
           canAssignSuperAdmin={sessionUser.role === "SUPER_ADMIN"}
           canEditRole={sessionUser.role === "SUPER_ADMIN"}
           jobTitleOptions={jobTitleOptions}
+          availabilityRows={availabilityRows}
         />
       </div>
 
@@ -254,32 +276,18 @@ export default async function EmployeeDetailPage({ params }: { params: Promise<{
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="text-sm">
-              <span className="font-medium text-gray-700">Last sign-in:</span>{" "}
+              <span className="font-medium text-gray-700">Last tracked activity:</span>{" "}
               <span className="text-gray-600">
-                {employee.lastLoginAt
-                  ? formatDateTime(employee.lastLoginAt)
-                  : "Never signed in"}
+                {latestTrackedActivityAt
+                  ? formatDateTime(latestTrackedActivityAt)
+                  : "No tracked activity yet"}
               </span>
             </div>
-            <div className="border-t border-gray-100 pt-4">
-              <p className="text-sm text-gray-700 mb-3">
-                Send the employee a welcome email with a fresh temporary password
-                and a link to sign in. Each send invalidates any previously issued
-                temp password.
-              </p>
-              <SendWelcomeEmailButton
-                employeeId={employee.id}
-                disabled={employee.email.endsWith("@placeholder.local")}
-                disabledHint="No email on file — add one above to send a welcome email."
-              />
-            </div>
-
             {sessionUser.role === "SUPER_ADMIN" && (
               <div className="border-t border-gray-100 pt-4">
                 <p className="text-sm text-gray-700 mb-3">
-                  <span className="font-medium">Or generate a temp password manually.</span>{" "}
-                  Use this while transactional email isn&apos;t configured, or to
-                  recover access if the welcome email was lost. Generating
+                  <span className="font-medium">Generate a temp password.</span>{" "}
+                  Use this to set up or recover portal access. Generating
                   invalidates any previously issued temp password.
                 </p>
                 <RevealTempPasswordButton employeeId={employee.id} />
@@ -323,56 +331,27 @@ export default async function EmployeeDetailPage({ params }: { params: Promise<{
             uploadedAt: d.uploadedAt.toISOString(),
             uploadedBy: d.uploadedBy,
           }))}
-        />
-      </div>
-
-      <Card className="mt-6">
-        <CardHeader>
-          <h2 className="font-semibold text-gray-900">Availability</h2>
-        </CardHeader>
-        <CardContent className="p-0">
-          <ul className="divide-y divide-gray-100">
-            {DAYS_OF_WEEK.map((day) => {
-              const entry = availabilityByDay.get(day.value);
-              return (
-                <li
-                  key={day.value}
-                  className="flex items-center justify-between px-6 py-2 text-sm"
-                >
-                  <span className="text-gray-900">{day.label}</span>
-                  {entry ? (
-                    <span className="text-gray-600">
-                      {formatTimeLabel(entry.startTime)} – {formatTimeLabel(entry.endTime)}
-                    </span>
-                  ) : (
-                    <span className="text-gray-400">Unavailable</span>
-                  )}
-                </li>
-              );
-            })}
-          </ul>
-        </CardContent>
-      </Card>
-
-      <div className="mt-6">
-        <EsignRequestsCard
-          employeeId={employee.id}
-          employeeHasEmail={!employee.email.endsWith("@placeholder.local")}
-          employeeHasDriveFolder={!!employee.driveFolderId}
-          isTerminated={isTerminated}
-          signableDocuments={signableDocuments}
-          initialRequests={esignRequests.map((r) => ({
-            id: r.id,
-            status: r.status,
-            sentAt: r.sentAt.toISOString(),
-            signedAt: r.signedAt ? r.signedAt.toISOString() : null,
-            cancelledAt: r.cancelledAt ? r.cancelledAt.toISOString() : null,
-            signedFileDriveId: r.signedFileDriveId,
-            signableDocument: r.signableDocument,
-            requestedBy: r.requestedBy ?? { id: "", name: "(removed)" },
-            verifiedBy: r.verifiedBy,
-          }))}
-        />
+        >
+          <EsignRequestsCard
+            employeeId={employee.id}
+            employeeHasEmail={!employee.email.endsWith("@placeholder.local")}
+            employeeHasDriveFolder={!!employee.driveFolderId}
+            isTerminated={isTerminated}
+            signableDocuments={signableDocuments}
+            initialRequests={esignRequests.map((r) => ({
+              id: r.id,
+              status: r.status,
+              sentAt: r.sentAt.toISOString(),
+              signedAt: r.signedAt ? r.signedAt.toISOString() : null,
+              cancelledAt: r.cancelledAt ? r.cancelledAt.toISOString() : null,
+              signedFileDriveId: r.signedFileDriveId,
+              signableDocument: r.signableDocument,
+              requestedBy: r.requestedBy ?? { id: "", name: "(removed)" },
+              verifiedBy: r.verifiedBy,
+            }))}
+            embedded
+          />
+        </EmployeeDocumentsCard>
       </div>
 
       <div className="mt-6">

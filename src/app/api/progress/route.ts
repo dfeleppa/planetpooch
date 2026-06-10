@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/auth-helpers";
+import { getVisibleModuleIdsForUser } from "@/lib/module-visibility";
 
 export async function GET() {
   const session = await getSession();
@@ -8,7 +9,18 @@ export async function GET() {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
+  const user = await prisma.user.findUnique({
+    where: { id: session.user.id },
+    select: { jobTitle: true, company: true },
+  });
+  const visibleModuleIds = await getVisibleModuleIdsForUser(
+    session.user.id,
+    user?.jobTitle ?? null,
+    user?.company ?? null,
+  );
+
   const modules = await prisma.module.findMany({
+    where: { id: { in: [...visibleModuleIds] } },
     orderBy: { order: "asc" },
     include: {
       subsections: {

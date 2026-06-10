@@ -6,12 +6,10 @@ import { generateTempPassword } from "@/lib/onboarding";
 
 /**
  * POST — generate a fresh temp password for the employee and return the
- * plaintext to the caller. Super admin only — managers must use the email
- * flow which never reveals the plaintext to a human-readable response.
+ * plaintext to the caller. Super admin only because this reveals a credential
+ * in a human-readable response.
  *
- * This is a stopgap for the period before transactional email is configured,
- * and a recovery path if an admin loses an unsent password. Each call
- * invalidates any previously issued temp password.
+ * Each call invalidates any previously issued temp password.
  */
 export async function POST(
   _req: NextRequest,

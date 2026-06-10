@@ -26,6 +26,11 @@ interface Props {
   canAssignSuperAdmin: boolean;
   canEditRole: boolean;
   jobTitleOptions: Record<Company, string[]>;
+  availabilityRows?: {
+    day: string;
+    value: string;
+    isAvailable: boolean;
+  }[];
 }
 
 const COMPANY_LABELS: Record<Company, string> = {
@@ -46,6 +51,7 @@ export function EditEmployeeForm({
   canAssignSuperAdmin,
   canEditRole,
   jobTitleOptions,
+  availabilityRows = [],
 }: Props) {
   const router = useRouter();
   const [editing, setEditing] = useState(false);
@@ -145,6 +151,30 @@ export function EditEmployeeForm({
             label="Hire Date"
             value={employee.hireDate ? employee.hireDate.slice(0, 10) : "—"}
           />
+          {availabilityRows.length > 0 && (
+            <div className="sm:col-span-2 border-t border-gray-100 pt-4 mt-1">
+              <div className="text-xs uppercase tracking-wide text-gray-500 mb-2">
+                Availability
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-2">
+                {availabilityRows.map((row) => (
+                  <div
+                    key={row.day}
+                    className="flex items-center justify-between gap-4"
+                  >
+                    <span className="text-gray-900">{row.day}</span>
+                    <span
+                      className={
+                        row.isAvailable ? "text-gray-600" : "text-gray-400"
+                      }
+                    >
+                      {row.value}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </CardContent>
       </Card>
     );

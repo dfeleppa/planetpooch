@@ -44,6 +44,7 @@ interface Props {
   isTerminated?: boolean;
   signableDocuments: SignableDocument[];
   initialRequests: EsignRequest[];
+  embedded?: boolean;
 }
 
 export function EsignRequestsCard({
@@ -53,6 +54,7 @@ export function EsignRequestsCard({
   isTerminated = false,
   signableDocuments,
   initialRequests,
+  embedded = false,
 }: Props) {
   const router = useRouter();
   const [requests, setRequests] = useState(initialRequests);
@@ -157,12 +159,8 @@ export function EsignRequestsCard({
     }
   }
 
-  return (
-    <Card>
-      <CardHeader>
-        <h2 className="font-semibold text-gray-900">eSignature Requests</h2>
-      </CardHeader>
-      <CardContent className="space-y-4">
+  const body = (
+    <CardContent className={embedded ? "space-y-4 p-0" : "space-y-4"}>
         {isTerminated && (
           <p className="text-sm text-gray-600 bg-gray-50 border border-gray-200 rounded-lg px-3 py-2">
             This employee is no longer active — new eSign requests are disabled.
@@ -337,6 +335,25 @@ export function EsignRequestsCard({
           })}
         </ul>
       </CardContent>
+  );
+
+  if (embedded) {
+    return (
+      <section className="space-y-4">
+        <h3 className="text-sm font-semibold text-gray-900">
+          eSignature Requests
+        </h3>
+        {body}
+      </section>
+    );
+  }
+
+  return (
+    <Card>
+      <CardHeader>
+        <h2 className="font-semibold text-gray-900">eSignature Requests</h2>
+      </CardHeader>
+      {body}
     </Card>
   );
 }

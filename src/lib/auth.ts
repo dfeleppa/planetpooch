@@ -90,9 +90,20 @@ export const authOptions: NextAuthOptions = {
             company: true,
             jobTitle: true,
             terminatedAt: true,
+            lastLoginAt: true,
           },
         });
         if (fresh) {
+          if (!fresh.terminatedAt && !fresh.lastLoginAt) {
+            try {
+              await prisma.user.update({
+                where: { id: token.id as string },
+                data: { lastLoginAt: new Date() },
+              });
+            } catch (err) {
+              console.error("[auth.jwt] lastLoginAt backfill failed:", err);
+            }
+          }
           token.mustChangePassword = fresh.mustChangePassword;
           token.role = fresh.role;
           token.company = fresh.company;
