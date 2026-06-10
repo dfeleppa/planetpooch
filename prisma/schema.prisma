@@ -1076,6 +1076,38 @@ model FinanceLeadSourceReportRow {
   @@index([reportType])
 }
 
+/// Editable Facebook campaign CSV import rows for finance reporting. Each
+/// import is stored against the business and period specified at import time.
+model FinanceFacebookCampaignReportRow {
+  id                  String   @id @default(cuid())
+  business            String
+  periodStart         DateTime @db.Date
+  periodEnd           DateTime @db.Date
+  rowOrder            Int      @default(0)
+  campaignId          String?
+  campaign            String
+  status              String?
+  clicks              Int?
+  costCents           Int?
+  revenueCents        Int?
+  roiPercent          Int?
+  cpcCents            Int?
+  ctrPercent          Int?
+  sales               Int?
+  cpsCents            Int?
+  leads               Int?
+  cplCents            Int?
+  impressions         Int?
+  averageRevenueCents Int?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([business, periodStart, periodEnd, rowOrder])
+  @@index([business, periodStart, periodEnd])
+  @@index([campaignId])
+}
+
 // Weekly KPI reports per business segment. One weekStart = one report; both
 // the "Last Week — Actuals" and "Next Week — Forecast" metrics live as distinct
 // metricKey rows under the same weekStart (the section is defined in

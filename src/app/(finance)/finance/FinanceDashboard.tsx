@@ -4,6 +4,7 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useState, useTransition } from "react";
 import { cn } from "@/lib/utils";
 import { Card, CardContent } from "@/components/ui/card";
+import { FacebookCampaignReportTable } from "./FacebookCampaignReportTable";
 import { LeadSourceReportTable } from "./LeadSourceReportTable";
 
 const BUSINESSES = [
@@ -454,6 +455,7 @@ export function FinanceDashboard({
       </div>
 
       <LeadSourceReportTable business={business} from={from} to={to} />
+      <FacebookCampaignReportTable business={business} from={from} to={to} />
 
       {/* Manual entry form */}
       {isManual && loaded && (

@@ -896,7 +896,7 @@ body {
 
 @media print {
   aside,
-  .md\\:sticky {
+  .md\:sticky {
     display: none !important;
   }
   main {
