@@ -316,6 +316,7 @@ export function KpiView({
       const segData = allSegmentsDataWithDerivedValues[segDef.key];
       if (!segData) continue;
       for (const section of SECTION_ORDER) {
+        if (isNotWorkingSection(segDef.key, section)) continue;
         const metrics = segDef.metrics.filter((m) => m.section === section);
         for (const metric of metrics) {
           const cell = segData[metric.key];
@@ -379,6 +380,7 @@ export function KpiView({
                   </h2>
                   <div className="flex flex-col gap-4">
                     {SECTION_ORDER.map((section) => {
+                      if (isNotWorkingSection(segDef.key, section)) return null;
                       const metrics = segDef.metrics.filter((m) => m.section === section);
                       if (metrics.length === 0) return null;
                       return (
@@ -600,10 +602,17 @@ function withImportedAt(message: string, importedAt: string): string {
 }
 
 function sectionLabel(segment: KpiSegment, section: KpiSection): string {
+  if (segment === "BOARDING" && section === "FORECAST") {
+    return "NOT WORKING";
+  }
   if (segment === "DAYCARE" && section === "FORECAST") {
-    return "Future KPI Card";
+    return "NOT WORKING";
   }
   return SECTION_LABELS[section];
+}
+
+function isNotWorkingSection(segment: KpiSegment, section: KpiSection): boolean {
+  return section === "FORECAST" && (segment === "BOARDING" || segment === "DAYCARE");
 }
 
 function showsUnavailableForecast(segment: KpiSegment, section: KpiSection): boolean {
