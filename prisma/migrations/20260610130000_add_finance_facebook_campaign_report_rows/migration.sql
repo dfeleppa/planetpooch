@@ -25,6 +25,6 @@ CREATE TABLE "FinanceFacebookCampaignReportRow" (
     CONSTRAINT "FinanceFacebookCampaignReportRow_pkey" PRIMARY KEY ("id")
 );
 
-CREATE UNIQUE INDEX "FinanceFacebookCampaignReportRow_business_periodStart_periodEnd_rowOrder_key" ON "FinanceFacebookCampaignReportRow"("business", "periodStart", "periodEnd", "rowOrder");
-CREATE INDEX "FinanceFacebookCampaignReportRow_business_periodStart_periodEnd_idx" ON "FinanceFacebookCampaignReportRow"("business", "periodStart", "periodEnd");
-CREATE INDEX "FinanceFacebookCampaignReportRow_campaignId_idx" ON "FinanceFacebookCampaignReportRow"("campaignId");
+CREATE UNIQUE INDEX "FinanceFbCampaignReport_business_period_row_order_key" ON "FinanceFacebookCampaignReportRow"("business", "periodStart", "periodEnd", "rowOrder");
+CREATE INDEX "FinanceFbCampaignReport_business_period_idx" ON "FinanceFacebookCampaignReportRow"("business", "periodStart", "periodEnd");
+CREATE INDEX "FinanceFbCampaignReport_campaign_id_idx" ON "FinanceFacebookCampaignReportRow"("campaignId");

@@ -1103,9 +1103,9 @@ model FinanceFacebookCampaignReportRow {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  @@unique([business, periodStart, periodEnd, rowOrder])
-  @@index([business, periodStart, periodEnd])
-  @@index([campaignId])
+  @@unique([business, periodStart, periodEnd, rowOrder], map: "FinanceFbCampaignReport_business_period_row_order_key")
+  @@index([business, periodStart, periodEnd], map: "FinanceFbCampaignReport_business_period_idx")
+  @@index([campaignId], map: "FinanceFbCampaignReport_campaign_id_idx")
 }
 
 // Weekly KPI reports per business segment. One weekStart = one report; both
