@@ -4,6 +4,7 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useState, useTransition } from "react";
 import { cn } from "@/lib/utils";
 import { Card, CardContent } from "@/components/ui/card";
+import { LeadSourceReportTable } from "./LeadSourceReportTable";
 
 const BUSINESSES = [
   { value: "", label: "All Businesses" },
@@ -451,6 +452,8 @@ export function FinanceDashboard({
           hasData={kpis.googleRoas !== null}
         />
       </div>
+
+      <LeadSourceReportTable business={business} from={from} to={to} />
 
       {/* Manual entry form */}
       {isManual && loaded && (

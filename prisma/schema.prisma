@@ -1051,6 +1051,31 @@ model FinanceMetric {
   @@index([periodStart, periodEnd])
 }
 
+/// Editable lead source report rows for finance reporting. One report is
+/// identified by business, period, and reportType; rows are ordered manually.
+model FinanceLeadSourceReportRow {
+  id              String   @id @default(cuid())
+  business        String
+  periodStart     DateTime @db.Date
+  periodEnd       DateTime @db.Date
+  reportType      String   @default("sales")
+  rowOrder        Int      @default(0)
+  source          String
+  totalLeads      Int?
+  totalValueCents Int?
+  open            Int?
+  won             Int?
+  lost            Int?
+  abandoned       Int?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([business, periodStart, periodEnd, reportType, rowOrder])
+  @@index([business, periodStart, periodEnd])
+  @@index([reportType])
+}
+
 // Weekly KPI reports per business segment. One weekStart = one report; both
 // the "Last Week — Actuals" and "Next Week — Forecast" metrics live as distinct
 // metricKey rows under the same weekStart (the section is defined in
