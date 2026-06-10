@@ -403,20 +403,6 @@ export default async function EmployeeDetailPage({ params }: { params: Promise<{
         </EmployeeDocumentsCard>
       </div>
 
-      <div className="mt-6">
-        <DangerZoneCard
-          employeeId={employee.id}
-          employeeName={employee.name}
-          isTerminated={isTerminated}
-          isSuperAdmin={sessionUser.role === "SUPER_ADMIN"}
-          canEndEmployment={true}
-        />
-      </div>
-
-      <div className="mt-6">
-        <EmployeeModuleAssignments employeeId={employee.id} />
-      </div>
-
       {/* Module progress */}
       <Card className="mt-6">
         <CardHeader>
@@ -429,6 +415,10 @@ export default async function EmployeeDetailPage({ params }: { params: Promise<{
           <EmployeeModuleProgressTable modules={moduleProgressRows} />
         </CardContent>
       </Card>
+
+      <div className="mt-6">
+        <EmployeeModuleAssignments employeeId={employee.id} />
+      </div>
 
       {/* Recent audit log */}
       <Card className="mt-8">
@@ -454,6 +444,16 @@ export default async function EmployeeDetailPage({ params }: { params: Promise<{
           </ul>
         </CardContent>
       </Card>
+
+      <div className="mt-6">
+        <DangerZoneCard
+          employeeId={employee.id}
+          employeeName={employee.name}
+          isTerminated={isTerminated}
+          isSuperAdmin={sessionUser.role === "SUPER_ADMIN"}
+          canEndEmployment={true}
+        />
+      </div>
     </div>
   );
 }

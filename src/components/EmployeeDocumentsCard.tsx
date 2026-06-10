@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useId, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -64,7 +64,9 @@ export function EmployeeDocumentsCard({
   children,
 }: Props) {
   const router = useRouter();
+  const documentsBodyId = useId();
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [isCollapsed, setIsCollapsed] = useState(false);
   const [documents, setDocuments] = useState(initialDocuments);
   const [issues, setIssues] = useState(initialIssues);
   const [category, setCategory] = useState<EmployeeDocumentCategory>("I9");
@@ -174,12 +176,29 @@ export function EmployeeDocumentsCard({
   }
 
   const uploadedCategories = new Set(documents.map((d) => d.category));
+  const documentsByCategory = new Map<EmployeeDocumentCategory, DocumentRow[]>();
+  for (const doc of documents) {
+    documentsByCategory.set(
+      doc.category,
+      (documentsByCategory.get(doc.category) ?? []).concat(doc),
+    );
+  }
   const requiredStatus = REQUIRED_CATEGORIES.map((cat) => ({
     category: cat,
     label: DOCUMENT_CATEGORY_LABELS[cat],
     uploaded: uploadedCategories.has(cat),
     notNeeded: cat === "SS_CARD" && ssCardNotNeeded,
+    document: documentsByCategory.get(cat)?.[0] ?? null,
   }));
+  const primaryRequiredDocumentIds = new Set(
+    requiredStatus
+      .map((item) => item.document?.id)
+      .filter((id): id is string => !!id),
+  );
+  const additionalDocuments = documents.filter(
+    (doc) =>
+      doc.category === "OTHER" || !primaryRequiredDocumentIds.has(doc.id),
+  );
   const missingCount =
     requiredStatus.filter((r) => !r.uploaded && !r.notNeeded).length + (handbookSigned ? 0 : 1);
 
@@ -216,10 +235,21 @@ export function EmployeeDocumentsCard({
 
   return (
     <Card>
-      <CardHeader>
+      <CardHeader className="flex items-center justify-between gap-3">
         <h2 className="font-semibold text-gray-900">Documents</h2>
+        <button
+          type="button"
+          aria-expanded={!isCollapsed}
+          aria-controls={documentsBodyId}
+          aria-label={isCollapsed ? "Expand documents" : "Collapse documents"}
+          title={isCollapsed ? "Expand documents" : "Collapse documents"}
+          onClick={() => setIsCollapsed((collapsed) => !collapsed)}
+          className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-md border border-gray-200 bg-white text-sm font-semibold text-gray-600 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+        >
+          <span aria-hidden>{isCollapsed ? "+" : "-"}</span>
+        </button>
       </CardHeader>
-      <CardContent className="space-y-3">
+      {!isCollapsed && <CardContent id={documentsBodyId} className="space-y-3">
         {topContent && (
           <div className="rounded-lg border border-gray-200 bg-gray-50 px-3 py-2">
             {topContent}
@@ -234,39 +264,72 @@ export function EmployeeDocumentsCard({
                 : `${missingCount} missing`}
             </span>
           </div>
-          <ul className="mt-2 grid grid-cols-1 gap-2 md:grid-cols-2 xl:grid-cols-4">
+          <ul className="mt-2 divide-y divide-gray-200 rounded-md border border-gray-200 bg-white">
             {requiredStatus.map((item) => {
               const issue = issueMap.get(item.category);
               const isEditing = editingIssue === item.category;
+              const doc = item.document;
               return (
-                <li key={item.category} className="min-w-0">
-                  <div className="flex min-h-8 items-center gap-2 rounded-md border border-gray-200 bg-white px-2 py-1 text-sm">
-                    <span
-                      aria-hidden
-                      className={
-                        issue
-                          ? "inline-flex h-4 w-4 items-center justify-center rounded-full bg-red-100 text-red-700 text-xs"
-                          : item.uploaded || item.notNeeded
-                            ? "inline-flex h-4 w-4 items-center justify-center rounded-full bg-green-100 text-green-700 text-xs"
-                            : "inline-flex h-4 w-4 items-center justify-center rounded-full bg-gray-200 text-gray-500 text-xs"
-                      }
-                    >
-                      {issue ? "!" : (item.uploaded || item.notNeeded) ? "✓" : "·"}
-                    </span>
-                    <span className={(item.uploaded || item.notNeeded) ? "text-gray-900" : "text-gray-600"}>
-                      {item.label}
-                    </span>
-                    <span className={
-                      issue
-                        ? "text-xs text-red-600"
-                        : item.notNeeded
-                          ? "text-xs text-green-700"
-                          : item.uploaded ? "text-xs text-green-700" : "text-xs text-gray-400"
-                    }>
-                      {issue ? "Issue" : item.notNeeded ? "Not needed" : item.uploaded ? "Uploaded" : "Not uploaded"}
-                    </span>
+                <li key={item.category} className="px-2 py-2">
+                  <div className="grid grid-cols-1 gap-2 md:grid-cols-[minmax(0,1fr)_auto] md:items-center">
+                    <div className="flex min-w-0 items-start gap-2 text-sm">
+                      <span
+                        aria-hidden
+                        className={
+                          issue
+                            ? "mt-0.5 inline-flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-red-100 text-xs text-red-700"
+                            : item.uploaded || item.notNeeded
+                              ? "mt-0.5 inline-flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-green-100 text-xs text-green-700"
+                              : "mt-0.5 inline-flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-gray-200 text-xs text-gray-500"
+                        }
+                      >
+                        {issue ? "!" : (item.uploaded || item.notNeeded) ? "✓" : "·"}
+                      </span>
+                      <div className="min-w-0">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <span className={(item.uploaded || item.notNeeded) ? "font-medium text-gray-900" : "font-medium text-gray-600"}>
+                            {item.label}
+                          </span>
+                          <span className={
+                            issue
+                              ? "text-xs text-red-600"
+                              : item.notNeeded
+                                ? "text-xs text-green-700"
+                                : item.uploaded ? "text-xs text-green-700" : "text-xs text-gray-400"
+                          }>
+                            {issue ? "Issue" : item.notNeeded ? "Not needed" : item.uploaded ? "Uploaded" : "Not uploaded"}
+                          </span>
+                        </div>
+                        {doc && (
+                          <div className="mt-0.5 truncate text-xs text-gray-500">
+                            {doc.fileName} · {formatBytes(doc.fileSize)} · uploaded by{" "}
+                            {doc.uploadedBy?.name ?? "(removed)"} on {formatDateTime(doc.uploadedAt)}
+                          </div>
+                        )}
+                      </div>
+                    </div>
                     {!isTerminated && !isEditing && (
-                      <div className="ml-auto flex shrink-0 items-center gap-1">
+                      <div className="flex shrink-0 items-center justify-end gap-2">
+                        {doc && (
+                          <>
+                            <a
+                              href={`https://drive.google.com/file/d/${doc.driveFileId}/view`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-sm text-blue-600 hover:underline"
+                            >
+                              Open ↗
+                            </a>
+                            <Button
+                              size="sm"
+                              variant="danger"
+                              onClick={() => deleteDocument(doc.id)}
+                              disabled={deletingDocId === doc.id}
+                            >
+                              {deletingDocId === doc.id ? "Deleting…" : "Delete"}
+                            </Button>
+                          </>
+                        )}
                         {item.category === "SS_CARD" && (
                           <button
                             type="button"
@@ -345,8 +408,8 @@ export function EmployeeDocumentsCard({
             <li
               className={
                 handbookSigned
-                  ? "flex min-h-8 items-center gap-2 rounded-md border border-gray-200 bg-white px-2 py-1 text-sm"
-                  : "flex min-h-8 items-center gap-2 rounded-md border border-gray-200 bg-white px-2 py-1 text-sm opacity-60"
+                  ? "flex min-h-9 items-center gap-2 px-2 py-2 text-sm"
+                  : "flex min-h-9 items-center gap-2 px-2 py-2 text-sm opacity-60"
               }
               title={handbookSigned ? undefined : "Completed via eSignature — uploads disabled"}
             >
@@ -455,10 +518,15 @@ export function EmployeeDocumentsCard({
         )}
 
         <ul className="divide-y divide-gray-100 border-t border-gray-100">
-          {documents.length === 0 && (
+          {additionalDocuments.length === 0 && documents.length === 0 && (
             <li className="text-sm text-gray-400 py-2">No documents yet.</li>
           )}
-          {documents.map((doc) => (
+          {additionalDocuments.length > 0 && (
+            <li className="py-2 text-xs font-medium uppercase tracking-wide text-gray-500">
+              Additional documents
+            </li>
+          )}
+          {additionalDocuments.map((doc) => (
             <li key={doc.id} className="flex items-center justify-between gap-3 py-2">
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-2">
@@ -504,7 +572,7 @@ export function EmployeeDocumentsCard({
             {children}
           </div>
         )}
-      </CardContent>
+      </CardContent>}
     </Card>
   );
 }

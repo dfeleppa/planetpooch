@@ -132,31 +132,33 @@ export function EditEmployeeForm({
             Edit
           </Button>
         </CardHeader>
-        <CardContent className="grid grid-cols-1 gap-3 text-sm sm:grid-cols-2 xl:grid-cols-3">
-          <Field label="First Name" value={employee.firstName} />
-          <Field label="Last Name" value={employee.lastName} />
-          <Field
-            label="Email"
-            value={
-              employee.email.endsWith("@placeholder.local")
-                ? "— (not set)"
-                : employee.email
-            }
-          />
-          <Field label="Phone" value={employee.phone || "—"} />
-          <Field label="Role" value={employee.role} />
-          <Field label="Company" value={COMPANY_LABELS[employee.company]} />
-          <Field label="Job Title" value={employee.jobTitle || "—"} />
-          <Field
-            label="Hire Date"
-            value={employee.hireDate ? employee.hireDate.slice(0, 10) : "—"}
-          />
+        <CardContent className="grid grid-cols-1 gap-4 text-sm xl:grid-cols-[2fr_1fr]">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <Field label="First Name" value={employee.firstName} />
+            <Field label="Last Name" value={employee.lastName} />
+            <Field
+              label="Email"
+              value={
+                employee.email.endsWith("@placeholder.local")
+                  ? "— (not set)"
+                  : employee.email
+              }
+            />
+            <Field label="Phone" value={employee.phone || "—"} />
+            <Field label="Role" value={employee.role} />
+            <Field label="Company" value={COMPANY_LABELS[employee.company]} />
+            <Field label="Job Title" value={employee.jobTitle || "—"} />
+            <Field
+              label="Hire Date"
+              value={employee.hireDate ? employee.hireDate.slice(0, 10) : "—"}
+            />
+          </div>
           {availabilityRows.length > 0 && (
-            <div className="border-t border-gray-100 pt-4 mt-1 sm:col-span-2 xl:col-span-3">
+            <div className="border-t border-gray-100 pt-4 mt-1 xl:mt-0 xl:border-l xl:border-t-0 xl:pl-5 xl:pt-0">
               <div className="text-xs uppercase tracking-wide text-gray-500 mb-2">
                 Availability
               </div>
-              <div className="grid grid-cols-1 gap-x-8 gap-y-2 sm:grid-cols-2 xl:grid-cols-3">
+              <div className="grid grid-cols-1 gap-x-8 gap-y-2 sm:grid-cols-2 xl:grid-cols-1">
                 {availabilityRows.map((row) => (
                   <div
                     key={row.day}
