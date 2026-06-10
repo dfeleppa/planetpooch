@@ -1,7 +1,6 @@
 import { requireEmployeeManager, getCompanyFilter } from "@/lib/auth-helpers";
 import { prisma } from "@/lib/prisma";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
-import { ProgressBar } from "@/components/ui/progress-bar";
 import { Badge } from "@/components/ui/badge";
 import { formatDateTime } from "@/lib/utils";
 import Link from "next/link";
@@ -19,6 +18,7 @@ import { getFileWebLink, isDriveEnabled, isStubId } from "@/lib/drive";
 import { formatDate } from "@/lib/utils";
 import { HANDBOOK_SIGNABLE_NAME } from "@/lib/employee-documents";
 import { getVisibleModuleIdsForUser } from "@/lib/module-visibility";
+import { EmployeeModuleProgressTable, type ModuleProgressRow } from "./EmployeeModuleProgressTable";
 
 const COMPANIES: Company[] = ["GROOMING", "RESORT", "CORPORATE"];
 
@@ -113,6 +113,55 @@ export default async function EmployeeDetailPage({ params }: { params: Promise<{
   });
 
   const completionMap = new Map(completions.map((c) => [c.lessonId, c]));
+  const moduleProgressRows: ModuleProgressRow[] = modules.map((mod) => {
+    const allLessons = mod.subsections.flatMap((s) => s.lessons);
+    const total = allLessons.length;
+    const completedLessons = allLessons.filter(
+      (lesson) => completionMap.get(lesson.id)?.isCompleted,
+    );
+    const completed = completedLessons.length;
+    const completedAt =
+      total > 0 && completed === total
+        ? completedLessons
+            .map((lesson) => completionMap.get(lesson.id)?.completedAt)
+            .filter((date): date is Date => date instanceof Date)
+            .sort((a, b) => b.getTime() - a.getTime())[0]
+        : null;
+
+    return {
+      id: mod.id,
+      title: mod.title,
+      completed,
+      total,
+      percent: total > 0 ? Math.round((completed / total) * 100) : 0,
+      completedAt: completedAt ? formatDateTime(completedAt) : null,
+      subsections: mod.subsections.map((subsection) => {
+        const subsectionCompleted = subsection.lessons.filter(
+          (lesson) => completionMap.get(lesson.id)?.isCompleted,
+        ).length;
+
+        return {
+          id: subsection.id,
+          title: subsection.title,
+          completed: subsectionCompleted,
+          total: subsection.lessons.length,
+          lessons: subsection.lessons.map((lesson) => {
+            const completion = completionMap.get(lesson.id);
+
+            return {
+              id: lesson.id,
+              title: lesson.title,
+              isCompleted: !!completion?.isCompleted,
+              completedAt:
+                completion?.isCompleted && completion.completedAt
+                  ? formatDateTime(completion.completedAt)
+                  : null,
+            };
+          }),
+        };
+      }),
+    };
+  });
 
   const recentAudit = await prisma.completionAuditLog.findMany({
     where: { userId: employeeId },
@@ -298,16 +347,6 @@ export default async function EmployeeDetailPage({ params }: { params: Promise<{
       )}
 
       <div className="mt-6">
-        <DriveFolderCard
-          employeeId={employee.id}
-          driveFolderId={employee.driveFolderId}
-          webViewLink={driveFolderWebLink}
-          driveEnabled={isDriveEnabled()}
-          isStub={isStubId(employee.driveFolderId)}
-        />
-      </div>
-
-      <div className="mt-6">
         <EmployeeDocumentsCard
           employeeId={employee.id}
           hasDriveFolder={!!employee.driveFolderId}
@@ -331,6 +370,16 @@ export default async function EmployeeDetailPage({ params }: { params: Promise<{
             uploadedAt: d.uploadedAt.toISOString(),
             uploadedBy: d.uploadedBy,
           }))}
+          topContent={
+            <DriveFolderCard
+              employeeId={employee.id}
+              driveFolderId={employee.driveFolderId}
+              webViewLink={driveFolderWebLink}
+              driveEnabled={isDriveEnabled()}
+              isStub={isStubId(employee.driveFolderId)}
+              embedded
+            />
+          }
         >
           <EsignRequestsCard
             employeeId={employee.id}
@@ -369,62 +418,17 @@ export default async function EmployeeDetailPage({ params }: { params: Promise<{
       </div>
 
       {/* Module progress */}
-      <div className="space-y-6 mt-6">
-        {modules.map((mod) => {
-          const allLessons = mod.subsections.flatMap((s) => s.lessons);
-          const total = allLessons.length;
-          const completed = allLessons.filter((l) => completionMap.get(l.id)?.isCompleted).length;
-
-          return (
-            <Card key={mod.id}>
-              <CardHeader>
-                <div className="flex items-center justify-between">
-                  <h2 className="font-semibold text-gray-900">{mod.title}</h2>
-                  <Badge variant={completed === total && total > 0 ? "success" : completed > 0 ? "warning" : "default"}>
-                    {total > 0 ? Math.round((completed / total) * 100) : 0}%
-                  </Badge>
-                </div>
-                <ProgressBar value={completed} max={total} className="mt-2" />
-              </CardHeader>
-              <CardContent className="p-0">
-                {mod.subsections.map((sub) => (
-                  <div key={sub.id}>
-                    <div className="px-6 py-2 bg-gray-50 text-sm font-medium text-gray-600">
-                      {sub.title}
-                    </div>
-                    <ul className="divide-y divide-gray-100">
-                      {sub.lessons.map((lesson) => {
-                        const comp = completionMap.get(lesson.id);
-                        return (
-                          <li key={lesson.id} className="flex items-center justify-between px-6 py-2">
-                            <div className="flex items-center gap-2">
-                              <span className={`w-4 h-4 rounded-full border-2 flex items-center justify-center ${
-                                comp?.isCompleted ? "bg-green-500 border-green-500 text-white" : "border-gray-300"
-                              }`}>
-                                {comp?.isCompleted && (
-                                  <svg className="w-2.5 h-2.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
-                                    <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-                                  </svg>
-                                )}
-                              </span>
-                              <span className="text-sm text-gray-700">{lesson.title}</span>
-                            </div>
-                            {comp?.isCompleted && comp.completedAt && (
-                              <span className="text-xs text-gray-400">
-                                {formatDateTime(comp.completedAt)}
-                              </span>
-                            )}
-                          </li>
-                        );
-                      })}
-                    </ul>
-                  </div>
-                ))}
-              </CardContent>
-            </Card>
-          );
-        })}
-      </div>
+      <Card className="mt-6">
+        <CardHeader>
+          <h2 className="font-semibold text-gray-900">Module progress</h2>
+          <p className="text-sm text-gray-500">
+            Expand a module to review subsection and lesson completion details.
+          </p>
+        </CardHeader>
+        <CardContent>
+          <EmployeeModuleProgressTable modules={moduleProgressRows} />
+        </CardContent>
+      </Card>
 
       {/* Recent audit log */}
       <Card className="mt-8">

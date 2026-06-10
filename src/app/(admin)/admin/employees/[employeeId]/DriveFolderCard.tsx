@@ -12,6 +12,7 @@ interface Props {
   webViewLink: string | null;
   driveEnabled: boolean;
   isStub: boolean;
+  embedded?: boolean;
 }
 
 export function DriveFolderCard({
@@ -20,6 +21,7 @@ export function DriveFolderCard({
   webViewLink,
   driveEnabled,
   isStub,
+  embedded = false,
 }: Props) {
   const router = useRouter();
   const [creating, setCreating] = useState(false);
@@ -42,23 +44,31 @@ export function DriveFolderCard({
     }
   }
 
-  return (
-    <Card>
-      <CardHeader>
-        <div className="flex items-center gap-2">
-          <h2 className="font-semibold text-gray-900">Drive Folder</h2>
-          <StatusBadge
-            driveEnabled={driveEnabled}
-            hasFolder={!!driveFolderId}
-            isStub={isStub}
-          />
-        </div>
-      </CardHeader>
-      <CardContent>
+  const header = (
+    <div className="flex items-center gap-2">
+      <h2
+        className={
+          embedded
+            ? "text-sm font-semibold text-gray-900"
+            : "font-semibold text-gray-900"
+        }
+      >
+        Drive Folder
+      </h2>
+      <StatusBadge
+        driveEnabled={driveEnabled}
+        hasFolder={!!driveFolderId}
+        isStub={isStub}
+      />
+    </div>
+  );
+
+  const body = (
+    <CardContent className={embedded ? "p-0" : undefined}>
         {!driveEnabled && (
           <p className="text-sm text-red-700 bg-red-50 border border-red-200 rounded-lg px-3 py-2">
             Google Drive integration is disabled — the WIF environment
-            variables are missing. Folders cannot be created until that's
+            variables are missing. Folders cannot be created until that&apos;s
             fixed in the Vercel project settings.
           </p>
         )}
@@ -66,7 +76,7 @@ export function DriveFolderCard({
         {driveEnabled && isStub && (
           <p className="text-sm text-red-700 bg-red-50 border border-red-200 rounded-lg px-3 py-2">
             This employee has a placeholder folder ID from a time when Drive
-            was disabled. The folder doesn't actually exist in Google Drive.
+            was disabled. The folder doesn&apos;t actually exist in Google Drive.
             Use the button below to create a real one — the placeholder will
             be replaced.
           </p>
@@ -119,8 +129,23 @@ export function DriveFolderCard({
           </div>
         )}
 
-        {error && <p className="text-sm text-red-600 mt-2">{error}</p>}
-      </CardContent>
+      {error && <p className="text-sm text-red-600 mt-2">{error}</p>}
+    </CardContent>
+  );
+
+  if (embedded) {
+    return (
+      <section className="space-y-3">
+        {header}
+        {body}
+      </section>
+    );
+  }
+
+  return (
+    <Card>
+      <CardHeader>{header}</CardHeader>
+      {body}
     </Card>
   );
 }

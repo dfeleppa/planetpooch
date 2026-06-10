@@ -132,7 +132,7 @@ export function EditEmployeeForm({
             Edit
           </Button>
         </CardHeader>
-        <CardContent className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
+        <CardContent className="grid grid-cols-1 gap-3 text-sm sm:grid-cols-2 xl:grid-cols-3">
           <Field label="First Name" value={employee.firstName} />
           <Field label="Last Name" value={employee.lastName} />
           <Field
@@ -152,11 +152,11 @@ export function EditEmployeeForm({
             value={employee.hireDate ? employee.hireDate.slice(0, 10) : "—"}
           />
           {availabilityRows.length > 0 && (
-            <div className="sm:col-span-2 border-t border-gray-100 pt-4 mt-1">
+            <div className="border-t border-gray-100 pt-4 mt-1 sm:col-span-2 xl:col-span-3">
               <div className="text-xs uppercase tracking-wide text-gray-500 mb-2">
                 Availability
               </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-2">
+              <div className="grid grid-cols-1 gap-x-8 gap-y-2 sm:grid-cols-2 xl:grid-cols-3">
                 {availabilityRows.map((row) => (
                   <div
                     key={row.day}

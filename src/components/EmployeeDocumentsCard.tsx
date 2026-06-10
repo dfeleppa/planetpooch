@@ -39,6 +39,7 @@ interface Props {
   ssCardNotNeeded: boolean;
   initialIssues: DocumentIssue[];
   initialDocuments: DocumentRow[];
+  topContent?: React.ReactNode;
   children?: React.ReactNode;
 }
 
@@ -59,6 +60,7 @@ export function EmployeeDocumentsCard({
   ssCardNotNeeded: initialSsCardNotNeeded,
   initialIssues,
   initialDocuments,
+  topContent,
   children,
 }: Props) {
   const router = useRouter();
@@ -217,9 +219,14 @@ export function EmployeeDocumentsCard({
       <CardHeader>
         <h2 className="font-semibold text-gray-900">Documents</h2>
       </CardHeader>
-      <CardContent className="space-y-4">
+      <CardContent className="space-y-3">
+        {topContent && (
+          <div className="rounded-lg border border-gray-200 bg-gray-50 px-3 py-2">
+            {topContent}
+          </div>
+        )}
         <div className="rounded-lg border border-gray-200 bg-gray-50 px-3 py-2">
-          <div className="flex items-center justify-between mb-2">
+          <div className="flex items-center justify-between gap-3">
             <span className="text-sm font-medium text-gray-700">Required documents</span>
             <span className="text-xs text-gray-500">
               {missingCount === 0
@@ -227,13 +234,13 @@ export function EmployeeDocumentsCard({
                 : `${missingCount} missing`}
             </span>
           </div>
-          <ul className="space-y-1">
+          <ul className="mt-2 grid grid-cols-1 gap-2 md:grid-cols-2 xl:grid-cols-4">
             {requiredStatus.map((item) => {
               const issue = issueMap.get(item.category);
               const isEditing = editingIssue === item.category;
               return (
-                <li key={item.category} className="py-1">
-                  <div className="flex items-center gap-2 text-sm">
+                <li key={item.category} className="min-w-0">
+                  <div className="flex min-h-8 items-center gap-2 rounded-md border border-gray-200 bg-white px-2 py-1 text-sm">
                     <span
                       aria-hidden
                       className={
@@ -259,7 +266,7 @@ export function EmployeeDocumentsCard({
                       {issue ? "Issue" : item.notNeeded ? "Not needed" : item.uploaded ? "Uploaded" : "Not uploaded"}
                     </span>
                     {!isTerminated && !isEditing && (
-                      <div className="ml-auto flex items-center gap-2">
+                      <div className="ml-auto flex shrink-0 items-center gap-1">
                         {item.category === "SS_CARD" && (
                           <button
                             type="button"
@@ -282,7 +289,7 @@ export function EmployeeDocumentsCard({
                           }}
                           className="text-xs text-gray-400 hover:text-gray-600"
                         >
-                          {issue ? "Edit issue" : "Flag issue"}
+                          {issue ? "Edit" : "Flag"}
                         </button>
                       </div>
                     )}
@@ -338,8 +345,8 @@ export function EmployeeDocumentsCard({
             <li
               className={
                 handbookSigned
-                  ? "flex items-center gap-2 text-sm"
-                  : "flex items-center gap-2 text-sm opacity-60"
+                  ? "flex min-h-8 items-center gap-2 rounded-md border border-gray-200 bg-white px-2 py-1 text-sm"
+                  : "flex min-h-8 items-center gap-2 rounded-md border border-gray-200 bg-white px-2 py-1 text-sm opacity-60"
               }
               title={handbookSigned ? undefined : "Completed via eSignature — uploads disabled"}
             >
@@ -376,8 +383,11 @@ export function EmployeeDocumentsCard({
         )}
 
         {!isTerminated && (
-        <form onSubmit={upload} className="space-y-3">
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <form
+          onSubmit={upload}
+          className="grid grid-cols-1 gap-3 md:grid-cols-[220px_minmax(260px,1fr)_auto] md:items-end"
+        >
+          <div className={isOther ? "grid grid-cols-1 gap-3 sm:grid-cols-2 md:col-span-3" : ""}>
             <div className="flex flex-col gap-1">
               <label className="text-sm font-medium text-gray-700">Type</label>
               <select
@@ -431,26 +441,25 @@ export function EmployeeDocumentsCard({
             </p>
           </div>
 
-          {error && (
-            <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">
-              {error}
-            </p>
-          )}
-
           <div className="flex justify-end">
             <Button type="submit" disabled={!canSubmit}>
               {uploading ? "Uploading…" : "Upload"}
             </Button>
           </div>
+          {error && (
+            <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2 md:col-span-3">
+              {error}
+            </p>
+          )}
         </form>
         )}
 
         <ul className="divide-y divide-gray-100 border-t border-gray-100">
           {documents.length === 0 && (
-            <li className="text-sm text-gray-400 py-3">No documents yet.</li>
+            <li className="text-sm text-gray-400 py-2">No documents yet.</li>
           )}
           {documents.map((doc) => (
-            <li key={doc.id} className="flex items-center justify-between gap-3 py-3">
+            <li key={doc.id} className="flex items-center justify-between gap-3 py-2">
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-2">
                   <span className="text-sm font-medium text-gray-900 truncate">

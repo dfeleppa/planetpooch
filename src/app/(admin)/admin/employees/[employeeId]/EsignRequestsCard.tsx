@@ -160,7 +160,7 @@ export function EsignRequestsCard({
   }
 
   const body = (
-    <CardContent className={embedded ? "space-y-4 p-0" : "space-y-4"}>
+    <CardContent className={embedded ? "space-y-3 p-0" : "space-y-4"}>
         {isTerminated && (
           <p className="text-sm text-gray-600 bg-gray-50 border border-gray-200 rounded-lg px-3 py-2">
             This employee is no longer active — new eSign requests are disabled.
@@ -197,7 +197,7 @@ export function EsignRequestsCard({
                   value={selectedDocId}
                   onChange={(e) => setSelectedDocId(e.target.value)}
                   disabled={sending}
-                  className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-50 disabled:text-gray-500"
+                  className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-1.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-50 disabled:text-gray-500"
                 >
                   {signableDocuments.map((d) => (
                     <option key={d.id} value={d.id}>
@@ -216,19 +216,13 @@ export function EsignRequestsCard({
                   onChange={(e) => setDriveFileRef(e.target.value)}
                   disabled={sending}
                   placeholder="https://drive.google.com/file/d/…"
-                  className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-50 disabled:text-gray-500"
+                  className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-50 disabled:text-gray-500"
                 />
               </div>
               <Button onClick={send} disabled={!canSend || sending}>
                 {sending ? "Registering…" : "Register eSign request"}
               </Button>
             </div>
-            <p className="text-xs text-gray-500">
-              Create the document in Drive and start the signature request
-              there, then paste the file&apos;s share URL or ID here. Once the
-              employee has signed, confirm it yourself with &ldquo;Verify &amp;
-              mark signed&rdquo;.
-            </p>
           </div>
         )}
 
@@ -245,14 +239,14 @@ export function EsignRequestsCard({
 
         <ul className="divide-y divide-gray-100">
           {requests.length === 0 && (
-            <li className="text-sm text-gray-400 py-3">No requests yet.</li>
+            <li className="text-sm text-gray-400 py-2">No requests yet.</li>
           )}
           {requests.map((r) => {
             const fileUrl = driveFileUrl(r.signedFileDriveId);
             return (
               <li
                 key={r.id}
-                className="flex items-center justify-between py-3 gap-3"
+                className="flex items-center justify-between py-2 gap-3"
               >
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-2">
@@ -339,7 +333,7 @@ export function EsignRequestsCard({
 
   if (embedded) {
     return (
-      <section className="space-y-4">
+      <section className="space-y-3">
         <h3 className="text-sm font-semibold text-gray-900">
           eSignature Requests
         </h3>

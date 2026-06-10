@@ -5,6 +5,10 @@ interface TableProps {
   className?: string;
 }
 
+type TableCellProps = React.TdHTMLAttributes<HTMLTableCellElement> & {
+  children?: React.ReactNode;
+};
+
 export function Table({ children, className }: TableProps) {
   return (
     <div className="overflow-x-auto rounded-lg border border-gray-200">
@@ -41,6 +45,10 @@ export function TableHeader({ children, className }: TableProps) {
   );
 }
 
-export function TableCell({ children, className }: TableProps) {
-  return <td className={cn("px-4 py-3 text-sm text-gray-900", className)}>{children}</td>;
+export function TableCell({ children, className, ...props }: TableCellProps) {
+  return (
+    <td className={cn("px-4 py-3 text-sm text-gray-900", className)} {...props}>
+      {children}
+    </td>
+  );
 }
