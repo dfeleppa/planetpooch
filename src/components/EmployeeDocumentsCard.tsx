@@ -66,7 +66,7 @@ export function EmployeeDocumentsCard({
   const router = useRouter();
   const documentsBodyId = useId();
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const [isCollapsed, setIsCollapsed] = useState(false);
+  const [isCollapsed, setIsCollapsed] = useState(true);
   const [documents, setDocuments] = useState(initialDocuments);
   const [issues, setIssues] = useState(initialIssues);
   const [category, setCategory] = useState<EmployeeDocumentCategory>("I9");

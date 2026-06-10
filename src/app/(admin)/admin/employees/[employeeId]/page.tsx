@@ -9,6 +9,7 @@ import { Company, Role } from "@prisma/client";
 import { EditEmployeeForm } from "./EditEmployeeForm";
 import { EsignRequestsCard } from "./EsignRequestsCard";
 import { DriveFolderCard } from "./DriveFolderCard";
+import { CollapsibleSectionCard } from "./CollapsibleSectionCard";
 import { RevealTempPasswordButton } from "../RevealTempPasswordButton";
 import { EmployeeDocumentsCard } from "@/components/EmployeeDocumentsCard";
 import { DangerZoneCard } from "./DangerZoneCard";
@@ -319,31 +320,30 @@ export default async function EmployeeDetailPage({ params }: { params: Promise<{
       </div>
 
       {!isTerminated && (
-        <Card className="mt-6">
-          <CardHeader>
-            <h2 className="font-semibold text-gray-900">Login access</h2>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="text-sm">
-              <span className="font-medium text-gray-700">Last tracked activity:</span>{" "}
-              <span className="text-gray-600">
-                {latestTrackedActivityAt
-                  ? formatDateTime(latestTrackedActivityAt)
-                  : "No tracked activity yet"}
-              </span>
+        <CollapsibleSectionCard
+          title="Login access"
+          className="mt-6"
+          defaultCollapsed
+        >
+          <div className="text-sm">
+            <span className="font-medium text-gray-700">Last tracked activity:</span>{" "}
+            <span className="text-gray-600">
+              {latestTrackedActivityAt
+                ? formatDateTime(latestTrackedActivityAt)
+                : "No tracked activity yet"}
+            </span>
+          </div>
+          {sessionUser.role === "SUPER_ADMIN" && (
+            <div className="border-t border-gray-100 pt-4">
+              <p className="text-sm text-gray-700 mb-3">
+                <span className="font-medium">Generate a temp password.</span>{" "}
+                Use this to set up or recover portal access. Generating
+                invalidates any previously issued temp password.
+              </p>
+              <RevealTempPasswordButton employeeId={employee.id} />
             </div>
-            {sessionUser.role === "SUPER_ADMIN" && (
-              <div className="border-t border-gray-100 pt-4">
-                <p className="text-sm text-gray-700 mb-3">
-                  <span className="font-medium">Generate a temp password.</span>{" "}
-                  Use this to set up or recover portal access. Generating
-                  invalidates any previously issued temp password.
-                </p>
-                <RevealTempPasswordButton employeeId={employee.id} />
-              </div>
-            )}
-          </CardContent>
-        </Card>
+          )}
+        </CollapsibleSectionCard>
       )}
 
       <div className="mt-6">
