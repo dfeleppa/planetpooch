@@ -307,14 +307,16 @@ export async function buildWeeklyBoardingReport(options?: {
     const capacityUnits = daysInWindow(appointment, start, end);
 
     for (const service of lines) {
-      const netCents = netLineCents(toCents(service.price), appointmentGrossCents, order);
-      if (netCents <= 0) continue;
+      const grossCents = toCents(service.price);
+      if (grossCents <= 0) continue;
 
       if (isBoardingPackage(service)) {
-        packageSalesCents += netCents;
+        packageSalesCents += grossCents;
       } else if (isBoardingAddon(service)) {
-        addonSalesCents += netCents;
+        addonSalesCents += grossCents;
       } else if (isBoardingService(service)) {
+        const netCents = netLineCents(grossCents, appointmentGrossCents, order);
+        if (netCents <= 0) continue;
         totalRevenueCents += netCents;
         nights += capacityUnits;
         const serviceName = service.name?.trim() ?? "(unnamed service)";
