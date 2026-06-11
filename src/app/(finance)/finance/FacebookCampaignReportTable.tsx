@@ -45,31 +45,6 @@ type ApiCampaignReportRow = {
   averageRevenueCents: number | null;
 };
 
-function newClientId(): string {
-  return `campaign-row-${Date.now()}-${Math.random().toString(36).slice(2)}`;
-}
-
-function blankRow(): CampaignReportRow {
-  return {
-    clientId: newClientId(),
-    campaignId: "",
-    campaign: "",
-    status: "",
-    clicks: null,
-    costCents: null,
-    revenueCents: null,
-    roiPercent: null,
-    cpcCents: null,
-    ctrPercent: null,
-    sales: null,
-    cpsCents: null,
-    leads: null,
-    cplCents: null,
-    impressions: null,
-    averageRevenueCents: null,
-  };
-}
-
 function normalizeApiRow(row: ApiCampaignReportRow): CampaignReportRow {
   return {
     ...row,
@@ -79,119 +54,53 @@ function normalizeApiRow(row: ApiCampaignReportRow): CampaignReportRow {
   };
 }
 
-function toInputRows(rows: CampaignReportRow[]) {
-  return rows.map((row) => {
-    const { clientId, id, ...input } = row;
-    void clientId;
-    void id;
-    return input;
+function formatText(value: string | null | undefined): string {
+  return value?.trim() ? value : "-";
+}
+
+function formatInteger(value: number | null): string {
+  return value === null ? "-" : value.toLocaleString("en-US");
+}
+
+function formatMoney(value: number | null): string {
+  if (value === null) return "-";
+  return (value / 100).toLocaleString("en-US", {
+    style: "currency",
+    currency: "USD",
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
   });
 }
 
-function parseIntegerInput(value: string): number | null {
-  if (value === "") return null;
-  const parsed = Number(value.replace(/[,\s]/g, ""));
-  if (!Number.isFinite(parsed) || parsed < 0) return null;
-  return Math.round(parsed);
+function formatPercent(value: number | null): string {
+  if (value === null) return "-";
+  return `${(value / 100).toLocaleString("en-US", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  })}%`;
 }
 
-function parseScaledInput(value: string, scale: number): number | null {
-  if (value === "") return null;
-  const parsed = Number(value.replace(/[$,%\s,]/g, ""));
-  if (!Number.isFinite(parsed) || parsed < 0) return null;
-  return Math.round(parsed * scale);
+function sumRows(
+  rows: CampaignReportRow[],
+  field: keyof Pick<
+    CampaignReportRow,
+    | "clicks"
+    | "costCents"
+    | "revenueCents"
+    | "sales"
+    | "leads"
+    | "impressions"
+  >
+): number {
+  return rows.reduce((sum, row) => sum + (row[field] ?? 0), 0);
 }
 
-function centsToInput(value: number | null): string {
-  return value === null ? "" : (value / 100).toString();
+function divideToCents(numeratorCents: number, denominator: number): number | null {
+  return denominator > 0 ? Math.round(numeratorCents / denominator) : null;
 }
 
-function percentToInput(value: number | null): string {
-  return value === null ? "" : (value / 100).toString();
-}
-
-function inputClass(className?: string) {
-  return cn(
-    "h-9 w-full rounded-md border border-transparent bg-transparent px-2 text-sm text-gray-900 outline-none transition-colors",
-    "hover:border-gray-200 hover:bg-white focus:border-blue-500 focus:bg-white focus:ring-2 focus:ring-blue-100",
-    className
-  );
-}
-
-function MoneyInput({
-  value,
-  onChange,
-  ariaLabel,
-}: {
-  value: number | null;
-  onChange: (value: number | null) => void;
-  ariaLabel: string;
-}) {
-  return (
-    <div className="relative">
-      <span className="pointer-events-none absolute left-2 top-1/2 -translate-y-1/2 text-sm text-gray-400">
-        $
-      </span>
-      <input
-        type="number"
-        min="0"
-        step="0.01"
-        value={centsToInput(value)}
-        onChange={(event) => onChange(parseScaledInput(event.target.value, 100))}
-        className={inputClass("pl-6 text-right tabular-nums")}
-        aria-label={ariaLabel}
-      />
-    </div>
-  );
-}
-
-function PercentInput({
-  value,
-  onChange,
-  ariaLabel,
-}: {
-  value: number | null;
-  onChange: (value: number | null) => void;
-  ariaLabel: string;
-}) {
-  return (
-    <div className="relative">
-      <input
-        type="number"
-        min="0"
-        step="0.01"
-        value={percentToInput(value)}
-        onChange={(event) => onChange(parseScaledInput(event.target.value, 100))}
-        className={inputClass("pr-7 text-right tabular-nums")}
-        aria-label={ariaLabel}
-      />
-      <span className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-sm text-gray-400">
-        %
-      </span>
-    </div>
-  );
-}
-
-function IntegerInput({
-  value,
-  onChange,
-  ariaLabel,
-}: {
-  value: number | null;
-  onChange: (value: number | null) => void;
-  ariaLabel: string;
-}) {
-  return (
-    <input
-      type="number"
-      min="0"
-      step="1"
-      value={value ?? ""}
-      onChange={(event) => onChange(parseIntegerInput(event.target.value))}
-      className={inputClass("text-right tabular-nums")}
-      aria-label={ariaLabel}
-    />
-  );
+function percentTimes100(numerator: number, denominator: number): number | null {
+  return denominator > 0 ? Math.round((numerator / denominator) * 10_000) : null;
 }
 
 function CampaignReportTable({
@@ -213,7 +122,6 @@ function CampaignReportTable({
   const [rows, setRows] = useState<CampaignReportRow[]>([]);
   const [page, setPage] = useState(0);
   const [loaded, setLoaded] = useState(false);
-  const [saving, setSaving] = useState(false);
   const [importing, setImporting] = useState(false);
   const [saved, setSaved] = useState(false);
   const [fileName, setFileName] = useState("");
@@ -270,65 +178,29 @@ function CampaignReportTable({
     const start = currentPage * ROWS_PER_PAGE;
     return rows.slice(start, start + ROWS_PER_PAGE);
   }, [currentPage, rows]);
+  const totals = useMemo(() => {
+    const clicks = sumRows(rows, "clicks");
+    const costCents = sumRows(rows, "costCents");
+    const revenueCents = sumRows(rows, "revenueCents");
+    const sales = sumRows(rows, "sales");
+    const leads = sumRows(rows, "leads");
+    const impressions = sumRows(rows, "impressions");
 
-  function updateRow(
-    visibleIndex: number,
-    patch: Partial<Omit<CampaignReportRow, "clientId">>
-  ) {
-    setSaved(false);
-    const rowIndex = currentPage * ROWS_PER_PAGE + visibleIndex;
-    setRows((current) =>
-      current.map((row, index) => (index === rowIndex ? { ...row, ...patch } : row))
-    );
-  }
-
-  function addRow() {
-    setSaved(false);
-    setRows((current) => [...current, blankRow()]);
-    setPage(Math.floor(rows.length / ROWS_PER_PAGE));
-  }
-
-  function removeRow(visibleIndex: number) {
-    setSaved(false);
-    const rowIndex = currentPage * ROWS_PER_PAGE + visibleIndex;
-    setRows((current) => current.filter((_, index) => index !== rowIndex));
-  }
-
-  async function saveRows() {
-    if (!from || !to) return;
-
-    setSaving(true);
-    setSaved(false);
-    setError(null);
-
-    try {
-      const res = await fetch(apiPath, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          business: businessKey,
-          periodStart: from,
-          periodEnd: to,
-          rows: toInputRows(rows),
-        }),
-      });
-      const json = (await res.json().catch(() => ({}))) as {
-        rows?: ApiCampaignReportRow[];
-        error?: string;
-      };
-
-      if (!res.ok) {
-        throw new Error(json.error ?? "Unable to save campaign rows.");
-      }
-
-      setRows(Array.isArray(json.rows) ? json.rows.map(normalizeApiRow) : []);
-      setSaved(true);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Unable to save campaign rows.");
-    } finally {
-      setSaving(false);
-    }
-  }
+    return {
+      clicks,
+      costCents,
+      revenueCents,
+      roiPercent: percentTimes100(revenueCents, costCents),
+      cpcCents: divideToCents(costCents, clicks),
+      ctrPercent: percentTimes100(clicks, impressions),
+      sales,
+      cpsCents: divideToCents(costCents, sales),
+      leads,
+      cplCents: divideToCents(costCents, leads),
+      impressions,
+      averageRevenueCents: divideToCents(revenueCents, sales),
+    };
+  }, [rows]);
 
   async function importCsv() {
     const file = fileInputRef.current?.files?.[0];
@@ -397,23 +269,6 @@ function CampaignReportTable({
           >
             {importing ? "Importing..." : "Import CSV"}
           </button>
-          <button
-            type="button"
-            onClick={addRow}
-            className="grid h-10 w-10 place-items-center rounded-lg border border-transparent text-lg font-semibold text-blue-600 transition-colors hover:bg-blue-50 focus:outline-none focus:ring-2 focus:ring-blue-100"
-            aria-label="Add Facebook campaign row"
-            title="Add row"
-          >
-            +
-          </button>
-          <button
-            type="button"
-            onClick={saveRows}
-            disabled={saving || importing || !loaded || !from || !to}
-            className="h-10 rounded-lg bg-blue-600 px-4 text-sm font-semibold text-white transition-colors hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
-          >
-            {saving ? "Saving..." : saved ? "Saved" : "Save"}
-          </button>
         </div>
       </div>
 
@@ -427,12 +282,12 @@ function CampaignReportTable({
           )}
           role={error ? "alert" : "status"}
         >
-          {error || "Campaign report saved."}
+          {error || "Campaign report imported."}
         </div>
       )}
 
       <div className="overflow-x-auto">
-        <table className="min-w-[1720px] w-full table-fixed border-collapse text-sm">
+        <table className="min-w-[1660px] w-full table-fixed border-collapse text-sm">
           <thead className="bg-gray-50 text-left text-xs font-semibold text-gray-900">
             <tr className="border-b border-gray-200">
               <th className="w-[165px] px-4 py-3">Id</th>
@@ -450,156 +305,118 @@ function CampaignReportTable({
               <th className="w-[105px] px-3 py-3 text-right">CPL</th>
               <th className="w-[120px] px-3 py-3 text-right">Impressions</th>
               <th className="w-[140px] px-3 py-3 text-right">Average Revenue</th>
-              <th className="w-[64px] px-4 py-3" aria-label="Actions" />
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-200 bg-white">
             {!loaded ? (
               <tr>
-                <td colSpan={16} className="px-4 py-12 text-center text-sm text-gray-400">
+                <td colSpan={15} className="px-4 py-12 text-center text-sm text-gray-400">
                   Loading...
                 </td>
               </tr>
             ) : visibleRows.length === 0 ? (
               <tr>
-                <td colSpan={16} className="px-4 py-12 text-center text-sm text-gray-400">
+                <td colSpan={15} className="px-4 py-12 text-center text-sm text-gray-400">
                   No campaign rows for this period.
                 </td>
               </tr>
             ) : (
-              visibleRows.map((row, index) => {
-                const label = row.campaign || row.campaignId || `row ${index + 1}`;
-
-                return (
-                  <tr key={row.clientId} className="transition-colors hover:bg-gray-50">
-                    <td className="px-2 py-1 align-middle">
-                      <input
-                        value={row.campaignId}
-                        onChange={(event) =>
-                          updateRow(index, { campaignId: event.target.value })
-                        }
-                        className={inputClass("text-left tabular-nums")}
-                        aria-label={`Campaign id for ${label}`}
-                      />
-                    </td>
-                    <td className="px-2 py-1 align-middle">
-                      <input
-                        value={row.campaign}
-                        onChange={(event) => updateRow(index, { campaign: event.target.value })}
-                        className={inputClass("text-left")}
-                        aria-label={`Campaign name for ${label}`}
-                      />
-                    </td>
-                    <td className="px-2 py-1 align-middle">
-                      <input
-                        value={row.status}
-                        onChange={(event) => updateRow(index, { status: event.target.value })}
-                        className={inputClass("text-left")}
-                        aria-label={`Campaign status for ${label}`}
-                      />
-                    </td>
-                    <td className="px-2 py-1 align-middle">
-                      <IntegerInput
-                        value={row.clicks}
-                        onChange={(value) => updateRow(index, { clicks: value })}
-                        ariaLabel={`Clicks for ${label}`}
-                      />
-                    </td>
-                    <td className="px-2 py-1 align-middle">
-                      <MoneyInput
-                        value={row.costCents}
-                        onChange={(value) => updateRow(index, { costCents: value })}
-                        ariaLabel={`Cost for ${label}`}
-                      />
-                    </td>
-                    <td className="px-2 py-1 align-middle">
-                      <MoneyInput
-                        value={row.revenueCents}
-                        onChange={(value) => updateRow(index, { revenueCents: value })}
-                        ariaLabel={`Revenue for ${label}`}
-                      />
-                    </td>
-                    <td className="px-2 py-1 align-middle">
-                      <PercentInput
-                        value={row.roiPercent}
-                        onChange={(value) => updateRow(index, { roiPercent: value })}
-                        ariaLabel={`ROI percent for ${label}`}
-                      />
-                    </td>
-                    <td className="px-2 py-1 align-middle">
-                      <MoneyInput
-                        value={row.cpcCents}
-                        onChange={(value) => updateRow(index, { cpcCents: value })}
-                        ariaLabel={`CPC for ${label}`}
-                      />
-                    </td>
-                    <td className="px-2 py-1 align-middle">
-                      <PercentInput
-                        value={row.ctrPercent}
-                        onChange={(value) => updateRow(index, { ctrPercent: value })}
-                        ariaLabel={`CTR for ${label}`}
-                      />
-                    </td>
-                    <td className="px-2 py-1 align-middle">
-                      <IntegerInput
-                        value={row.sales}
-                        onChange={(value) => updateRow(index, { sales: value })}
-                        ariaLabel={`Sales for ${label}`}
-                      />
-                    </td>
-                    <td className="px-2 py-1 align-middle">
-                      <MoneyInput
-                        value={row.cpsCents}
-                        onChange={(value) => updateRow(index, { cpsCents: value })}
-                        ariaLabel={`CPS for ${label}`}
-                      />
-                    </td>
-                    <td className="px-2 py-1 align-middle">
-                      <IntegerInput
-                        value={row.leads}
-                        onChange={(value) => updateRow(index, { leads: value })}
-                        ariaLabel={`Leads for ${label}`}
-                      />
-                    </td>
-                    <td className="px-2 py-1 align-middle">
-                      <MoneyInput
-                        value={row.cplCents}
-                        onChange={(value) => updateRow(index, { cplCents: value })}
-                        ariaLabel={`CPL for ${label}`}
-                      />
-                    </td>
-                    <td className="px-2 py-1 align-middle">
-                      <IntegerInput
-                        value={row.impressions}
-                        onChange={(value) => updateRow(index, { impressions: value })}
-                        ariaLabel={`Impressions for ${label}`}
-                      />
-                    </td>
-                    <td className="px-2 py-1 align-middle">
-                      <MoneyInput
-                        value={row.averageRevenueCents}
-                        onChange={(value) =>
-                          updateRow(index, { averageRevenueCents: value })
-                        }
-                        ariaLabel={`Average revenue for ${label}`}
-                      />
-                    </td>
-                    <td className="px-4 py-1 align-middle">
-                      <button
-                        type="button"
-                        onClick={() => removeRow(index)}
-                        className="grid h-8 w-8 place-items-center rounded-md text-sm font-semibold text-gray-400 transition-colors hover:bg-red-50 hover:text-red-600 focus:outline-none focus:ring-2 focus:ring-red-100"
-                        aria-label={`Remove ${label}`}
-                        title="Remove row"
-                      >
-                        x
-                      </button>
-                    </td>
-                  </tr>
-                );
-              })
+              visibleRows.map((row) => (
+                <tr key={row.clientId} className="transition-colors hover:bg-gray-50">
+                  <td className="px-4 py-3 align-middle text-gray-900 tabular-nums">
+                    {formatText(row.campaignId)}
+                  </td>
+                  <td className="px-3 py-3 align-middle text-gray-900">
+                    {formatText(row.campaign)}
+                  </td>
+                  <td className="px-3 py-3 align-middle text-gray-900">
+                    {formatText(row.status)}
+                  </td>
+                  <td className="px-3 py-3 text-right tabular-nums text-gray-900">
+                    {formatInteger(row.clicks)}
+                  </td>
+                  <td className="px-3 py-3 text-right tabular-nums text-gray-900">
+                    {formatMoney(row.costCents)}
+                  </td>
+                  <td className="px-3 py-3 text-right tabular-nums text-gray-900">
+                    {formatMoney(row.revenueCents)}
+                  </td>
+                  <td className="px-3 py-3 text-right tabular-nums text-gray-900">
+                    {formatPercent(row.roiPercent)}
+                  </td>
+                  <td className="px-3 py-3 text-right tabular-nums text-gray-900">
+                    {formatMoney(row.cpcCents)}
+                  </td>
+                  <td className="px-3 py-3 text-right tabular-nums text-gray-900">
+                    {formatPercent(row.ctrPercent)}
+                  </td>
+                  <td className="px-3 py-3 text-right tabular-nums text-gray-900">
+                    {formatInteger(row.sales)}
+                  </td>
+                  <td className="px-3 py-3 text-right tabular-nums text-gray-900">
+                    {formatMoney(row.cpsCents)}
+                  </td>
+                  <td className="px-3 py-3 text-right tabular-nums text-gray-900">
+                    {formatInteger(row.leads)}
+                  </td>
+                  <td className="px-3 py-3 text-right tabular-nums text-gray-900">
+                    {formatMoney(row.cplCents)}
+                  </td>
+                  <td className="px-3 py-3 text-right tabular-nums text-gray-900">
+                    {formatInteger(row.impressions)}
+                  </td>
+                  <td className="px-3 py-3 text-right tabular-nums text-gray-900">
+                    {formatMoney(row.averageRevenueCents)}
+                  </td>
+                </tr>
+              ))
             )}
           </tbody>
+          {loaded && rows.length > 0 && (
+            <tfoot className="border-t border-gray-300 bg-gray-50 font-semibold text-gray-900">
+              <tr>
+                <td className="px-4 py-3 align-middle" colSpan={3}>
+                  Total
+                </td>
+                <td className="px-3 py-3 text-right tabular-nums">
+                  {formatInteger(totals.clicks)}
+                </td>
+                <td className="px-3 py-3 text-right tabular-nums">
+                  {formatMoney(totals.costCents)}
+                </td>
+                <td className="px-3 py-3 text-right tabular-nums">
+                  {formatMoney(totals.revenueCents)}
+                </td>
+                <td className="px-3 py-3 text-right tabular-nums">
+                  {formatPercent(totals.roiPercent)}
+                </td>
+                <td className="px-3 py-3 text-right tabular-nums">
+                  {formatMoney(totals.cpcCents)}
+                </td>
+                <td className="px-3 py-3 text-right tabular-nums">
+                  {formatPercent(totals.ctrPercent)}
+                </td>
+                <td className="px-3 py-3 text-right tabular-nums">
+                  {formatInteger(totals.sales)}
+                </td>
+                <td className="px-3 py-3 text-right tabular-nums">
+                  {formatMoney(totals.cpsCents)}
+                </td>
+                <td className="px-3 py-3 text-right tabular-nums">
+                  {formatInteger(totals.leads)}
+                </td>
+                <td className="px-3 py-3 text-right tabular-nums">
+                  {formatMoney(totals.cplCents)}
+                </td>
+                <td className="px-3 py-3 text-right tabular-nums">
+                  {formatInteger(totals.impressions)}
+                </td>
+                <td className="px-3 py-3 text-right tabular-nums">
+                  {formatMoney(totals.averageRevenueCents)}
+                </td>
+              </tr>
+            </tfoot>
+          )}
         </table>
       </div>
 

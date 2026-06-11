@@ -74,11 +74,6 @@ function cloneDefaultRows(): LeadSourceReportRow[] {
   return DEFAULT_ROWS.map((row) => ({ ...row, clientId: newClientId() }));
 }
 
-function dollars(cents: number | null): string {
-  if (cents === null) return "";
-  return (cents / 100).toString();
-}
-
 function displayDollars(cents: number | null): string {
   const amount = cents ?? 0;
   return amount === 0
@@ -91,20 +86,6 @@ function displayDollars(cents: number | null): string {
       });
 }
 
-function parseIntegerInput(value: string): number | null {
-  if (value === "") return null;
-  const parsed = Number(value);
-  if (!Number.isFinite(parsed) || parsed < 0) return null;
-  return Math.round(parsed);
-}
-
-function parseCurrencyInput(value: string): number | null {
-  if (value === "") return null;
-  const parsed = Number(value);
-  if (!Number.isFinite(parsed) || parsed < 0) return null;
-  return Math.round(parsed * 100);
-}
-
 function winPercent(row: LeadSourceReportRow): string {
   const totalLeads = row.totalLeads ?? 0;
   const won = row.won ?? 0;
@@ -112,12 +93,18 @@ function winPercent(row: LeadSourceReportRow): string {
   return `${((won / totalLeads) * 100).toFixed(2)}%`;
 }
 
-function inputClass(className?: string) {
-  return cn(
-    "h-9 w-full rounded-md border border-transparent bg-transparent px-2 text-sm text-gray-900 outline-none transition-colors",
-    "hover:border-gray-200 hover:bg-white focus:border-blue-500 focus:bg-white focus:ring-2 focus:ring-blue-100",
-    className
-  );
+function displayInteger(value: number | null): string {
+  return (value ?? 0).toLocaleString("en-US");
+}
+
+function sumRows(
+  rows: LeadSourceReportRow[],
+  field: keyof Pick<
+    LeadSourceReportRow,
+    "totalLeads" | "totalValueCents" | "open" | "won" | "lost" | "abandoned"
+  >
+): number {
+  return rows.reduce((sum, row) => sum + (row[field] ?? 0), 0);
 }
 
 export function LeadSourceReportTable({
@@ -133,14 +120,11 @@ export function LeadSourceReportTable({
   const [rows, setRows] = useState<LeadSourceReportRow[]>(() => cloneDefaultRows());
   const [page, setPage] = useState(0);
   const [loaded, setLoaded] = useState(false);
-  const [saving, setSaving] = useState(false);
-  const [saved, setSaved] = useState(false);
 
   const businessKey = business || "all-businesses";
 
   const loadRows = useCallback(async () => {
     setLoaded(false);
-    setSaved(false);
     const params = new URLSearchParams({
       business: businessKey,
       from,
@@ -179,67 +163,19 @@ export function LeadSourceReportTable({
     const start = currentPage * ROWS_PER_PAGE;
     return rows.slice(start, start + ROWS_PER_PAGE);
   }, [currentPage, rows]);
-
-  function updateRow(
-    visibleIndex: number,
-    patch: Partial<Omit<LeadSourceReportRow, "clientId">>
-  ) {
-    setSaved(false);
-    const rowIndex = currentPage * ROWS_PER_PAGE + visibleIndex;
-    setRows((current) =>
-      current.map((row, index) => (index === rowIndex ? { ...row, ...patch } : row))
-    );
-  }
-
-  function addRow() {
-    setSaved(false);
-    setRows((current) => [
-      ...current,
-      {
-        clientId: newClientId(),
-        source: "",
-        totalLeads: null,
-        totalValueCents: null,
-        open: null,
-        won: null,
-        lost: null,
-        abandoned: null,
-      },
-    ]);
-    setPage(Math.floor(rows.length / ROWS_PER_PAGE));
-  }
-
-  async function saveRows() {
-    setSaving(true);
-    setSaved(false);
-    try {
-      const res = await fetch("/api/finance/lead-source-report", {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          business: businessKey,
-          periodStart: from,
-          periodEnd: to,
-          reportType,
-          rows,
-        }),
-      });
-      const json = (await res.json().catch(() => ({}))) as {
-        rows?: ApiLeadSourceReportRow[];
-      };
-      if (res.ok && json.rows) {
-        setRows(
-          json.rows.map((row) => ({
-            ...row,
-            clientId: row.id,
-          }))
-        );
-        setSaved(true);
-      }
-    } finally {
-      setSaving(false);
-    }
-  }
+  const totals = useMemo(
+    () => ({
+      clientId: "totals",
+      source: "Total",
+      totalLeads: sumRows(rows, "totalLeads"),
+      totalValueCents: sumRows(rows, "totalValueCents"),
+      open: sumRows(rows, "open"),
+      won: sumRows(rows, "won"),
+      lost: sumRows(rows, "lost"),
+      abandoned: sumRows(rows, "abandoned"),
+    }),
+    [rows]
+  );
 
   return (
     <Card className="mt-6 overflow-hidden rounded-lg shadow-none">
@@ -258,23 +194,6 @@ export function LeadSourceReportTable({
               </option>
             ))}
           </select>
-          <button
-            type="button"
-            onClick={addRow}
-            className="grid h-10 w-10 place-items-center rounded-lg border border-transparent text-lg font-semibold text-blue-600 transition-colors hover:bg-blue-50 focus:outline-none focus:ring-2 focus:ring-blue-100"
-            aria-label="Add lead source row"
-            title="Add row"
-          >
-            +
-          </button>
-          <button
-            type="button"
-            onClick={saveRows}
-            disabled={saving || !loaded}
-            className="h-10 rounded-lg bg-blue-600 px-4 text-sm font-semibold text-white transition-colors hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
-          >
-            {saving ? "Saving..." : saved ? "Saved" : "Save"}
-          </button>
         </div>
       </div>
 
@@ -308,68 +227,21 @@ export function LeadSourceReportTable({
                     index === visibleRows.length - 1 && "bg-gray-100 hover:bg-gray-100"
                   )}
                 >
-                  <td className="px-2 py-1 align-middle">
-                    <input
-                      value={row.source}
-                      onChange={(event) => updateRow(index, { source: event.target.value })}
-                      className={inputClass("text-left")}
-                      aria-label={`Source row ${index + 1}`}
-                    />
+                  <td className="px-4 py-3 align-middle text-gray-900">
+                    {row.source || "-"}
                   </td>
-                  <td className="px-2 py-1 align-middle">
-                    <input
-                      type="number"
-                      min="0"
-                      step="1"
-                      value={row.totalLeads ?? ""}
-                      onChange={(event) =>
-                        updateRow(index, {
-                          totalLeads: parseIntegerInput(event.target.value),
-                        })
-                      }
-                      className={inputClass("text-right tabular-nums")}
-                      aria-label={`Total leads for ${row.source || "row"}`}
-                    />
+                  <td className="px-3 py-3 text-right tabular-nums text-gray-900">
+                    {displayInteger(row.totalLeads)}
                   </td>
-                  <td className="px-2 py-1 align-middle">
-                    <div className="relative">
-                      <span className="pointer-events-none absolute left-2 top-1/2 -translate-y-1/2 text-sm text-gray-400">
-                        $
-                      </span>
-                      <input
-                        type="number"
-                        min="0"
-                        step="0.01"
-                        value={dollars(row.totalValueCents)}
-                        onChange={(event) =>
-                          updateRow(index, {
-                            totalValueCents: parseCurrencyInput(event.target.value),
-                          })
-                        }
-                        onBlur={(event) => {
-                          if (event.target.value === "") return;
-                          event.currentTarget.title = displayDollars(row.totalValueCents);
-                        }}
-                        className={inputClass("pl-6 text-right tabular-nums")}
-                        aria-label={`Total value for ${row.source || "row"}`}
-                      />
-                    </div>
+                  <td className="px-3 py-3 text-right tabular-nums text-gray-900">
+                    {displayDollars(row.totalValueCents)}
                   </td>
                   {(["open", "won", "lost", "abandoned"] as const).map((field) => (
-                    <td key={field} className="px-2 py-1 align-middle">
-                      <input
-                        type="number"
-                        min="0"
-                        step="1"
-                        value={row[field] ?? ""}
-                        onChange={(event) =>
-                          updateRow(index, {
-                            [field]: parseIntegerInput(event.target.value),
-                          })
-                        }
-                        className={inputClass("text-right tabular-nums")}
-                        aria-label={`${field} leads for ${row.source || "row"}`}
-                      />
+                    <td
+                      key={field}
+                      className="px-3 py-3 text-right tabular-nums text-gray-900"
+                    >
+                      {displayInteger(row[field])}
                     </td>
                   ))}
                   <td className="px-4 py-3 text-right tabular-nums text-gray-900">
@@ -379,6 +251,27 @@ export function LeadSourceReportTable({
               ))
             )}
           </tbody>
+          {loaded && rows.length > 0 && (
+            <tfoot className="border-t border-gray-300 bg-gray-50 font-semibold text-gray-900">
+              <tr>
+                <td className="px-4 py-3 align-middle">Total</td>
+                <td className="px-3 py-3 text-right tabular-nums">
+                  {displayInteger(totals.totalLeads)}
+                </td>
+                <td className="px-3 py-3 text-right tabular-nums">
+                  {displayDollars(totals.totalValueCents)}
+                </td>
+                {(["open", "won", "lost", "abandoned"] as const).map((field) => (
+                  <td key={field} className="px-3 py-3 text-right tabular-nums">
+                    {displayInteger(totals[field])}
+                  </td>
+                ))}
+                <td className="px-4 py-3 text-right tabular-nums">
+                  {winPercent(totals)}
+                </td>
+              </tr>
+            </tfoot>
+          )}
         </table>
       </div>
 

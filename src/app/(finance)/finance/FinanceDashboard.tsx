@@ -1,7 +1,7 @@
 "use client";
 
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { useCallback, useEffect, useMemo, useState, useTransition } from "react";
+import { useEffect, useMemo, useState, useTransition } from "react";
 import { cn } from "@/lib/utils";
 import { Card, CardContent } from "@/components/ui/card";
 import {
@@ -14,12 +14,7 @@ const BUSINESSES = [
   { value: "", label: "All Businesses" },
   { value: "mobile-grooming", label: "Planet Pooch Mobile Grooming" },
   { value: "pet-resort", label: "Planet Pooch Pet Resort" },
-  { value: "all-businesses-manual", label: "All Businesses (Manual)" },
-  { value: "mobile-grooming-manual", label: "Mobile Grooming (Manual)" },
-  { value: "pet-resort-manual", label: "Pet Resort (Manual)" },
 ];
-
-const MANUAL_BUSINESSES = ["all-businesses-manual", "mobile-grooming-manual", "pet-resort-manual"];
 
 const MONTHS = [
   { value: "1", label: "January" },
@@ -129,76 +124,6 @@ function computeKPIs(m: MetricData) {
   return { cac, ltvRevenue, ltvProfit, metaRoas, googleRoas };
 }
 
-function DollarInput({
-  label,
-  hint,
-  value,
-  onChange,
-}: {
-  label: string;
-  hint: string;
-  value: number | null;
-  onChange: (val: number | null) => void;
-}) {
-  const display = value !== null ? (value / 100).toFixed(2) : "";
-  return (
-    <div>
-      <label className="block text-xs font-medium text-gray-700 mb-1">
-        {label} <span className="text-gray-400 font-normal">({hint})</span>
-      </label>
-      <div className="relative">
-        <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400 text-sm">$</span>
-        <input
-          type="number"
-          step="0.01"
-          min="0"
-          value={display}
-          onChange={(e) => {
-            const v = e.target.value;
-            if (v === "") { onChange(null); return; }
-            onChange(Math.round(parseFloat(v) * 100));
-          }}
-          className="w-full pl-6 pr-3 py-1.5 rounded-lg border border-gray-300 bg-white text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-          placeholder="0.00"
-        />
-      </div>
-    </div>
-  );
-}
-
-function IntInput({
-  label,
-  hint,
-  value,
-  onChange,
-}: {
-  label: string;
-  hint: string;
-  value: number | null;
-  onChange: (val: number | null) => void;
-}) {
-  return (
-    <div>
-      <label className="block text-xs font-medium text-gray-700 mb-1">
-        {label} <span className="text-gray-400 font-normal">({hint})</span>
-      </label>
-      <input
-        type="number"
-        step="1"
-        min="0"
-        value={value ?? ""}
-        onChange={(e) => {
-          const v = e.target.value;
-          if (v === "") { onChange(null); return; }
-          onChange(parseInt(v, 10));
-        }}
-        className="w-full px-3 py-1.5 rounded-lg border border-gray-300 bg-white text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-        placeholder="0"
-      />
-    </div>
-  );
-}
-
 export function FinanceDashboard({
   business,
   month,
@@ -214,10 +139,7 @@ export function FinanceDashboard({
   const [isPending, startTransition] = useTransition();
 
   const [metric, setMetric] = useState<MetricData>(EMPTY_METRIC);
-  const [saving, setSaving] = useState(false);
-  const [loaded, setLoaded] = useState(false);
 
-  const isManual = MANUAL_BUSINESSES.includes(business);
   const selectedMonth = parseMonthParam(month);
   const selectedYear = parseYearParam(year);
   const { from, to } = computeMonthRange(selectedYear, selectedMonth);
@@ -231,83 +153,37 @@ export function FinanceDashboard({
     );
   }, [selectedYear]);
 
-  const fetchMetric = useCallback(async () => {
-    if (isManual) {
-      try {
-        const res = await fetch(
-          `/api/finance/metrics?business=${business}&from=${from}&to=${to}`,
-        );
-        const json = await res.json();
-        if (json.metric) {
-          const m = json.metric;
-          setMetric({
-            totalRevenue: m.totalRevenue,
-            totalProfit: m.totalProfit,
-            totalCustomers: m.totalCustomers,
-            totalAdSpend: m.totalAdSpend,
-            totalConversions: m.totalConversions,
-            metaAdSpend: m.metaAdSpend,
-            metaRevenue: m.metaRevenue,
-            googleAdSpend: m.googleAdSpend,
-            googleRevenue: m.googleRevenue,
-          });
-        } else {
-          setMetric(EMPTY_METRIC);
-        }
-      } catch {
-        setMetric(EMPTY_METRIC);
-      }
-    } else {
-      try {
-        const res = await fetch(
-          `/api/finance/aggregated?business=${business}&from=${from}&to=${to}`,
-        );
-        const json = await res.json();
-        if (json.metric) {
-          const m = json.metric;
-          setMetric({
-            totalRevenue: m.totalRevenue,
-            totalProfit: m.totalProfit,
-            totalCustomers: m.totalCustomers,
-            totalAdSpend: m.totalAdSpend,
-            totalConversions: m.totalConversions,
-            metaAdSpend: m.metaAdSpend,
-            metaRevenue: m.metaRevenue,
-            googleAdSpend: m.googleAdSpend,
-            googleRevenue: m.googleRevenue,
-          });
-        } else {
-          setMetric(EMPTY_METRIC);
-        }
-      } catch {
-        setMetric(EMPTY_METRIC);
-      }
-    }
-    setLoaded(true);
-  }, [business, from, to, isManual]);
-
   useEffect(() => {
-    setLoaded(false);
-    fetchMetric();
-  }, [fetchMetric]);
-
-  async function saveMetric() {
-    setSaving(true);
-    try {
-      await fetch("/api/finance/metrics", {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          business,
-          periodStart: from,
-          periodEnd: to,
-          ...metric,
-        }),
+    let cancelled = false;
+    fetch(`/api/finance/aggregated?business=${business}&from=${from}&to=${to}`)
+      .then((res) => res.json())
+      .then((json) => {
+        if (cancelled) return;
+        if (json.metric) {
+          const m = json.metric;
+          setMetric({
+            totalRevenue: m.totalRevenue,
+            totalProfit: m.totalProfit,
+            totalCustomers: m.totalCustomers,
+            totalAdSpend: m.totalAdSpend,
+            totalConversions: m.totalConversions,
+            metaAdSpend: m.metaAdSpend,
+            metaRevenue: m.metaRevenue,
+            googleAdSpend: m.googleAdSpend,
+            googleRevenue: m.googleRevenue,
+          });
+        } else {
+          setMetric(EMPTY_METRIC);
+        }
+      })
+      .catch(() => {
+        if (!cancelled) setMetric(EMPTY_METRIC);
       });
-    } finally {
-      setSaving(false);
-    }
-  }
+
+    return () => {
+      cancelled = true;
+    };
+  }, [business, from, to]);
 
   function update(patch: Record<string, string | undefined>) {
     const next = new URLSearchParams(searchParams.toString());
@@ -445,121 +321,8 @@ export function FinanceDashboard({
       <FacebookCampaignReportTable business={business} from={from} to={to} />
       <GoogleCampaignReportTable business={business} from={from} to={to} />
 
-      {/* Manual entry form */}
-      {isManual && loaded && (
-        <div className="mt-6 rounded-xl border border-gray-200 bg-white p-5">
-          <div className="flex items-center justify-between mb-4">
-            <div>
-              <h3 className="text-sm font-semibold text-gray-900">
-                Manual Entry
-              </h3>
-              <p className="text-xs text-gray-500 mt-0.5">
-                {businessLabel} &middot; {from} to {to}
-              </p>
-            </div>
-            <button
-              type="button"
-              onClick={saveMetric}
-              disabled={saving}
-              className="rounded-lg bg-blue-600 px-4 py-1.5 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50 transition-colors"
-            >
-              {saving ? "Saving…" : "Save"}
-            </button>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-4">
-            <div className="space-y-3">
-              <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
-                Revenue &amp; Customers
-              </p>
-              <DollarInput
-                label="Total Revenue"
-                hint="gross revenue"
-                value={metric.totalRevenue}
-                onChange={(v) => setMetric((p) => ({ ...p, totalRevenue: v }))}
-              />
-              <DollarInput
-                label="Total Profit"
-                hint="net profit"
-                value={metric.totalProfit}
-                onChange={(v) => setMetric((p) => ({ ...p, totalProfit: v }))}
-              />
-              <IntInput
-                label="Total Customers"
-                hint="unique customers"
-                value={metric.totalCustomers}
-                onChange={(v) => setMetric((p) => ({ ...p, totalCustomers: v }))}
-              />
-            </div>
-
-            <div className="space-y-3">
-              <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
-                Acquisition
-              </p>
-              <DollarInput
-                label="Total Ad Spend"
-                hint="all platforms"
-                value={metric.totalAdSpend}
-                onChange={(v) => setMetric((p) => ({ ...p, totalAdSpend: v }))}
-              />
-              <IntInput
-                label="Total Conversions"
-                hint="new customers from ads"
-                value={metric.totalConversions}
-                onChange={(v) => setMetric((p) => ({ ...p, totalConversions: v }))}
-              />
-            </div>
-
-            <div className="space-y-3">
-              <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
-                Ad Platform Breakdown
-              </p>
-              <DollarInput
-                label="Meta Ad Spend"
-                hint="Facebook / Instagram"
-                value={metric.metaAdSpend}
-                onChange={(v) => setMetric((p) => ({ ...p, metaAdSpend: v }))}
-              />
-              <DollarInput
-                label="Meta Revenue"
-                hint="revenue from Meta ads"
-                value={metric.metaRevenue}
-                onChange={(v) => setMetric((p) => ({ ...p, metaRevenue: v }))}
-              />
-              <DollarInput
-                label="Google Ad Spend"
-                hint="Google Ads"
-                value={metric.googleAdSpend}
-                onChange={(v) => setMetric((p) => ({ ...p, googleAdSpend: v }))}
-              />
-              <DollarInput
-                label="Google Revenue"
-                hint="revenue from Google ads"
-                value={metric.googleRevenue}
-                onChange={(v) => setMetric((p) => ({ ...p, googleRevenue: v }))}
-              />
-            </div>
-          </div>
-
-          {/* Live computed preview */}
-          <div className="mt-5 pt-4 border-t border-gray-100">
-            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">
-              Computed from your inputs
-            </p>
-            <div className="flex flex-wrap gap-x-8 gap-y-1 text-sm text-gray-700">
-              <span>CAC: <strong>{formatDollars(kpis.cac)}</strong></span>
-              <span>LTV (Rev): <strong>{formatDollars(kpis.ltvRevenue)}</strong></span>
-              <span>LTV (Profit): <strong>{formatDollars(kpis.ltvProfit)}</strong></span>
-              <span>Meta ROAS: <strong>{formatRatio(kpis.metaRoas)}</strong></span>
-              <span>Google ROAS: <strong>{formatRatio(kpis.googleRoas)}</strong></span>
-            </div>
-          </div>
-        </div>
-      )}
-
       <p className="mt-6 text-xs text-gray-400">
         Showing {businessLabel} &middot; {rangeLabel}
-        {isManual && <> &middot; Period: {from} to {to}</>}
       </p>
     </div>
   );
