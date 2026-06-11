@@ -15,6 +15,7 @@ const BOARDING_KPI_METRICS = {
   revenue: "revenue",
   packages: "package_sales",
   addons: "addon_sales",
+  nights: "nights",
 } as const;
 
 const BOARDING_SERVICE_NAMES = [
@@ -90,10 +91,15 @@ export type WeeklyBoardingKpiValues = {
   totalRevenueCents: number;
   packageSalesCents: number;
   addonSalesCents: number;
+  nights: number;
 };
 
 function moneyValue(cents: number): number {
   return Math.round(cents);
+}
+
+function numberValue(value: number): number {
+  return Math.round(value * 100);
 }
 
 function serviceLines(appointment: MoegoAppointmentRow): MoegoAppointmentServiceDetail[] {
@@ -295,6 +301,7 @@ export async function buildWeeklyBoardingReport(options?: {
   const orderMoney = await ordersById(orderIds, start, end, businessId);
 
   let nights = 0;
+  const countedNightKeys = new Set<string>();
   const nightsByService = new Map<string, number>();
   let packageSalesCents = 0;
   let addonSalesCents = 0;
@@ -321,7 +328,11 @@ export async function buildWeeklyBoardingReport(options?: {
         const netCents = netLineCents(grossCents, appointmentGrossCents, order);
         if (netCents <= 0) continue;
         totalRevenueCents += netCents * capacityUnits;
-        nights += capacityUnits;
+        const nightKey = appointment.orderId || appointment.id;
+        if (!countedNightKeys.has(nightKey)) {
+          nights += capacityUnits;
+          countedNightKeys.add(nightKey);
+        }
         const serviceName = service.name?.trim() ?? "(unnamed service)";
         nightsByService.set(serviceName, (nightsByService.get(serviceName) || 0) + capacityUnits);
       }
@@ -360,6 +371,10 @@ export async function upsertWeeklyBoardingKpis(
       metricKey: BOARDING_KPI_METRICS.addons,
       value: moneyValue(values.addonSalesCents),
     },
+    {
+      metricKey: BOARDING_KPI_METRICS.nights,
+      value: numberValue(values.nights),
+    },
   ];
 
   await prisma.$transaction(
@@ -395,6 +410,7 @@ export async function syncWeeklyBoardingKpis(options?: {
     totalRevenueCents: report.totalRevenueCents,
     packageSalesCents: report.packageSalesCents,
     addonSalesCents: report.addonSalesCents,
+    nights: report.nights,
   });
 
   return report;
