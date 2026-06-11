@@ -80,7 +80,12 @@ function normalizeApiRow(row: ApiCampaignReportRow): CampaignReportRow {
 }
 
 function toInputRows(rows: CampaignReportRow[]) {
-  return rows.map(({ clientId: _clientId, id: _id, ...row }) => row);
+  return rows.map((row) => {
+    const { clientId, id, ...input } = row;
+    void clientId;
+    void id;
+    return input;
+  });
 }
 
 function parseIntegerInput(value: string): number | null {
@@ -189,18 +194,22 @@ function IntegerInput({
   );
 }
 
-export function FacebookCampaignReportTable({
+function CampaignReportTable({
+  title,
+  apiPath,
+  csvLabel,
   business,
   from,
   to,
 }: {
+  title: string;
+  apiPath: string;
+  csvLabel: string;
   business: string;
   from: string;
   to: string;
 }) {
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const [periodStart, setPeriodStart] = useState(from);
-  const [periodEnd, setPeriodEnd] = useState(to);
   const [rows, setRows] = useState<CampaignReportRow[]>([]);
   const [page, setPage] = useState(0);
   const [loaded, setLoaded] = useState(false);
@@ -212,13 +221,8 @@ export function FacebookCampaignReportTable({
 
   const businessKey = business || "all-businesses";
 
-  useEffect(() => {
-    setPeriodStart(from);
-    setPeriodEnd(to);
-  }, [from, to]);
-
   const loadRows = useCallback(async () => {
-    if (!periodStart || !periodEnd) return;
+    if (!from || !to) return;
 
     setLoaded(false);
     setSaved(false);
@@ -226,12 +230,12 @@ export function FacebookCampaignReportTable({
 
     const params = new URLSearchParams({
       business: businessKey,
-      from: periodStart,
-      to: periodEnd,
+      from,
+      to,
     });
 
     try {
-      const res = await fetch(`/api/finance/facebook-campaign-report?${params.toString()}`);
+      const res = await fetch(`${apiPath}?${params.toString()}`);
       const json = (await res.json().catch(() => ({}))) as {
         rows?: ApiCampaignReportRow[];
         error?: string;
@@ -249,7 +253,7 @@ export function FacebookCampaignReportTable({
     } finally {
       setLoaded(true);
     }
-  }, [businessKey, periodEnd, periodStart]);
+  }, [apiPath, businessKey, from, to]);
 
   useEffect(() => {
     loadRows();
@@ -291,20 +295,20 @@ export function FacebookCampaignReportTable({
   }
 
   async function saveRows() {
-    if (!periodStart || !periodEnd) return;
+    if (!from || !to) return;
 
     setSaving(true);
     setSaved(false);
     setError(null);
 
     try {
-      const res = await fetch("/api/finance/facebook-campaign-report", {
+      const res = await fetch(apiPath, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           business: businessKey,
-          periodStart,
-          periodEnd,
+          periodStart: from,
+          periodEnd: to,
           rows: toInputRows(rows),
         }),
       });
@@ -328,8 +332,8 @@ export function FacebookCampaignReportTable({
 
   async function importCsv() {
     const file = fileInputRef.current?.files?.[0];
-    if (!file || !periodStart || !periodEnd) {
-      setError("Choose a CSV file and period before importing.");
+    if (!file || !from || !to) {
+      setError("Choose a CSV file before importing.");
       return;
     }
 
@@ -339,12 +343,12 @@ export function FacebookCampaignReportTable({
 
     const form = new FormData();
     form.append("business", businessKey);
-    form.append("periodStart", periodStart);
-    form.append("periodEnd", periodEnd);
+    form.append("periodStart", from);
+    form.append("periodEnd", to);
     form.append("file", file);
 
     try {
-      const res = await fetch("/api/finance/facebook-campaign-report", {
+      const res = await fetch(apiPath, {
         method: "POST",
         body: form,
       });
@@ -354,7 +358,7 @@ export function FacebookCampaignReportTable({
       };
 
       if (!res.ok) {
-        throw new Error(json.error ?? "Unable to import campaign CSV.");
+        throw new Error(json.error ?? `Unable to import ${csvLabel} CSV.`);
       }
 
       setRows(Array.isArray(json.rows) ? json.rows.map(normalizeApiRow) : []);
@@ -372,23 +376,8 @@ export function FacebookCampaignReportTable({
   return (
     <Card className="mt-6 overflow-hidden rounded-lg shadow-none">
       <div className="flex flex-col gap-3 border-b border-gray-200 bg-white px-4 py-3 xl:flex-row xl:items-center xl:justify-between">
-        <h2 className="text-base font-semibold text-gray-900">Facebook Campaign Report</h2>
+        <h2 className="text-base font-semibold text-gray-900">{title}</h2>
         <div className="flex flex-wrap items-center gap-2">
-          <input
-            type="date"
-            value={periodStart}
-            onChange={(event) => setPeriodStart(event.target.value)}
-            className="h-10 rounded-lg border border-gray-300 bg-white px-3 text-sm text-gray-900 shadow-sm outline-none transition-colors focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
-            aria-label="Facebook campaign report start date"
-          />
-          <span className="text-sm text-gray-400">to</span>
-          <input
-            type="date"
-            value={periodEnd}
-            onChange={(event) => setPeriodEnd(event.target.value)}
-            className="h-10 rounded-lg border border-gray-300 bg-white px-3 text-sm text-gray-900 shadow-sm outline-none transition-colors focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
-            aria-label="Facebook campaign report end date"
-          />
           <label className="flex h-10 max-w-56 cursor-pointer items-center rounded-lg border border-gray-300 bg-white px-3 text-sm font-medium text-gray-700 shadow-sm transition-colors hover:bg-gray-50">
             <span className="truncate">{fileName || "Choose CSV"}</span>
             <input
@@ -397,13 +386,13 @@ export function FacebookCampaignReportTable({
               accept=".csv,text/csv"
               className="sr-only"
               onChange={(event) => setFileName(event.target.files?.[0]?.name ?? "")}
-              aria-label="Choose Facebook campaign CSV"
+              aria-label={`Choose ${csvLabel} campaign CSV`}
             />
           </label>
           <button
             type="button"
             onClick={importCsv}
-            disabled={importing || !periodStart || !periodEnd}
+            disabled={importing || !from || !to}
             className="h-10 rounded-lg border border-blue-600 bg-white px-4 text-sm font-semibold text-blue-600 transition-colors hover:bg-blue-50 disabled:cursor-not-allowed disabled:opacity-50"
           >
             {importing ? "Importing..." : "Import CSV"}
@@ -420,7 +409,7 @@ export function FacebookCampaignReportTable({
           <button
             type="button"
             onClick={saveRows}
-            disabled={saving || importing || !loaded || !periodStart || !periodEnd}
+            disabled={saving || importing || !loaded || !from || !to}
             className="h-10 rounded-lg bg-blue-600 px-4 text-sm font-semibold text-white transition-colors hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
           >
             {saving ? "Saving..." : saved ? "Saved" : "Save"}
@@ -641,5 +630,47 @@ export function FacebookCampaignReportTable({
         </div>
       </div>
     </Card>
+  );
+}
+
+export function FacebookCampaignReportTable({
+  business,
+  from,
+  to,
+}: {
+  business: string;
+  from: string;
+  to: string;
+}) {
+  return (
+    <CampaignReportTable
+      title="Facebook Campaign Report"
+      apiPath="/api/finance/facebook-campaign-report"
+      csvLabel="Facebook"
+      business={business}
+      from={from}
+      to={to}
+    />
+  );
+}
+
+export function GoogleCampaignReportTable({
+  business,
+  from,
+  to,
+}: {
+  business: string;
+  from: string;
+  to: string;
+}) {
+  return (
+    <CampaignReportTable
+      title="Google Campaign Report"
+      apiPath="/api/finance/google-campaign-report"
+      csvLabel="Google"
+      business={business}
+      from={from}
+      to={to}
+    />
   );
 }

@@ -1,10 +1,13 @@
 "use client";
 
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { useCallback, useEffect, useState, useTransition } from "react";
+import { useCallback, useEffect, useMemo, useState, useTransition } from "react";
 import { cn } from "@/lib/utils";
 import { Card, CardContent } from "@/components/ui/card";
-import { FacebookCampaignReportTable } from "./FacebookCampaignReportTable";
+import {
+  FacebookCampaignReportTable,
+  GoogleCampaignReportTable,
+} from "./FacebookCampaignReportTable";
 import { LeadSourceReportTable } from "./LeadSourceReportTable";
 
 const BUSINESSES = [
@@ -18,71 +21,44 @@ const BUSINESSES = [
 
 const MANUAL_BUSINESSES = ["all-businesses-manual", "mobile-grooming-manual", "pet-resort-manual"];
 
-const DATE_RANGES = [
-  { value: "mtd", label: "Month to Date" },
-  { value: "last-month", label: "Last Month" },
-  { value: "qtd", label: "Quarter to Date" },
-  { value: "last-quarter", label: "Last Quarter" },
-  { value: "ytd", label: "Year to Date" },
-  { value: "last-year", label: "Last Year" },
-  { value: "last-30", label: "Last 30 Days" },
-  { value: "last-90", label: "Last 90 Days" },
-  { value: "custom", label: "Custom Range" },
-];
+const MONTHS = [
+  { value: "1", label: "January" },
+  { value: "2", label: "February" },
+  { value: "3", label: "March" },
+  { value: "4", label: "April" },
+  { value: "5", label: "May" },
+  { value: "6", label: "June" },
+  { value: "7", label: "July" },
+  { value: "8", label: "August" },
+  { value: "9", label: "September" },
+  { value: "10", label: "October" },
+  { value: "11", label: "November" },
+  { value: "12", label: "December" },
+] as const;
 
-function computeDateRange(
-  range: string,
-  customFrom?: string | null,
-  customTo?: string | null,
-): { from: string; to: string } {
+function parseMonthParam(value: string | undefined): number {
+  const month = Number(value);
+  return Number.isInteger(month) && month >= 1 && month <= 12
+    ? month
+    : new Date().getMonth() + 1;
+}
+
+function parseYearParam(value: string | undefined): number {
+  const year = Number(value);
   const now = new Date();
-  const y = now.getFullYear();
-  const m = now.getMonth();
-  const d = now.getDate();
+  return Number.isInteger(year) && year >= 2020 && year <= now.getFullYear() + 1
+    ? year
+    : now.getFullYear();
+}
 
-  const fmt = (dt: Date) => dt.toISOString().slice(0, 10);
+function formatDateParam(date: Date): string {
+  return date.toISOString().slice(0, 10);
+}
 
-  switch (range) {
-    case "last-month": {
-      const start = new Date(y, m - 1, 1);
-      const end = new Date(y, m, 0);
-      return { from: fmt(start), to: fmt(end) };
-    }
-    case "qtd": {
-      const qStart = new Date(y, Math.floor(m / 3) * 3, 1);
-      return { from: fmt(qStart), to: fmt(now) };
-    }
-    case "last-quarter": {
-      const cqStart = Math.floor(m / 3) * 3;
-      const start = new Date(y, cqStart - 3, 1);
-      const end = new Date(y, cqStart, 0);
-      return { from: fmt(start), to: fmt(end) };
-    }
-    case "ytd":
-      return { from: `${y}-01-01`, to: fmt(now) };
-    case "last-year":
-      return { from: `${y - 1}-01-01`, to: `${y - 1}-12-31` };
-    case "last-30": {
-      const d30 = new Date(now);
-      d30.setDate(d30.getDate() - 30);
-      return { from: fmt(d30), to: fmt(now) };
-    }
-    case "last-90": {
-      const d90 = new Date(now);
-      d90.setDate(d90.getDate() - 90);
-      return { from: fmt(d90), to: fmt(now) };
-    }
-    case "custom":
-      return {
-        from: customFrom || fmt(new Date(y, m, 1)),
-        to: customTo || fmt(now),
-      };
-    default: {
-      // mtd
-      const start = new Date(y, m, 1);
-      return { from: fmt(start), to: fmt(now) };
-    }
-  }
+function computeMonthRange(year: number, month: number): { from: string; to: string } {
+  const start = new Date(Date.UTC(year, month - 1, 1));
+  const end = new Date(Date.UTC(year, month, 0));
+  return { from: formatDateParam(start), to: formatDateParam(end) };
 }
 
 type MetricData = {
@@ -122,11 +98,6 @@ function formatDollars(val: number | null) {
 function formatRatio(val: number | null) {
   if (val === null) return "—";
   return val.toFixed(2) + "x";
-}
-
-function formatInt(val: number | null) {
-  if (val === null) return "—";
-  return val.toLocaleString("en-US");
 }
 
 function computeKPIs(m: MetricData) {
@@ -230,10 +201,12 @@ function IntInput({
 
 export function FinanceDashboard({
   business,
-  range,
+  month,
+  year,
 }: {
   business: string;
-  range: string;
+  month?: string;
+  year?: string;
 }) {
   const router = useRouter();
   const pathname = usePathname();
@@ -245,11 +218,18 @@ export function FinanceDashboard({
   const [loaded, setLoaded] = useState(false);
 
   const isManual = MANUAL_BUSINESSES.includes(business);
-  const { from, to } = computeDateRange(
-    range,
-    searchParams.get("from"),
-    searchParams.get("to"),
-  );
+  const selectedMonth = parseMonthParam(month);
+  const selectedYear = parseYearParam(year);
+  const { from, to } = computeMonthRange(selectedYear, selectedMonth);
+  const years = useMemo(() => {
+    const currentYear = new Date().getFullYear();
+    const startYear = Math.min(2024, selectedYear);
+    const endYear = Math.max(currentYear + 1, selectedYear);
+    return Array.from(
+      { length: endYear - startYear + 1 },
+      (_, index) => startYear + index
+    );
+  }, [selectedYear]);
 
   const fetchMetric = useCallback(async () => {
     if (isManual) {
@@ -342,7 +322,7 @@ export function FinanceDashboard({
   }
 
   const rangeLabel =
-    DATE_RANGES.find((r) => r.value === range)?.label ?? "Month to Date";
+    `${MONTHS[selectedMonth - 1].label} ${selectedYear}`;
   const businessLabel =
     BUSINESSES.find((b) => b.value === business)?.label ?? "All Businesses";
 
@@ -368,46 +348,53 @@ export function FinanceDashboard({
         </select>
 
         <select
-          value={range}
+          value={String(selectedMonth)}
           onChange={(e) =>
-            update({ range: e.target.value === "mtd" ? undefined : e.target.value })
+            update({
+              month: e.target.value,
+              range: undefined,
+              from: undefined,
+              to: undefined,
+            })
           }
           className="rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-          aria-label="Date range"
+          aria-label="Performance month"
         >
-          {DATE_RANGES.map((r) => (
-            <option key={r.value} value={r.value}>
-              {r.label}
+          {MONTHS.map((m) => (
+            <option key={m.value} value={m.value}>
+              {m.label}
             </option>
           ))}
         </select>
 
-        {range === "custom" && (
-          <div className="flex items-center gap-2">
-            <input
-              type="date"
-              value={searchParams.get("from") ?? ""}
-              onChange={(e) => update({ from: e.target.value || undefined })}
-              className="rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              aria-label="Start date"
-            />
-            <span className="text-sm text-gray-400">to</span>
-            <input
-              type="date"
-              value={searchParams.get("to") ?? ""}
-              onChange={(e) => update({ to: e.target.value || undefined })}
-              className="rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              aria-label="End date"
-            />
-          </div>
-        )}
+        <select
+          value={String(selectedYear)}
+          onChange={(e) =>
+            update({
+              year: e.target.value,
+              range: undefined,
+              from: undefined,
+              to: undefined,
+            })
+          }
+          className="rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+          aria-label="Performance year"
+        >
+          {years.map((y) => (
+            <option key={y} value={y}>
+              {y}
+            </option>
+          ))}
+        </select>
 
-        {(business || range !== "mtd") && (
+        {(business || month || year) && (
           <button
             type="button"
             onClick={() =>
               update({
                 business: undefined,
+                month: undefined,
+                year: undefined,
                 range: undefined,
                 from: undefined,
                 to: undefined,
@@ -456,6 +443,7 @@ export function FinanceDashboard({
 
       <LeadSourceReportTable business={business} from={from} to={to} />
       <FacebookCampaignReportTable business={business} from={from} to={to} />
+      <GoogleCampaignReportTable business={business} from={from} to={to} />
 
       {/* Manual entry form */}
       {isManual && loaded && (

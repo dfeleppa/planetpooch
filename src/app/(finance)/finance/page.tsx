@@ -4,12 +4,11 @@ import { FinanceDashboard } from "./FinanceDashboard";
 export default async function FinanceDashboardPage({
   searchParams,
 }: {
-  searchParams: Promise<{ business?: string; range?: string }>;
+  searchParams: Promise<{ business?: string; month?: string; year?: string }>;
 }) {
   await requireSuperAdmin();
   const params = await searchParams;
   const business = params.business ?? "";
-  const range = params.range ?? "mtd";
 
   return (
     <div>
@@ -20,7 +19,7 @@ export default async function FinanceDashboardPage({
         </p>
       </div>
 
-      <FinanceDashboard business={business} range={range} />
+      <FinanceDashboard business={business} month={params.month} year={params.year} />
     </div>
   );
 }

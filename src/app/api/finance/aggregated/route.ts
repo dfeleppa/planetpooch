@@ -33,6 +33,12 @@ function parseDate(s: string | null): Date | null {
   return Number.isNaN(d.getTime()) ? null : d;
 }
 
+function addDays(date: Date, days: number): Date {
+  const next = new Date(date);
+  next.setUTCDate(next.getUTCDate() + days);
+  return next;
+}
+
 async function loadAggData(forceRefresh: boolean): Promise<AggData> {
   if (!forceRefresh && cache && Date.now() - cache.cachedAt < CACHE_TTL_MS) {
     return cache.data;
@@ -86,6 +92,7 @@ export async function GET(req: NextRequest) {
   const defaultFrom = new Date(now.getFullYear(), now.getMonth(), 1);
   const from = parseDate(sp.get("from")) ?? defaultFrom;
   const to = parseDate(sp.get("to")) ?? now;
+  const toExclusive = addDays(to, 1);
 
   let agg: AggData;
   try {
@@ -101,11 +108,10 @@ export async function GET(req: NextRequest) {
   }
 
   const fromMs = from.getTime();
-  const toMs = to.getTime();
 
   let filteredOpps = agg.ghlOpportunities.filter((o) => {
     const t = new Date(o.createdAt).getTime();
-    return t >= fromMs && t <= toMs;
+    return t >= fromMs && t < toExclusive.getTime();
   });
 
   if (business === "mobile-grooming") {
@@ -136,17 +142,17 @@ export async function GET(req: NextRequest) {
     const [moegoRevWindow, moegoCustWindow, metaSpendWindow] =
       await Promise.all([
         prisma.moegoOrder.aggregate({
-          where: { createdTime: { gte: from, lt: to } },
+          where: { createdTime: { gte: from, lt: toExclusive } },
           _sum: { paidCents: true },
         }),
         prisma.moegoCustomer.count({
-          where: { createdTime: { gte: from, lt: to } },
+          where: { createdTime: { gte: from, lt: toExclusive } },
         }),
         prisma.metaAdInsight.aggregate({
           where: {
             date: {
               gte: new Date(from.toISOString().slice(0, 10)),
-              lt: new Date(to.toISOString().slice(0, 10)),
+              lt: new Date(toExclusive.toISOString().slice(0, 10)),
             },
           },
           _sum: { spendCents: true },
