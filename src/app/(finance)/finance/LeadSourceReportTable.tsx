@@ -120,11 +120,16 @@ export function LeadSourceReportTable({
   const [rows, setRows] = useState<LeadSourceReportRow[]>(() => cloneDefaultRows());
   const [page, setPage] = useState(0);
   const [loaded, setLoaded] = useState(false);
+  const [pulling, setPulling] = useState(false);
+  const [message, setMessage] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   const businessKey = business || "all-businesses";
 
   const loadRows = useCallback(async () => {
     setLoaded(false);
+    setMessage(null);
+    setError(null);
     const params = new URLSearchParams({
       business: businessKey,
       from,
@@ -177,6 +182,48 @@ export function LeadSourceReportTable({
     [rows]
   );
 
+  async function pullFromApi() {
+    setPulling(true);
+    setMessage(null);
+    setError(null);
+
+    try {
+      const res = await fetch("/api/finance/lead-source-report", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          business: businessKey,
+          periodStart: from,
+          periodEnd: to,
+          reportType,
+        }),
+      });
+      const json = (await res.json().catch(() => ({}))) as {
+        rows?: ApiLeadSourceReportRow[];
+        error?: string;
+      };
+
+      if (!res.ok) {
+        throw new Error(json.error ?? "Unable to pull lead source rows.");
+      }
+
+      setRows(
+        Array.isArray(json.rows)
+          ? json.rows.map((row) => ({
+              ...row,
+              clientId: row.id,
+            }))
+          : []
+      );
+      setPage(0);
+      setMessage("Lead source report pulled from GHL.");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Unable to pull lead source rows.");
+    } finally {
+      setPulling(false);
+    }
+  }
+
   return (
     <Card className="mt-6 overflow-hidden rounded-lg shadow-none">
       <div className="flex flex-col gap-3 border-b border-gray-200 bg-white px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
@@ -194,8 +241,30 @@ export function LeadSourceReportTable({
               </option>
             ))}
           </select>
+          <button
+            type="button"
+            onClick={pullFromApi}
+            disabled={pulling || !loaded}
+            className="h-10 rounded-lg border border-blue-600 bg-white px-4 text-sm font-semibold text-blue-600 transition-colors hover:bg-blue-50 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            {pulling ? "Pulling..." : "Pull from GHL"}
+          </button>
         </div>
       </div>
+
+      {(error || message) && (
+        <div
+          className={cn(
+            "border-b px-4 py-2 text-sm",
+            error
+              ? "border-red-100 bg-red-50 text-red-700"
+              : "border-green-100 bg-green-50 text-green-700"
+          )}
+          role={error ? "alert" : "status"}
+        >
+          {error || message}
+        </div>
+      )}
 
       <div className="overflow-x-auto">
         <table className="min-w-[780px] w-full table-fixed border-collapse text-sm">

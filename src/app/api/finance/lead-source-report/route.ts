@@ -1,7 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 import { Role } from "@prisma/client";
 import { getSession } from "@/lib/auth-helpers";
+import {
+  fetchAllOpportunities,
+  GhlApiError,
+  GhlConfigError,
+} from "@/lib/ghl/client";
 import { prisma } from "@/lib/prisma";
+
+export const maxDuration = 120;
 
 const VALID_BUSINESSES = new Set([
   "all-businesses",
@@ -67,6 +74,81 @@ function cleanRows(rows: LeadSourceInputRow[]) {
   }));
 }
 
+function statusBucket(status: string): "open" | "won" | "lost" | "abandoned" {
+  const normalized = status.trim().toLowerCase();
+  if (normalized === "won") return "won";
+  if (normalized === "lost") return "lost";
+  if (normalized === "abandoned") return "abandoned";
+  return "open";
+}
+
+async function buildRowsFromGhl({
+  business,
+  periodStart,
+  periodEnd,
+}: {
+  business: string;
+  periodStart: Date;
+  periodEnd: Date;
+}) {
+  const toExclusive = new Date(periodEnd);
+  toExclusive.setUTCDate(toExclusive.getUTCDate() + 1);
+
+  const [opportunities, serviceRows] = await Promise.all([
+    fetchAllOpportunities(),
+    prisma.ghlOpportunityService.findMany(),
+  ]);
+  const serviceMap = new Map<string, string>();
+  for (const row of serviceRows) serviceMap.set(row.opportunityId, row.service);
+
+  const fromMs = periodStart.getTime();
+  const toMs = toExclusive.getTime();
+  const groups = new Map<
+    string,
+    {
+      source: string;
+      totalLeads: number;
+      totalValueCents: number;
+      open: number;
+      won: number;
+      lost: number;
+      abandoned: number;
+    }
+  >();
+
+  for (const opportunity of opportunities) {
+    const createdMs = new Date(opportunity.createdAt).getTime();
+    if (Number.isNaN(createdMs) || createdMs < fromMs || createdMs >= toMs) {
+      continue;
+    }
+
+    const service = serviceMap.get(opportunity.id) ?? null;
+    if (business === "mobile-grooming" && service !== "mobile") continue;
+    if (business === "pet-resort" && service !== "resort") continue;
+
+    const source = opportunity.source?.trim() || "-";
+    const group = groups.get(source) ?? {
+      source,
+      totalLeads: 0,
+      totalValueCents: 0,
+      open: 0,
+      won: 0,
+      lost: 0,
+      abandoned: 0,
+    };
+    const bucket = statusBucket(opportunity.status);
+
+    group.totalLeads += 1;
+    group.totalValueCents += Math.round((opportunity.monetaryValue ?? 0) * 100);
+    group[bucket] += 1;
+    groups.set(source, group);
+  }
+
+  return Array.from(groups.values())
+    .sort((a, b) => b.totalValueCents - a.totalValueCents || a.source.localeCompare(b.source))
+    .map((row, index) => ({ ...row, rowOrder: index }));
+}
+
 export async function GET(req: NextRequest) {
   const session = await getSession();
   if (!session?.user || !isSuperAdmin((session.user as { role: string }).role)) {
@@ -91,6 +173,74 @@ export async function GET(req: NextRequest) {
   });
 
   return NextResponse.json({ rows });
+}
+
+export async function POST(req: NextRequest) {
+  const session = await getSession();
+  if (!session?.user || !isSuperAdmin((session.user as { role: string }).role)) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
+
+  const body = (await req.json().catch(() => null)) as
+    | {
+        business?: string;
+        periodStart?: string;
+        periodEnd?: string;
+        reportType?: string;
+      }
+    | null;
+
+  const business = cleanBusiness(body?.business ?? null);
+  const reportType = cleanReportType(body?.reportType ?? null);
+  const periodStart = dateFromParam(body?.periodStart ?? null);
+  const periodEnd = dateFromParam(body?.periodEnd ?? null);
+
+  if (!business || !reportType || !periodStart || !periodEnd) {
+    return NextResponse.json(
+      { error: "business, periodStart, periodEnd, and reportType are required." },
+      { status: 400 }
+    );
+  }
+
+  try {
+    const rows = await buildRowsFromGhl({ business, periodStart, periodEnd });
+
+    const writes = [
+      prisma.financeLeadSourceReportRow.deleteMany({
+        where: { business, reportType, periodStart, periodEnd },
+      }),
+    ];
+    if (rows.length > 0) {
+      writes.push(
+        prisma.financeLeadSourceReportRow.createMany({
+          data: rows.map((row) => ({
+            business,
+            reportType,
+            periodStart,
+            periodEnd,
+            ...row,
+          })),
+        })
+      );
+    }
+
+    await prisma.$transaction(writes);
+
+    const savedRows = await prisma.financeLeadSourceReportRow.findMany({
+      where: { business, reportType, periodStart, periodEnd },
+      orderBy: { rowOrder: "asc" },
+    });
+
+    return NextResponse.json({ rows: savedRows });
+  } catch (e) {
+    if (e instanceof GhlConfigError) {
+      return NextResponse.json({ error: e.message }, { status: 500 });
+    }
+    if (e instanceof GhlApiError) {
+      return NextResponse.json({ error: e.message }, { status: e.status });
+    }
+    throw e;
+  }
 }
 
 export async function PUT(req: NextRequest) {
