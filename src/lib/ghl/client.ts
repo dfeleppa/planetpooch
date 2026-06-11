@@ -96,14 +96,66 @@ export type GhlOpportunity = {
 };
 
 type OpportunitySearchResponse = {
-  meta: {
-    total: number;
-    nextPageUrl: string;
-    startAfter: number;
-    startAfterId: string;
+  meta?: {
+    total?: number;
+    nextPageUrl?: string | null;
+    startAfter?: number | string | null;
+    startAfterId?: string | null;
   };
-  opportunities: GhlOpportunity[];
+  opportunities?: unknown[];
 };
+
+function cleanString(value: unknown): string {
+  return typeof value === "string" ? value : "";
+}
+
+function cleanNumber(value: unknown): number {
+  const n =
+    typeof value === "number"
+      ? value
+      : typeof value === "string"
+        ? Number(value)
+        : 0;
+  return Number.isFinite(n) ? n : 0;
+}
+
+function cleanAttributions(value: unknown): GhlOpportunity["attributions"] {
+  if (!Array.isArray(value)) return [];
+  return value.flatMap((item) => {
+    if (typeof item !== "object" || item === null) return [];
+    const raw = item as Record<string, unknown>;
+    return {
+      adSource: cleanString(raw.adSource) || undefined,
+      utmCampaign: cleanString(raw.utmCampaign) || undefined,
+      utmCampaignId: cleanString(raw.utmCampaignId) || undefined,
+      utmContent: cleanString(raw.utmContent) || undefined,
+      utmMedium: cleanString(raw.utmMedium) || undefined,
+      utmSessionSource: cleanString(raw.utmSessionSource) || undefined,
+      utmSource: cleanString(raw.utmSource) || undefined,
+      utmAdId: cleanString(raw.utmAdId) || undefined,
+      mediumId: cleanString(raw.mediumId) || undefined,
+      isFirst: typeof raw.isFirst === "boolean" ? raw.isFirst : undefined,
+      isLast: typeof raw.isLast === "boolean" ? raw.isLast : undefined,
+    };
+  });
+}
+
+function cleanOpportunity(value: unknown): GhlOpportunity | null {
+  if (typeof value !== "object" || value === null) return null;
+  const raw = value as Record<string, unknown>;
+  const id = cleanString(raw.id);
+  if (!id) return null;
+
+  return {
+    id,
+    name: cleanString(raw.name),
+    status: cleanString(raw.status),
+    source: cleanString(raw.source),
+    monetaryValue: cleanNumber(raw.monetaryValue),
+    createdAt: cleanString(raw.createdAt),
+    attributions: cleanAttributions(raw.attributions),
+  };
+}
 
 export async function fetchAllOpportunities(): Promise<GhlOpportunity[]> {
   const { locationId } = getGhlConfig();
@@ -112,8 +164,11 @@ export async function fetchAllOpportunities(): Promise<GhlOpportunity[]> {
   let startAfterId: string | undefined;
   let pages = 0;
 
-  while (pages < 100) {
-    const params: Record<string, string> = { location_id: locationId };
+  while (pages < 500) {
+    const params: Record<string, string> = {
+      location_id: locationId,
+      limit: "100",
+    };
     if (startAfter && startAfterId) {
       params.startAfter = startAfter;
       params.startAfterId = startAfterId;
@@ -124,12 +179,20 @@ export async function fetchAllOpportunities(): Promise<GhlOpportunity[]> {
       params
     );
 
-    all.push(...res.opportunities);
+    const opportunities = (res.opportunities ?? []).flatMap((o) => {
+      const opportunity = cleanOpportunity(o);
+      return opportunity ? [opportunity] : [];
+    });
+    all.push(...opportunities);
     pages++;
 
-    if (!res.meta.nextPageUrl || res.opportunities.length === 0) break;
-    startAfter = String(res.meta.startAfter);
-    startAfterId = res.meta.startAfterId;
+    if (!res.meta?.nextPageUrl || opportunities.length === 0) break;
+    startAfter =
+      res.meta.startAfter === null || res.meta.startAfter === undefined
+        ? undefined
+        : String(res.meta.startAfter);
+    startAfterId = res.meta.startAfterId ?? undefined;
+    if (!startAfter || !startAfterId) break;
   }
 
   return all;

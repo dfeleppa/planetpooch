@@ -82,6 +82,14 @@ function statusBucket(status: string): "open" | "won" | "lost" | "abandoned" {
   return "open";
 }
 
+function normalizeSource(source: string): string {
+  return source.trim().replace(/\s+/g, " ") || "-";
+}
+
+function sourceKey(source: string): string {
+  return normalizeSource(source).toLocaleLowerCase("en-US");
+}
+
 async function buildRowsFromGhl({
   business,
   periodStart,
@@ -126,8 +134,9 @@ async function buildRowsFromGhl({
     if (business === "mobile-grooming" && service !== "mobile") continue;
     if (business === "pet-resort" && service !== "resort") continue;
 
-    const source = opportunity.source?.trim() || "-";
-    const group = groups.get(source) ?? {
+    const source = normalizeSource(opportunity.source);
+    const key = sourceKey(source);
+    const group = groups.get(key) ?? {
       source,
       totalLeads: 0,
       totalValueCents: 0,
@@ -141,7 +150,7 @@ async function buildRowsFromGhl({
     group.totalLeads += 1;
     group.totalValueCents += Math.round((opportunity.monetaryValue ?? 0) * 100);
     group[bucket] += 1;
-    groups.set(source, group);
+    groups.set(key, group);
   }
 
   return Array.from(groups.values())
