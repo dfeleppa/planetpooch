@@ -110,8 +110,8 @@ export const KPI_SEGMENTS: KpiSegmentDef[] = [
     label: "Boarding",
     metrics: [
       { key: "revenue", label: "Revenue", section: "ACTUALS", format: "currency" },
-      { key: "nights", label: "Nights", section: "FORECAST", format: "number" },
-      { key: "upsells", label: "Upsells", section: "FORECAST", format: "currency" },
+      { key: "package_sales", label: "Packages", section: "ACTUALS", format: "currency" },
+      { key: "addon_sales", label: "Addons", section: "ACTUALS", format: "currency" },
     ],
   },
   {
@@ -137,10 +137,6 @@ export const KPI_SEGMENTS: KpiSegmentDef[] = [
       { key: "avg_daily_occupancy", label: "Average daily occupancy", section: "ACTUALS", format: "number" },
       { key: "unique_clients", label: "Unique clients", section: "ACTUALS", format: "number" },
       { key: "avg_visits", label: "Average number of visits", section: "ACTUALS", format: "number" },
-      { key: "total_net_sales", label: "Total net sales", section: "FORECAST", format: "currency" },
-      { key: "package_sales", label: "Package sales", section: "FORECAST", format: "currency" },
-      { key: "addon_sales", label: "Addon sales", section: "FORECAST", format: "currency" },
-      { key: "payroll_hours", label: "Payroll hours", section: "FORECAST", format: "number" },
     ],
   },
   {

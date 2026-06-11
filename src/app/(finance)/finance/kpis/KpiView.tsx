@@ -70,11 +70,10 @@ type DaycareImportReport = {
 };
 
 type BoardingImportReport = {
-  nights: number;
-  upsellsCents: number;
+  packageSalesCents: number;
+  addonSalesCents: number;
   totalFinishedBoardingAppointments: number;
   totalRevenueCents: number;
-  nightsByService?: Record<string, number>;
 };
 
 type TrainingImportReport = {
@@ -272,16 +271,9 @@ export function KpiView({
         );
       } else if (segment === "BOARDING") {
         const report = json.report as BoardingImportReport;
-        const nightsByService = report.nightsByService
-          ? Object.entries(report.nightsByService)
-              .sort((a, b) => b[1] - a[1])
-              .map(([name, nights]) => `${name}: ${nights}`)
-              .join(", ")
-          : "";
-        const breakdown = nightsByService ? ` (${nightsByService})` : "";
         setImportMessage(
           withImportedAt(
-            `Imported ${report.totalFinishedBoardingAppointments} finished boarding appointments, ${dollars(report.totalRevenueCents)} revenue, ${report.nights} nights${breakdown}, and ${dollars(report.upsellsCents)} upsells.`,
+            `Imported ${report.totalFinishedBoardingAppointments} finished boarding appointments, ${dollars(report.totalRevenueCents)} revenue, ${dollars(report.packageSalesCents)} packages, and ${dollars(report.addonSalesCents)} addons.`,
             importedAt
           )
         );
@@ -494,23 +486,10 @@ export function KpiView({
           ) : (
             <div className="flex flex-col gap-8">
               {SECTION_ORDER.map((section) => {
+                if (isNotWorkingSection(segment, section)) return null;
                 const metrics = segmentDef.metrics.filter((m) => m.section === section);
                 if (metrics.length === 0) {
-                  if (!showsUnavailableForecast(segment, section)) return null;
-                  return (
-                    <section key={section}>
-                      <h2 className="text-xs font-semibold uppercase tracking-wider text-gray-500 mb-2">
-                        {sectionLabel(segment, section)}
-                      </h2>
-                      <Card>
-                        <CardContent className="py-8">
-                          <p className="text-center text-sm font-medium text-gray-500">
-                            Not Available
-                          </p>
-                        </CardContent>
-                      </Card>
-                    </section>
-                  );
+                  return null;
                 }
                 return (
                   <section key={section}>
@@ -612,10 +591,6 @@ function sectionLabel(segment: KpiSegment, section: KpiSection): string {
 }
 
 function isNotWorkingSection(segment: KpiSegment, section: KpiSection): boolean {
-  return section === "FORECAST" && (segment === "BOARDING" || segment === "DAYCARE");
-}
-
-function showsUnavailableForecast(segment: KpiSegment, section: KpiSection): boolean {
   return section === "FORECAST" && (segment === "BOARDING" || segment === "DAYCARE");
 }
 

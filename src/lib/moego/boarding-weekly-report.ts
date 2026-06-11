@@ -13,8 +13,8 @@ import { PET_RESORT_BUSINESS_ID } from "@/lib/moego/daycare-weekly-report";
 
 const BOARDING_KPI_METRICS = {
   revenue: "revenue",
-  nights: "nights",
-  upsells: "upsells",
+  packages: "package_sales",
+  addons: "addon_sales",
 } as const;
 
 const BOARDING_SERVICE_NAMES = [
@@ -38,6 +38,41 @@ const BOARDING_SERVICE_NAMES = [
 
 const BOARDING_SERVICE_NAME_SET = new Set<string>(BOARDING_SERVICE_NAMES);
 
+const BOARDING_PACKAGE_NAMES = [
+  "comfort care",
+  "premium care",
+  "comfort plus care",
+] as const;
+
+const BOARDING_ADDON_NAMES = [
+  "frozen kong",
+  "pupkin spiced latte",
+  "thanksgiving dinner",
+  "fetch",
+  "basic training",
+  "pup cup",
+  "tug of war",
+  "boarding easy scent games included",
+  "boarding bubble activity included",
+  "boarding snuffle mats included",
+  "boarding dog marathon included",
+  "boarding puzzles included",
+  "one on one time included",
+  "enrichment activity included",
+  "full day included",
+  "half day daycare included",
+  "walk explore",
+  "paw sicle treat time",
+  "bark lickin treat",
+  "snuggle buddy",
+  "kong tastic delight",
+  "furry birthday celebration",
+  "senior comfort zone",
+  "dreamy tales night time",
+  "welcome wagon",
+  "canine cinema night",
+] as const;
+
 export type WeeklyBoardingReport = {
   weekStart: string;
   weekEnd: string;
@@ -45,23 +80,20 @@ export type WeeklyBoardingReport = {
   totalFinishedBoardingAppointments: number;
   totalRevenueCents: number;
   nights: number;
-  upsellsCents: number;
+  packageSalesCents: number;
+  addonSalesCents: number;
   nightsByService: Record<string, number>;
 };
 
 export type WeeklyBoardingKpiValues = {
   weekStart: string;
   totalRevenueCents: number;
-  nights: number;
-  upsellsCents: number;
+  packageSalesCents: number;
+  addonSalesCents: number;
 };
 
 function moneyValue(cents: number): number {
   return Math.round(cents);
-}
-
-function numberValue(value: number): number {
-  return Math.round(value * 100);
 }
 
 function serviceLines(appointment: MoegoAppointmentRow): MoegoAppointmentServiceDetail[] {
@@ -76,8 +108,24 @@ function normalizeServiceName(name: string | undefined): string {
     .replace(/[\u00a0\u1680\u180e\u2000-\u200a\u2028\u2029\u202f\u205f\u3000]+/g, " ")
     .replace(/[/&(),$]/g, " ")
     .replace(/-/g, " ")
+    .replace(/[']/g, "")
     .replace(/\s+/g, " ")
     .trim();
+}
+
+const BOARDING_PACKAGE_NAME_SET = new Set<string>(
+  BOARDING_PACKAGE_NAMES.map(normalizeServiceName)
+);
+const BOARDING_ADDON_NAME_SET = new Set<string>(
+  BOARDING_ADDON_NAMES.map(normalizeServiceName)
+);
+
+function isBoardingPackage(service: MoegoAppointmentServiceDetail): boolean {
+  return BOARDING_PACKAGE_NAME_SET.has(normalizeServiceName(service.name));
+}
+
+function isBoardingAddon(service: MoegoAppointmentServiceDetail): boolean {
+  return BOARDING_ADDON_NAME_SET.has(normalizeServiceName(service.name));
 }
 
 function isBoardingService(service: MoegoAppointmentServiceDetail): boolean {
@@ -245,7 +293,8 @@ export async function buildWeeklyBoardingReport(options?: {
 
   let nights = 0;
   const nightsByService = new Map<string, number>();
-  let upsellsCents = 0;
+  let packageSalesCents = 0;
+  let addonSalesCents = 0;
   let totalRevenueCents = 0;
 
   for (const appointment of appointments) {
@@ -259,13 +308,17 @@ export async function buildWeeklyBoardingReport(options?: {
 
     for (const service of lines) {
       const netCents = netLineCents(toCents(service.price), appointmentGrossCents, order);
-      if (netCents > 0 && isBoardingService(service)) {
+      if (netCents <= 0) continue;
+
+      if (isBoardingPackage(service)) {
+        packageSalesCents += netCents;
+      } else if (isBoardingAddon(service)) {
+        addonSalesCents += netCents;
+      } else if (isBoardingService(service)) {
         totalRevenueCents += netCents;
         nights += capacityUnits;
         const serviceName = service.name?.trim() ?? "(unnamed service)";
         nightsByService.set(serviceName, (nightsByService.get(serviceName) || 0) + capacityUnits);
-      } else if (netCents > 0) {
-        upsellsCents += netCents;
       }
     }
   }
@@ -277,7 +330,8 @@ export async function buildWeeklyBoardingReport(options?: {
     totalFinishedBoardingAppointments: appointments.length,
     totalRevenueCents,
     nights,
-    upsellsCents,
+    packageSalesCents,
+    addonSalesCents,
     nightsByService: Object.fromEntries(
       [...nightsByService.entries()].sort(([a], [b]) => a.localeCompare(b))
     ),
@@ -294,12 +348,12 @@ export async function upsertWeeklyBoardingKpis(
       value: moneyValue(values.totalRevenueCents),
     },
     {
-      metricKey: BOARDING_KPI_METRICS.nights,
-      value: numberValue(values.nights),
+      metricKey: BOARDING_KPI_METRICS.packages,
+      value: moneyValue(values.packageSalesCents),
     },
     {
-      metricKey: BOARDING_KPI_METRICS.upsells,
-      value: moneyValue(values.upsellsCents),
+      metricKey: BOARDING_KPI_METRICS.addons,
+      value: moneyValue(values.addonSalesCents),
     },
   ];
 
@@ -334,8 +388,8 @@ export async function syncWeeklyBoardingKpis(options?: {
   await upsertWeeklyBoardingKpis({
     weekStart: report.weekStart,
     totalRevenueCents: report.totalRevenueCents,
-    nights: report.nights,
-    upsellsCents: report.upsellsCents,
+    packageSalesCents: report.packageSalesCents,
+    addonSalesCents: report.addonSalesCents,
   });
 
   return report;
