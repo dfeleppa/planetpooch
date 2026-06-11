@@ -182,24 +182,27 @@ function parseDate(value: string | undefined): Date | null {
   return Number.isNaN(parsed.getTime()) ? null : parsed;
 }
 
-function daysInWindow(
+function utcDateOnlyTime(date: Date): number {
+  return Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate());
+}
+
+function stayNightsInWindow(
   appointment: MoegoAppointmentRow,
   weekStart: Date,
   weekEnd: Date
 ): number {
-  const start = parseDate(appointment.duration?.startTime) ?? parseDate(appointment.checkInTime);
-  const end = parseDate(appointment.duration?.endTime) ?? parseDate(appointment.checkOutTime);
+  const start = parseDate(appointment.checkInTime) ?? parseDate(appointment.duration?.startTime);
+  const end = parseDate(appointment.checkOutTime) ?? parseDate(appointment.duration?.endTime);
   if (!start || !end) return 1;
 
-  const overlapStart = Math.max(start.getTime(), weekStart.getTime());
-  const overlapEnd = Math.min(end.getTime(), weekEnd.getTime());
+  const overlapStart = Math.max(utcDateOnlyTime(start), utcDateOnlyTime(weekStart));
+  const overlapEnd = Math.min(utcDateOnlyTime(end), utcDateOnlyTime(weekEnd));
   if (!(Number.isFinite(overlapStart) && Number.isFinite(overlapEnd)) || overlapEnd <= overlapStart) {
     return 1;
   }
 
-  const ms = overlapEnd - overlapStart;
   const oneDay = 24 * 60 * 60 * 1000;
-  return Math.max(1, Math.ceil(ms / oneDay));
+  return Math.max(1, Math.round((overlapEnd - overlapStart) / oneDay));
 }
 
 function previousCompletedWeek(today = new Date()): {
@@ -304,20 +307,20 @@ export async function buildWeeklyBoardingReport(options?: {
       0
     );
     const order = appointment.orderId ? orderMoney.get(appointment.orderId) : undefined;
-    const capacityUnits = daysInWindow(appointment, start, end);
+    const capacityUnits = stayNightsInWindow(appointment, start, end);
 
     for (const service of lines) {
       const grossCents = toCents(service.price);
       if (grossCents <= 0) continue;
 
       if (isBoardingPackage(service)) {
-        packageSalesCents += grossCents;
+        packageSalesCents += grossCents * capacityUnits;
       } else if (isBoardingAddon(service)) {
         addonSalesCents += grossCents;
       } else if (isBoardingService(service)) {
         const netCents = netLineCents(grossCents, appointmentGrossCents, order);
         if (netCents <= 0) continue;
-        totalRevenueCents += netCents;
+        totalRevenueCents += netCents * capacityUnits;
         nights += capacityUnits;
         const serviceName = service.name?.trim() ?? "(unnamed service)";
         nightsByService.set(serviceName, (nightsByService.get(serviceName) || 0) + capacityUnits);
