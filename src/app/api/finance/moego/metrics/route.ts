@@ -8,6 +8,12 @@ function parseDate(s: string | null): Date | null {
   return Number.isNaN(d.getTime()) ? null : d;
 }
 
+function addUtcDays(date: Date, days: number): Date {
+  const next = new Date(date);
+  next.setUTCDate(next.getUTCDate() + days);
+  return next;
+}
+
 export async function GET(req: NextRequest) {
   const session = await getSession();
   if (!session?.user || session.user.role !== "SUPER_ADMIN") {
@@ -22,7 +28,8 @@ export async function GET(req: NextRequest) {
   const now = new Date();
   const defaultFrom = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
   const from = parseDate(sp.get("from")) ?? defaultFrom;
-  const to = parseDate(sp.get("to")) ?? now;
+  const toParam = parseDate(sp.get("to"));
+  const to = toParam ? addUtcDays(toParam, 1) : now;
   if (from >= to) {
     return NextResponse.json(
       { error: "`from` must be before `to`." },

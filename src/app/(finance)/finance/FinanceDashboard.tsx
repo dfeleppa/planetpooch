@@ -8,7 +8,6 @@ import {
   FacebookCampaignReportTable,
   GoogleCampaignReportTable,
 } from "./FacebookCampaignReportTable";
-import { LeadSourceReportTable } from "./LeadSourceReportTable";
 
 const BUSINESSES = [
   { value: "", label: "All Businesses" },
@@ -317,7 +316,6 @@ export function FinanceDashboard({
         />
       </div>
 
-      <LeadSourceReportTable business={business} from={from} to={to} />
       <FacebookCampaignReportTable business={business} from={from} to={to} />
       <GoogleCampaignReportTable business={business} from={from} to={to} />
 

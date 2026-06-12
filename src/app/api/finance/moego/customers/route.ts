@@ -54,6 +54,18 @@ const DEFAULT_DIR: Record<Sort, Dir> = {
   lastOrder: "desc",
 };
 
+function parseDate(s: string | null): Date | null {
+  if (!s) return null;
+  const d = new Date(s);
+  return Number.isNaN(d.getTime()) ? null : d;
+}
+
+function addUtcDays(date: Date, days: number): Date {
+  const next = new Date(date);
+  next.setUTCDate(next.getUTCDate() + days);
+  return next;
+}
+
 /**
  * Per-customer detail for /finance/moego. Returns one row per customer
  * with their lifetime order count, revenue (sum of paidCents), and last
@@ -85,14 +97,13 @@ export async function GET(req: NextRequest) {
       : DEFAULT_DIR[sort];
 
   // Optional acquisition window — when set, only customers created
-  // between [from, to) are returned. Used by the page-wide date range
+  // between [from, end of to day] are returned. Used by the page-wide date range
   // picker so the table reflects the same cohort as the KPI tiles.
-  const fromRaw = sp.get("from");
-  const toRaw = sp.get("to");
-  const fromDate = fromRaw ? new Date(fromRaw) : null;
-  const toDate = toRaw ? new Date(toRaw) : null;
+  const fromDate = parseDate(sp.get("from"));
+  const toDate = parseDate(sp.get("to"));
+  const toExclusive = toDate ? addUtcDays(toDate, 1) : null;
   const hasDateFilter =
-    fromDate && toDate && !Number.isNaN(fromDate.getTime()) && !Number.isNaN(toDate.getTime());
+    fromDate !== null && toExclusive !== null;
 
   const offset = (page - 1) * PAGE_SIZE;
   const like = search ? `%${search}%` : null;
@@ -107,7 +118,7 @@ export async function GET(req: NextRequest) {
       )`
     : null;
   const dateClause = hasDateFilter
-    ? Prisma.sql`c."createdTime" >= ${fromDate} AND c."createdTime" < ${toDate}`
+    ? Prisma.sql`c."createdTime" >= ${fromDate} AND c."createdTime" < ${toExclusive}`
     : null;
   const where =
     searchClause && dateClause
