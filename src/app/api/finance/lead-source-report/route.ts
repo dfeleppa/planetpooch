@@ -5,6 +5,7 @@ import {
   fetchAllOpportunities,
   GhlApiError,
   GhlConfigError,
+  GhlOpportunity,
 } from "@/lib/ghl/client";
 import { prisma } from "@/lib/prisma";
 
@@ -82,12 +83,71 @@ function statusBucket(status: string): "open" | "won" | "lost" | "abandoned" {
   return "open";
 }
 
-function normalizeSource(source: string): string {
-  return source.trim().replace(/\s+/g, " ") || "-";
+function normalizeText(value: string): string {
+  return value.trim().replace(/\s+/g, " ");
+}
+
+function canonicalSource(source: string): string {
+  const normalized = normalizeText(source);
+  if (!normalized) return "-";
+
+  const lower = normalized.toLocaleLowerCase("en-US");
+  if (lower === "meta ads" || lower === "facebook" || lower === "instagram") {
+    return "meta ads";
+  }
+  if (lower === "website") return "website";
+  if (lower === "website getting started form") return "website getting started form";
+  return normalized;
 }
 
 function sourceKey(source: string): string {
-  return normalizeSource(source).toLocaleLowerCase("en-US");
+  return canonicalSource(source).toLocaleLowerCase("en-US");
+}
+
+function attributionValues(opportunity: GhlOpportunity): string[] {
+  return opportunity.attributions.flatMap((attribution) =>
+    [
+      attribution.adSource,
+      attribution.utmCampaign,
+      attribution.utmContent,
+      attribution.utmMedium,
+      attribution.utmSessionSource,
+      attribution.utmSource,
+    ].flatMap((value) => (value ? [value] : []))
+  );
+}
+
+function reportSource(opportunity: GhlOpportunity): string {
+  const values = attributionValues(opportunity).map((value) =>
+    normalizeText(value).toLocaleLowerCase("en-US")
+  );
+
+  if (
+    values.some(
+      (value) =>
+        value === "meta ads" ||
+        value === "facebook" ||
+        value === "instagram" ||
+        value.includes("facebook") ||
+        value.includes("instagram") ||
+        value.includes("meta")
+    )
+  ) {
+    return "meta ads";
+  }
+
+  if (
+    values.some(
+      (value) =>
+        value === "website" ||
+        value.includes("planet-pooch.com") ||
+        value.includes("planetpooch.com")
+    )
+  ) {
+    return "website";
+  }
+
+  return canonicalSource(opportunity.source);
 }
 
 async function buildRowsFromGhl({
@@ -134,7 +194,7 @@ async function buildRowsFromGhl({
     if (business === "mobile-grooming" && service !== "mobile") continue;
     if (business === "pet-resort" && service !== "resort") continue;
 
-    const source = normalizeSource(opportunity.source);
+    const source = reportSource(opportunity);
     const key = sourceKey(source);
     const group = groups.get(key) ?? {
       source,
@@ -148,7 +208,9 @@ async function buildRowsFromGhl({
     const bucket = statusBucket(opportunity.status);
 
     group.totalLeads += 1;
-    group.totalValueCents += Math.round((opportunity.monetaryValue ?? 0) * 100);
+    if (bucket === "won") {
+      group.totalValueCents += Math.round((opportunity.monetaryValue ?? 0) * 100);
+    }
     group[bucket] += 1;
     groups.set(key, group);
   }
