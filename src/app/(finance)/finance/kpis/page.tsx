@@ -8,7 +8,7 @@ import {
   getSegmentDef,
   isValidSegment,
 } from "@/lib/kpis";
-import { currentWeekStart, fromWeekParam, isValidWeekParam, toWeekParam } from "@/lib/week";
+import { addWeeks, currentWeekStart, fromWeekParam, isValidWeekParam, toWeekParam } from "@/lib/week";
 import { resolveStandingAmount, type StandingRow } from "@/lib/kpi-standing";
 import { KpiView, type KpiCell } from "./KpiView";
 
@@ -27,13 +27,21 @@ function withDerivedKpiCells(
   const values = Object.fromEntries(
     Object.entries(data).map(([key, cell]) => [key, cell.value])
   );
+  const previousValues = Object.fromEntries(
+    Object.entries(data).map(([key, cell]) => [key, cell.previousValue])
+  );
   const derived = calculateDaycareDerivedMetricValues(values);
-  if (Object.keys(derived).length === 0) return data;
+  const previousDerived = calculateDaycareDerivedMetricValues(previousValues);
+  if (Object.keys(derived).length === 0 && Object.keys(previousDerived).length === 0) return data;
 
   const next = { ...data };
   for (const [key, value] of Object.entries(derived)) {
     if (!next[key]) continue;
     next[key] = { ...next[key], value };
+  }
+  for (const [key, previousValue] of Object.entries(previousDerived)) {
+    if (!next[key]) continue;
+    next[key] = { ...next[key], previousValue };
   }
   return next;
 }
@@ -63,11 +71,16 @@ export default async function KpisPage({
   }
 
   const week = toWeekParam(weekStart);
+  const previousWeekStart = addWeeks(weekStart, -1);
 
   if (showAll) {
-    const [valueRows, standingRows] = await Promise.all([
+    const [valueRows, previousValueRows, standingRows] = await Promise.all([
       prisma.kpiWeeklyValue.findMany({
         where: { weekStart },
+        select: { segment: true, metricKey: true, value: true },
+      }),
+      prisma.kpiWeeklyValue.findMany({
+        where: { weekStart: previousWeekStart },
         select: { segment: true, metricKey: true, value: true },
       }),
       prisma.kpiStandingValue.findMany({
@@ -79,14 +92,17 @@ export default async function KpisPage({
     const allData: Record<string, Record<string, KpiCell>> = {};
     for (const segDef of KPI_SEGMENTS) {
       const segValues = valueRows.filter((r) => r.segment === segDef.key);
+      const previousSegValues = previousValueRows.filter((r) => r.segment === segDef.key);
       const segStanding = standingRows.filter((r) => r.segment === segDef.key) as StandingRow[];
       const valueByKey = new Map(segValues.map((r) => [r.metricKey, r.value]));
+      const previousValueByKey = new Map(previousSegValues.map((r) => [r.metricKey, r.value]));
 
       const data: Record<string, KpiCell> = {};
       for (const metric of segDef.metrics) {
         const sourceKey = metric.mirrorsKey ?? metric.key;
         data[metric.key] = {
           value: valueByKey.get(metric.key) ?? null,
+          previousValue: previousValueByKey.get(metric.key) ?? null,
           target: resolveStandingAmount(segStanding, sourceKey, "TARGET", weekStart),
           average: resolveStandingAmount(segStanding, sourceKey, "AVERAGE", weekStart),
         };
@@ -108,9 +124,13 @@ export default async function KpisPage({
     );
   }
 
-  const [valueRows, standingRows] = await Promise.all([
+  const [valueRows, previousValueRows, standingRows] = await Promise.all([
     prisma.kpiWeeklyValue.findMany({
       where: { segment, weekStart },
+      select: { metricKey: true, value: true },
+    }),
+    prisma.kpiWeeklyValue.findMany({
+      where: { segment, weekStart: previousWeekStart },
       select: { metricKey: true, value: true },
     }),
     prisma.kpiStandingValue.findMany({
@@ -120,6 +140,7 @@ export default async function KpisPage({
   ]);
 
   const valueByKey = new Map(valueRows.map((r) => [r.metricKey, r.value]));
+  const previousValueByKey = new Map(previousValueRows.map((r) => [r.metricKey, r.value]));
   const standing = standingRows as StandingRow[];
 
   let data: Record<string, KpiCell> = {};
@@ -127,6 +148,7 @@ export default async function KpisPage({
     const sourceKey = metric.mirrorsKey ?? metric.key;
     data[metric.key] = {
       value: valueByKey.get(metric.key) ?? null,
+      previousValue: previousValueByKey.get(metric.key) ?? null,
       target: resolveStandingAmount(standing, sourceKey, "TARGET", weekStart),
       average: resolveStandingAmount(standing, sourceKey, "AVERAGE", weekStart),
     };

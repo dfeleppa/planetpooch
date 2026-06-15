@@ -32,6 +32,7 @@ import {
 
 export type KpiCell = {
   value: number | null;
+  previousValue: number | null;
   average: number | null;
   target: number | null;
 };
@@ -109,13 +110,21 @@ function withDerivedKpiCells(
   const values = Object.fromEntries(
     Object.entries(cells).map(([key, cell]) => [key, cell.value])
   );
+  const previousValues = Object.fromEntries(
+    Object.entries(cells).map(([key, cell]) => [key, cell.previousValue])
+  );
   const derived = calculateDaycareDerivedMetricValues(values);
-  if (Object.keys(derived).length === 0) return cells;
+  const previousDerived = calculateDaycareDerivedMetricValues(previousValues);
+  if (Object.keys(derived).length === 0 && Object.keys(previousDerived).length === 0) return cells;
 
   const next = { ...cells };
   for (const [key, value] of Object.entries(derived)) {
     if (!next[key]) continue;
     next[key] = { ...next[key], value };
+  }
+  for (const [key, previousValue] of Object.entries(previousDerived)) {
+    if (!next[key]) continue;
+    next[key] = { ...next[key], previousValue };
   }
   return next;
 }
@@ -171,13 +180,22 @@ export function KpiView({
     const seed: Record<string, KpiCell> = {};
     for (const metric of segmentDef.metrics) {
       seed[metric.key] =
-        dataWithDerivedValues[metric.key] ?? { value: null, average: null, target: null };
+        dataWithDerivedValues[metric.key] ?? {
+          value: null,
+          previousValue: null,
+          average: null,
+          target: null,
+        };
     }
     setDraft(seed);
     setMode(nextMode);
   }
 
-  function updateDraft(metricKey: string, field: keyof KpiCell, scaled: number | null) {
+  function updateDraft(
+    metricKey: string,
+    field: Exclude<keyof KpiCell, "previousValue">,
+    scaled: number | null
+  ) {
     setDraft((prev) => ({
       ...prev,
       [metricKey]: { ...prev[metricKey], [field]: scaled },
@@ -304,7 +322,9 @@ export function KpiView({
 
   function exportCsv() {
     if (!allSegmentsDataWithDerivedValues) return;
-    const rows: string[][] = [["Segment", "Section", "KPI", "Value", "Average", "Target"]];
+    const rows: string[][] = [
+      ["Segment", "Section", "KPI", "Value", "Last Week", "WoW", "Average", "Target"],
+    ];
     for (const segDef of KPI_SEGMENTS) {
       const segData = allSegmentsDataWithDerivedValues[segDef.key];
       if (!segData) continue;
@@ -318,6 +338,12 @@ export function KpiView({
             section,
             metric.label,
             formatKpiValue(cell?.value ?? null, metric.format),
+            formatKpiValue(cell?.previousValue ?? null, metric.format),
+            formatComparisonForCsv(
+              cell?.value ?? null,
+              cell?.previousValue ?? null,
+              metric.format
+            ),
             formatKpiValue(cell?.average ?? null, metric.format),
             formatKpiValue(cell?.target ?? null, metric.format),
           ]);
@@ -387,6 +413,8 @@ export function KpiView({
                                 <TableHeader className="w-12">#</TableHeader>
                                 <TableHeader>KPI</TableHeader>
                                 <TableHeader className="text-right">Value</TableHeader>
+                                <TableHeader className="text-right">Last Week</TableHeader>
+                                <TableHeader className="text-right">WoW</TableHeader>
                                 <TableHeader className="text-right">Average</TableHeader>
                                 <TableHeader className="text-right">Target</TableHeader>
                               </tr>
@@ -400,6 +428,16 @@ export function KpiView({
                                     <TableCell className="font-medium">{metric.label}</TableCell>
                                     <TableCell className="text-right tabular-nums">
                                       {formatKpiValue(cell?.value ?? null, metric.format)}
+                                    </TableCell>
+                                    <TableCell className="text-right tabular-nums">
+                                      {formatKpiValue(cell?.previousValue ?? null, metric.format)}
+                                    </TableCell>
+                                    <TableCell className="text-right tabular-nums">
+                                      <KpiComparison
+                                        value={cell?.value ?? null}
+                                        previousValue={cell?.previousValue ?? null}
+                                        format={metric.format}
+                                      />
                                     </TableCell>
                                     <TableCell className="text-right tabular-nums">
                                       {formatKpiValue(cell?.average ?? null, metric.format)}
@@ -503,6 +541,8 @@ export function KpiView({
                           <TableHeader className="w-12">#</TableHeader>
                           <TableHeader>KPI</TableHeader>
                           <TableHeader className="text-right">Value</TableHeader>
+                          <TableHeader className="text-right">Last Week</TableHeader>
+                          <TableHeader className="text-right">WoW</TableHeader>
                           <TableHeader className="text-right">Average</TableHeader>
                           <TableHeader className="text-right">Target</TableHeader>
                         </tr>
@@ -513,27 +553,48 @@ export function KpiView({
                           const activeCells = mode
                             ? withDerivedKpiCells(segment, draft)
                             : dataWithDerivedValues;
+                          const value = activeCells[metric.key]?.value ?? null;
+                          const previousValue =
+                            dataWithDerivedValues[metric.key]?.previousValue ?? null;
+                          const valueIsCalculated =
+                            segment === "DAYCARE" &&
+                            DAYCARE_CALCULATED_VALUE_KEY_SET.has(metric.key);
                           return (
                             <TableRow key={metric.key}>
                               <TableCell className="text-gray-400">{idx + 1}</TableCell>
                               <TableCell className="font-medium">{metric.label}</TableCell>
-                              {(["value", "average", "target"] as const).map((field) => {
-                                const editable =
-                                  (mode === "week" && field === "value") ||
-                                  (mode === "targets" && field !== "value" && !isMirror);
-                                const isCalculatedActual =
-                                  field === "value" &&
-                                  segment === "DAYCARE" &&
-                                  DAYCARE_CALCULATED_VALUE_KEY_SET.has(metric.key);
+                              <TableCell className="text-right tabular-nums">
+                                {mode === "week" && !valueIsCalculated ? (
+                                  <KpiInput
+                                    format={metric.format}
+                                    scaled={value}
+                                    onChange={(v) => updateDraft(metric.key, "value", v)}
+                                  />
+                                ) : (
+                                  formatKpiValue(value, metric.format)
+                                )}
+                              </TableCell>
+                              <TableCell className="text-right tabular-nums">
+                                {formatKpiValue(previousValue, metric.format)}
+                              </TableCell>
+                              <TableCell className="text-right tabular-nums">
+                                <KpiComparison
+                                  value={value}
+                                  previousValue={previousValue}
+                                  format={metric.format}
+                                />
+                              </TableCell>
+                              {(["average", "target"] as const).map((field) => {
+                                const editable = mode === "targets" && !isMirror;
                                 const scaled =
-                                  isMirror && field !== "value"
+                                  isMirror
                                     ? (mode === "targets"
                                         ? draft[metric.mirrorsKey ?? metric.key]?.[field]
                                         : dataWithDerivedValues[metric.key]?.[field]) ?? null
                                     : activeCells[metric.key]?.[field] ?? null;
                                 return (
                                   <TableCell key={field} className="text-right tabular-nums">
-                                    {editable && !isCalculatedActual ? (
+                                    {editable ? (
                                       <KpiInput
                                         format={metric.format}
                                         scaled={scaled}
@@ -567,6 +628,69 @@ function dollars(cents: number): string {
     currency: "USD",
     maximumFractionDigits: 0,
   });
+}
+
+function comparisonParts(
+  value: number | null,
+  previousValue: number | null,
+  format: KpiFormat
+): { delta: number; deltaLabel: string; detail: string | null } | null {
+  if (value === null || previousValue === null) return null;
+
+  const delta = value - previousValue;
+  const deltaLabel = formatSignedKpiValue(delta, format);
+  let detail: string | null = null;
+
+  if (previousValue === 0) {
+    detail = delta === 0 ? "0.0%" : "from 0";
+  } else {
+    const percentChange = (delta / Math.abs(previousValue)) * 100;
+    detail = `${percentChange > 0 ? "+" : ""}${percentChange.toFixed(1)}%`;
+  }
+
+  return { delta, deltaLabel, detail };
+}
+
+function formatSignedKpiValue(delta: number, format: KpiFormat): string {
+  if (delta === 0) return formatKpiValue(0, format);
+  return `${delta > 0 ? "+" : "-"}${formatKpiValue(Math.abs(delta), format)}`;
+}
+
+function formatComparisonForCsv(
+  value: number | null,
+  previousValue: number | null,
+  format: KpiFormat
+): string {
+  const parts = comparisonParts(value, previousValue, format);
+  if (!parts) return "";
+  return parts.detail ? `${parts.deltaLabel} (${parts.detail})` : parts.deltaLabel;
+}
+
+function KpiComparison({
+  value,
+  previousValue,
+  format,
+}: {
+  value: number | null;
+  previousValue: number | null;
+  format: KpiFormat;
+}) {
+  const parts = comparisonParts(value, previousValue, format);
+  if (!parts) return <span className="text-gray-400">—</span>;
+
+  const tone =
+    parts.delta > 0
+      ? "text-blue-700"
+      : parts.delta < 0
+        ? "text-amber-700"
+        : "text-gray-500";
+
+  return (
+    <span className={`inline-flex flex-col items-end leading-tight ${tone}`}>
+      <span>{parts.deltaLabel}</span>
+      {parts.detail && <span className="text-[11px] text-gray-400">{parts.detail}</span>}
+    </span>
+  );
 }
 
 function formatImportedAt(date = new Date()): string {
