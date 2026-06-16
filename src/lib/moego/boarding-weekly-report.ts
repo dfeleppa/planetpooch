@@ -28,9 +28,6 @@ const BOARDING_SERVICE_NAMES = [
   "express a platinum",
   "express b group play",
   "express b 1 on 1",
-  "full day daycare",
-  "full day enrichment activity",
-  "half day daycare",
   "luxury group play",
   "luxury 1 on 1",
   "xl group play",
@@ -119,6 +116,10 @@ function normalizeServiceName(name: string | undefined): string {
     .trim();
 }
 
+function normalizeServiceItemType(type: string | undefined): string {
+  return (type ?? "").trim().toUpperCase();
+}
+
 const BOARDING_PACKAGE_NAME_SET = new Set<string>(
   BOARDING_PACKAGE_NAMES.map(normalizeServiceName)
 );
@@ -135,6 +136,11 @@ function isBoardingAddon(service: MoegoAppointmentServiceDetail): boolean {
 }
 
 function isBoardingService(service: MoegoAppointmentServiceDetail): boolean {
+  // MoeGo reuses names like "Full day daycare" across modules. Prefer the
+  // explicit item type when present so daycare rows do not inflate boarding.
+  const itemType = normalizeServiceItemType(service.serviceItemType);
+  if (itemType) return itemType === "BOARDING";
+
   const name = normalizeServiceName(service.name);
   const category = (service.category ?? "").toLowerCase();
   if (BOARDING_SERVICE_NAME_SET.has(name)) return true;
@@ -148,9 +154,7 @@ function isBoardingService(service: MoegoAppointmentServiceDetail): boolean {
     name.includes("board") ||
     category.includes("boarding") ||
     category.includes("board") ||
-    isPlayOrSolo ||
-    /(^|\s)full day (?:daycare|enrichment activity)/.test(name) ||
-    /(^|\s)half day daycare/.test(name)
+    isPlayOrSolo
   );
 }
 
@@ -309,6 +313,9 @@ export async function buildWeeklyBoardingReport(options?: {
 
   for (const appointment of appointments) {
     const lines = serviceLines(appointment);
+    const hasBoardingService = lines.some(isBoardingService);
+    if (!hasBoardingService) continue;
+
     const appointmentGrossCents = lines.reduce(
       (sum, service) => sum + toCents(service.price),
       0
