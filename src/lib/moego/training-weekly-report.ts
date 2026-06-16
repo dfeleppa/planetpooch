@@ -19,6 +19,7 @@ const TRAINING_KPI_METRICS = {
 } as const;
 
 const TRAINING_EVALUATION_NAME = normalizeServiceName("Training Evaluation");
+const TRAINING_PRODUCT_NAMES = new Set([normalizeServiceName("Training Treat Pouch")]);
 const SALES_DATE_CANDIDATE_LOOKBACK_WEEKS = 26;
 const SALES_DATE_CANDIDATE_LOOKAHEAD_WEEKS = 52;
 
@@ -29,6 +30,7 @@ export type WeeklyTrainingReport = {
   totalFinishedTrainingAppointments: number;
   trainingAppointmentsInSalesWindow: number;
   trainingEvaluations: number;
+  productSalesCents: number;
   groupRevenueCents: number;
   oneOnOneRevenueCents: number;
   ordersInSalesWindow: number;
@@ -39,6 +41,7 @@ export type WeeklyTrainingReport = {
 
 export type WeeklyTrainingKpiValues = {
   weekStart: string;
+  productSalesCents: number;
   groupRevenueCents: number;
   oneOnOneRevenueCents: number;
   trainingEvaluations?: number;
@@ -146,6 +149,11 @@ function isDirectGroupTrainingOrder(order: OrderMoney): boolean {
 function isDirectOneOnOneTrainingOrder(order: OrderMoney): boolean {
   const title = normalizeServiceName(order.title);
   return title.includes("training") && isOneOnOneTrainingService({ name: order.title });
+}
+
+function isTrainingProductOrder(order: OrderMoney): boolean {
+  const title = normalizeServiceName(order.title);
+  return [...TRAINING_PRODUCT_NAMES].some((productName) => title.includes(productName));
 }
 
 function addCount(counts: Map<string, number>, name: string | undefined) {
@@ -310,6 +318,7 @@ export async function buildWeeklyTrainingReport(options?: {
   const orderMoney = await ordersById(orderIds, businessId);
 
   const serviceCounts = new Map<string, number>();
+  let productSalesCents = 0;
   let groupRevenueCents = 0;
   let oneOnOneRevenueCents = 0;
   let appointmentsMissingSalesDatetime = 0;
@@ -375,7 +384,11 @@ export async function buildWeeklyTrainingReport(options?: {
     const orderNetCents = orderNetSalesCents(order);
     if (orderNetCents <= 0) continue;
 
-    if (isDirectGroupTrainingOrder(order)) {
+    if (isTrainingProductOrder(order)) {
+      productSalesCents += orderNetCents;
+      countedOrderIds.add(order.id);
+      addCount(serviceCounts, order.title);
+    } else if (isDirectGroupTrainingOrder(order)) {
       groupRevenueCents += orderNetCents;
       countedOrderIds.add(order.id);
       addCount(serviceCounts, order.title);
@@ -393,6 +406,7 @@ export async function buildWeeklyTrainingReport(options?: {
     totalFinishedTrainingAppointments: trainingAppointments.length,
     trainingAppointmentsInSalesWindow: trainingAppointmentsInSalesWindow.length,
     trainingEvaluations,
+    productSalesCents,
     groupRevenueCents,
     oneOnOneRevenueCents,
     ordersInSalesWindow: countedOrderIds.size,
@@ -413,7 +427,7 @@ export async function upsertWeeklyTrainingKpis(
   const rows = [
     {
       metricKey: TRAINING_KPI_METRICS.productSales,
-      value: null,
+      value: moneyValue(values.productSalesCents),
     },
     {
       metricKey: TRAINING_KPI_METRICS.groupRevenue,
@@ -460,6 +474,7 @@ export async function syncWeeklyTrainingKpis(options?: {
 
   await upsertWeeklyTrainingKpis({
     weekStart: report.weekStart,
+    productSalesCents: report.productSalesCents,
     groupRevenueCents: report.groupRevenueCents,
     oneOnOneRevenueCents: report.oneOnOneRevenueCents,
     trainingEvaluations: report.trainingEvaluations,
