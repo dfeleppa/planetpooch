@@ -1,0 +1,4 @@
+interface:
+  display_name: "MoeGo Payroll Clock In/Out"
+  short_description: "Summarize and upload MoeGo clock-in/out payroll hours"
+  default_prompt: "Use $moego-payroll-clock-inout to pull and save the latest MoeGo clock-in/out payroll totals."

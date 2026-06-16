@@ -1115,6 +1115,47 @@ model FinanceGoogleCampaignReportRow {
   @@index([campaignId], map: "FinanceGoogleCampaignReport_campaign_id_idx")
 }
 
+enum PayrollCategory {
+  TRAINING
+  GROOMING
+  RESORT
+}
+
+/// Weekly payroll hours imported from MoeGo clock-in/out or entered manually.
+/// One week is always a Sunday-Saturday range.
+model FinancePayrollWeek {
+  id        String   @id @default(cuid())
+  weekStart DateTime @db.Date
+  weekEnd   DateTime @db.Date
+  source    String   @default("manual")
+  notes     String   @default("")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  rows FinancePayrollEmployeeHours[]
+
+  @@unique([weekStart])
+  @@index([weekStart, weekEnd])
+}
+
+model FinancePayrollEmployeeHours {
+  id            String          @id @default(cuid())
+  payrollWeekId String
+  employeeName  String
+  category      PayrollCategory
+  shifts        Int             @default(0)
+  totalSeconds  Int             @default(0)
+  rowOrder      Int             @default(0)
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+
+  payrollWeek FinancePayrollWeek @relation(fields: [payrollWeekId], references: [id], onDelete: Cascade)
+
+  @@unique([payrollWeekId, employeeName])
+  @@index([payrollWeekId, category])
+  @@index([employeeName])
+}
+
 // Weekly KPI reports per business segment. One weekStart = one report; both
 // the "Last Week — Actuals" and "Next Week — Forecast" metrics live as distinct
 // metricKey rows under the same weekStart (the section is defined in
