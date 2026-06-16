@@ -6,6 +6,7 @@ import { Role, KpiSegment, KpiStandingField, Prisma } from "@prisma/client";
 import {
   calculateDaycareDerivedMetricValues,
   getMetricDef,
+  isBackendKpiMetric,
   isValidMetricKey,
 } from "@/lib/kpis";
 import { fromWeekParam } from "@/lib/week";
@@ -89,8 +90,10 @@ export async function POST(req: NextRequest) {
   const ops: Prisma.PrismaPromise<unknown>[] = [];
 
   for (const m of metrics) {
+    const valueIsBackend = isBackendKpiMetric(segment, m.metricKey);
+
     // Per-week actual/forecast value. Skip creating all-null rows.
-    if (m.value !== null || hasValueRow.has(m.metricKey)) {
+    if (!valueIsBackend && (m.value !== null || hasValueRow.has(m.metricKey))) {
       ops.push(
         prisma.kpiWeeklyValue.upsert({
           where: { segment_weekStart_metricKey: { segment, weekStart: week, metricKey: m.metricKey } },
@@ -130,7 +133,9 @@ export async function POST(req: NextRequest) {
     }
   }
 
-  await prisma.$transaction(ops);
+  if (ops.length > 0) {
+    await prisma.$transaction(ops);
+  }
 
   return NextResponse.json({ ok: true });
 }

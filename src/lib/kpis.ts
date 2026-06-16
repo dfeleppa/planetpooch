@@ -38,6 +38,17 @@ export const DAYCARE_CALCULATED_VALUE_KEYS = [
   "avg_visits",
 ] as const;
 
+export const DAYCARE_STAFF_HOURS_METRIC_KEY = "staff_hours";
+
+export const DAYCARE_BACKEND_VALUE_KEYS = [
+  DAYCARE_STAFF_HOURS_METRIC_KEY,
+] as const;
+
+export const DAYCARE_READ_ONLY_VALUE_KEYS = [
+  ...DAYCARE_CALCULATED_VALUE_KEYS,
+  ...DAYCARE_BACKEND_VALUE_KEYS,
+] as const;
+
 type KpiValueLookup = Record<string, number | null | undefined>;
 
 function sumScaledMetricValues(
@@ -136,6 +147,7 @@ export const KPI_SEGMENTS: KpiSegmentDef[] = [
       { key: "half_day_enrichment_activity", label: "Half day enrichment activity", section: "ACTUALS", format: "number" },
       { key: "evaluations", label: "Evaluations", section: "ACTUALS", format: "number" },
       { key: "avg_daily_occupancy", label: "Average daily occupancy", section: "ACTUALS", format: "number" },
+      { key: DAYCARE_STAFF_HOURS_METRIC_KEY, label: "Staff Hours", section: "ACTUALS", format: "number" },
       { key: "unique_clients", label: "Unique clients", section: "ACTUALS", format: "number" },
       { key: "avg_visits", label: "Average number of visits", section: "ACTUALS", format: "number" },
     ],
@@ -172,4 +184,8 @@ export function getMetricDef(
 // API against orphan rows.
 export function isValidMetricKey(segment: KpiSegment, metricKey: string): boolean {
   return getSegmentDef(segment).metrics.some((m) => m.key === metricKey);
+}
+
+export function isBackendKpiMetric(segment: KpiSegment, metricKey: string): boolean {
+  return segment === "DAYCARE" && metricKey === DAYCARE_STAFF_HOURS_METRIC_KEY;
 }

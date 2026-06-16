@@ -2,6 +2,7 @@ import { requireSuperAdmin } from "@/lib/auth-helpers";
 import { prisma } from "@/lib/prisma";
 import { KpiSegment } from "@prisma/client";
 import {
+  DAYCARE_STAFF_HOURS_METRIC_KEY,
   DEFAULT_SEGMENT,
   KPI_SEGMENTS,
   calculateDaycareDerivedMetricValues,
@@ -10,6 +11,7 @@ import {
 } from "@/lib/kpis";
 import { addWeeks, currentWeekStart, fromWeekParam, isValidWeekParam, toWeekParam } from "@/lib/week";
 import { resolveStandingAmount, type StandingRow } from "@/lib/kpi-standing";
+import { getResortStaffHoursByWeek } from "@/lib/payroll-kpis";
 import { KpiView, type KpiCell } from "./KpiView";
 
 const ALL_TAB = "ALL";
@@ -46,6 +48,25 @@ function withDerivedKpiCells(
   return next;
 }
 
+function withPayrollStaffHours(
+  segment: KpiSegment,
+  data: Record<string, KpiCell>,
+  staffHoursByWeek: Map<string, number>,
+  week: string,
+  previousWeek: string
+): Record<string, KpiCell> {
+  if (segment !== "DAYCARE" || !data[DAYCARE_STAFF_HOURS_METRIC_KEY]) return data;
+
+  return {
+    ...data,
+    [DAYCARE_STAFF_HOURS_METRIC_KEY]: {
+      ...data[DAYCARE_STAFF_HOURS_METRIC_KEY],
+      value: staffHoursByWeek.get(week) ?? null,
+      previousValue: staffHoursByWeek.get(previousWeek) ?? null,
+    },
+  };
+}
+
 export default async function KpisPage({
   searchParams,
 }: {
@@ -72,9 +93,14 @@ export default async function KpisPage({
 
   const week = toWeekParam(weekStart);
   const previousWeekStart = addWeeks(weekStart, -1);
+  const previousWeek = toWeekParam(previousWeekStart);
+  const staffHoursByWeekPromise =
+    showAll || segment === "DAYCARE"
+      ? getResortStaffHoursByWeek([weekStart, previousWeekStart])
+      : Promise.resolve(new Map<string, number>());
 
   if (showAll) {
-    const [valueRows, previousValueRows, standingRows] = await Promise.all([
+    const [valueRows, previousValueRows, standingRows, staffHoursByWeek] = await Promise.all([
       prisma.kpiWeeklyValue.findMany({
         where: { weekStart },
         select: { segment: true, metricKey: true, value: true },
@@ -87,6 +113,7 @@ export default async function KpisPage({
         where: { effectiveWeekStart: { lte: weekStart } },
         select: { segment: true, metricKey: true, field: true, amount: true, effectiveWeekStart: true },
       }),
+      staffHoursByWeekPromise,
     ]);
 
     const allData: Record<string, Record<string, KpiCell>> = {};
@@ -107,7 +134,10 @@ export default async function KpisPage({
           average: resolveStandingAmount(segStanding, sourceKey, "AVERAGE", weekStart),
         };
       }
-      allData[segDef.key] = withDerivedKpiCells(segDef.key, data);
+      allData[segDef.key] = withDerivedKpiCells(
+        segDef.key,
+        withPayrollStaffHours(segDef.key, data, staffHoursByWeek, week, previousWeek)
+      );
     }
 
     return (
@@ -124,7 +154,7 @@ export default async function KpisPage({
     );
   }
 
-  const [valueRows, previousValueRows, standingRows] = await Promise.all([
+  const [valueRows, previousValueRows, standingRows, staffHoursByWeek] = await Promise.all([
     prisma.kpiWeeklyValue.findMany({
       where: { segment, weekStart },
       select: { metricKey: true, value: true },
@@ -137,6 +167,7 @@ export default async function KpisPage({
       where: { segment, effectiveWeekStart: { lte: weekStart } },
       select: { metricKey: true, field: true, amount: true, effectiveWeekStart: true },
     }),
+    staffHoursByWeekPromise,
   ]);
 
   const valueByKey = new Map(valueRows.map((r) => [r.metricKey, r.value]));
@@ -153,6 +184,7 @@ export default async function KpisPage({
       average: resolveStandingAmount(standing, sourceKey, "AVERAGE", weekStart),
     };
   }
+  data = withPayrollStaffHours(segment, data, staffHoursByWeek, week, previousWeek);
   data = withDerivedKpiCells(segment, data);
 
   return (

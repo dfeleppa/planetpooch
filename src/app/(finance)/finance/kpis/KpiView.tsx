@@ -10,7 +10,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { formatKpiValue } from "@/lib/utils";
 import {
-  DAYCARE_CALCULATED_VALUE_KEYS,
+  DAYCARE_READ_ONLY_VALUE_KEYS,
   KPI_SEGMENTS,
   SECTION_LABELS,
   calculateDaycareDerivedMetricValues,
@@ -98,8 +98,8 @@ const SELECT_CLS =
 const SECTION_ORDER: KpiSection[] = ["ACTUALS", "FORECAST"];
 
 const ALL_TAB = "ALL";
-const DAYCARE_CALCULATED_VALUE_KEY_SET = new Set<string>(
-  DAYCARE_CALCULATED_VALUE_KEYS
+const DAYCARE_READ_ONLY_VALUE_KEY_SET = new Set<string>(
+  DAYCARE_READ_ONLY_VALUE_KEYS
 );
 
 function withDerivedKpiCells(
@@ -557,15 +557,15 @@ export function KpiView({
                           const value = activeCells[metric.key]?.value ?? null;
                           const previousValue =
                             dataWithDerivedValues[metric.key]?.previousValue ?? null;
-                          const valueIsCalculated =
+                          const valueIsReadOnly =
                             segment === "DAYCARE" &&
-                            DAYCARE_CALCULATED_VALUE_KEY_SET.has(metric.key);
+                            DAYCARE_READ_ONLY_VALUE_KEY_SET.has(metric.key);
                           return (
                             <TableRow key={metric.key}>
                               <TableCell className="text-gray-400">{idx + 1}</TableCell>
                               <TableCell className="font-medium">{metric.label}</TableCell>
                               <TableCell className="text-right tabular-nums">
-                                {mode === "week" && !valueIsCalculated ? (
+                                {mode === "week" && !valueIsReadOnly ? (
                                   <KpiInput
                                     format={metric.format}
                                     scaled={value}
