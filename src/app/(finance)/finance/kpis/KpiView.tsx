@@ -10,9 +10,11 @@ import { Card, CardContent } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { formatKpiValue } from "@/lib/utils";
 import {
+  BOARDING_READ_ONLY_VALUE_KEYS,
   DAYCARE_READ_ONLY_VALUE_KEYS,
   KPI_SEGMENTS,
   SECTION_LABELS,
+  calculateBoardingDerivedMetricValues,
   calculateDaycareDerivedMetricValues,
   getSegmentDef,
   type KpiFormat,
@@ -101,12 +103,15 @@ const ALL_TAB = "ALL";
 const DAYCARE_READ_ONLY_VALUE_KEY_SET = new Set<string>(
   DAYCARE_READ_ONLY_VALUE_KEYS
 );
+const BOARDING_READ_ONLY_VALUE_KEY_SET = new Set<string>(
+  BOARDING_READ_ONLY_VALUE_KEYS
+);
 
 function withDerivedKpiCells(
   segment: KpiSegment,
   cells: Record<string, KpiCell>
 ): Record<string, KpiCell> {
-  if (segment !== "DAYCARE") return cells;
+  if (segment !== "DAYCARE" && segment !== "BOARDING") return cells;
 
   const values = Object.fromEntries(
     Object.entries(cells).map(([key, cell]) => [key, cell.value])
@@ -114,8 +119,14 @@ function withDerivedKpiCells(
   const previousValues = Object.fromEntries(
     Object.entries(cells).map(([key, cell]) => [key, cell.previousValue])
   );
-  const derived = calculateDaycareDerivedMetricValues(values);
-  const previousDerived = calculateDaycareDerivedMetricValues(previousValues);
+  const derived =
+    segment === "DAYCARE"
+      ? calculateDaycareDerivedMetricValues(values)
+      : calculateBoardingDerivedMetricValues(values);
+  const previousDerived =
+    segment === "DAYCARE"
+      ? calculateDaycareDerivedMetricValues(previousValues)
+      : calculateBoardingDerivedMetricValues(previousValues);
   if (Object.keys(derived).length === 0 && Object.keys(previousDerived).length === 0) return cells;
 
   const next = { ...cells };
@@ -558,8 +569,10 @@ export function KpiView({
                           const previousValue =
                             dataWithDerivedValues[metric.key]?.previousValue ?? null;
                           const valueIsReadOnly =
-                            segment === "DAYCARE" &&
-                            DAYCARE_READ_ONLY_VALUE_KEY_SET.has(metric.key);
+                            (segment === "DAYCARE" &&
+                              DAYCARE_READ_ONLY_VALUE_KEY_SET.has(metric.key)) ||
+                            (segment === "BOARDING" &&
+                              BOARDING_READ_ONLY_VALUE_KEY_SET.has(metric.key));
                           return (
                             <TableRow key={metric.key}>
                               <TableCell className="text-gray-400">{idx + 1}</TableCell>

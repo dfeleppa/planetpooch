@@ -32,6 +32,14 @@ const DAYCARE_TOTAL_METRIC_KEYS = [
   "evaluations",
 ] as const;
 
+export const BOARDING_NIGHTS_METRIC_KEY = "nights";
+export const BOARDING_OCCUPANCY_RATE_METRIC_KEY = "occupancy_rate";
+export const BOARDING_OCCUPANCY_CAPACITY_NIGHTS = 224;
+
+export const BOARDING_CALCULATED_VALUE_KEYS = [
+  BOARDING_OCCUPANCY_RATE_METRIC_KEY,
+] as const;
+
 export const DAYCARE_CALCULATED_VALUE_KEYS = [
   "total_daycare_appointments",
   "avg_daily_occupancy",
@@ -47,6 +55,10 @@ export const DAYCARE_BACKEND_VALUE_KEYS = [
 export const DAYCARE_READ_ONLY_VALUE_KEYS = [
   ...DAYCARE_CALCULATED_VALUE_KEYS,
   ...DAYCARE_BACKEND_VALUE_KEYS,
+] as const;
+
+export const BOARDING_READ_ONLY_VALUE_KEYS = [
+  ...BOARDING_CALCULATED_VALUE_KEYS,
 ] as const;
 
 type KpiValueLookup = Record<string, number | null | undefined>;
@@ -94,6 +106,19 @@ export function calculateDaycareDerivedMetricValues(
   return derived;
 }
 
+export function calculateBoardingDerivedMetricValues(
+  values: KpiValueLookup
+): Partial<Record<(typeof BOARDING_CALCULATED_VALUE_KEYS)[number], number>> {
+  const nights = values[BOARDING_NIGHTS_METRIC_KEY];
+  if (nights === null || nights === undefined) return {};
+
+  return {
+    [BOARDING_OCCUPANCY_RATE_METRIC_KEY]: Math.round(
+      (nights / BOARDING_OCCUPANCY_CAPACITY_NIGHTS) * 10
+    ) * 10,
+  };
+}
+
 // Section labels shown above each table on the page.
 export const SECTION_LABELS: Record<KpiSection, string> = {
   ACTUALS: "Last Week — Actuals",
@@ -123,7 +148,8 @@ export const KPI_SEGMENTS: KpiSegmentDef[] = [
       { key: "revenue", label: "Revenue", section: "ACTUALS", format: "currency" },
       { key: "package_sales", label: "Packages", section: "ACTUALS", format: "currency" },
       { key: "addon_sales", label: "Addons", section: "ACTUALS", format: "currency" },
-      { key: "nights", label: "Nights", section: "ACTUALS", format: "number" },
+      { key: BOARDING_NIGHTS_METRIC_KEY, label: "Nights", section: "ACTUALS", format: "number" },
+      { key: BOARDING_OCCUPANCY_RATE_METRIC_KEY, label: "Occupancy Rate", section: "ACTUALS", format: "percent" },
     ],
   },
   {

@@ -5,6 +5,7 @@ import {
   DAYCARE_STAFF_HOURS_METRIC_KEY,
   DEFAULT_SEGMENT,
   KPI_SEGMENTS,
+  calculateBoardingDerivedMetricValues,
   calculateDaycareDerivedMetricValues,
   getSegmentDef,
   isValidSegment,
@@ -24,7 +25,7 @@ function withDerivedKpiCells(
   segment: KpiSegment,
   data: Record<string, KpiCell>
 ): Record<string, KpiCell> {
-  if (segment !== "DAYCARE") return data;
+  if (segment !== "DAYCARE" && segment !== "BOARDING") return data;
 
   const values = Object.fromEntries(
     Object.entries(data).map(([key, cell]) => [key, cell.value])
@@ -32,8 +33,14 @@ function withDerivedKpiCells(
   const previousValues = Object.fromEntries(
     Object.entries(data).map(([key, cell]) => [key, cell.previousValue])
   );
-  const derived = calculateDaycareDerivedMetricValues(values);
-  const previousDerived = calculateDaycareDerivedMetricValues(previousValues);
+  const derived =
+    segment === "DAYCARE"
+      ? calculateDaycareDerivedMetricValues(values)
+      : calculateBoardingDerivedMetricValues(values);
+  const previousDerived =
+    segment === "DAYCARE"
+      ? calculateDaycareDerivedMetricValues(previousValues)
+      : calculateBoardingDerivedMetricValues(previousValues);
   if (Object.keys(derived).length === 0 && Object.keys(previousDerived).length === 0) return data;
 
   const next = { ...data };
