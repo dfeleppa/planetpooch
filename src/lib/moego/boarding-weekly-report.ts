@@ -18,6 +18,8 @@ const BOARDING_KPI_METRICS = {
   nights: "nights",
 } as const;
 
+const BOARDING_APPOINTMENT_LOOKBACK_WEEKS = 12;
+
 const BOARDING_SERVICE_NAMES = [
   "classic group play",
   "classic 1 on 1",
@@ -196,23 +198,45 @@ function utcDateOnlyTime(date: Date): number {
   return Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate());
 }
 
+function appointmentStayRange(appointment: MoegoAppointmentRow): {
+  start: Date;
+  end: Date;
+} | null {
+  const start = parseDate(appointment.checkInTime) ?? parseDate(appointment.duration?.startTime);
+  const end = parseDate(appointment.checkOutTime) ?? parseDate(appointment.duration?.endTime);
+  return start && end ? { start, end } : null;
+}
+
 function stayNightsInWindow(
   appointment: MoegoAppointmentRow,
   weekStart: Date,
   weekEnd: Date
 ): number {
-  const start = parseDate(appointment.checkInTime) ?? parseDate(appointment.duration?.startTime);
-  const end = parseDate(appointment.checkOutTime) ?? parseDate(appointment.duration?.endTime);
-  if (!start || !end) return 1;
+  const range = appointmentStayRange(appointment);
+  if (!range) return 1;
 
-  const overlapStart = Math.max(utcDateOnlyTime(start), utcDateOnlyTime(weekStart));
-  const overlapEnd = Math.min(utcDateOnlyTime(end), utcDateOnlyTime(weekEnd));
+  const overlapStart = Math.max(utcDateOnlyTime(range.start), utcDateOnlyTime(weekStart));
+  const overlapEnd = Math.min(utcDateOnlyTime(range.end), utcDateOnlyTime(weekEnd));
   if (!(Number.isFinite(overlapStart) && Number.isFinite(overlapEnd)) || overlapEnd <= overlapStart) {
-    return 1;
+    return 0;
   }
 
   const oneDay = 24 * 60 * 60 * 1000;
   return Math.max(1, Math.round((overlapEnd - overlapStart) / oneDay));
+}
+
+function stayOverlapsWindow(
+  appointment: MoegoAppointmentRow,
+  weekStart: Date,
+  weekEnd: Date
+): boolean {
+  const range = appointmentStayRange(appointment);
+  if (!range) return true;
+
+  return (
+    utcDateOnlyTime(range.start) < utcDateOnlyTime(weekEnd) &&
+    utcDateOnlyTime(range.end) > utcDateOnlyTime(weekStart)
+  );
 }
 
 function previousCompletedWeek(today = new Date()): {
@@ -231,10 +255,11 @@ async function listFinishedBoardingAppointments(
   businessId: string
 ): Promise<MoegoAppointmentRow[]> {
   const appointments: MoegoAppointmentRow[] = [];
+  const lookupStart = addWeeks(start, -BOARDING_APPOINTMENT_LOOKBACK_WEEKS);
   for await (const page of streamAppointments(
     {
       startTime: {
-        startTime: start.toISOString(),
+        startTime: lookupStart.toISOString(),
         endTime: end.toISOString(),
       },
       statuses: ["FINISHED"],
@@ -295,9 +320,17 @@ export async function buildWeeklyBoardingReport(options?: {
   const businessId = options?.businessId ?? PET_RESORT_BUSINESS_ID;
 
   const appointments = await listFinishedBoardingAppointments(start, end, businessId);
+  const boardingAppointments = appointments.filter((appointment) => {
+    const lines = serviceLines(appointment);
+    return (
+      lines.some(isBoardingService) &&
+      stayOverlapsWindow(appointment, start, end) &&
+      stayNightsInWindow(appointment, start, end) > 0
+    );
+  });
   const orderIds = [
     ...new Set(
-      appointments
+      boardingAppointments
         .map((appointment) => appointment.orderId)
         .filter((orderId): orderId is string => Boolean(orderId))
     ),
@@ -311,10 +344,8 @@ export async function buildWeeklyBoardingReport(options?: {
   let addonSalesCents = 0;
   let totalRevenueCents = 0;
 
-  for (const appointment of appointments) {
+  for (const appointment of boardingAppointments) {
     const lines = serviceLines(appointment);
-    const hasBoardingService = lines.some(isBoardingService);
-    if (!hasBoardingService) continue;
 
     const appointmentGrossCents = lines.reduce(
       (sum, service) => sum + toCents(service.price),
@@ -322,6 +353,7 @@ export async function buildWeeklyBoardingReport(options?: {
     );
     const order = appointment.orderId ? orderMoney.get(appointment.orderId) : undefined;
     const capacityUnits = stayNightsInWindow(appointment, start, end);
+    if (capacityUnits <= 0) continue;
 
     for (const service of lines) {
       const grossCents = toCents(service.price);
@@ -350,7 +382,7 @@ export async function buildWeeklyBoardingReport(options?: {
     weekStart: toWeekParam(start),
     weekEnd: toWeekParam(new Date(end.getTime() - 24 * 60 * 60 * 1000)),
     businessId,
-    totalFinishedBoardingAppointments: appointments.length,
+    totalFinishedBoardingAppointments: boardingAppointments.length,
     totalRevenueCents,
     nights,
     packageSalesCents,
