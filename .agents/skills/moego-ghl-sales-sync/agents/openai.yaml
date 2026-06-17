@@ -1,0 +1,4 @@
+interface:
+  display_name: "MoeGo GHL Sales Sync"
+  short_description: "Sync MoeGo paid sales to GHL opportunities"
+  default_prompt: "Use $moego-ghl-sales-sync to pull MoeGo paid sales and update matching GoHighLevel opportunities."
