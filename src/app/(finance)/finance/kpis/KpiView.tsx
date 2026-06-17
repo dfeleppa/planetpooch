@@ -80,6 +80,20 @@ type BoardingImportReport = {
   nights: number;
 };
 
+type UpcomingBoardingBookingWeek = {
+  weekStart: string;
+  weekEnding: string;
+  bookingCount: number;
+};
+
+type UpcomingBoardingBookingsReport = {
+  generatedAt: string;
+  windowStart: string;
+  windowEnd: string;
+  totalBookings: number;
+  weeks: UpcomingBoardingBookingWeek[];
+};
+
 type TrainingImportReport = {
   totalFinishedTrainingAppointments: number;
   trainingAppointmentsInSalesWindow: number;
@@ -628,12 +642,126 @@ export function KpiView({
                   </section>
                 );
               })}
+              {segment === "BOARDING" && <UpcomingBoardingBookingsSection />}
             </div>
           )}
         </>
       )}
     </div>
   );
+}
+
+function UpcomingBoardingBookingsSection() {
+  const [report, setReport] = useState<UpcomingBoardingBookingsReport | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const controller = new AbortController();
+    let active = true;
+
+    async function load() {
+      setLoading(true);
+      setError(null);
+      try {
+        const res = await fetch(
+          "/api/finance/kpis/moego-boarding/upcoming-bookings",
+          {
+            cache: "no-store",
+            signal: controller.signal,
+          }
+        );
+        const json = (await res.json().catch(() => ({}))) as {
+          error?: string;
+          report?: UpcomingBoardingBookingsReport;
+        };
+        if (!active) return;
+        if (!res.ok || !json.report) {
+          setError(json.error ?? "Could not load upcoming boarding bookings.");
+          setReport(null);
+          return;
+        }
+        setReport(json.report);
+      } catch (err) {
+        if (!active || controller.signal.aborted) return;
+        setError(err instanceof Error ? err.message : "Could not load upcoming boarding bookings.");
+        setReport(null);
+      } finally {
+        if (active) setLoading(false);
+      }
+    }
+
+    load();
+
+    return () => {
+      active = false;
+      controller.abort();
+    };
+  }, []);
+
+  return (
+    <section>
+      <div className="mb-2 flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
+        <h2 className="text-xs font-semibold uppercase tracking-wider text-gray-500">
+          Upcoming Boarding Bookings
+        </h2>
+        {report && (
+          <div className="text-xs text-gray-500">
+            {report.totalBookings.toLocaleString("en-US")} total bookings
+          </div>
+        )}
+      </div>
+      <Table>
+        <TableHead>
+          <tr>
+            <TableHeader>Week Ending</TableHeader>
+            <TableHeader className="text-right">Bookings</TableHeader>
+          </tr>
+        </TableHead>
+        <TableBody>
+          {loading ? (
+            <TableRow>
+              <TableCell colSpan={2} className="text-gray-500">
+                Loading upcoming bookings...
+              </TableCell>
+            </TableRow>
+          ) : error ? (
+            <TableRow>
+              <TableCell colSpan={2} className="text-amber-700">
+                {error}
+              </TableCell>
+            </TableRow>
+          ) : report && report.weeks.length > 0 ? (
+            report.weeks.map((week) => (
+              <TableRow key={week.weekStart}>
+                <TableCell className="font-medium">
+                  {formatDateOnly(week.weekEnding)}
+                </TableCell>
+                <TableCell className="text-right tabular-nums">
+                  {week.bookingCount.toLocaleString("en-US")}
+                </TableCell>
+              </TableRow>
+            ))
+          ) : (
+            <TableRow>
+              <TableCell colSpan={2} className="text-gray-500">
+                No upcoming bookings found.
+              </TableCell>
+            </TableRow>
+          )}
+        </TableBody>
+      </Table>
+    </section>
+  );
+}
+
+function formatDateOnly(value: string): string {
+  return new Date(`${value}T00:00:00.000Z`).toLocaleDateString("en-US", {
+    timeZone: "UTC",
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  });
 }
 
 function dollars(cents: number): string {

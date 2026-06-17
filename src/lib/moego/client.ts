@@ -325,6 +325,8 @@ export type MoegoAppointmentRow = {
   customerId?: string;
   orderId?: string;
   status?: string;
+  isDeleted?: boolean;
+  noShow?: boolean;
   totalAmount?: MoegoMoney;
   paidAmount?: MoegoMoney;
   refundAmount?: MoegoMoney;

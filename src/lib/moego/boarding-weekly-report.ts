@@ -19,6 +19,8 @@ const BOARDING_KPI_METRICS = {
 } as const;
 
 const BOARDING_APPOINTMENT_LOOKBACK_WEEKS = 12;
+const UPCOMING_BOARDING_BOOKING_WEEKS = 13;
+const MS_PER_DAY = 24 * 60 * 60 * 1000;
 
 const BOARDING_SERVICE_NAMES = [
   "classic group play",
@@ -91,6 +93,21 @@ export type WeeklyBoardingKpiValues = {
   packageSalesCents: number;
   addonSalesCents: number;
   nights: number;
+};
+
+export type UpcomingBoardingBookingWeek = {
+  weekStart: string;
+  weekEnding: string;
+  bookingCount: number;
+};
+
+export type UpcomingBoardingBookingsReport = {
+  businessId: string;
+  generatedAt: string;
+  windowStart: string;
+  windowEnd: string;
+  totalBookings: number;
+  weeks: UpcomingBoardingBookingWeek[];
 };
 
 function moneyValue(cents: number): number {
@@ -194,6 +211,11 @@ function parseDate(value: string | undefined): Date | null {
   return Number.isNaN(parsed.getTime()) ? null : parsed;
 }
 
+function isCanceledOrInactiveBooking(appointment: MoegoAppointmentRow): boolean {
+  const status = (appointment.status ?? "").toUpperCase();
+  return status.includes("CANCEL") || appointment.isDeleted === true || appointment.noShow === true;
+}
+
 function utcDateOnlyTime(date: Date): number {
   return Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate());
 }
@@ -205,6 +227,10 @@ function appointmentStayRange(appointment: MoegoAppointmentRow): {
   const start = parseDate(appointment.checkInTime) ?? parseDate(appointment.duration?.startTime);
   const end = parseDate(appointment.checkOutTime) ?? parseDate(appointment.duration?.endTime);
   return start && end ? { start, end } : null;
+}
+
+function appointmentStartDate(appointment: MoegoAppointmentRow): Date | null {
+  return parseDate(appointment.checkInTime) ?? parseDate(appointment.duration?.startTime);
 }
 
 function stayNightsInWindow(
@@ -263,6 +289,27 @@ async function listFinishedBoardingAppointments(
         endTime: end.toISOString(),
       },
       statuses: ["FINISHED"],
+    },
+    [businessId]
+  )) {
+    appointments.push(...page);
+  }
+  return appointments;
+}
+
+async function listUpcomingBoardingAppointments(
+  start: Date,
+  end: Date,
+  businessId: string
+): Promise<MoegoAppointmentRow[]> {
+  const appointments: MoegoAppointmentRow[] = [];
+  for await (const page of streamAppointments(
+    {
+      startTime: {
+        startTime: start.toISOString(),
+        endTime: end.toISOString(),
+      },
+      serviceTypes: ["BOARDING"],
     },
     [businessId]
   )) {
@@ -390,6 +437,64 @@ export async function buildWeeklyBoardingReport(options?: {
     nightsByService: Object.fromEntries(
       [...nightsByService.entries()].sort(([a], [b]) => a.localeCompare(b))
     ),
+  };
+}
+
+export async function buildUpcomingBoardingBookingsReport(options?: {
+  today?: Date;
+  businessId?: string;
+  weeks?: number;
+}): Promise<UpcomingBoardingBookingsReport> {
+  const today = options?.today ?? new Date();
+  const businessId = options?.businessId ?? PET_RESORT_BUSINESS_ID;
+  const weekCount = options?.weeks ?? UPCOMING_BOARDING_BOOKING_WEEKS;
+  const baseWeekStart = weekStartOf(today);
+  const windowStart = new Date(
+    Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), today.getUTCDate())
+  );
+  const windowEnd = addWeeks(baseWeekStart, weekCount);
+  const weekRows = Array.from({ length: weekCount }, (_, index) => {
+    const weekStart = addWeeks(baseWeekStart, index);
+    const weekEnding = new Date(weekStart.getTime() + 6 * MS_PER_DAY);
+    return {
+      weekStart,
+      key: toWeekParam(weekStart),
+      weekEnding: toWeekParam(weekEnding),
+      bookingCount: 0,
+    };
+  });
+  const countsByWeek = new Map(weekRows.map((row) => [row.key, row]));
+  const appointments = await listUpcomingBoardingAppointments(
+    windowStart,
+    windowEnd,
+    businessId
+  );
+
+  for (const appointment of appointments) {
+    if (isCanceledOrInactiveBooking(appointment)) continue;
+    const lines = serviceLines(appointment);
+    if (!lines.some(isBoardingService)) continue;
+    const start = appointmentStartDate(appointment);
+    if (!start || start < windowStart || start >= windowEnd) continue;
+
+    const weekKey = toWeekParam(weekStartOf(start));
+    const row = countsByWeek.get(weekKey);
+    if (row) row.bookingCount++;
+  }
+
+  const weeks = weekRows.map((row) => ({
+    weekStart: row.key,
+    weekEnding: row.weekEnding,
+    bookingCount: row.bookingCount,
+  }));
+
+  return {
+    businessId,
+    generatedAt: today.toISOString(),
+    windowStart: windowStart.toISOString(),
+    windowEnd: windowEnd.toISOString(),
+    totalBookings: weeks.reduce((sum, row) => sum + row.bookingCount, 0),
+    weeks,
   };
 }
 
