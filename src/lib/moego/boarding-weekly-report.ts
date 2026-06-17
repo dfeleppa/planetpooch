@@ -98,7 +98,7 @@ export type WeeklyBoardingKpiValues = {
 export type UpcomingBoardingBookingWeek = {
   weekStart: string;
   weekEnding: string;
-  bookingCount: number;
+  nightCount: number;
 };
 
 export type UpcomingBoardingBookingsReport = {
@@ -106,7 +106,7 @@ export type UpcomingBoardingBookingsReport = {
   generatedAt: string;
   windowStart: string;
   windowEnd: string;
-  totalBookings: number;
+  totalNights: number;
   weeks: UpcomingBoardingBookingWeek[];
 };
 
@@ -231,6 +231,19 @@ function appointmentStayRange(appointment: MoegoAppointmentRow): {
 
 function appointmentStartDate(appointment: MoegoAppointmentRow): Date | null {
   return parseDate(appointment.checkInTime) ?? parseDate(appointment.duration?.startTime);
+}
+
+function totalStayNights(appointment: MoegoAppointmentRow): number {
+  const range = appointmentStayRange(appointment);
+  if (!range) return 1;
+
+  const start = utcDateOnlyTime(range.start);
+  const end = utcDateOnlyTime(range.end);
+  if (!(Number.isFinite(start) && Number.isFinite(end)) || end <= start) {
+    return 1;
+  }
+
+  return Math.max(1, Math.round((end - start) / MS_PER_DAY));
 }
 
 function stayNightsInWindow(
@@ -460,7 +473,7 @@ export async function buildUpcomingBoardingBookingsReport(options?: {
       weekStart,
       key: toWeekParam(weekStart),
       weekEnding: toWeekParam(weekEnding),
-      bookingCount: 0,
+      nightCount: 0,
     };
   });
   const countsByWeek = new Map(weekRows.map((row) => [row.key, row]));
@@ -479,13 +492,13 @@ export async function buildUpcomingBoardingBookingsReport(options?: {
 
     const weekKey = toWeekParam(weekStartOf(start));
     const row = countsByWeek.get(weekKey);
-    if (row) row.bookingCount++;
+    if (row) row.nightCount += totalStayNights(appointment);
   }
 
   const weeks = weekRows.map((row) => ({
     weekStart: row.key,
     weekEnding: row.weekEnding,
-    bookingCount: row.bookingCount,
+    nightCount: row.nightCount,
   }));
 
   return {
@@ -493,7 +506,7 @@ export async function buildUpcomingBoardingBookingsReport(options?: {
     generatedAt: today.toISOString(),
     windowStart: windowStart.toISOString(),
     windowEnd: windowEnd.toISOString(),
-    totalBookings: weeks.reduce((sum, row) => sum + row.bookingCount, 0),
+    totalNights: weeks.reduce((sum, row) => sum + row.nightCount, 0),
     weeks,
   };
 }

@@ -83,14 +83,14 @@ type BoardingImportReport = {
 type UpcomingBoardingBookingWeek = {
   weekStart: string;
   weekEnding: string;
-  bookingCount: number;
+  nightCount: number;
 };
 
 type UpcomingBoardingBookingsReport = {
   generatedAt: string;
   windowStart: string;
   windowEnd: string;
-  totalBookings: number;
+  totalNights: number;
   weeks: UpcomingBoardingBookingWeek[];
 };
 
@@ -703,11 +703,11 @@ function UpcomingBoardingBookingsSection() {
     <section>
       <div className="mb-2 flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
         <h2 className="text-xs font-semibold uppercase tracking-wider text-gray-500">
-          Upcoming Boarding Bookings
+          Upcoming Boarding Nights
         </h2>
         {report && (
           <div className="text-xs text-gray-500">
-            {report.totalBookings.toLocaleString("en-US")} total bookings
+            {report.totalNights.toLocaleString("en-US")} total nights
           </div>
         )}
       </div>
@@ -715,14 +715,14 @@ function UpcomingBoardingBookingsSection() {
         <TableHead>
           <tr>
             <TableHeader>Week Ending</TableHeader>
-            <TableHeader className="text-right">Bookings</TableHeader>
+            <TableHeader className="text-right">Nights</TableHeader>
           </tr>
         </TableHead>
         <TableBody>
           {loading ? (
             <TableRow>
               <TableCell colSpan={2} className="text-gray-500">
-                Loading upcoming bookings...
+                Loading upcoming boarding nights...
               </TableCell>
             </TableRow>
           ) : error ? (
@@ -738,7 +738,7 @@ function UpcomingBoardingBookingsSection() {
                   {formatDateOnly(week.weekEnding)}
                 </TableCell>
                 <TableCell className="text-right tabular-nums">
-                  {week.bookingCount.toLocaleString("en-US")}
+                  {week.nightCount.toLocaleString("en-US")}
                 </TableCell>
               </TableRow>
             ))
