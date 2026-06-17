@@ -87,7 +87,7 @@ type UpcomingBoardingBookingWeek = {
 };
 
 type UpcomingBoardingBookingsReport = {
-  generatedAt: string;
+  generatedAt: string | null;
   windowStart: string;
   windowEnd: string;
   totalNights: number;
@@ -654,6 +654,7 @@ export function KpiView({
 function UpcomingBoardingBookingsSection() {
   const [report, setReport] = useState<UpcomingBoardingBookingsReport | null>(null);
   const [loading, setLoading] = useState(true);
+  const [updating, setUpdating] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -699,17 +700,61 @@ function UpcomingBoardingBookingsSection() {
     };
   }, []);
 
+  async function updateUpcomingNights() {
+    setUpdating(true);
+    setError(null);
+    try {
+      const res = await fetch(
+        "/api/finance/kpis/moego-boarding/upcoming-bookings",
+        {
+          method: "POST",
+          cache: "no-store",
+        }
+      );
+      const json = (await res.json().catch(() => ({}))) as {
+        error?: string;
+        report?: UpcomingBoardingBookingsReport;
+      };
+      if (!res.ok || !json.report) {
+        setError(json.error ?? "Could not update upcoming boarding nights.");
+        return;
+      }
+      setReport(json.report);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not update upcoming boarding nights.");
+    } finally {
+      setUpdating(false);
+    }
+  }
+
   return (
     <section>
       <div className="mb-2 flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
-        <h2 className="text-xs font-semibold uppercase tracking-wider text-gray-500">
-          Upcoming Boarding Nights
-        </h2>
-        {report && (
-          <div className="text-xs text-gray-500">
-            {report.totalNights.toLocaleString("en-US")} total nights
+        <div>
+          <h2 className="text-xs font-semibold uppercase tracking-wider text-gray-500">
+            Upcoming Boarding Nights
+          </h2>
+          <div className="mt-1 text-xs text-gray-500">
+            {report?.generatedAt
+              ? `Updated ${formatImportedAt(new Date(report.generatedAt))}`
+              : "Stored snapshot has not been updated yet"}
           </div>
-        )}
+        </div>
+        <div className="flex items-center gap-3">
+          {report && (
+            <div className="text-xs text-gray-500">
+              {report.totalNights.toLocaleString("en-US")} total nights
+            </div>
+          )}
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={updateUpcomingNights}
+            disabled={updating}
+          >
+            {updating ? "Updating..." : "Update"}
+          </Button>
+        </div>
       </div>
       <Table>
         <TableHead>

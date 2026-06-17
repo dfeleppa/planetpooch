@@ -1345,6 +1345,24 @@ model MoegoSyncState {
   updatedAt    DateTime @updatedAt
 }
 
+/// Stored snapshot for the Boarding KPI page's 13-week upcoming nights view.
+/// Rows are refreshed only when an admin clicks Update, so the KPI page can
+/// render without calling MoeGo on every view.
+model MoegoUpcomingBoardingNight {
+  id         String   @id @default(cuid())
+  businessId String
+  weekStart  DateTime @db.Date
+  weekEnding DateTime @db.Date
+  nightCount Int      @default(0)
+  syncedAt   DateTime
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([businessId, weekStart])
+  @@index([businessId, weekEnding])
+}
+
 /// One row per day-of-week the employee is available. Times are stored as
 /// "HH:MM" 24-hour strings on 30-minute boundaries (e.g. "09:00", "17:30").
 /// Days the employee is NOT available simply have no row — absence == off.

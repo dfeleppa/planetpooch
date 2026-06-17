@@ -103,11 +103,18 @@ export type UpcomingBoardingBookingWeek = {
 
 export type UpcomingBoardingBookingsReport = {
   businessId: string;
-  generatedAt: string;
+  generatedAt: string | null;
   windowStart: string;
   windowEnd: string;
   totalNights: number;
   weeks: UpcomingBoardingBookingWeek[];
+};
+
+type StoredUpcomingBoardingNightRow = {
+  weekStart: Date;
+  weekEnding: Date;
+  nightCount: number;
+  syncedAt: Date;
 };
 
 function moneyValue(cents: number): number {
@@ -244,6 +251,71 @@ function totalStayNights(appointment: MoegoAppointmentRow): number {
   }
 
   return Math.max(1, Math.round((end - start) / MS_PER_DAY));
+}
+
+function upcomingBoardingWindow(today: Date, weekCount: number) {
+  const baseWeekStart = weekStartOf(today);
+  const windowStart = new Date(
+    Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), today.getUTCDate())
+  );
+  const windowEnd = addWeeks(baseWeekStart, weekCount);
+  const weekRows = Array.from({ length: weekCount }, (_, index) => {
+    const weekStart = addWeeks(baseWeekStart, index);
+    const weekEnding = new Date(weekStart.getTime() + 6 * MS_PER_DAY);
+    return {
+      weekStart,
+      key: toWeekParam(weekStart),
+      weekEnding,
+      weekEndingKey: toWeekParam(weekEnding),
+      nightCount: 0,
+    };
+  });
+
+  return { windowStart, windowEnd, weekRows };
+}
+
+function dateFromWeekParam(value: string): Date {
+  return new Date(`${value}T00:00:00.000Z`);
+}
+
+function storedUpcomingBoardingReport(options: {
+  businessId: string;
+  today: Date;
+  weekCount: number;
+  rows: StoredUpcomingBoardingNightRow[];
+}): UpcomingBoardingBookingsReport {
+  const { windowStart, windowEnd, weekRows } = upcomingBoardingWindow(
+    options.today,
+    options.weekCount
+  );
+  const storedByWeek = new Map(
+    options.rows.map((row) => [toWeekParam(row.weekStart), row])
+  );
+  let generatedAtTime = 0;
+  let generatedAtIso: string | null = null;
+
+  const weeks = weekRows.map((row) => {
+    const stored = storedByWeek.get(row.key);
+    const syncedAtTime = stored?.syncedAt.getTime() ?? 0;
+    if (stored && syncedAtTime > generatedAtTime) {
+      generatedAtTime = syncedAtTime;
+      generatedAtIso = stored.syncedAt.toISOString();
+    }
+    return {
+      weekStart: row.key,
+      weekEnding: row.weekEndingKey,
+      nightCount: stored?.nightCount ?? 0,
+    };
+  });
+
+  return {
+    businessId: options.businessId,
+    generatedAt: generatedAtIso,
+    windowStart: windowStart.toISOString(),
+    windowEnd: windowEnd.toISOString(),
+    totalNights: weeks.reduce((sum, row) => sum + row.nightCount, 0),
+    weeks,
+  };
 }
 
 function stayNightsInWindow(
@@ -461,21 +533,7 @@ export async function buildUpcomingBoardingBookingsReport(options?: {
   const today = options?.today ?? new Date();
   const businessId = options?.businessId ?? PET_RESORT_BUSINESS_ID;
   const weekCount = options?.weeks ?? UPCOMING_BOARDING_BOOKING_WEEKS;
-  const baseWeekStart = weekStartOf(today);
-  const windowStart = new Date(
-    Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), today.getUTCDate())
-  );
-  const windowEnd = addWeeks(baseWeekStart, weekCount);
-  const weekRows = Array.from({ length: weekCount }, (_, index) => {
-    const weekStart = addWeeks(baseWeekStart, index);
-    const weekEnding = new Date(weekStart.getTime() + 6 * MS_PER_DAY);
-    return {
-      weekStart,
-      key: toWeekParam(weekStart),
-      weekEnding: toWeekParam(weekEnding),
-      nightCount: 0,
-    };
-  });
+  const { windowStart, windowEnd, weekRows } = upcomingBoardingWindow(today, weekCount);
   const countsByWeek = new Map(weekRows.map((row) => [row.key, row]));
   const appointments = await listUpcomingBoardingAppointments(
     windowStart,
@@ -497,7 +555,7 @@ export async function buildUpcomingBoardingBookingsReport(options?: {
 
   const weeks = weekRows.map((row) => ({
     weekStart: row.key,
-    weekEnding: row.weekEnding,
+    weekEnding: row.weekEndingKey,
     nightCount: row.nightCount,
   }));
 
@@ -509,6 +567,78 @@ export async function buildUpcomingBoardingBookingsReport(options?: {
     totalNights: weeks.reduce((sum, row) => sum + row.nightCount, 0),
     weeks,
   };
+}
+
+export async function getStoredUpcomingBoardingBookingsReport(options?: {
+  today?: Date;
+  businessId?: string;
+  weeks?: number;
+}): Promise<UpcomingBoardingBookingsReport> {
+  const today = options?.today ?? new Date();
+  const businessId = options?.businessId ?? PET_RESORT_BUSINESS_ID;
+  const weekCount = options?.weeks ?? UPCOMING_BOARDING_BOOKING_WEEKS;
+  const { windowEnd, weekRows } = upcomingBoardingWindow(today, weekCount);
+  const firstWeekStart = weekRows[0]?.weekStart ?? weekStartOf(today);
+  const rows = await prisma.$queryRaw<StoredUpcomingBoardingNightRow[]>(Prisma.sql`
+    SELECT "weekStart", "weekEnding", "nightCount", "syncedAt"
+    FROM "MoegoUpcomingBoardingNight"
+    WHERE "businessId" = ${businessId}
+      AND "weekStart" >= ${firstWeekStart}
+      AND "weekStart" < ${windowEnd}
+    ORDER BY "weekStart" ASC
+  `);
+
+  return storedUpcomingBoardingReport({
+    businessId,
+    today,
+    weekCount,
+    rows,
+  });
+}
+
+export async function refreshUpcomingBoardingBookingsReport(options?: {
+  today?: Date;
+  businessId?: string;
+  weeks?: number;
+}): Promise<UpcomingBoardingBookingsReport> {
+  const report = await buildUpcomingBoardingBookingsReport(options);
+  const syncedAt = report.generatedAt ? new Date(report.generatedAt) : new Date();
+  const weekStartDates = report.weeks.map((row) => dateFromWeekParam(row.weekStart));
+
+  await prisma.$transaction([
+    prisma.$executeRaw(Prisma.sql`
+      DELETE FROM "MoegoUpcomingBoardingNight"
+      WHERE "businessId" = ${report.businessId}
+        AND "weekStart" NOT IN (${Prisma.join(weekStartDates)})
+    `),
+    ...report.weeks.map((row) =>
+      prisma.$executeRaw(Prisma.sql`
+        INSERT INTO "MoegoUpcomingBoardingNight"
+          ("id", "businessId", "weekStart", "weekEnding", "nightCount", "syncedAt", "updatedAt")
+        VALUES
+          (
+            ${`mubn_${report.businessId}_${row.weekStart}`},
+            ${report.businessId},
+            ${dateFromWeekParam(row.weekStart)},
+            ${dateFromWeekParam(row.weekEnding)},
+            ${row.nightCount},
+            ${syncedAt},
+            CURRENT_TIMESTAMP
+          )
+        ON CONFLICT ("businessId", "weekStart") DO UPDATE SET
+          "weekEnding" = EXCLUDED."weekEnding",
+          "nightCount" = EXCLUDED."nightCount",
+          "syncedAt" = EXCLUDED."syncedAt",
+          "updatedAt" = CURRENT_TIMESTAMP
+      `)
+    ),
+  ]);
+
+  return getStoredUpcomingBoardingBookingsReport({
+    today: options?.today,
+    businessId: report.businessId,
+    weeks: options?.weeks,
+  });
 }
 
 export async function upsertWeeklyBoardingKpis(
