@@ -111,10 +111,10 @@ export type UpcomingBoardingBookingsReport = {
 };
 
 type StoredUpcomingBoardingNightRow = {
-  weekStart: Date;
-  weekEnding: Date;
-  nightCount: number;
-  syncedAt: Date;
+  weekStart: Date | string;
+  weekEnding: Date | string;
+  nightCount: bigint | number;
+  syncedAt: Date | string;
 };
 
 function moneyValue(cents: number): number {
@@ -278,6 +278,39 @@ function dateFromWeekParam(value: string): Date {
   return new Date(`${value}T00:00:00.000Z`);
 }
 
+function dateValue(value: Date | string): Date {
+  return value instanceof Date ? value : new Date(value);
+}
+
+function numberFromDb(value: bigint | number): number {
+  return typeof value === "bigint" ? Number(value) : value;
+}
+
+function prismaErrorText(err: unknown): string {
+  const parts = [err instanceof Error ? err.message : String(err)];
+
+  if (typeof err === "object" && err !== null) {
+    if ("code" in err) {
+      parts.push(String((err as { code?: unknown }).code));
+    }
+    if ("meta" in err) {
+      parts.push(JSON.stringify((err as { meta?: unknown }).meta));
+    }
+  }
+
+  return parts.join(" ");
+}
+
+function isMissingUpcomingBoardingNightTable(err: unknown): boolean {
+  const text = prismaErrorText(err);
+  return (
+    text.includes("MoegoUpcomingBoardingNight") &&
+    (text.includes("does not exist") ||
+      text.includes("UndefinedTable") ||
+      text.includes("42P01"))
+  );
+}
+
 function storedUpcomingBoardingReport(options: {
   businessId: string;
   today: Date;
@@ -288,23 +321,28 @@ function storedUpcomingBoardingReport(options: {
     options.today,
     options.weekCount
   );
-  const storedByWeek = new Map(
-    options.rows.map((row) => [toWeekParam(row.weekStart), row])
-  );
+  const storedByWeek = new Map<string, StoredUpcomingBoardingNightRow>();
+  for (const row of options.rows) {
+    const weekStart = dateValue(row.weekStart);
+    if (Number.isNaN(weekStart.getTime())) continue;
+    storedByWeek.set(toWeekParam(weekStart), row);
+  }
   let generatedAtTime = 0;
   let generatedAtIso: string | null = null;
 
   const weeks = weekRows.map((row) => {
     const stored = storedByWeek.get(row.key);
-    const syncedAtTime = stored?.syncedAt.getTime() ?? 0;
+    const syncedAt = stored ? dateValue(stored.syncedAt) : null;
+    const syncedAtTime =
+      syncedAt && !Number.isNaN(syncedAt.getTime()) ? syncedAt.getTime() : 0;
     if (stored && syncedAtTime > generatedAtTime) {
       generatedAtTime = syncedAtTime;
-      generatedAtIso = stored.syncedAt.toISOString();
+      generatedAtIso = syncedAt?.toISOString() ?? null;
     }
     return {
       weekStart: row.key,
       weekEnding: row.weekEndingKey,
-      nightCount: stored?.nightCount ?? 0,
+      nightCount: stored ? numberFromDb(stored.nightCount) : 0,
     };
   });
 
@@ -579,14 +617,21 @@ export async function getStoredUpcomingBoardingBookingsReport(options?: {
   const weekCount = options?.weeks ?? UPCOMING_BOARDING_BOOKING_WEEKS;
   const { windowEnd, weekRows } = upcomingBoardingWindow(today, weekCount);
   const firstWeekStart = weekRows[0]?.weekStart ?? weekStartOf(today);
-  const rows = await prisma.$queryRaw<StoredUpcomingBoardingNightRow[]>(Prisma.sql`
-    SELECT "weekStart", "weekEnding", "nightCount", "syncedAt"
-    FROM "MoegoUpcomingBoardingNight"
-    WHERE "businessId" = ${businessId}
-      AND "weekStart" >= ${firstWeekStart}
-      AND "weekStart" < ${windowEnd}
-    ORDER BY "weekStart" ASC
-  `);
+  let rows: StoredUpcomingBoardingNightRow[];
+
+  try {
+    rows = await prisma.$queryRaw<StoredUpcomingBoardingNightRow[]>(Prisma.sql`
+      SELECT "weekStart", "weekEnding", "nightCount", "syncedAt"
+      FROM "MoegoUpcomingBoardingNight"
+      WHERE "businessId" = ${businessId}
+        AND "weekStart" >= ${firstWeekStart}
+        AND "weekStart" < ${windowEnd}
+      ORDER BY "weekStart" ASC
+    `);
+  } catch (err) {
+    if (!isMissingUpcomingBoardingNightTable(err)) throw err;
+    rows = [];
+  }
 
   return storedUpcomingBoardingReport({
     businessId,
