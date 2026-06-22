@@ -7,6 +7,7 @@ import { EmployeeFilters } from "./EmployeeFilters";
 import { RosterShell } from "./RosterShell";
 import { REQUIRED_DOCUMENT_CATEGORIES } from "@/lib/employee-documents";
 import { getVisibleModuleIdsForUsers } from "@/lib/module-visibility";
+import { AdminPeopleNav } from "../AdminPeopleNav";
 
 const COMPANY_LABELS: Record<Company, string> = {
   GROOMING: "Planet Pooch Grooming",
@@ -404,6 +405,8 @@ export default async function AdminEmployeesPage({
           </div>
         )}
       </div>
+
+      <AdminPeopleNav active="employees" />
 
       {/* KPI strip — only on active tab */}
       {tab === "active" && (

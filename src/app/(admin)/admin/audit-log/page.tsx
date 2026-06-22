@@ -1,9 +1,10 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { AdminPeopleNav } from "../AdminPeopleNav";
 
 interface AuditLog {
   id: string;
@@ -34,19 +35,38 @@ export default function AuditLogPage() {
   const [loading, setLoading] = useState(true);
   const [filterAction, setFilterAction] = useState<string>("");
 
-  async function loadLogs(page = 1) {
-    setLoading(true);
+  async function fetchLogs(page: number, action: string) {
     const params = new URLSearchParams({ page: String(page), limit: "50" });
-    if (filterAction) params.set("action", filterAction);
+    if (action) params.set("action", action);
 
     const res = await fetch(`/api/audit-log?${params}`);
-    const data = await res.json();
+    return (await res.json()) as { logs: AuditLog[]; pagination: Pagination };
+  }
+
+  async function loadLogs(page = 1) {
+    setLoading(true);
+    const data = await fetchLogs(page, filterAction);
     setLogs(data.logs);
     setPagination(data.pagination);
     setLoading(false);
   }
 
-  useEffect(() => { loadLogs(); }, [filterAction]);
+  useEffect(() => {
+    let cancelled = false;
+
+    async function syncLogs() {
+      const data = await fetchLogs(1, filterAction);
+      if (cancelled) return;
+      setLogs(data.logs);
+      setPagination(data.pagination);
+      setLoading(false);
+    }
+
+    syncLogs();
+    return () => {
+      cancelled = true;
+    };
+  }, [filterAction]);
 
   function formatDate(date: string) {
     return new Date(date).toLocaleString();
@@ -56,12 +76,18 @@ export default function AuditLogPage() {
     <div>
       <h1 className="text-2xl font-bold text-gray-900">Audit Log</h1>
       <p className="text-gray-500 mt-1">Track all lesson completion and uncompletion events</p>
+      <div className="mt-6">
+        <AdminPeopleNav active="audit-log" />
+      </div>
 
       {/* Filters */}
       <div className="flex gap-3 mt-6">
         <select
           value={filterAction}
-          onChange={(e) => setFilterAction(e.target.value)}
+          onChange={(e) => {
+            setLoading(true);
+            setFilterAction(e.target.value);
+          }}
           className="rounded-lg border border-gray-300 px-3 py-2 text-sm"
         >
           <option value="">All Actions</option>

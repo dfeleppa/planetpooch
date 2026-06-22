@@ -57,6 +57,14 @@ const financeNav: NavItem[] = [
   { href: "/finance/kpis", label: "KPIs", icon: "▦" },
 ];
 
+const adminDashboardPaths = [
+  "/admin",
+  "/admin/employees",
+  "/admin/module-progress",
+  "/admin/org-chart",
+  "/admin/audit-log",
+];
+
 const ROLE_LABELS: Record<string, string> = {
   SUPER_ADMIN: "Super Admin",
   MANAGER: "Manager",
@@ -81,11 +89,17 @@ export function Sidebar() {
   // "Manage Modules" appears alongside the rest of the admin links.
   const canManageModules = isSuperAdmin || jobTitle === "CMO";
 
-  const nav = canManageModules
+  const baseNav = canManageModules
     ? superAdminNav
     : isManager
     ? managerNav
     : employeeNav;
+  const nav =
+    baseNav === employeeNav
+      ? employeeNav
+      : baseNav
+          .filter((item) => !["/admin/employees", "/admin/org-chart", "/admin/audit-log"].includes(item.href))
+          .map((item) => (item.href === "/admin" ? { ...item, href: "/admin/employees" } : item));
   // The admin navs (super admin / manager) are the HR links;
   // the plain employee nav (Dashboard / Modules / Search) is not.
   const isAdminNav = nav !== employeeNav;
@@ -123,6 +137,11 @@ export function Sidebar() {
   }
 
   function isActive(href: string) {
+    if (href === "/admin/employees") {
+      return adminDashboardPaths.some((path) =>
+        path === "/admin" ? pathname === path : pathname === path || pathname.startsWith(path + "/")
+      );
+    }
     if (href === "/dashboard" || href === "/admin") return pathname === href;
     if (pathname !== href && !pathname.startsWith(href + "/")) return false;
     // Longest-prefix wins: don't highlight /maintenance when on /maintenance/inventory.
