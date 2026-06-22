@@ -23,8 +23,8 @@ const employeeNav: NavItem[] = [
 // Full admin nav — SUPER_ADMIN only (includes module management)
 const superAdminNav: NavItem[] = [
   { href: "/admin", label: "Dashboard", icon: "▣" },
-  { href: "/admin/modules", label: "Manage Modules", icon: "❏" },
   { href: "/admin/employees", label: "Employees", icon: "◉" },
+  { href: "/admin/modules", label: "Manage Modules", icon: "❏" },
   { href: "/admin/org-chart", label: "Org Chart", icon: "⌬" },
   { href: "/admin/audit-log", label: "Audit Log", icon: "≡" },
 ];
