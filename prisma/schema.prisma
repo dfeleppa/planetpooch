@@ -43,21 +43,6 @@ enum MaintenanceTaskStatus {
   SKIPPED
 }
 
-enum TaskStatus {
-  TODO
-  IN_PROGRESS
-  IN_REVIEW
-  DONE
-  CANCELLED
-}
-
-enum TaskPriority {
-  LOW
-  MEDIUM
-  HIGH
-  URGENT
-}
-
 // ============================================================
 // Onboarding enums (Phase 2+)
 // ============================================================
@@ -202,13 +187,6 @@ model User {
   maintenanceTasksAssigned    MaintenanceTask[]     @relation("MaintenanceAssignee")
   maintenanceTasksCompleted   MaintenanceTask[]     @relation("MaintenanceCompleter")
   inventoryAdjustments        InventoryAdjustment[] @relation("InventoryAdjuster")
-
-  // Task Manager relations
-  projectsOwned    Project[]        @relation("ProjectOwner")
-  projectMembers   ProjectMember[]
-  tasksCreated     Task[]           @relation("TaskCreator")
-  taskAssignments  TaskAssignee[]
-  taskComments     TaskComment[]
 
   // Onboarding relations
   onboardingTemplatesCreated OnboardingTemplate[] @relation("TemplateCreator")
@@ -534,113 +512,6 @@ model InventoryAdjustment {
   adjustedBy    User?         @relation("InventoryAdjuster", fields: [adjustedById], references: [id], onDelete: SetNull)
 
   @@index([inventoryItemId])
-}
-
-// ============================================================
-// Task Manager Models
-// ============================================================
-
-model Project {
-  id          String   @id @default(cuid())
-  name        String
-  description String   @default("")
-  ownerId     String?
-  isArchived  Boolean  @default(false)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-
-  owner       User?           @relation("ProjectOwner", fields: [ownerId], references: [id], onDelete: SetNull)
-  members     ProjectMember[]
-  subProjects SubProject[]
-  tasks       Task[]
-
-  @@index([ownerId])
-}
-
-model SubProject {
-  id          String   @id @default(cuid())
-  name        String
-  description String   @default("")
-  projectId   String
-  order       Int      @default(0)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-
-  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  tasks   Task[]
-
-  @@index([projectId])
-}
-
-model ProjectMember {
-  id        String   @id @default(cuid())
-  projectId String
-  userId    String
-  role      String   @default("MEMBER")
-  joinedAt  DateTime @default(now())
-
-  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@unique([projectId, userId])
-  @@index([userId])
-}
-
-model Task {
-  id           String       @id @default(cuid())
-  title        String
-  description  String       @default("")
-  status       TaskStatus   @default(TODO)
-  priority     TaskPriority @default(MEDIUM)
-  order        Int          @default(0)
-  dueDate      DateTime?
-  projectId    String
-  subProjectId String?
-  parentTaskId String?
-  createdById  String?
-  createdAt    DateTime     @default(now())
-  updatedAt    DateTime     @updatedAt
-
-  project    Project      @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  subProject SubProject?  @relation(fields: [subProjectId], references: [id], onDelete: SetNull)
-  parentTask Task?        @relation("TaskSubtasks", fields: [parentTaskId], references: [id], onDelete: Cascade)
-  subtasks   Task[]       @relation("TaskSubtasks")
-  createdBy  User?        @relation("TaskCreator", fields: [createdById], references: [id], onDelete: SetNull)
-  assignees  TaskAssignee[]
-  comments   TaskComment[]
-
-  @@index([projectId])
-  @@index([subProjectId])
-  @@index([parentTaskId])
-  @@index([status])
-  @@index([dueDate])
-}
-
-model TaskAssignee {
-  id         String   @id @default(cuid())
-  taskId     String
-  userId     String
-  assignedAt DateTime @default(now())
-
-  task Task @relation(fields: [taskId], references: [id], onDelete: Cascade)
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@unique([taskId, userId])
-  @@index([userId])
-}
-
-model TaskComment {
-  id        String   @id @default(cuid())
-  taskId    String
-  userId    String
-  content   String
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  task Task @relation(fields: [taskId], references: [id], onDelete: Cascade)
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@index([taskId])
 }
 
 // ============================================================

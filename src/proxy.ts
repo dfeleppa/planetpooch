@@ -69,7 +69,6 @@ export const config = {
     "/admin/:path*",
     "/search/:path*",
     "/maintenance/:path*",
-    "/tasks/:path*",
     "/marketing/:path*",
     "/change-password",
   ],
