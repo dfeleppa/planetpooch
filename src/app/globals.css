@@ -303,6 +303,7 @@ body {
   min-height: 0;
 }
 .pp-roster {
+  --pp-roster-table-width: 1155px;
   background: var(--color-pp-surface);
   border: 1px solid var(--color-pp-line);
   border-radius: 10px;
@@ -324,7 +325,9 @@ body {
   gap: 14px;
   padding: 12px 16px;
   align-items: center;
-  min-width: max-content;
+  box-sizing: border-box;
+  width: max(100%, var(--pp-roster-table-width));
+  min-width: var(--pp-roster-table-width);
 }
 /* Column resize handles */
 .pp-resize-handle {
@@ -643,15 +646,16 @@ body {
   }
   .pp-row {
     display: grid;
-    grid-template-columns: 1fr auto;
+    grid-template-columns: minmax(0, 1fr) auto auto;
     grid-template-areas:
-      "name view"
-      "role role"
-      "meta meta"
-      "progress progress";
+      "name name view"
+      "role role role"
+      "company modules docs"
+      "progress progress progress";
     column-gap: 12px;
     row-gap: 8px;
     padding: 14px;
+    width: 100%;
     min-width: 0;
   }
   .pp-row > .pp-rcol-name {
@@ -663,20 +667,23 @@ body {
     font-size: 12px;
     white-space: normal;
   }
-  /* Company / Modules / Docs collapse to a single inline meta row. */
+  .pp-row > .pp-rcol:nth-child(3) {
+    grid-area: company;
+  }
+  .pp-row > .pp-rcol:nth-child(4) {
+    grid-area: modules;
+  }
+  .pp-row > .pp-rcol:nth-child(5) {
+    grid-area: docs;
+  }
   .pp-row > .pp-rcol:nth-child(3),
   .pp-row > .pp-rcol:nth-child(4),
   .pp-row > .pp-rcol:nth-child(5) {
-    grid-area: meta;
     display: inline-flex;
     align-items: center;
     gap: 10px;
     font-size: 12px;
     color: var(--color-pp-ink-3);
-  }
-  /* Wrap the meta items into one line by giving them no grid placement. */
-  .pp-row > .pp-rcol:nth-child(3) {
-    margin-right: 0;
   }
   /* Progress bar spans full width */
   .pp-row > .pp-rcol:nth-child(6) {
