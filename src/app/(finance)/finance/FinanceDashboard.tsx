@@ -65,6 +65,17 @@ type MetricData = {
   metaRevenue: number | null;
   googleAdSpend: number | null;
   googleRevenue: number | null;
+  statement: StatementData;
+};
+
+type StatementData = {
+  income: number | null;
+  operatingExpenses: number | null;
+  expenses: number | null;
+  payroll: number | null;
+  netProfit: number | null;
+  ytdRevenue: number | null;
+  ytdNetProfit: number | null;
 };
 
 const EMPTY_METRIC: MetricData = {
@@ -77,7 +88,20 @@ const EMPTY_METRIC: MetricData = {
   metaRevenue: null,
   googleAdSpend: null,
   googleRevenue: null,
+  statement: {
+    income: null,
+    operatingExpenses: null,
+    expenses: null,
+    payroll: null,
+    netProfit: null,
+    ytdRevenue: null,
+    ytdNetProfit: null,
+  },
 };
+
+function nullableNumber(value: unknown): number | null {
+  return typeof value === "number" && Number.isFinite(value) ? value : null;
+}
 
 function cents(val: number | null) {
   if (val === null) return null;
@@ -86,7 +110,16 @@ function cents(val: number | null) {
 
 function formatDollars(val: number | null) {
   if (val === null) return "—";
-  return "$" + val.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  return val.toLocaleString("en-US", {
+    style: "currency",
+    currency: "USD",
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
+}
+
+function formatCents(val: number | null) {
+  return val === null ? "-" : formatDollars(val / 100);
 }
 
 function formatRatio(val: number | null) {
@@ -160,6 +193,7 @@ export function FinanceDashboard({
         if (cancelled) return;
         if (json.metric) {
           const m = json.metric;
+          const statement = m.statement ?? {};
           setMetric({
             totalRevenue: m.totalRevenue,
             totalProfit: m.totalProfit,
@@ -170,6 +204,15 @@ export function FinanceDashboard({
             metaRevenue: m.metaRevenue,
             googleAdSpend: m.googleAdSpend,
             googleRevenue: m.googleRevenue,
+            statement: {
+              income: nullableNumber(statement.income ?? m.totalRevenue),
+              operatingExpenses: nullableNumber(statement.operatingExpenses),
+              expenses: nullableNumber(statement.expenses),
+              payroll: nullableNumber(statement.payroll),
+              netProfit: nullableNumber(statement.netProfit ?? m.totalProfit),
+              ytdRevenue: nullableNumber(statement.ytdRevenue),
+              ytdNetProfit: nullableNumber(statement.ytdNetProfit),
+            },
           });
         } else {
           setMetric(EMPTY_METRIC);
@@ -316,12 +359,115 @@ export function FinanceDashboard({
         />
       </div>
 
+      <FinancialStatementSection
+        statement={metric.statement}
+        rangeLabel={rangeLabel}
+        ytdLabel={`YTD ${selectedYear}`}
+      />
+
       <FacebookCampaignReportTable business={business} from={from} to={to} />
       <GoogleCampaignReportTable business={business} from={from} to={to} />
 
       <p className="mt-6 text-xs text-gray-400">
         Showing {businessLabel} &middot; {rangeLabel}
       </p>
+    </div>
+  );
+}
+
+function FinancialStatementSection({
+  statement,
+  rangeLabel,
+  ytdLabel,
+}: {
+  statement: StatementData;
+  rangeLabel: string;
+  ytdLabel: string;
+}) {
+  return (
+    <Card className="mt-6 overflow-hidden rounded-lg shadow-none">
+      <div className="flex flex-col gap-1 border-b border-gray-200 bg-white px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+        <h2 className="text-base font-semibold text-gray-900">Financial Snapshot</h2>
+        <p className="text-sm text-gray-500">{rangeLabel}</p>
+      </div>
+      <CardContent className="grid gap-4 lg:grid-cols-[minmax(0,2fr)_minmax(220px,1fr)]">
+        <div className="grid gap-3 sm:grid-cols-3">
+          <StatementMetric
+            label="Income"
+            value={formatCents(statement.income)}
+            hasData={statement.income !== null}
+          />
+          <StatementMetric
+            label="Operating Expenses"
+            value={formatCents(statement.operatingExpenses)}
+            hasData={statement.operatingExpenses !== null}
+          />
+          <StatementMetric
+            label="Net Profit"
+            value={formatCents(statement.netProfit)}
+            hasData={statement.netProfit !== null}
+            tone={(statement.netProfit ?? 0) < 0 ? "danger" : "default"}
+          />
+        </div>
+
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-1">
+          <div className="rounded-lg border border-gray-200 bg-gray-50 px-4 py-3">
+            <p className="text-xs font-semibold uppercase tracking-[0.08em] text-gray-500">
+              Expense Breakdown
+            </p>
+            <div className="mt-3 space-y-2">
+              <StatementRow label="Expenses" value={formatCents(statement.expenses)} />
+              <StatementRow label="Payroll" value={formatCents(statement.payroll)} />
+            </div>
+          </div>
+          <div className="rounded-lg border border-gray-200 bg-gray-50 px-4 py-3">
+            <p className="text-xs font-semibold uppercase tracking-[0.08em] text-gray-500">
+              {ytdLabel}
+            </p>
+            <div className="mt-3 space-y-2">
+              <StatementRow label="Revenue" value={formatCents(statement.ytdRevenue)} />
+              <StatementRow label="Net Profit" value={formatCents(statement.ytdNetProfit)} />
+            </div>
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+function StatementMetric({
+  label,
+  value,
+  hasData,
+  tone = "default",
+}: {
+  label: string;
+  value: string;
+  hasData: boolean;
+  tone?: "default" | "danger";
+}) {
+  return (
+    <div className="rounded-lg border border-gray-200 bg-white px-4 py-4">
+      <p className="text-xs font-semibold uppercase tracking-[0.08em] text-gray-500">{label}</p>
+      <p
+        className={cn(
+          "mt-2 text-2xl font-bold tabular-nums",
+          !hasData && "text-gray-300",
+          hasData && tone === "default" && "text-gray-900",
+          hasData && tone === "danger" && "text-red-600"
+        )}
+      >
+        {value}
+      </p>
+    </div>
+  );
+}
+
+function StatementRow({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="flex items-center justify-between gap-4 text-sm">
+      <span className="font-medium text-gray-600">{label}</span>
+      <span className="font-semibold tabular-nums text-gray-900">{value}</span>
     </div>
   );
 }

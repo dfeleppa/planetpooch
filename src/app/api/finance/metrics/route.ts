@@ -53,7 +53,7 @@ export async function PUT(req: NextRequest) {
   }
 
   const numericFields = [
-    "totalRevenue", "totalProfit", "totalCustomers",
+    "totalRevenue", "totalProfit", "nonPayrollExpenses", "payrollExpenses", "totalCustomers",
     "totalAdSpend", "totalConversions",
     "metaAdSpend", "metaRevenue", "googleAdSpend", "googleRevenue",
   ] as const;
