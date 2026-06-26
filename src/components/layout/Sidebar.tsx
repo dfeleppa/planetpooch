@@ -51,6 +51,7 @@ const marketingNav: NavItem[] = [
 
 const financeNav: NavItem[] = [
   { href: "/finance", label: "Dashboard", icon: "$" },
+  { href: "/finance/ad-reporting", label: "Ad Reporting", icon: "%" },
   { href: "/finance/data", label: "Data", icon: "◈" },
   { href: "/finance/moego", label: "MoeGo", icon: "◉" },
   { href: "/finance/payroll", label: "Payroll", icon: "P" },

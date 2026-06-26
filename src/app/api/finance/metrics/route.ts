@@ -13,25 +13,62 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
-  const business = req.nextUrl.searchParams.get("business");
-  const from = req.nextUrl.searchParams.get("from");
-  const to = req.nextUrl.searchParams.get("to");
+  const sp = req.nextUrl.searchParams;
+  const business = sp.get("business");
+  const from = sp.get("from");
+  const to = sp.get("to");
 
   if (!business || !from || !to) {
     return NextResponse.json({ error: "business, from, and to are required" }, { status: 400 });
   }
 
+  const periodStart = new Date(from);
+  const periodEnd = new Date(to);
+
   const metric = await prisma.financeMetric.findUnique({
     where: {
       business_periodStart_periodEnd: {
         business,
-        periodStart: new Date(from),
-        periodEnd: new Date(to),
+        periodStart,
+        periodEnd,
       },
     },
   });
 
-  return NextResponse.json({ metric });
+  if (sp.get("includeYtd") !== "1") {
+    return NextResponse.json({ metric });
+  }
+
+  const requestedYear = Number(sp.get("year"));
+  const ytdYear = Number.isInteger(requestedYear)
+    ? requestedYear
+    : periodEnd.getUTCFullYear();
+  const ytdStart = new Date(Date.UTC(ytdYear, 0, 1));
+  const ytdTotals = await prisma.financeMetric.aggregate({
+    where: {
+      business,
+      periodEnd: {
+        gte: ytdStart,
+        lte: periodEnd,
+      },
+    },
+    _sum: {
+      totalRevenue: true,
+      totalProfit: true,
+      nonPayrollExpenses: true,
+      payrollExpenses: true,
+    },
+  });
+
+  return NextResponse.json({
+    metric,
+    ytd: {
+      totalRevenue: ytdTotals._sum.totalRevenue,
+      totalProfit: ytdTotals._sum.totalProfit,
+      nonPayrollExpenses: ytdTotals._sum.nonPayrollExpenses,
+      payrollExpenses: ytdTotals._sum.payrollExpenses,
+    },
+  });
 }
 
 export async function PUT(req: NextRequest) {
@@ -47,7 +84,12 @@ export async function PUT(req: NextRequest) {
     return NextResponse.json({ error: "business, periodStart, and periodEnd are required" }, { status: 400 });
   }
 
-  const validBusinesses = ["all-businesses-manual", "mobile-grooming-manual", "pet-resort-manual"];
+  const validBusinesses = [
+    "all-businesses-manual",
+    "all-businesses-weekly",
+    "mobile-grooming-manual",
+    "pet-resort-manual",
+  ];
   if (!validBusinesses.includes(business)) {
     return NextResponse.json({ error: "Invalid business" }, { status: 400 });
   }
