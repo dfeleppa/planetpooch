@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getSession } from "@/lib/auth-helpers";
+import { getSession, hasMarketingAccess } from "@/lib/auth-helpers";
 import { prisma } from "@/lib/prisma";
 import {
   fetchAllOpportunities,
@@ -222,7 +222,10 @@ async function summarizeWindow(
 
 export async function GET(req: NextRequest) {
   const session = await getSession();
-  if (!session?.user || session.user.role !== "SUPER_ADMIN") {
+  const user = session?.user as
+    | { role?: string | null; jobTitle?: string | null }
+    | undefined;
+  if (!user || !hasMarketingAccess(user.role, user.jobTitle)) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 

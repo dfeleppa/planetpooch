@@ -46,12 +46,12 @@ const marketingNav: NavItem[] = [
   { href: "/marketing", label: "Marketing", icon: "✦" },
   { href: "/marketing/ideas", label: "Ideas", icon: "◆" },
   { href: "/marketing/performance", label: "Performance", icon: "▲" },
+  { href: "/marketing/ad-reporting", label: "Ad Reporting", icon: "%" },
   { href: "/marketing/voice", label: "Voice Profile", icon: "✎" },
 ];
 
 const financeNav: NavItem[] = [
   { href: "/finance", label: "Dashboard", icon: "$" },
-  { href: "/finance/ad-reporting", label: "Ad Reporting", icon: "%" },
   { href: "/finance/data", label: "Data", icon: "◈" },
   { href: "/finance/moego", label: "MoeGo", icon: "◉" },
   { href: "/finance/payroll", label: "Payroll", icon: "P" },

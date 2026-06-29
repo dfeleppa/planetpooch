@@ -1,25 +1,23 @@
-import { requireSuperAdmin } from "@/lib/auth-helpers";
-import { FinanceDashboard } from "../FinanceDashboard";
-import { FinanceSubnav } from "../FinanceSubnav";
+import { redirect } from "next/navigation";
 
-export default async function FinanceAdReportingPage({
+type SearchParams = {
+  business?: string;
+  month?: string;
+  year?: string;
+};
+
+export default async function FinanceAdReportingRedirect({
   searchParams,
 }: {
-  searchParams: Promise<{ business?: string; month?: string; year?: string }>;
+  searchParams: Promise<SearchParams>;
 }) {
-  await requireSuperAdmin();
   const params = await searchParams;
-  const business = params.business ?? "";
+  const next = new URLSearchParams();
 
-  return (
-    <div>
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold text-gray-900">Finance</h1>
-        <p className="mt-1 text-gray-500">Ad KPIs and campaign reporting</p>
-      </div>
+  if (params.business) next.set("business", params.business);
+  if (params.month) next.set("month", params.month);
+  if (params.year) next.set("year", params.year);
 
-      <FinanceSubnav />
-      <FinanceDashboard business={business} month={params.month} year={params.year} />
-    </div>
-  );
+  const query = next.toString();
+  redirect(query ? `/marketing/ad-reporting?${query}` : "/marketing/ad-reporting");
 }

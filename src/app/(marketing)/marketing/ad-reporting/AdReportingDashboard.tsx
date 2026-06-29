@@ -7,7 +7,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import {
   FacebookCampaignReportTable,
   GoogleCampaignReportTable,
-} from "./FacebookCampaignReportTable";
+} from "./CampaignReportTables";
 
 const BUSINESSES = [
   { value: "", label: "All Businesses" },
@@ -128,7 +128,7 @@ function computeKPIs(m: MetricData) {
   return { cac, ltvRevenue, ltvProfit, metaRoas, googleRoas };
 }
 
-export function FinanceDashboard({
+export function AdReportingDashboard({
   business,
   month,
   year,

@@ -1,5 +1,4 @@
 import { requireSuperAdmin } from "@/lib/auth-helpers";
-import { FinanceSubnav } from "./FinanceSubnav";
 import { WeeklyFinancialSnapshot } from "./WeeklyFinancialSnapshot";
 
 export default async function FinanceDashboardPage({
@@ -17,7 +16,6 @@ export default async function FinanceDashboardPage({
         <p className="mt-1 text-gray-500">Weekly financial snapshot for Planet Pooch</p>
       </div>
 
-      <FinanceSubnav />
       <WeeklyFinancialSnapshot year={params.year} week={params.week} />
     </div>
   );

@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { Role } from "@prisma/client";
-import { getSession } from "@/lib/auth-helpers";
+import { getSession, hasMarketingAccess } from "@/lib/auth-helpers";
 import { prisma } from "@/lib/prisma";
 
 const VALID_BUSINESSES = new Set([
@@ -32,8 +31,10 @@ type CampaignInputRow = {
 
 type ParsedCsvRow = Record<string, string>;
 
-function isSuperAdmin(role: string) {
-  return role === Role.SUPER_ADMIN || role === Role.ADMIN;
+function canAccessAdReporting(
+  user: { role?: string | null; jobTitle?: string | null } | undefined
+) {
+  return Boolean(user && hasMarketingAccess(user.role, user.jobTitle));
 }
 
 function dateFromParam(value: string | null | undefined): Date | null {
@@ -217,7 +218,11 @@ async function replaceRows({
 
 export async function GET(req: NextRequest) {
   const session = await getSession();
-  if (!session?.user || !isSuperAdmin((session.user as { role: string }).role)) {
+  if (
+    !canAccessAdReporting(
+      session?.user as { role?: string | null; jobTitle?: string | null } | undefined
+    )
+  ) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
@@ -242,7 +247,11 @@ export async function GET(req: NextRequest) {
 
 export async function PUT(req: NextRequest) {
   const session = await getSession();
-  if (!session?.user || !isSuperAdmin((session.user as { role: string }).role)) {
+  if (
+    !canAccessAdReporting(
+      session?.user as { role?: string | null; jobTitle?: string | null } | undefined
+    )
+  ) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
@@ -278,7 +287,11 @@ export async function PUT(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   const session = await getSession();
-  if (!session?.user || !isSuperAdmin((session.user as { role: string }).role)) {
+  if (
+    !canAccessAdReporting(
+      session?.user as { role?: string | null; jobTitle?: string | null } | undefined
+    )
+  ) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 

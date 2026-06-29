@@ -3,13 +3,25 @@ import { getToken } from "next-auth/jwt";
 import type { NextRequest } from "next/server";
 
 export async function proxy(req: NextRequest) {
+  const { pathname } = req.nextUrl;
+
+  if (
+    pathname === "/finance/ad-reporting" ||
+    pathname.startsWith("/finance/ad-reporting/")
+  ) {
+    const target = req.nextUrl.clone();
+    target.pathname = pathname.replace(
+      "/finance/ad-reporting",
+      "/marketing/ad-reporting"
+    );
+    return NextResponse.redirect(target);
+  }
+
   const token = await getToken({
     req,
     secret: process.env.NEXTAUTH_SECRET,
     secureCookie: !!process.env.VERCEL,
   });
-
-  const { pathname } = req.nextUrl;
 
   // Not authenticated — redirect to login
   if (!token) {
@@ -70,6 +82,7 @@ export const config = {
     "/search/:path*",
     "/maintenance/:path*",
     "/marketing/:path*",
+    "/finance/ad-reporting/:path*",
     "/change-password",
   ],
 };
