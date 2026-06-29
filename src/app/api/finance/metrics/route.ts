@@ -39,34 +39,13 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ metric });
   }
 
-  const requestedYear = Number(sp.get("year"));
-  const ytdYear = Number.isInteger(requestedYear)
-    ? requestedYear
-    : periodEnd.getUTCFullYear();
-  const ytdStart = new Date(Date.UTC(ytdYear, 0, 1));
-  const ytdTotals = await prisma.financeMetric.aggregate({
-    where: {
-      business,
-      periodEnd: {
-        gte: ytdStart,
-        lte: periodEnd,
-      },
-    },
-    _sum: {
-      totalRevenue: true,
-      totalProfit: true,
-      nonPayrollExpenses: true,
-      payrollExpenses: true,
-    },
-  });
-
   return NextResponse.json({
     metric,
     ytd: {
-      totalRevenue: ytdTotals._sum.totalRevenue,
-      totalProfit: ytdTotals._sum.totalProfit,
-      nonPayrollExpenses: ytdTotals._sum.nonPayrollExpenses,
-      payrollExpenses: ytdTotals._sum.payrollExpenses,
+      totalRevenue: metric?.ytdRevenue ?? null,
+      totalProfit: metric?.ytdNetProfit ?? null,
+      nonPayrollExpenses: null,
+      payrollExpenses: null,
     },
   });
 }
@@ -95,7 +74,7 @@ export async function PUT(req: NextRequest) {
   }
 
   const numericFields = [
-    "totalRevenue", "totalProfit", "nonPayrollExpenses", "payrollExpenses", "totalCustomers",
+    "totalRevenue", "totalProfit", "ytdRevenue", "ytdNetProfit", "nonPayrollExpenses", "payrollExpenses", "totalCustomers",
     "totalAdSpend", "totalConversions",
     "metaAdSpend", "metaRevenue", "googleAdSpend", "googleRevenue",
   ] as const;

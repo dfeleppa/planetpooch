@@ -906,6 +906,8 @@ model FinanceMetric {
 
   totalRevenue     Int? // cents
   totalProfit      Int? // cents
+  ytdRevenue       Int? // cents, stored snapshot for this selected week
+  ytdNetProfit     Int? // cents, stored snapshot for this selected week
   nonPayrollExpenses Int? // cents
   payrollExpenses    Int? // cents
   totalCustomers   Int?
