@@ -258,27 +258,6 @@ export function Sidebar() {
             })}
           </div>
 
-          {/* Maintenance */}
-          {!isCollapsed ? (
-            <div className="px-2.5 pt-1 text-[10px] font-medium uppercase tracking-[0.08em] text-pp-ink-4">Maintenance</div>
-          ) : (
-            <div className="mx-1.5 h-px bg-pp-line" />
-          )}
-          <div className="-mt-2 flex flex-col gap-px">
-            {sharedNav.map((item) => {
-              const active = isActive(item.href);
-              return (
-                <Link key={item.href} href={item.href} title={isCollapsed ? item.label : undefined} className={navItemClass(active)}>
-                  {activeRail(active)}
-                  <span className={cn("text-[14px] w-4 text-center flex-shrink-0", active ? "text-pp-accent" : "text-pp-ink-3")}>
-                    {item.icon}
-                  </span>
-                  {!isCollapsed && <span className="truncate">{item.label}</span>}
-                </Link>
-              );
-            })}
-          </div>
-
           {/* Marketing section — visible to MARKETING role and SUPER_ADMIN */}
           {hasMarketingAccess && (
             <>
@@ -359,6 +338,27 @@ export function Sidebar() {
               </div>
             </>
           )}
+
+          {/* Maintenance */}
+          {!isCollapsed ? (
+            <div className="px-2.5 pt-1 text-[10px] font-medium uppercase tracking-[0.08em] text-pp-ink-4">Maintenance</div>
+          ) : (
+            <div className="mx-1.5 h-px bg-pp-line" />
+          )}
+          <div className="-mt-2 flex flex-col gap-px">
+            {sharedNav.map((item) => {
+              const active = isActive(item.href);
+              return (
+                <Link key={item.href} href={item.href} title={isCollapsed ? item.label : undefined} className={navItemClass(active)}>
+                  {activeRail(active)}
+                  <span className={cn("text-[14px] w-4 text-center flex-shrink-0", active ? "text-pp-accent" : "text-pp-ink-3")}>
+                    {item.icon}
+                  </span>
+                  {!isCollapsed && <span className="truncate">{item.label}</span>}
+                </Link>
+              );
+            })}
+          </div>
         </nav>
 
         {/* User section */}
