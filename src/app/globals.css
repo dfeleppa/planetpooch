@@ -64,6 +64,7 @@ body {
   background: var(--color-pp-line);
   border: 1px solid var(--color-pp-line);
   border-radius: 10px;
+  flex: 0 0 auto;
   overflow: hidden;
 }
 .pp-kpi {
@@ -301,6 +302,10 @@ body {
 /* Roster table (Variation A) */
 .pp-employees-page {
   min-height: 0;
+  gap: 16px;
+}
+.pp-employees-page > :not(.pp-roster) {
+  flex-shrink: 0;
 }
 .pp-roster {
   --pp-roster-table-width: 1155px;
@@ -601,7 +606,7 @@ body {
 
   .pp-employees-page .pp-roster {
     flex: 1 1 auto;
-    min-height: 260px;
+    min-height: clamp(150px, 20dvh, 260px);
     overflow: auto;
   }
 
