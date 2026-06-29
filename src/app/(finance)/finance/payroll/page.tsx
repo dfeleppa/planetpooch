@@ -7,7 +7,7 @@ export default async function PayrollPage() {
   return (
     <div>
       <div className="mb-6">
-        <h1 className="text-2xl font-bold text-gray-900">Payroll</h1>
+        <h2 className="text-xl font-semibold text-gray-900">Payroll</h2>
         <p className="text-gray-500 mt-1">Weekly staff hours by category</p>
       </div>
 

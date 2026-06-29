@@ -5,6 +5,12 @@ import type { NextRequest } from "next/server";
 export async function proxy(req: NextRequest) {
   const { pathname } = req.nextUrl;
 
+  if (pathname === "/finance") {
+    const target = req.nextUrl.clone();
+    target.pathname = "/finance/profit-loss";
+    return NextResponse.redirect(target);
+  }
+
   if (
     pathname === "/finance/ad-reporting" ||
     pathname.startsWith("/finance/ad-reporting/")
@@ -55,6 +61,7 @@ export async function proxy(req: NextRequest) {
     role === "SUPER_ADMIN" || role === "ADMIN" || jobTitle === "CMO";
   const canEditModules = canManageModules;
   const canAccessAdmin = isManagerOrAbove;
+  const canAccessFinance = role === "SUPER_ADMIN" || role === "ADMIN";
 
   // Module management section: top-tier admins and CMO can edit.
   if (pathname.startsWith("/admin/modules") && !canEditModules) {
@@ -71,6 +78,11 @@ export async function proxy(req: NextRequest) {
     return NextResponse.redirect(new URL("/dashboard", req.url));
   }
 
+  // Finance section: top-tier admins only.
+  if (pathname.startsWith("/finance") && !canAccessFinance) {
+    return NextResponse.redirect(new URL("/dashboard", req.url));
+  }
+
   return NextResponse.next();
 }
 
@@ -82,7 +94,7 @@ export const config = {
     "/search/:path*",
     "/maintenance/:path*",
     "/marketing/:path*",
-    "/finance/ad-reporting/:path*",
+    "/finance/:path*",
     "/change-password",
   ],
 };

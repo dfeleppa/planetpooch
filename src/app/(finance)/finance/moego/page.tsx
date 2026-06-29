@@ -8,7 +8,7 @@ export default async function MoegoPage() {
   return (
     <div>
       <div className="mb-6">
-        <h1 className="text-2xl font-bold text-gray-900">MoeGo</h1>
+        <h2 className="text-xl font-semibold text-gray-900">MoeGo</h2>
         <p className="text-gray-500 mt-1">
           Lead source, LTV, and CAC pulled from MoeGo (customers, orders,
           leads) and joined with Meta ad spend.

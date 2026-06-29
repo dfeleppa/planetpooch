@@ -1,22 +1,16 @@
-import { requireSuperAdmin } from "@/lib/auth-helpers";
-import { WeeklyFinancialSnapshot } from "./WeeklyFinancialSnapshot";
+import { redirect } from "next/navigation";
 
-export default async function FinanceDashboardPage({
+export default async function FinanceRedirectPage({
   searchParams,
 }: {
   searchParams: Promise<{ year?: string; week?: string }>;
 }) {
-  await requireSuperAdmin();
   const params = await searchParams;
+  const next = new URLSearchParams();
 
-  return (
-    <div>
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold text-gray-900">Finance</h1>
-        <p className="mt-1 text-gray-500">Weekly financial snapshot for Planet Pooch</p>
-      </div>
+  if (params.year) next.set("year", params.year);
+  if (params.week) next.set("week", params.week);
 
-      <WeeklyFinancialSnapshot year={params.year} week={params.week} />
-    </div>
-  );
+  const query = next.toString();
+  redirect(query ? `/finance/profit-loss?${query}` : "/finance/profit-loss");
 }
