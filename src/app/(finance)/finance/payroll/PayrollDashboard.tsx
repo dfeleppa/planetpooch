@@ -75,6 +75,11 @@ type EditableRow = {
   decimalHours: string;
 };
 
+export type PayrollEmployeeOption = {
+  id: string;
+  name: string;
+};
+
 type ImportRow = {
   employeeName?: unknown;
   name?: unknown;
@@ -277,7 +282,11 @@ function secondsFromEditable(row: EditableRow): number {
   return Math.round(rowDecimalHours(row) * 3600);
 }
 
-export function PayrollDashboard() {
+export function PayrollDashboard({
+  employeeOptionsByBusiness = {},
+}: {
+  employeeOptionsByBusiness?: Partial<Record<PayrollBusinessValue, PayrollEmployeeOption[]>>;
+}) {
   const [savedWeeks, setSavedWeeks] = useState<SavedWeekSummary[]>([]);
   const [business, setBusiness] = useState<PayrollBusinessValue>(DEFAULT_PAYROLL_BUSINESS);
   const [weekStart, setWeekStart] = useState(lastCompletedWeekStart);
@@ -291,6 +300,23 @@ export function PayrollDashboard() {
   const [error, setError] = useState<string | null>(null);
 
   const weekEnd = addDaysParam(weekStart, 6);
+  const isMobileGrooming = business === "mobile-grooming";
+  const employeeOptions = employeeOptionsByBusiness[business] ?? [];
+  const selectedEmployeeNames = useMemo(
+    () =>
+      new Set(
+        rows
+          .map((row) => normalizeEmployeeName(row.employeeName))
+          .filter(Boolean)
+      ),
+    [rows]
+  );
+  const mobileEmployeeChoicesUnavailable =
+    isMobileGrooming &&
+    (employeeOptions.length === 0 ||
+      employeeOptions.every((employee) =>
+        selectedEmployeeNames.has(normalizeEmployeeName(employee.name))
+      ));
 
   const weekOptions = useMemo(() => {
     const byStart = new Map<string, { weekStart: string; weekEnd: string; stored: boolean }>();
@@ -391,9 +417,19 @@ export function PayrollDashboard() {
   }
 
   function addRow() {
+    const nextEmployee = isMobileGrooming
+      ? employeeOptions.find(
+          (employee) => !selectedEmployeeNames.has(normalizeEmployeeName(employee.name))
+        )
+      : null;
     setRows((current) => [
       ...current,
-      { localId: makeLocalId(), employeeName: "", shifts: "0", decimalHours: "0" },
+      {
+        localId: makeLocalId(),
+        employeeName: nextEmployee?.name ?? "",
+        shifts: "0",
+        decimalHours: "0",
+      },
     ]);
   }
 
@@ -455,7 +491,7 @@ export function PayrollDashboard() {
           weekStart,
           weekEnd,
           business,
-          source: source.trim() || "manual",
+          source: isMobileGrooming ? "manual" : source.trim() || "manual",
           notes,
           rows: cleanRows,
         }),
@@ -542,13 +578,20 @@ export function PayrollDashboard() {
             </Button>
           </div>
 
-          <div className="grid gap-3 lg:grid-cols-[220px_1fr]">
-            <Input
-              label="Source"
-              value={source}
-              onChange={(event) => setSource(event.target.value)}
-              disabled={loading || saving}
-            />
+          <div
+            className={cn(
+              "grid gap-3",
+              isMobileGrooming ? "lg:grid-cols-1" : "lg:grid-cols-[220px_1fr]"
+            )}
+          >
+            {!isMobileGrooming && (
+              <Input
+                label="Source"
+                value={source}
+                onChange={(event) => setSource(event.target.value)}
+                disabled={loading || saving}
+              />
+            )}
             <Input
               label="Notes"
               value={notes}
@@ -565,7 +608,7 @@ export function PayrollDashboard() {
           value={decimalPayrollHours(totals.grandSeconds).toFixed(2)}
           detail={`${totals.employeeCount} employees`}
         />
-        {totals.categoryTotals.map((total) => (
+        {!isMobileGrooming && totals.categoryTotals.map((total) => (
           <SummaryCard
             key={total.category}
             label={total.label}
@@ -575,7 +618,8 @@ export function PayrollDashboard() {
         ))}
       </div>
 
-      <Card>
+      {!isMobileGrooming && (
+        <Card>
         <CardContent className="space-y-3">
           <div className="flex flex-col gap-3 lg:flex-row lg:items-end">
             <div className="flex-1">
@@ -612,13 +656,20 @@ export function PayrollDashboard() {
             </div>
           </div>
         </CardContent>
-      </Card>
+        </Card>
+      )}
 
       <Card>
         <CardContent className="space-y-3">
           <div className="flex items-center justify-between gap-3">
             <h2 className="text-base font-semibold text-gray-900">Employee hours</h2>
-            <Button type="button" variant="secondary" size="sm" onClick={addRow} disabled={saving}>
+            <Button
+              type="button"
+              variant="secondary"
+              size="sm"
+              onClick={addRow}
+              disabled={saving || mobileEmployeeChoicesUnavailable}
+            >
               Add employee
             </Button>
           </div>
@@ -627,7 +678,7 @@ export function PayrollDashboard() {
             <TableHead>
               <TableRow>
                 <TableHeader className="min-w-[220px]">Employee</TableHeader>
-                <TableHeader>Category</TableHeader>
+                {!isMobileGrooming && <TableHeader>Category</TableHeader>}
                 <TableHeader className="w-[120px]">Shifts</TableHeader>
                 <TableHeader className="w-[150px]">Total hours</TableHeader>
                 <TableHeader>Duration</TableHeader>
@@ -637,29 +688,68 @@ export function PayrollDashboard() {
             <TableBody>
               {rows.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={6} className="py-8 text-center text-gray-500">
+                  <TableCell colSpan={isMobileGrooming ? 5 : 6} className="py-8 text-center text-gray-500">
                     No employee hours for this week.
                   </TableCell>
                 </TableRow>
               ) : (
                 rows.map((row) => {
                   const category = categoryForEmployee(row.employeeName, business);
+                  const currentEmployeeName = normalizeEmployeeName(row.employeeName);
+                  const hasCurrentEmployeeOption = employeeOptions.some(
+                    (employee) => normalizeEmployeeName(employee.name) === currentEmployeeName
+                  );
                   const seconds = secondsFromEditable(row);
                   return (
                     <TableRow key={row.localId}>
                       <TableCell>
-                        <input
-                          value={row.employeeName}
-                          onChange={(event) => updateRow(row.localId, { employeeName: event.target.value })}
-                          className="w-full rounded-md border border-gray-300 px-2.5 py-1.5 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                          disabled={saving}
-                        />
+                        {isMobileGrooming ? (
+                          <select
+                            value={currentEmployeeName}
+                            onChange={(event) =>
+                              updateRow(row.localId, { employeeName: event.target.value })
+                            }
+                            className="w-full rounded-md border border-gray-300 bg-white px-2.5 py-1.5 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                            disabled={saving}
+                          >
+                            <option value="">Select employee</option>
+                            {employeeOptions.map((employee) => {
+                              const employeeName = normalizeEmployeeName(employee.name);
+                              const selectedElsewhere =
+                                selectedEmployeeNames.has(employeeName) &&
+                                employeeName !== currentEmployeeName;
+                              return (
+                                <option
+                                  key={employee.id}
+                                  value={employeeName}
+                                  disabled={selectedElsewhere}
+                                >
+                                  {employeeName}
+                                </option>
+                              );
+                            })}
+                            {currentEmployeeName && !hasCurrentEmployeeOption && (
+                              <option value={currentEmployeeName}>{currentEmployeeName}</option>
+                            )}
+                          </select>
+                        ) : (
+                          <input
+                            value={row.employeeName}
+                            onChange={(event) =>
+                              updateRow(row.localId, { employeeName: event.target.value })
+                            }
+                            className="w-full rounded-md border border-gray-300 px-2.5 py-1.5 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                            disabled={saving}
+                          />
+                        )}
                       </TableCell>
-                      <TableCell>
-                        <Badge variant={categoryBadgeVariant(category)}>
-                          {PAYROLL_CATEGORY_LABELS[category]}
-                        </Badge>
-                      </TableCell>
+                      {!isMobileGrooming && (
+                        <TableCell>
+                          <Badge variant={categoryBadgeVariant(category)}>
+                            {PAYROLL_CATEGORY_LABELS[category]}
+                          </Badge>
+                        </TableCell>
+                      )}
                       <TableCell>
                         <input
                           type="number"
