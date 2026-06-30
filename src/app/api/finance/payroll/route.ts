@@ -5,10 +5,12 @@ import {
   PAYROLL_CATEGORIES,
   PAYROLL_CATEGORY_LABELS,
   categoryForEmployee,
+  cleanPayrollBusiness,
   decimalPayrollHours,
   formatPayrollDuration,
   normalizeEmployeeName,
   parsePayrollDurationToSeconds,
+  type PayrollBusinessValue,
   type PayrollCategoryValue,
 } from "@/lib/payroll";
 
@@ -113,7 +115,7 @@ function shiftsFromRow(row: PayrollRowPayload): number {
   return Math.max(0, Math.round(shifts));
 }
 
-function normalizeRows(rawRows: unknown) {
+function normalizeRows(rawRows: unknown, business: PayrollBusinessValue) {
   if (!Array.isArray(rawRows)) {
     return { error: "rows must be an array" as const };
   }
@@ -140,7 +142,7 @@ function normalizeRows(rawRows: unknown) {
         employeeName,
         shifts: 0,
         totalSeconds: 0,
-        category: categoryForEmployee(employeeName),
+        category: categoryForEmployee(employeeName, business),
       };
 
     current.employeeName = current.employeeName || employeeName;
@@ -159,6 +161,7 @@ function normalizeRows(rawRows: unknown) {
 function serializeWeek(
   week: {
     id: string;
+    business: string;
     weekStart: Date;
     weekEnd: Date;
     source: string;
@@ -206,6 +209,7 @@ function serializeWeek(
 
   return {
     id: week.id,
+    business: week.business,
     weekStart: week.weekStart.toISOString().slice(0, 10),
     weekEnd: week.weekEnd.toISOString().slice(0, 10),
     source: week.source,
@@ -223,10 +227,10 @@ function serializeWeek(
   };
 }
 
-async function findWeekWithRows(weekStart: Date | null) {
+async function findWeekWithRows(business: PayrollBusinessValue, weekStart: Date | null) {
   if (!weekStart) return null;
   return prisma.financePayrollWeek.findUnique({
-    where: { weekStart },
+    where: { business_weekStart: { business, weekStart } },
     include: {
       rows: {
         orderBy: [{ rowOrder: "asc" }, { employeeName: "asc" }],
@@ -238,11 +242,14 @@ async function findWeekWithRows(weekStart: Date | null) {
 export async function GET(req: NextRequest) {
   if (!(await canAccessPayroll())) return unauthorized();
 
+  const business = cleanPayrollBusiness(req.nextUrl.searchParams.get("business"));
   const weeks = await prisma.financePayrollWeek.findMany({
+    where: { business },
     orderBy: { weekStart: "desc" },
     take: 60,
     select: {
       id: true,
+      business: true,
       weekStart: true,
       weekEnd: true,
       source: true,
@@ -252,11 +259,13 @@ export async function GET(req: NextRequest) {
 
   const requestedWeekStart = parseDateParam(req.nextUrl.searchParams.get("weekStart"));
   const selectedWeekStart = requestedWeekStart ?? weeks[0]?.weekStart ?? null;
-  const week = await findWeekWithRows(selectedWeekStart);
+  const week = await findWeekWithRows(business, selectedWeekStart);
 
   return NextResponse.json({
+    business,
     weeks: weeks.map((weekSummary) => ({
       id: weekSummary.id,
+      business: weekSummary.business,
       weekStart: weekSummary.weekStart.toISOString().slice(0, 10),
       weekEnd: weekSummary.weekEnd.toISOString().slice(0, 10),
       source: weekSummary.source,
@@ -271,6 +280,7 @@ async function savePayroll(req: NextRequest) {
 
   const body = await req.json();
   const payload = (body?.payrollUpload ?? body) as Record<string, unknown>;
+  const business = cleanPayrollBusiness(payload.business);
   const weekDates = parseWeekDates(payload);
   if ("error" in weekDates) {
     return NextResponse.json({ error: weekDates.error }, { status: 400 });
@@ -280,7 +290,7 @@ async function savePayroll(req: NextRequest) {
     Array.isArray(payload.totals) && Array.isArray(payload.dateRange)
       ? payload.totals
       : payload.rows ?? payload.totals;
-  const normalized = normalizeRows(rawRows);
+  const normalized = normalizeRows(rawRows, business);
   if ("error" in normalized) {
     return NextResponse.json({ error: normalized.error }, { status: 400 });
   }
@@ -293,13 +303,14 @@ async function savePayroll(req: NextRequest) {
 
   const week = await prisma.$transaction(async (tx) => {
     const savedWeek = await tx.financePayrollWeek.upsert({
-      where: { weekStart: weekDates.weekStart },
+      where: { business_weekStart: { business, weekStart: weekDates.weekStart } },
       update: {
         weekEnd: weekDates.weekEnd,
         source,
         notes,
       },
       create: {
+        business,
         weekStart: weekDates.weekStart,
         weekEnd: weekDates.weekEnd,
         source,

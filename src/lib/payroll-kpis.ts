@@ -1,5 +1,6 @@
 import { PayrollCategory } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
+import { DEFAULT_PAYROLL_BUSINESS } from "@/lib/payroll";
 import { toWeekParam } from "@/lib/week";
 
 export async function getResortStaffHoursByWeek(
@@ -12,7 +13,10 @@ export async function getResortStaffHoursByWeek(
   if (uniqueWeekStarts.length === 0) return new Map();
 
   const payrollWeeks = await prisma.financePayrollWeek.findMany({
-    where: { weekStart: { in: uniqueWeekStarts } },
+    where: {
+      business: DEFAULT_PAYROLL_BUSINESS,
+      weekStart: { in: uniqueWeekStarts },
+    },
     select: {
       weekStart: true,
       rows: {

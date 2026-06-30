@@ -1,6 +1,6 @@
 "use client";
 
-import { ChangeEvent, useEffect, useMemo, useState } from "react";
+import { ChangeEvent, useCallback, useEffect, useMemo, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -17,11 +17,16 @@ import {
 import {
   PAYROLL_CATEGORIES,
   PAYROLL_CATEGORY_LABELS,
+  PAYROLL_BUSINESSES,
+  DEFAULT_PAYROLL_BUSINESS,
   categoryForEmployee,
+  cleanPayrollBusiness,
   decimalPayrollHours,
   formatPayrollDuration,
+  isPayrollBusiness,
   normalizeEmployeeName,
   parsePayrollDurationToSeconds,
+  type PayrollBusinessValue,
   type PayrollCategoryValue,
 } from "@/lib/payroll";
 import { cn } from "@/lib/utils";
@@ -30,6 +35,7 @@ const MS_PER_DAY = 86_400_000;
 
 type SavedWeekSummary = {
   id: string;
+  business: PayrollBusinessValue;
   weekStart: string;
   weekEnd: string;
   source: string;
@@ -48,6 +54,7 @@ type SavedPayrollRow = {
 
 type SavedPayrollWeek = {
   id: string;
+  business: PayrollBusinessValue;
   weekStart: string;
   weekEnd: string;
   source: string;
@@ -56,6 +63,7 @@ type SavedPayrollWeek = {
 };
 
 type PayrollApiResponse = {
+  business: PayrollBusinessValue;
   weeks: SavedWeekSummary[];
   week: SavedPayrollWeek | null;
 };
@@ -241,6 +249,7 @@ function extractImportPayload(text: string) {
 
   return {
     rows: importRowsToEditable(rows),
+    business: isPayrollBusiness(payload.business) ? payload.business : null,
     weekStart,
     weekEnd,
     source: typeof payload.source === "string" ? payload.source : "moego-clock-inout",
@@ -270,6 +279,7 @@ function secondsFromEditable(row: EditableRow): number {
 
 export function PayrollDashboard() {
   const [savedWeeks, setSavedWeeks] = useState<SavedWeekSummary[]>([]);
+  const [business, setBusiness] = useState<PayrollBusinessValue>(DEFAULT_PAYROLL_BUSINESS);
   const [weekStart, setWeekStart] = useState(lastCompletedWeekStart);
   const [source, setSource] = useState("manual");
   const [notes, setNotes] = useState("");
@@ -313,7 +323,9 @@ export function PayrollDashboard() {
   const totals = useMemo(() => {
     const categoryTotals = PAYROLL_CATEGORIES.map((category) => {
       const categoryRows = rows.filter(
-        (row) => normalizeEmployeeName(row.employeeName) && categoryForEmployee(row.employeeName) === category
+        (row) =>
+          normalizeEmployeeName(row.employeeName) &&
+          categoryForEmployee(row.employeeName, business) === category
       );
       const totalSeconds = categoryRows.reduce((sum, row) => sum + secondsFromEditable(row), 0);
       return {
@@ -330,20 +342,25 @@ export function PayrollDashboard() {
       grandSeconds,
       employeeCount: rows.filter((row) => normalizeEmployeeName(row.employeeName)).length,
     };
-  }, [rows]);
+  }, [business, rows]);
 
-  async function loadWeek(selectedWeekStart?: string) {
+  const loadWeek = useCallback(async (
+    selectedWeekStart: string | undefined,
+    selectedBusiness: PayrollBusinessValue
+  ) => {
+    setBusiness(selectedBusiness);
     setLoading(true);
     setError(null);
     try {
-      const url = selectedWeekStart
-        ? `/api/finance/payroll?weekStart=${encodeURIComponent(selectedWeekStart)}`
-        : "/api/finance/payroll";
+      const params = new URLSearchParams({ business: selectedBusiness });
+      if (selectedWeekStart) params.set("weekStart", selectedWeekStart);
+      const url = `/api/finance/payroll?${params.toString()}`;
       const response = await fetch(url);
       const data = (await response.json()) as PayrollApiResponse & { error?: string };
       if (!response.ok) throw new Error(data.error || "Could not load payroll.");
 
       setSavedWeeks(data.weeks);
+      setBusiness(data.week?.business ?? data.business ?? selectedBusiness);
       if (data.week) {
         setWeekStart(data.week.weekStart);
         setSource(data.week.source || "manual");
@@ -361,11 +378,11 @@ export function PayrollDashboard() {
     } finally {
       setLoading(false);
     }
-  }
+  }, []);
 
   useEffect(() => {
-    void loadWeek();
-  }, []);
+    void loadWeek(undefined, DEFAULT_PAYROLL_BUSINESS);
+  }, [loadWeek]);
 
   function updateRow(localId: string, patch: Partial<EditableRow>) {
     setRows((current) =>
@@ -389,6 +406,7 @@ export function PayrollDashboard() {
     setMessage(null);
     try {
       const imported = extractImportPayload(text);
+      if (imported.business) setBusiness(imported.business);
       if (imported.weekStart) setWeekStart(imported.weekStart);
       setSource(imported.source);
       setNotes(imported.notes);
@@ -436,6 +454,7 @@ export function PayrollDashboard() {
         body: JSON.stringify({
           weekStart,
           weekEnd,
+          business,
           source: source.trim() || "manual",
           notes,
           rows: cleanRows,
@@ -445,20 +464,25 @@ export function PayrollDashboard() {
       if (!response.ok || !data.week) throw new Error(data.error || "Could not save payroll.");
 
       setWeekStart(data.week.weekStart);
+      setBusiness(data.week.business);
       setSource(data.week.source || "manual");
       setNotes(data.week.notes || "");
       setRows(savedRowsToEditable(data.week.rows));
       setSavedWeeks((current) => {
         const summary = {
           id: data.week!.id,
+          business: data.week!.business,
           weekStart: data.week!.weekStart,
           weekEnd: data.week!.weekEnd,
           source: data.week!.source,
           updatedAt: new Date().toISOString(),
         };
-        return [summary, ...current.filter((week) => week.weekStart !== summary.weekStart)].sort((a, b) =>
-          b.weekStart.localeCompare(a.weekStart)
-        );
+        return [
+          summary,
+          ...current.filter(
+            (week) => week.business !== summary.business || week.weekStart !== summary.weekStart
+          ),
+        ].sort((a, b) => b.weekStart.localeCompare(a.weekStart));
       });
       setMessage("Payroll saved.");
     } catch (err) {
@@ -472,17 +496,31 @@ export function PayrollDashboard() {
     <div className={cn("space-y-5", loading && "opacity-70")}>
       <Card>
         <CardContent className="space-y-4">
-          <div className="grid gap-3 lg:grid-cols-[minmax(220px,1fr)_180px_180px_auto] lg:items-end">
+          <div className="grid gap-3 lg:grid-cols-[minmax(220px,1fr)_minmax(220px,1fr)_180px_180px_auto] lg:items-end">
+            <Select
+              label="Business"
+              value={business}
+              onChange={(event) =>
+                void loadWeek(weekStart, cleanPayrollBusiness(event.target.value))
+              }
+              disabled={loading || saving}
+            >
+              {PAYROLL_BUSINESSES.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </Select>
             <Select
               label="Week"
               value={weekStart}
-              onChange={(event) => void loadWeek(event.target.value)}
+              onChange={(event) => void loadWeek(event.target.value, business)}
               disabled={loading || saving}
             >
               {weekOptions.map((option) => (
                 <option key={option.weekStart} value={option.weekStart}>
                   {formatWeekRange(option.weekStart, option.weekEnd)}
-                  {option.stored ? " (saved)" : ""}
+                  {option.stored ? ` (saved)` : ""}
                 </option>
               ))}
             </Select>
@@ -605,7 +643,7 @@ export function PayrollDashboard() {
                 </TableRow>
               ) : (
                 rows.map((row) => {
-                  const category = categoryForEmployee(row.employeeName);
+                  const category = categoryForEmployee(row.employeeName, business);
                   const seconds = secondsFromEditable(row);
                   return (
                     <TableRow key={row.localId}>

@@ -2,6 +2,15 @@ export const PAYROLL_CATEGORIES = ["TRAINING", "GROOMING", "RESORT"] as const;
 
 export type PayrollCategoryValue = (typeof PAYROLL_CATEGORIES)[number];
 
+export const PAYROLL_BUSINESSES = [
+  { value: "pet-resort", label: "Planet Pooch Pet Resort" },
+  { value: "mobile-grooming", label: "Planet Pooch Mobile Grooming" },
+] as const;
+
+export type PayrollBusinessValue = (typeof PAYROLL_BUSINESSES)[number]["value"];
+
+export const DEFAULT_PAYROLL_BUSINESS: PayrollBusinessValue = "pet-resort";
+
 export const PAYROLL_CATEGORY_LABELS: Record<PayrollCategoryValue, string> = {
   TRAINING: "Training",
   GROOMING: "Grooming",
@@ -17,7 +26,19 @@ export function normalizeEmployeeName(name: string): string {
   return name.replace(/\s+/g, " ").trim();
 }
 
-export function categoryForEmployee(name: string): PayrollCategoryValue {
+export function isPayrollBusiness(value: unknown): value is PayrollBusinessValue {
+  return PAYROLL_BUSINESSES.some((business) => business.value === value);
+}
+
+export function cleanPayrollBusiness(value: unknown): PayrollBusinessValue {
+  return isPayrollBusiness(value) ? value : DEFAULT_PAYROLL_BUSINESS;
+}
+
+export function categoryForEmployee(
+  name: string,
+  business: PayrollBusinessValue = DEFAULT_PAYROLL_BUSINESS
+): PayrollCategoryValue {
+  if (business === "mobile-grooming") return "GROOMING";
   return CATEGORY_BY_EMPLOYEE[normalizeEmployeeName(name).toLocaleLowerCase()] ?? "RESORT";
 }
 
