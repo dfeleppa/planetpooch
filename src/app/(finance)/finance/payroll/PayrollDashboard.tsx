@@ -80,6 +80,8 @@ export type PayrollEmployeeOption = {
   name: string;
 };
 
+const EMPTY_EMPLOYEE_OPTIONS: PayrollEmployeeOption[] = [];
+
 type ImportRow = {
   employeeName?: unknown;
   name?: unknown;
@@ -301,22 +303,33 @@ export function PayrollDashboard({
 
   const weekEnd = addDaysParam(weekStart, 6);
   const isMobileGrooming = business === "mobile-grooming";
-  const employeeOptions = employeeOptionsByBusiness[business] ?? [];
-  const selectedEmployeeNames = useMemo(
+  const employeeOptions = employeeOptionsByBusiness[business] ?? EMPTY_EMPLOYEE_OPTIONS;
+  const selectedEmployeeNameKeys = useMemo(
     () =>
       new Set(
         rows
-          .map((row) => normalizeEmployeeName(row.employeeName))
+          .map((row) => normalizeEmployeeName(row.employeeName).toLocaleLowerCase())
           .filter(Boolean)
       ),
     [rows]
   );
+  const availableMobileEmployees = useMemo(
+    () =>
+      employeeOptions.filter(
+        (employee) =>
+          !selectedEmployeeNameKeys.has(
+            normalizeEmployeeName(employee.name).toLocaleLowerCase()
+          )
+      ),
+    [employeeOptions, selectedEmployeeNameKeys]
+  );
   const mobileEmployeeChoicesUnavailable =
-    isMobileGrooming &&
-    (employeeOptions.length === 0 ||
-      employeeOptions.every((employee) =>
-        selectedEmployeeNames.has(normalizeEmployeeName(employee.name))
-      ));
+    isMobileGrooming && availableMobileEmployees.length === 0;
+  const mobileEmployeePlaceholder = (() => {
+    if (employeeOptions.length === 0) return "No employees available";
+    if (availableMobileEmployees.length === 0) return "All employees selected";
+    return "Select employee";
+  })();
 
   const weekOptions = useMemo(() => {
     const byStart = new Map<string, { weekStart: string; weekEnd: string; stored: boolean }>();
@@ -417,20 +430,41 @@ export function PayrollDashboard({
   }
 
   function addRow() {
-    const nextEmployee = isMobileGrooming
-      ? employeeOptions.find(
-          (employee) => !selectedEmployeeNames.has(normalizeEmployeeName(employee.name))
-        )
-      : null;
     setRows((current) => [
       ...current,
       {
         localId: makeLocalId(),
-        employeeName: nextEmployee?.name ?? "",
+        employeeName: "",
         shifts: "0",
         decimalHours: "0",
       },
     ]);
+  }
+
+  function addMobileEmployee(employeeName: string) {
+    const cleanName = normalizeEmployeeName(employeeName);
+    if (!cleanName) return;
+
+    const employeeKey = cleanName.toLocaleLowerCase();
+    setRows((current) => {
+      if (
+        current.some(
+          (row) => normalizeEmployeeName(row.employeeName).toLocaleLowerCase() === employeeKey
+        )
+      ) {
+        return current;
+      }
+
+      return [
+        ...current,
+        {
+          localId: makeLocalId(),
+          employeeName: cleanName,
+          shifts: "0",
+          decimalHours: "0",
+        },
+      ];
+    });
   }
 
   function removeRow(localId: string) {
@@ -530,24 +564,32 @@ export function PayrollDashboard({
 
   return (
     <div className={cn("space-y-5", loading && "opacity-70")}>
+      <div className="max-w-md">
+        <Select
+          id="payroll-business"
+          label="Business"
+          value={business}
+          onChange={(event) => void loadWeek(weekStart, cleanPayrollBusiness(event.target.value))}
+          disabled={loading || saving}
+        >
+          {PAYROLL_BUSINESSES.map((option) => (
+            <option key={option.value} value={option.value}>
+              {option.label}
+            </option>
+          ))}
+        </Select>
+      </div>
+
+      <div>
+        <h2 className="text-xl font-semibold text-gray-900">Payroll</h2>
+        <p className="mt-1 text-gray-500">Weekly staff hours</p>
+      </div>
+
       <Card>
         <CardContent className="space-y-4">
-          <div className="grid gap-3 lg:grid-cols-[minmax(220px,1fr)_minmax(220px,1fr)_180px_180px_auto] lg:items-end">
+          <div className="grid gap-3 lg:grid-cols-[minmax(220px,1fr)_180px_180px_auto] lg:items-end">
             <Select
-              label="Business"
-              value={business}
-              onChange={(event) =>
-                void loadWeek(weekStart, cleanPayrollBusiness(event.target.value))
-              }
-              disabled={loading || saving}
-            >
-              {PAYROLL_BUSINESSES.map((option) => (
-                <option key={option.value} value={option.value}>
-                  {option.label}
-                </option>
-              ))}
-            </Select>
-            <Select
+              id="payroll-week"
               label="Week"
               value={weekStart}
               onChange={(event) => void loadWeek(event.target.value, business)}
@@ -602,76 +644,110 @@ export function PayrollDashboard({
         </CardContent>
       </Card>
 
-      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-        <SummaryCard
-          label="Total"
-          value={decimalPayrollHours(totals.grandSeconds).toFixed(2)}
-          detail={`${totals.employeeCount} employees`}
-        />
-        {!isMobileGrooming && totals.categoryTotals.map((total) => (
+      {!isMobileGrooming && (
+        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
           <SummaryCard
-            key={total.category}
-            label={total.label}
-            value={total.decimalHours.toFixed(2)}
-            detail={`${total.employeeCount} employees`}
+            label="Total"
+            value={decimalPayrollHours(totals.grandSeconds).toFixed(2)}
+            detail={`${totals.employeeCount} employees`}
           />
-        ))}
-      </div>
+          {totals.categoryTotals.map((total) => (
+            <SummaryCard
+              key={total.category}
+              label={total.label}
+              value={total.decimalHours.toFixed(2)}
+              detail={`${total.employeeCount} employees`}
+            />
+          ))}
+        </div>
+      )}
 
       {!isMobileGrooming && (
         <Card>
-        <CardContent className="space-y-3">
-          <div className="flex flex-col gap-3 lg:flex-row lg:items-end">
-            <div className="flex-1">
-              <label htmlFor="payroll-import" className="block text-sm font-medium text-gray-700">
-                Import JSON
-              </label>
-              <textarea
-                id="payroll-import"
-                value={importText}
-                onChange={(event) => setImportText(event.target.value)}
-                className="mt-1 block min-h-[90px] w-full rounded-lg border border-gray-300 px-3 py-2 text-sm shadow-sm placeholder:text-gray-400 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                placeholder='{"weekStart":"2026-06-07","weekEnd":"2026-06-13","rows":[...]}'
-              />
-            </div>
-            <div className="flex flex-wrap gap-2">
-              <Button
-                type="button"
-                variant="secondary"
-                onClick={() => applyImportText(importText)}
-                disabled={saving || !importText.trim()}
-              >
-                Load paste
-              </Button>
-              <label className="inline-flex cursor-pointer items-center justify-center rounded-lg bg-gray-200 px-4 py-2 text-sm font-medium text-gray-900 transition-colors hover:bg-gray-300">
-                Upload file
-                <input
-                  type="file"
-                  accept=".json,.txt,application/json,text/plain"
-                  className="sr-only"
-                  onChange={handleFileUpload}
-                  disabled={saving}
+          <CardContent className="space-y-3">
+            <div className="flex flex-col gap-3 lg:flex-row lg:items-end">
+              <div className="flex-1">
+                <label
+                  htmlFor="payroll-import"
+                  className="block text-sm font-medium text-gray-700"
+                >
+                  Import JSON
+                </label>
+                <textarea
+                  id="payroll-import"
+                  value={importText}
+                  onChange={(event) => setImportText(event.target.value)}
+                  className="mt-1 block min-h-[90px] w-full rounded-lg border border-gray-300 px-3 py-2 text-sm shadow-sm placeholder:text-gray-400 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                  placeholder='{"weekStart":"2026-06-07","weekEnd":"2026-06-13","rows":[...]}'
                 />
-              </label>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                <Button
+                  type="button"
+                  variant="secondary"
+                  onClick={() => applyImportText(importText)}
+                  disabled={saving || !importText.trim()}
+                >
+                  Load paste
+                </Button>
+                <label className="inline-flex cursor-pointer items-center justify-center rounded-lg bg-gray-200 px-4 py-2 text-sm font-medium text-gray-900 transition-colors hover:bg-gray-300">
+                  Upload file
+                  <input
+                    type="file"
+                    accept=".json,.txt,application/json,text/plain"
+                    className="sr-only"
+                    onChange={handleFileUpload}
+                    disabled={saving}
+                  />
+                </label>
+              </div>
             </div>
-          </div>
-        </CardContent>
+          </CardContent>
         </Card>
       )}
 
       <Card>
         <CardContent className="space-y-3">
-          <div className="flex items-center justify-between gap-3">
+          <div
+            className={cn(
+              "flex gap-3",
+              isMobileGrooming
+                ? "flex-col md:flex-row md:items-end md:justify-between"
+                : "items-center justify-between"
+            )}
+          >
             <h2 className="text-base font-semibold text-gray-900">Employee hours</h2>
-            <Button
-              type="button"
-              variant="secondary"
-              size="sm"
-              onClick={addRow}
-              disabled={saving || mobileEmployeeChoicesUnavailable}
-            >
-              Add employee
-            </Button>
+            {isMobileGrooming ? (
+              <div className="w-full md:max-w-sm">
+                <Select
+                  id="mobile-grooming-employee"
+                  label="Employee"
+                  value=""
+                  onChange={(event) => addMobileEmployee(event.target.value)}
+                  disabled={saving || mobileEmployeeChoicesUnavailable}
+                >
+                  <option value="">{mobileEmployeePlaceholder}</option>
+                  {availableMobileEmployees.map((employee) => {
+                    const employeeName = normalizeEmployeeName(employee.name);
+                    return (
+                      <option key={employee.id} value={employeeName}>
+                        {employeeName}
+                      </option>
+                    );
+                  })}
+                </Select>
+              </div>
+            ) : (
+              <Button
+                type="button"
+                variant="secondary"
+                size="sm"
+                onClick={addRow}
+                disabled={saving}
+              >
+                Add employee
+              </Button>
+            )}
           </div>
 
           <Table>
@@ -688,7 +764,10 @@ export function PayrollDashboard({
             <TableBody>
               {rows.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={isMobileGrooming ? 5 : 6} className="py-8 text-center text-gray-500">
+                  <TableCell
+                    colSpan={isMobileGrooming ? 5 : 6}
+                    className="py-8 text-center text-gray-500"
+                  >
                     No employee hours for this week.
                   </TableCell>
                 </TableRow>
@@ -696,42 +775,14 @@ export function PayrollDashboard({
                 rows.map((row) => {
                   const category = categoryForEmployee(row.employeeName, business);
                   const currentEmployeeName = normalizeEmployeeName(row.employeeName);
-                  const hasCurrentEmployeeOption = employeeOptions.some(
-                    (employee) => normalizeEmployeeName(employee.name) === currentEmployeeName
-                  );
                   const seconds = secondsFromEditable(row);
                   return (
                     <TableRow key={row.localId}>
                       <TableCell>
                         {isMobileGrooming ? (
-                          <select
-                            value={currentEmployeeName}
-                            onChange={(event) =>
-                              updateRow(row.localId, { employeeName: event.target.value })
-                            }
-                            className="w-full rounded-md border border-gray-300 bg-white px-2.5 py-1.5 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                            disabled={saving}
-                          >
-                            <option value="">Select employee</option>
-                            {employeeOptions.map((employee) => {
-                              const employeeName = normalizeEmployeeName(employee.name);
-                              const selectedElsewhere =
-                                selectedEmployeeNames.has(employeeName) &&
-                                employeeName !== currentEmployeeName;
-                              return (
-                                <option
-                                  key={employee.id}
-                                  value={employeeName}
-                                  disabled={selectedElsewhere}
-                                >
-                                  {employeeName}
-                                </option>
-                              );
-                            })}
-                            {currentEmployeeName && !hasCurrentEmployeeOption && (
-                              <option value={currentEmployeeName}>{currentEmployeeName}</option>
-                            )}
-                          </select>
+                          <span className="text-sm font-medium text-gray-900">
+                            {currentEmployeeName}
+                          </span>
                         ) : (
                           <input
                             value={row.employeeName}
@@ -756,7 +807,9 @@ export function PayrollDashboard({
                           min="0"
                           step="1"
                           value={row.shifts}
-                          onChange={(event) => updateRow(row.localId, { shifts: event.target.value })}
+                          onChange={(event) =>
+                            updateRow(row.localId, { shifts: event.target.value })
+                          }
                           className="w-24 rounded-md border border-gray-300 px-2.5 py-1.5 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
                           disabled={saving}
                         />
@@ -767,7 +820,9 @@ export function PayrollDashboard({
                           min="0"
                           step="0.01"
                           value={row.decimalHours}
-                          onChange={(event) => updateRow(row.localId, { decimalHours: event.target.value })}
+                          onChange={(event) =>
+                            updateRow(row.localId, { decimalHours: event.target.value })
+                          }
                           className="w-28 rounded-md border border-gray-300 px-2.5 py-1.5 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
                           disabled={saving}
                         />

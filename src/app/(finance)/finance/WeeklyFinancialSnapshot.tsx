@@ -6,23 +6,26 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/Select";
+import {
+  WEEKLY_FINANCE_YTD_BASE,
+  weekHasFinanceYtdBase,
+  weekIsFinanceYtdBase,
+  type FinanceYtdTotals,
+} from "@/lib/finance-ytd";
 import { cn } from "@/lib/utils";
 
-const BUSINESS_KEY = "all-businesses-weekly";
+const BUSINESS_KEY = WEEKLY_FINANCE_YTD_BASE.business;
 const MS_PER_DAY = 86_400_000;
 
 type MetricResponse = {
   metric: {
     totalRevenue: number | null;
     totalProfit: number | null;
-    ytdRevenue: number | null;
-    ytdNetProfit: number | null;
     nonPayrollExpenses: number | null;
     payrollExpenses: number | null;
   } | null;
-  ytd?: {
-    totalRevenue: number | null;
-    totalProfit: number | null;
+  ytd?: FinanceYtdTotals & {
+    baseWeekEnd?: string;
   };
   error?: string;
 };
@@ -31,9 +34,6 @@ type SnapshotForm = {
   totalRevenue: string;
   nonPayrollExpenses: string;
   payrollExpenses: string;
-  totalProfit: string;
-  ytdRevenue: string;
-  ytdNetProfit: string;
 };
 
 type WeekOption = {
@@ -46,9 +46,11 @@ const EMPTY_FORM: SnapshotForm = {
   totalRevenue: "",
   nonPayrollExpenses: "",
   payrollExpenses: "",
-  totalProfit: "",
-  ytdRevenue: "",
-  ytdNetProfit: "",
+};
+
+const EMPTY_TOTALS: FinanceYtdTotals = {
+  totalRevenue: null,
+  totalProfit: null,
 };
 
 function dateFromParam(value: string): Date {
@@ -152,6 +154,27 @@ function formMetricCents(form: SnapshotForm, field: keyof SnapshotForm): number 
   return inputToCents(form[field]);
 }
 
+function enteredMoneyFieldIsInvalid(form: SnapshotForm, field: keyof SnapshotForm): boolean {
+  return form[field].trim() !== "" && inputToCents(form[field]) === null;
+}
+
+function loadedMetricNetProfit(metric: MetricResponse["metric"]): number | null {
+  if (!metric) return null;
+  if (metric.totalProfit !== null) return metric.totalProfit;
+  if (
+    metric.totalRevenue === null &&
+    metric.nonPayrollExpenses === null &&
+    metric.payrollExpenses === null
+  ) {
+    return null;
+  }
+  return (
+    (metric.totalRevenue ?? 0) -
+    (metric.nonPayrollExpenses ?? 0) -
+    (metric.payrollExpenses ?? 0)
+  );
+}
+
 export function WeeklyFinancialSnapshot({
   year,
   week,
@@ -171,8 +194,16 @@ export function WeeklyFinancialSnapshot({
     : defaultWeekStartForYear(selectedYear, weekOptions);
   const selectedWeek =
     weekOptions.find((option) => option.weekStart === selectedWeekStart) ?? weekOptions[0];
+  const selectedWeekHasYtdBase = selectedWeek
+    ? weekHasFinanceYtdBase(selectedWeek.weekEnd, selectedYear)
+    : false;
+  const selectedWeekIsYtdBase = selectedWeek
+    ? weekIsFinanceYtdBase(selectedWeek.weekEnd, selectedYear)
+    : false;
 
   const [form, setForm] = useState<SnapshotForm>(EMPTY_FORM);
+  const [loadedWeekMetric, setLoadedWeekMetric] = useState<FinanceYtdTotals>(EMPTY_TOTALS);
+  const [loadedYtd, setLoadedYtd] = useState<FinanceYtdTotals>(EMPTY_TOTALS);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
@@ -190,6 +221,51 @@ export function WeeklyFinancialSnapshot({
     (formMetricCents(form, "payrollExpenses") ?? 0);
   const hasOperatingExpenseInput =
     form.nonPayrollExpenses.trim() !== "" || form.payrollExpenses.trim() !== "";
+  const netProfitSourceFields: Array<keyof SnapshotForm> = [
+    "totalRevenue",
+    "nonPayrollExpenses",
+    "payrollExpenses",
+  ];
+  const hasNetProfitSourceInput = netProfitSourceFields.some(
+    (field) => form[field].trim() !== ""
+  );
+  const hasInvalidNetProfitSourceInput = netProfitSourceFields.some((field) =>
+    enteredMoneyFieldIsInvalid(form, field)
+  );
+  const calculatedNetProfitCents =
+    hasNetProfitSourceInput && !hasInvalidNetProfitSourceInput
+      ? (formMetricCents(form, "totalRevenue") ?? 0) -
+        (formMetricCents(form, "nonPayrollExpenses") ?? 0) -
+        (formMetricCents(form, "payrollExpenses") ?? 0)
+      : null;
+  const calculatedNetProfitInput =
+    calculatedNetProfitCents === null ? "" : centsToInput(calculatedNetProfitCents);
+  const currentRevenueContributionCents = enteredMoneyFieldIsInvalid(form, "totalRevenue")
+    ? null
+    : formMetricCents(form, "totalRevenue") ?? 0;
+  const currentNetProfitContributionCents = hasInvalidNetProfitSourceInput
+    ? null
+    : calculatedNetProfitCents ?? 0;
+  const calculatedYtdRevenueCents = (() => {
+    if (!selectedWeekHasYtdBase) return null;
+    if (selectedWeekIsYtdBase) return WEEKLY_FINANCE_YTD_BASE.totalRevenue;
+    if (loadedYtd.totalRevenue === null || currentRevenueContributionCents === null) return null;
+    return (
+      loadedYtd.totalRevenue -
+      (loadedWeekMetric.totalRevenue ?? 0) +
+      currentRevenueContributionCents
+    );
+  })();
+  const calculatedYtdNetProfitCents = (() => {
+    if (!selectedWeekHasYtdBase) return null;
+    if (selectedWeekIsYtdBase) return WEEKLY_FINANCE_YTD_BASE.totalProfit;
+    if (loadedYtd.totalProfit === null || currentNetProfitContributionCents === null) return null;
+    return (
+      loadedYtd.totalProfit -
+      (loadedWeekMetric.totalProfit ?? 0) +
+      currentNetProfitContributionCents
+    );
+  })();
 
   useEffect(() => {
     if (!selectedWeek) return;
@@ -217,14 +293,21 @@ export function WeeklyFinancialSnapshot({
           totalRevenue: centsToInput(json.metric?.totalRevenue),
           nonPayrollExpenses: centsToInput(json.metric?.nonPayrollExpenses),
           payrollExpenses: centsToInput(json.metric?.payrollExpenses),
-          totalProfit: centsToInput(json.metric?.totalProfit),
-          ytdRevenue: centsToInput(json.metric?.ytdRevenue ?? json.ytd?.totalRevenue),
-          ytdNetProfit: centsToInput(json.metric?.ytdNetProfit ?? json.ytd?.totalProfit),
+        });
+        setLoadedWeekMetric({
+          totalRevenue: json.metric?.totalRevenue ?? null,
+          totalProfit: loadedMetricNetProfit(json.metric),
+        });
+        setLoadedYtd({
+          totalRevenue: json.ytd?.totalRevenue ?? null,
+          totalProfit: json.ytd?.totalProfit ?? null,
         });
       })
       .catch((err) => {
         if (!cancelled) {
           setForm(EMPTY_FORM);
+          setLoadedWeekMetric(EMPTY_TOTALS);
+          setLoadedYtd(EMPTY_TOTALS);
           setError(err instanceof Error ? err.message : "Could not load weekly report.");
         }
       })
@@ -264,9 +347,6 @@ export function WeeklyFinancialSnapshot({
       ["totalRevenue", "Income"],
       ["nonPayrollExpenses", "Expenses"],
       ["payrollExpenses", "Payroll"],
-      ["totalProfit", "Net Profit"],
-      ["ytdRevenue", `YTD ${selectedYear} Revenue`],
-      ["ytdNetProfit", `YTD ${selectedYear} Net Profit`],
     ];
     const invalidField = moneyFields.find(
       ([field]) => form[field].trim() !== "" && inputToCents(form[field]) === null
@@ -277,16 +357,18 @@ export function WeeklyFinancialSnapshot({
       return;
     }
 
+    const nextLoadedWeekMetric = {
+      totalRevenue: inputToCents(form.totalRevenue),
+      totalProfit: calculatedNetProfitCents,
+    };
     const payload = {
       business: BUSINESS_KEY,
       periodStart: selectedWeek.weekStart,
       periodEnd: selectedWeek.weekEnd,
-      totalRevenue: inputToCents(form.totalRevenue),
+      totalRevenue: nextLoadedWeekMetric.totalRevenue,
       nonPayrollExpenses: inputToCents(form.nonPayrollExpenses),
       payrollExpenses: inputToCents(form.payrollExpenses),
-      totalProfit: inputToCents(form.totalProfit),
-      ytdRevenue: inputToCents(form.ytdRevenue),
-      ytdNetProfit: inputToCents(form.ytdNetProfit),
+      totalProfit: nextLoadedWeekMetric.totalProfit,
     };
 
     try {
@@ -298,6 +380,11 @@ export function WeeklyFinancialSnapshot({
       const json = (await response.json().catch(() => ({}))) as MetricResponse;
       if (!response.ok) throw new Error(json.error || "Could not save weekly report.");
 
+      setLoadedWeekMetric(nextLoadedWeekMetric);
+      setLoadedYtd({
+        totalRevenue: json.ytd?.totalRevenue ?? calculatedYtdRevenueCents,
+        totalProfit: json.ytd?.totalProfit ?? calculatedYtdNetProfitCents,
+      });
       setMessage("Weekly report saved.");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not save weekly report.");
@@ -342,7 +429,11 @@ export function WeeklyFinancialSnapshot({
                 </option>
               ))}
             </Select>
-            <Button type="button" onClick={saveReport} disabled={loading || saving || !selectedWeek}>
+            <Button
+              type="button"
+              onClick={saveReport}
+              disabled={loading || saving || !selectedWeek}
+            >
               {saving ? "Saving..." : "Save report"}
             </Button>
           </div>
@@ -355,14 +446,20 @@ export function WeeklyFinancialSnapshot({
           label="Operating Expenses"
           value={hasOperatingExpenseInput ? formatCents(operatingExpensesCents) : "-"}
         />
-        <SummaryCard label="Net Profit" value={formatCents(formMetricCents(form, "totalProfit"))} />
-        <SummaryCard label={`YTD ${selectedYear} Revenue`} value={formatCents(formMetricCents(form, "ytdRevenue"))} />
-        <SummaryCard label={`YTD ${selectedYear} Net Profit`} value={formatCents(formMetricCents(form, "ytdNetProfit"))} />
+        <SummaryCard label="Net Profit" value={formatCents(calculatedNetProfitCents)} />
+        <SummaryCard
+          label={`YTD ${selectedYear} Revenue`}
+          value={formatCents(calculatedYtdRevenueCents)}
+        />
+        <SummaryCard
+          label={`YTD ${selectedYear} Net Profit`}
+          value={formatCents(calculatedYtdNetProfitCents)}
+        />
       </div>
 
       <Card>
         <CardContent className="space-y-4">
-          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
             <MoneyInput
               label="Income"
               value={form.totalRevenue}
@@ -383,21 +480,9 @@ export function WeeklyFinancialSnapshot({
             />
             <MoneyInput
               label="Net Profit"
-              value={form.totalProfit}
-              onChange={(value) => updateField("totalProfit", value)}
+              value={calculatedNetProfitInput}
               disabled={loading || saving}
-            />
-            <MoneyInput
-              label={`YTD ${selectedYear} Revenue`}
-              value={form.ytdRevenue}
-              onChange={(value) => updateField("ytdRevenue", value)}
-              disabled={loading || saving}
-            />
-            <MoneyInput
-              label={`YTD ${selectedYear} Net Profit`}
-              value={form.ytdNetProfit}
-              onChange={(value) => updateField("ytdNetProfit", value)}
-              disabled={loading || saving}
+              readOnly
             />
           </div>
         </CardContent>
@@ -422,12 +507,14 @@ function MoneyInput({
   label,
   value,
   disabled,
+  readOnly = false,
   onChange,
 }: {
   label: string;
   value: string;
   disabled: boolean;
-  onChange: (value: string) => void;
+  readOnly?: boolean;
+  onChange?: (value: string) => void;
 }) {
   return (
     <Input
@@ -435,8 +522,10 @@ function MoneyInput({
       inputMode="decimal"
       placeholder="0.00"
       value={value}
-      onChange={(event) => onChange(event.target.value)}
+      onChange={(event) => onChange?.(event.target.value)}
       disabled={disabled}
+      readOnly={readOnly}
+      className={readOnly ? "bg-gray-50 text-gray-700" : undefined}
     />
   );
 }

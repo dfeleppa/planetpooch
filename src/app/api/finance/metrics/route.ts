@@ -2,9 +2,105 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/auth-helpers";
 import { Role } from "@prisma/client";
+import {
+  dateParamFromDate,
+  WEEKLY_FINANCE_YTD_BASE,
+  weekHasFinanceYtdBase,
+  type FinanceYtdTotals,
+} from "@/lib/finance-ytd";
 
 function isSuperAdmin(role: string) {
   return role === Role.SUPER_ADMIN || role === Role.ADMIN;
+}
+
+function numericYear(value: string | null, fallback: number): number {
+  const year = Number(value);
+  return Number.isInteger(year) ? year : fallback;
+}
+
+function metricNetProfit(metric: {
+  totalRevenue: number | null;
+  totalProfit: number | null;
+  nonPayrollExpenses: number | null;
+  payrollExpenses: number | null;
+}): number {
+  if (metric.totalProfit !== null) return metric.totalProfit;
+  if (
+    metric.totalRevenue === null &&
+    metric.nonPayrollExpenses === null &&
+    metric.payrollExpenses === null
+  ) {
+    return 0;
+  }
+  return (
+    (metric.totalRevenue ?? 0) -
+    (metric.nonPayrollExpenses ?? 0) -
+    (metric.payrollExpenses ?? 0)
+  );
+}
+
+async function calculateWeeklyFinanceYtd({
+  business,
+  periodEnd,
+  year,
+}: {
+  business: string;
+  periodEnd: Date;
+  year: number;
+}): Promise<FinanceYtdTotals | null> {
+  const weekEnd = dateParamFromDate(periodEnd);
+  if (
+    business !== WEEKLY_FINANCE_YTD_BASE.business ||
+    !weekHasFinanceYtdBase(weekEnd, year)
+  ) {
+    return null;
+  }
+
+  if (weekEnd === WEEKLY_FINANCE_YTD_BASE.weekEnd) {
+    return {
+      totalRevenue: WEEKLY_FINANCE_YTD_BASE.totalRevenue,
+      totalProfit: WEEKLY_FINANCE_YTD_BASE.totalProfit,
+    };
+  }
+
+  const weeklyMetrics = await prisma.financeMetric.findMany({
+    where: {
+      business,
+      periodEnd: {
+        gt: new Date(`${WEEKLY_FINANCE_YTD_BASE.weekEnd}T00:00:00.000Z`),
+        lte: periodEnd,
+      },
+    },
+    select: {
+      totalRevenue: true,
+      totalProfit: true,
+      nonPayrollExpenses: true,
+      payrollExpenses: true,
+    },
+  });
+
+  const totals = weeklyMetrics.reduce<FinanceYtdTotals>(
+    (sum, metric) => ({
+      totalRevenue: (sum.totalRevenue ?? 0) + (metric.totalRevenue ?? 0),
+      totalProfit: (sum.totalProfit ?? 0) + metricNetProfit(metric),
+    }),
+    {
+      totalRevenue: WEEKLY_FINANCE_YTD_BASE.totalRevenue,
+      totalProfit: WEEKLY_FINANCE_YTD_BASE.totalProfit,
+    }
+  );
+
+  return totals;
+}
+
+function ytdResponse(totals: FinanceYtdTotals) {
+  return {
+    totalRevenue: totals.totalRevenue,
+    totalProfit: totals.totalProfit,
+    nonPayrollExpenses: null,
+    payrollExpenses: null,
+    baseWeekEnd: WEEKLY_FINANCE_YTD_BASE.weekEnd,
+  };
 }
 
 export async function GET(req: NextRequest) {
@@ -17,6 +113,7 @@ export async function GET(req: NextRequest) {
   const business = sp.get("business");
   const from = sp.get("from");
   const to = sp.get("to");
+  const year = numericYear(sp.get("year"), new Date().getUTCFullYear());
 
   if (!business || !from || !to) {
     return NextResponse.json({ error: "business, from, and to are required" }, { status: 400 });
@@ -39,14 +136,22 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ metric });
   }
 
+  const calculatedYtd = await calculateWeeklyFinanceYtd({
+    business,
+    periodEnd,
+    year,
+  });
+
   return NextResponse.json({
     metric,
-    ytd: {
-      totalRevenue: metric?.ytdRevenue ?? null,
-      totalProfit: metric?.ytdNetProfit ?? null,
-      nonPayrollExpenses: null,
-      payrollExpenses: null,
-    },
+    ytd: calculatedYtd
+      ? ytdResponse(calculatedYtd)
+      : {
+          totalRevenue: metric?.ytdRevenue ?? null,
+          totalProfit: metric?.ytdNetProfit ?? null,
+          nonPayrollExpenses: null,
+          payrollExpenses: null,
+        },
   });
 }
 
@@ -60,7 +165,10 @@ export async function PUT(req: NextRequest) {
   const { business, periodStart, periodEnd, ...data } = body;
 
   if (!business || !periodStart || !periodEnd) {
-    return NextResponse.json({ error: "business, periodStart, and periodEnd are required" }, { status: 400 });
+    return NextResponse.json(
+      { error: "business, periodStart, and periodEnd are required" },
+      { status: 400 }
+    );
   }
 
   const validBusinesses = [
@@ -74,9 +182,19 @@ export async function PUT(req: NextRequest) {
   }
 
   const numericFields = [
-    "totalRevenue", "totalProfit", "ytdRevenue", "ytdNetProfit", "nonPayrollExpenses", "payrollExpenses", "totalCustomers",
-    "totalAdSpend", "totalConversions",
-    "metaAdSpend", "metaRevenue", "googleAdSpend", "googleRevenue",
+    "totalRevenue",
+    "totalProfit",
+    "ytdRevenue",
+    "ytdNetProfit",
+    "nonPayrollExpenses",
+    "payrollExpenses",
+    "totalCustomers",
+    "totalAdSpend",
+    "totalConversions",
+    "metaAdSpend",
+    "metaRevenue",
+    "googleAdSpend",
+    "googleRevenue",
   ] as const;
 
   const cleanData: Record<string, number | null> = {};
@@ -110,5 +228,14 @@ export async function PUT(req: NextRequest) {
     },
   });
 
-  return NextResponse.json({ metric });
+  const calculatedYtd = await calculateWeeklyFinanceYtd({
+    business,
+    periodEnd: new Date(periodEnd),
+    year: new Date(periodEnd).getUTCFullYear(),
+  });
+
+  return NextResponse.json({
+    metric,
+    ...(calculatedYtd ? { ytd: ytdResponse(calculatedYtd) } : {}),
+  });
 }
