@@ -52,6 +52,7 @@ const marketingNav: NavItem[] = [
 
 const financeNav: NavItem[] = [
   { href: "/finance", label: "Dashboard", icon: "$" },
+  { href: "/finance/payroll", label: "Payroll", icon: "◷" },
 ];
 
 const adminDashboardPaths = [
