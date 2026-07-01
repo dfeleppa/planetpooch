@@ -32,15 +32,12 @@ const financeSections: FinanceSection[] = [
     label: "MoeGo",
     isActive: (pathname) => pathname.startsWith("/finance/moego"),
   },
-  {
-    href: "/finance/payroll",
-    label: "Payroll",
-    isActive: (pathname) => pathname.startsWith("/finance/payroll"),
-  },
 ];
 
 export function FinanceSubnav() {
   const pathname = usePathname();
+
+  if (pathname.startsWith("/finance/payroll")) return null;
 
   return (
     <nav className="pp-tabs mb-6" aria-label="Finance sections">
