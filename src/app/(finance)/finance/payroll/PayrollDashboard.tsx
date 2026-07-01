@@ -575,40 +575,68 @@ export function PayrollDashboard({
         <p className="mt-1 text-gray-500">Weekly staff hours</p>
       </div>
 
-      <Card>
-        <CardContent className="space-y-4">
-          <div className="grid gap-3 lg:grid-cols-[minmax(220px,1fr)_180px_180px_auto] lg:items-end">
-            <Select
-              id="payroll-week"
-              label="Week"
-              value={weekStart}
-              onChange={(event) => void loadWeek(event.target.value, business)}
-              disabled={loading || saving}
-            >
-              {weekOptions.map((option) => (
-                <option key={option.weekStart} value={option.weekStart}>
-                  {formatWeekRange(option.weekStart, option.weekEnd)}
-                  {option.stored ? ` (saved)` : ""}
-                </option>
-              ))}
-            </Select>
-            <Input
-              label="Week start"
-              type="date"
-              value={weekStart}
-              onChange={(event) => {
-                setWeekStart(event.target.value);
-                setRows([]);
-              }}
-              disabled={loading || saving}
-            />
-            <Input label="Week end" type="date" value={weekEnd} readOnly />
-            <Button type="button" onClick={savePayroll} disabled={loading || saving}>
-              {saving ? "Saving..." : "Save payroll"}
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
+      {!isMobileGrooming && (
+        <Card>
+          <CardContent className="space-y-4">
+            <div className="grid gap-3 lg:grid-cols-[minmax(220px,1fr)_180px_180px_auto] lg:items-end">
+              <Select
+                id="payroll-week"
+                label="Week"
+                value={weekStart}
+                onChange={(event) => void loadWeek(event.target.value, business)}
+                disabled={loading || saving}
+              >
+                {weekOptions.map((option) => (
+                  <option key={option.weekStart} value={option.weekStart}>
+                    {formatWeekRange(option.weekStart, option.weekEnd)}
+                    {option.stored ? ` (saved)` : ""}
+                  </option>
+                ))}
+              </Select>
+              <Input
+                label="Week start"
+                type="date"
+                value={weekStart}
+                onChange={(event) => {
+                  setWeekStart(event.target.value);
+                  setRows([]);
+                }}
+                disabled={loading || saving}
+              />
+              <Input label="Week end" type="date" value={weekEnd} readOnly />
+              <Button type="button" onClick={savePayroll} disabled={loading || saving}>
+                {saving ? "Saving..." : "Save payroll"}
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {isMobileGrooming && (
+        <Card>
+          <CardContent>
+            <div className="max-w-sm">
+              <Select
+                id="mobile-grooming-employee"
+                label="Employee"
+                value=""
+                onChange={(event) => addMobileEmployee(event.target.value)}
+                disabled={saving || mobileEmployeeChoicesUnavailable}
+              >
+                <option value="">{mobileEmployeePlaceholder}</option>
+                {availableMobileEmployees.map((employee) => {
+                  const employeeName = normalizeEmployeeName(employee.name);
+                  return (
+                    <option key={employee.id} value={employeeName}>
+                      {employeeName}
+                    </option>
+                  );
+                })}
+              </Select>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {!isMobileGrooming && (
         <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
@@ -684,24 +712,24 @@ export function PayrollDashboard({
           >
             <h2 className="text-base font-semibold text-gray-900">Employee hours</h2>
             {isMobileGrooming ? (
-              <div className="w-full md:max-w-sm">
+              <div className="grid w-full gap-3 md:max-w-lg md:grid-cols-[minmax(220px,1fr)_auto] md:items-end">
                 <Select
-                  id="mobile-grooming-employee"
-                  label="Employee"
-                  value=""
-                  onChange={(event) => addMobileEmployee(event.target.value)}
-                  disabled={saving || mobileEmployeeChoicesUnavailable}
+                  id="payroll-week"
+                  label="Week"
+                  value={weekStart}
+                  onChange={(event) => void loadWeek(event.target.value, business)}
+                  disabled={loading || saving}
                 >
-                  <option value="">{mobileEmployeePlaceholder}</option>
-                  {availableMobileEmployees.map((employee) => {
-                    const employeeName = normalizeEmployeeName(employee.name);
-                    return (
-                      <option key={employee.id} value={employeeName}>
-                        {employeeName}
-                      </option>
-                    );
-                  })}
+                  {weekOptions.map((option) => (
+                    <option key={option.weekStart} value={option.weekStart}>
+                      {formatWeekRange(option.weekStart, option.weekEnd)}
+                      {option.stored ? ` (saved)` : ""}
+                    </option>
+                  ))}
                 </Select>
+                <Button type="button" onClick={savePayroll} disabled={loading || saving}>
+                  {saving ? "Saving..." : "Save payroll"}
+                </Button>
               </div>
             ) : (
               <Button
