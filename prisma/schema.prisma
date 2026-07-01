@@ -1003,8 +1003,6 @@ model FinancePayrollWeek {
   business  String   @default("pet-resort")
   weekStart DateTime @db.Date
   weekEnd   DateTime @db.Date
-  source    String   @default("manual")
-  notes     String   @default("")
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 

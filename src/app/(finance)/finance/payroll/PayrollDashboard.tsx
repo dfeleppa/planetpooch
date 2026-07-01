@@ -20,9 +20,7 @@ import {
   PAYROLL_BUSINESSES,
   DEFAULT_PAYROLL_BUSINESS,
   categoryForEmployee,
-  cleanPayrollBusiness,
   decimalPayrollHours,
-  formatPayrollDuration,
   isPayrollBusiness,
   normalizeEmployeeName,
   parsePayrollDurationToSeconds,
@@ -38,7 +36,6 @@ type SavedWeekSummary = {
   business: PayrollBusinessValue;
   weekStart: string;
   weekEnd: string;
-  source: string;
   updatedAt: string;
 };
 
@@ -48,7 +45,6 @@ type SavedPayrollRow = {
   category: PayrollCategoryValue;
   shifts: number;
   totalSeconds: number;
-  totalDuration: string;
   decimalHours: number;
 };
 
@@ -57,8 +53,6 @@ type SavedPayrollWeek = {
   business: PayrollBusinessValue;
   weekStart: string;
   weekEnd: string;
-  source: string;
-  notes: string;
   rows: SavedPayrollRow[];
 };
 
@@ -259,8 +253,6 @@ function extractImportPayload(text: string) {
     business: isPayrollBusiness(payload.business) ? payload.business : null,
     weekStart,
     weekEnd,
-    source: typeof payload.source === "string" ? payload.source : "moego-clock-inout",
-    notes: typeof payload.notes === "string" ? payload.notes : "",
   };
 }
 
@@ -292,8 +284,6 @@ export function PayrollDashboard({
   const [savedWeeks, setSavedWeeks] = useState<SavedWeekSummary[]>([]);
   const [business, setBusiness] = useState<PayrollBusinessValue>(DEFAULT_PAYROLL_BUSINESS);
   const [weekStart, setWeekStart] = useState(lastCompletedWeekStart);
-  const [source, setSource] = useState("manual");
-  const [notes, setNotes] = useState("");
   const [rows, setRows] = useState<EditableRow[]>([]);
   const [importText, setImportText] = useState("");
   const [loading, setLoading] = useState(true);
@@ -402,14 +392,10 @@ export function PayrollDashboard({
       setBusiness(data.week?.business ?? data.business ?? selectedBusiness);
       if (data.week) {
         setWeekStart(data.week.weekStart);
-        setSource(data.week.source || "manual");
-        setNotes(data.week.notes || "");
         setRows(savedRowsToEditable(data.week.rows));
       } else {
         const nextWeekStart = selectedWeekStart ?? lastCompletedWeekStart();
         setWeekStart(nextWeekStart);
-        setSource("manual");
-        setNotes("");
         setRows([]);
       }
     } catch (err) {
@@ -478,8 +464,6 @@ export function PayrollDashboard({
       const imported = extractImportPayload(text);
       if (imported.business) setBusiness(imported.business);
       if (imported.weekStart) setWeekStart(imported.weekStart);
-      setSource(imported.source);
-      setNotes(imported.notes);
       setRows(imported.rows);
       setMessage(`Loaded ${imported.rows.length} employee rows.`);
     } catch (err) {
@@ -525,8 +509,6 @@ export function PayrollDashboard({
           weekStart,
           weekEnd,
           business,
-          source: isMobileGrooming ? "manual" : source.trim() || "manual",
-          notes,
           rows: cleanRows,
         }),
       });
@@ -535,8 +517,6 @@ export function PayrollDashboard({
 
       setWeekStart(data.week.weekStart);
       setBusiness(data.week.business);
-      setSource(data.week.source || "manual");
-      setNotes(data.week.notes || "");
       setRows(savedRowsToEditable(data.week.rows));
       setSavedWeeks((current) => {
         const summary = {
@@ -544,7 +524,6 @@ export function PayrollDashboard({
           business: data.week!.business,
           weekStart: data.week!.weekStart,
           weekEnd: data.week!.weekEnd,
-          source: data.week!.source,
           updatedAt: new Date().toISOString(),
         };
         return [
@@ -564,20 +543,31 @@ export function PayrollDashboard({
 
   return (
     <div className={cn("space-y-5", loading && "opacity-70")}>
-      <div className="max-w-md">
-        <Select
-          id="payroll-business"
-          label="Business"
-          value={business}
-          onChange={(event) => void loadWeek(weekStart, cleanPayrollBusiness(event.target.value))}
-          disabled={loading || saving}
-        >
-          {PAYROLL_BUSINESSES.map((option) => (
-            <option key={option.value} value={option.value}>
-              {option.label}
-            </option>
-          ))}
-        </Select>
+      <div>
+        <p className="mb-1 text-sm font-medium text-gray-700">Business</p>
+        <nav className="pp-tabs" aria-label="Payroll business">
+          {PAYROLL_BUSINESSES.map((option) => {
+            const active = business === option.value;
+            return (
+              <button
+                key={option.value}
+                type="button"
+                className={cn(
+                  "pp-tab",
+                  active && "is-on",
+                  (loading || saving) && "cursor-not-allowed opacity-60"
+                )}
+                aria-pressed={active}
+                onClick={() => {
+                  if (!active) void loadWeek(weekStart, option.value);
+                }}
+                disabled={loading || saving}
+              >
+                {option.label}
+              </button>
+            );
+          })}
+        </nav>
       </div>
 
       <div>
@@ -608,8 +598,6 @@ export function PayrollDashboard({
               value={weekStart}
               onChange={(event) => {
                 setWeekStart(event.target.value);
-                setSource("manual");
-                setNotes("");
                 setRows([]);
               }}
               disabled={loading || saving}
@@ -618,28 +606,6 @@ export function PayrollDashboard({
             <Button type="button" onClick={savePayroll} disabled={loading || saving}>
               {saving ? "Saving..." : "Save payroll"}
             </Button>
-          </div>
-
-          <div
-            className={cn(
-              "grid gap-3",
-              isMobileGrooming ? "lg:grid-cols-1" : "lg:grid-cols-[220px_1fr]"
-            )}
-          >
-            {!isMobileGrooming && (
-              <Input
-                label="Source"
-                value={source}
-                onChange={(event) => setSource(event.target.value)}
-                disabled={loading || saving}
-              />
-            )}
-            <Input
-              label="Notes"
-              value={notes}
-              onChange={(event) => setNotes(event.target.value)}
-              disabled={loading || saving}
-            />
           </div>
         </CardContent>
       </Card>
@@ -754,10 +720,9 @@ export function PayrollDashboard({
             <TableHead>
               <TableRow>
                 <TableHeader className="min-w-[220px]">Employee</TableHeader>
-                {!isMobileGrooming && <TableHeader>Category</TableHeader>}
+                {!isMobileGrooming && <TableHeader>Business</TableHeader>}
                 <TableHeader className="w-[120px]">Shifts</TableHeader>
                 <TableHeader className="w-[150px]">Total hours</TableHeader>
-                <TableHeader>Duration</TableHeader>
                 <TableHeader className="w-[90px]">Actions</TableHeader>
               </TableRow>
             </TableHead>
@@ -765,7 +730,7 @@ export function PayrollDashboard({
               {rows.length === 0 ? (
                 <TableRow>
                   <TableCell
-                    colSpan={isMobileGrooming ? 5 : 6}
+                    colSpan={isMobileGrooming ? 4 : 5}
                     className="py-8 text-center text-gray-500"
                   >
                     No employee hours for this week.
@@ -775,7 +740,6 @@ export function PayrollDashboard({
                 rows.map((row) => {
                   const category = categoryForEmployee(row.employeeName, business);
                   const currentEmployeeName = normalizeEmployeeName(row.employeeName);
-                  const seconds = secondsFromEditable(row);
                   return (
                     <TableRow key={row.localId}>
                       <TableCell>
@@ -827,7 +791,6 @@ export function PayrollDashboard({
                           disabled={saving}
                         />
                       </TableCell>
-                      <TableCell className="text-gray-600">{formatPayrollDuration(seconds)}</TableCell>
                       <TableCell>
                         <button
                           type="button"

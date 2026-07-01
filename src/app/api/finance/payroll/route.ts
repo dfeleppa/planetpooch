@@ -164,8 +164,6 @@ function serializeWeek(
     business: string;
     weekStart: Date;
     weekEnd: Date;
-    source: string;
-    notes: string;
     createdAt: Date;
     updatedAt: Date;
     rows: Array<{
@@ -212,8 +210,6 @@ function serializeWeek(
     business: week.business,
     weekStart: week.weekStart.toISOString().slice(0, 10),
     weekEnd: week.weekEnd.toISOString().slice(0, 10),
-    source: week.source,
-    notes: week.notes,
     createdAt: week.createdAt.toISOString(),
     updatedAt: week.updatedAt.toISOString(),
     rows,
@@ -252,7 +248,6 @@ export async function GET(req: NextRequest) {
       business: true,
       weekStart: true,
       weekEnd: true,
-      source: true,
       updatedAt: true,
     },
   });
@@ -268,7 +263,6 @@ export async function GET(req: NextRequest) {
       business: weekSummary.business,
       weekStart: weekSummary.weekStart.toISOString().slice(0, 10),
       weekEnd: weekSummary.weekEnd.toISOString().slice(0, 10),
-      source: weekSummary.source,
       updatedAt: weekSummary.updatedAt.toISOString(),
     })),
     week: serializeWeek(week),
@@ -295,26 +289,16 @@ async function savePayroll(req: NextRequest) {
     return NextResponse.json({ error: normalized.error }, { status: 400 });
   }
 
-  const source =
-    typeof payload.source === "string" && payload.source.trim()
-      ? payload.source.trim()
-      : "manual";
-  const notes = typeof payload.notes === "string" ? payload.notes.trim() : "";
-
   const week = await prisma.$transaction(async (tx) => {
     const savedWeek = await tx.financePayrollWeek.upsert({
       where: { business_weekStart: { business, weekStart: weekDates.weekStart } },
       update: {
         weekEnd: weekDates.weekEnd,
-        source,
-        notes,
       },
       create: {
         business,
         weekStart: weekDates.weekStart,
         weekEnd: weekDates.weekEnd,
-        source,
-        notes,
       },
     });
 
