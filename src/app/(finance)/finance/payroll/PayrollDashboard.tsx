@@ -48,12 +48,26 @@ type SavedPayrollRow = {
   decimalHours: number;
 };
 
+type SavedMobileGroomingEntry = {
+  id: string;
+  serviceDate: string;
+  employeeName: string;
+  paymentType: "cash" | "credit";
+  dogs: number;
+  priceCents: number;
+  upgradeQuantity: number;
+  upgradeCents: number;
+  creditCardTipCents: number;
+  discountCents: number;
+};
+
 type SavedPayrollWeek = {
   id: string;
   business: PayrollBusinessValue;
   weekStart: string;
   weekEnd: string;
   rows: SavedPayrollRow[];
+  mobileGroomingEntries: SavedMobileGroomingEntry[];
 };
 
 type PayrollApiResponse = {
@@ -67,6 +81,19 @@ type EditableRow = {
   employeeName: string;
   shifts: string;
   decimalHours: string;
+};
+
+type EditableMobileGroomingEntry = {
+  localId: string;
+  serviceDate: string;
+  employeeName: string;
+  paymentType: "cash" | "credit";
+  dogs: string;
+  price: string;
+  upgradeQuantity: string;
+  upgradeAmount: string;
+  creditCardTip: string;
+  discount: string;
 };
 
 export type PayrollEmployeeOption = {
@@ -155,12 +182,33 @@ function decimalInputFromSeconds(totalSeconds: number): string {
   return decimalPayrollHours(totalSeconds).toFixed(2);
 }
 
+function centsToInput(cents: number): string {
+  return (cents / 100).toFixed(2);
+}
+
 function savedRowsToEditable(rows: SavedPayrollRow[]): EditableRow[] {
   return rows.map((row) => ({
     localId: row.id || makeLocalId(),
     employeeName: row.employeeName,
     shifts: String(row.shifts),
     decimalHours: decimalInputFromSeconds(row.totalSeconds),
+  }));
+}
+
+function savedMobileEntriesToEditable(
+  entries: SavedMobileGroomingEntry[] = []
+): EditableMobileGroomingEntry[] {
+  return entries.map((entry) => ({
+    localId: entry.id || makeLocalId(),
+    serviceDate: entry.serviceDate,
+    employeeName: entry.employeeName,
+    paymentType: entry.paymentType === "cash" ? "cash" : "credit",
+    dogs: String(entry.dogs),
+    price: centsToInput(entry.priceCents),
+    upgradeQuantity: String(entry.upgradeQuantity),
+    upgradeAmount: centsToInput(entry.upgradeCents),
+    creditCardTip: centsToInput(entry.creditCardTipCents),
+    discount: centsToInput(entry.discountCents),
   }));
 }
 
@@ -267,6 +315,29 @@ function rowDecimalHours(row: EditableRow): number {
   return Number.isFinite(parsed) && parsed > 0 ? parsed : 0;
 }
 
+function moneyValue(value: string): number {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : 0;
+}
+
+function mobileEntryGroomerPay(entry: EditableMobileGroomingEntry): number {
+  return (moneyValue(entry.price) + moneyValue(entry.upgradeAmount)) * 0.4 +
+    moneyValue(entry.creditCardTip);
+}
+
+function mobileEntryTotalPrice(entry: EditableMobileGroomingEntry): number {
+  return moneyValue(entry.price) + moneyValue(entry.upgradeAmount) - moneyValue(entry.discount);
+}
+
+function formatMoney(value: number): string {
+  return value.toLocaleString("en-US", {
+    style: "currency",
+    currency: "USD",
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
+}
+
 function rowShifts(row: EditableRow): number {
   const parsed = Number(row.shifts);
   return Number.isFinite(parsed) && parsed > 0 ? Math.round(parsed) : 0;
@@ -285,6 +356,8 @@ export function PayrollDashboard({
   const [business, setBusiness] = useState<PayrollBusinessValue>(DEFAULT_PAYROLL_BUSINESS);
   const [weekStart, setWeekStart] = useState(lastCompletedWeekStart);
   const [rows, setRows] = useState<EditableRow[]>([]);
+  const [mobileEntries, setMobileEntries] = useState<EditableMobileGroomingEntry[]>([]);
+  const [selectedMobileEmployee, setSelectedMobileEmployee] = useState("");
   const [importText, setImportText] = useState("");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -294,32 +367,26 @@ export function PayrollDashboard({
   const weekEnd = addDaysParam(weekStart, 6);
   const isMobileGrooming = business === "mobile-grooming";
   const employeeOptions = employeeOptionsByBusiness[business] ?? EMPTY_EMPLOYEE_OPTIONS;
-  const selectedEmployeeNameKeys = useMemo(
+  const mobileEmployeeChoicesUnavailable = isMobileGrooming && employeeOptions.length === 0;
+  const mobileEmployeePlaceholder =
+    employeeOptions.length === 0 ? "No employees available" : "Select employee";
+  const weekDays = useMemo(
     () =>
-      new Set(
-        rows
-          .map((row) => normalizeEmployeeName(row.employeeName).toLocaleLowerCase())
-          .filter(Boolean)
-      ),
-    [rows]
+      Array.from({ length: 7 }, (_, index) => {
+        const value = addDaysParam(weekStart, index);
+        const date = dateFromParam(value);
+        return {
+          value,
+          label: date.toLocaleDateString("en-US", {
+            timeZone: "UTC",
+            weekday: "long",
+            month: "short",
+            day: "numeric",
+          }),
+        };
+      }),
+    [weekStart]
   );
-  const availableMobileEmployees = useMemo(
-    () =>
-      employeeOptions.filter(
-        (employee) =>
-          !selectedEmployeeNameKeys.has(
-            normalizeEmployeeName(employee.name).toLocaleLowerCase()
-          )
-      ),
-    [employeeOptions, selectedEmployeeNameKeys]
-  );
-  const mobileEmployeeChoicesUnavailable =
-    isMobileGrooming && availableMobileEmployees.length === 0;
-  const mobileEmployeePlaceholder = (() => {
-    if (employeeOptions.length === 0) return "No employees available";
-    if (availableMobileEmployees.length === 0) return "All employees selected";
-    return "Select employee";
-  })();
 
   const weekOptions = useMemo(() => {
     const byStart = new Map<string, { weekStart: string; weekEnd: string; stored: boolean }>();
@@ -393,10 +460,12 @@ export function PayrollDashboard({
       if (data.week) {
         setWeekStart(data.week.weekStart);
         setRows(savedRowsToEditable(data.week.rows));
+        setMobileEntries(savedMobileEntriesToEditable(data.week.mobileGroomingEntries));
       } else {
         const nextWeekStart = selectedWeekStart ?? lastCompletedWeekStart();
         setWeekStart(nextWeekStart);
         setRows([]);
+        setMobileEntries([]);
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not load payroll.");
@@ -428,33 +497,48 @@ export function PayrollDashboard({
   }
 
   function addMobileEmployee(employeeName: string) {
-    const cleanName = normalizeEmployeeName(employeeName);
-    if (!cleanName) return;
-
-    const employeeKey = cleanName.toLocaleLowerCase();
-    setRows((current) => {
-      if (
-        current.some(
-          (row) => normalizeEmployeeName(row.employeeName).toLocaleLowerCase() === employeeKey
-        )
-      ) {
-        return current;
-      }
-
-      return [
-        ...current,
-        {
-          localId: makeLocalId(),
-          employeeName: cleanName,
-          shifts: "0",
-          decimalHours: "0",
-        },
-      ];
-    });
+    setSelectedMobileEmployee(normalizeEmployeeName(employeeName));
   }
 
   function removeRow(localId: string) {
     setRows((current) => current.filter((row) => row.localId !== localId));
+  }
+
+  function addMobileEntry(serviceDate: string) {
+    const employeeName = normalizeEmployeeName(selectedMobileEmployee);
+    if (!employeeName) {
+      setError("Select an employee before adding an entry.");
+      return;
+    }
+    setError(null);
+    setMobileEntries((current) => [
+      ...current,
+      {
+        localId: makeLocalId(),
+        serviceDate,
+        employeeName,
+        paymentType: "credit",
+        dogs: "1",
+        price: "0",
+        upgradeQuantity: "0",
+        upgradeAmount: "0",
+        creditCardTip: "0",
+        discount: "0",
+      },
+    ]);
+  }
+
+  function updateMobileEntry(
+    localId: string,
+    patch: Partial<EditableMobileGroomingEntry>
+  ) {
+    setMobileEntries((current) =>
+      current.map((entry) => (entry.localId === localId ? { ...entry, ...patch } : entry))
+    );
+  }
+
+  function removeMobileEntry(localId: string) {
+    setMobileEntries((current) => current.filter((entry) => entry.localId !== localId));
   }
 
   function applyImportText(text: string) {
@@ -465,6 +549,7 @@ export function PayrollDashboard({
       if (imported.business) setBusiness(imported.business);
       if (imported.weekStart) setWeekStart(imported.weekStart);
       setRows(imported.rows);
+      setMobileEntries([]);
       setMessage(`Loaded ${imported.rows.length} employee rows.`);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not import payroll data.");
@@ -485,6 +570,59 @@ export function PayrollDashboard({
     setError(null);
     setMessage(null);
     try {
+      if (isMobileGrooming) {
+        const cleanEntries = mobileEntries.map((entry) => ({
+          serviceDate: entry.serviceDate,
+          employeeName: normalizeEmployeeName(entry.employeeName),
+          paymentType: entry.paymentType,
+          dogs: Math.max(0, Math.round(Number(entry.dogs) || 0)),
+          price: moneyValue(entry.price),
+          upgradeQuantity: Math.max(0, Math.round(Number(entry.upgradeQuantity) || 0)),
+          upgradesCents: Math.round(moneyValue(entry.upgradeAmount) * 100),
+          creditCardTip: moneyValue(entry.creditCardTip),
+          discount: moneyValue(entry.discount),
+        })).filter((entry) => entry.employeeName);
+
+        if (cleanEntries.length === 0) {
+          throw new Error("Add at least one mobile grooming entry.");
+        }
+
+        const response = await fetch("/api/finance/payroll", {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            weekStart,
+            weekEnd,
+            business,
+            mobileEntries: cleanEntries,
+          }),
+        });
+        const data = (await response.json()) as { week?: SavedPayrollWeek; error?: string };
+        if (!response.ok || !data.week) throw new Error(data.error || "Could not save payroll.");
+
+        setWeekStart(data.week.weekStart);
+        setBusiness(data.week.business);
+        setRows(savedRowsToEditable(data.week.rows));
+        setMobileEntries(savedMobileEntriesToEditable(data.week.mobileGroomingEntries));
+        setSavedWeeks((current) => {
+          const summary = {
+            id: data.week!.id,
+            business: data.week!.business,
+            weekStart: data.week!.weekStart,
+            weekEnd: data.week!.weekEnd,
+            updatedAt: new Date().toISOString(),
+          };
+          return [
+            summary,
+            ...current.filter(
+              (week) => week.business !== summary.business || week.weekStart !== summary.weekStart
+            ),
+          ].sort((a, b) => b.weekStart.localeCompare(a.weekStart));
+        });
+        setMessage("Payroll saved.");
+        return;
+      }
+
       const cleanRows = rows
         .map((row) => ({
           employeeName: normalizeEmployeeName(row.employeeName),
@@ -572,7 +710,9 @@ export function PayrollDashboard({
 
       <div>
         <h2 className="text-xl font-semibold text-gray-900">Payroll</h2>
-        <p className="mt-1 text-gray-500">Weekly staff hours</p>
+        <p className="mt-1 text-gray-500">
+          {isMobileGrooming ? "Weekly mobile grooming entries" : "Weekly staff hours"}
+        </p>
       </div>
 
       {!isMobileGrooming && (
@@ -600,6 +740,7 @@ export function PayrollDashboard({
                 onChange={(event) => {
                   setWeekStart(event.target.value);
                   setRows([]);
+                  setMobileEntries([]);
                 }}
                 disabled={loading || saving}
               />
@@ -619,12 +760,12 @@ export function PayrollDashboard({
               <Select
                 id="mobile-grooming-employee"
                 label="Employee"
-                value=""
+                value={selectedMobileEmployee}
                 onChange={(event) => addMobileEmployee(event.target.value)}
                 disabled={saving || mobileEmployeeChoicesUnavailable}
               >
                 <option value="">{mobileEmployeePlaceholder}</option>
-                {availableMobileEmployees.map((employee) => {
+                {employeeOptions.map((employee) => {
                   const employeeName = normalizeEmployeeName(employee.name);
                   return (
                     <option key={employee.id} value={employeeName}>
@@ -710,7 +851,9 @@ export function PayrollDashboard({
                 : "items-center justify-between"
             )}
           >
-            <h2 className="text-base font-semibold text-gray-900">Employee hours</h2>
+            <h2 className="text-base font-semibold text-gray-900">
+              {isMobileGrooming ? "Mobile grooming entries" : "Employee hours"}
+            </h2>
             {isMobileGrooming ? (
               <div className="grid w-full gap-3 md:max-w-lg md:grid-cols-[minmax(220px,1fr)_auto] md:items-end">
                 <Select
@@ -744,38 +887,84 @@ export function PayrollDashboard({
             )}
           </div>
 
-          <Table>
-            <TableHead>
-              <TableRow>
-                <TableHeader className="min-w-[220px]">Employee</TableHeader>
-                {!isMobileGrooming && <TableHeader>Business</TableHeader>}
-                <TableHeader className="w-[120px]">Shifts</TableHeader>
-                <TableHeader className="w-[150px]">Total hours</TableHeader>
-                <TableHeader className="w-[90px]">Actions</TableHeader>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {rows.length === 0 ? (
+          {isMobileGrooming ? (
+            <div className="grid gap-3">
+              {weekDays.map((day) => {
+                const dayEntries = mobileEntries.filter((entry) => entry.serviceDate === day.value);
+                const dayTotal = dayEntries.reduce(
+                  (sum, entry) => sum + mobileEntryTotalPrice(entry),
+                  0
+                );
+                const dayPay = dayEntries.reduce(
+                  (sum, entry) => sum + mobileEntryGroomerPay(entry),
+                  0
+                );
+                return (
+                  <div key={day.value} className="rounded-lg border border-gray-200 bg-white">
+                    <div className="flex flex-col gap-3 border-b border-gray-100 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+                      <div>
+                        <h3 className="text-sm font-semibold text-gray-900">{day.label}</h3>
+                        <p className="text-xs text-gray-500">
+                          {dayEntries.length} entries · {formatMoney(dayTotal)} total ·{" "}
+                          {formatMoney(dayPay)} groomer pay
+                        </p>
+                      </div>
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="secondary"
+                        onClick={() => addMobileEntry(day.value)}
+                        disabled={saving || !selectedMobileEmployee}
+                      >
+                        + Entry
+                      </Button>
+                    </div>
+
+                    {dayEntries.length === 0 ? (
+                      <p className="px-4 py-6 text-center text-sm text-gray-500">
+                        No entries for this day.
+                      </p>
+                    ) : (
+                      <div className="divide-y divide-gray-100">
+                        {dayEntries.map((entry) => (
+                          <MobileGroomingEntryEditor
+                            key={entry.localId}
+                            entry={entry}
+                            saving={saving}
+                            onChange={(patch) => updateMobileEntry(entry.localId, patch)}
+                            onRemove={() => removeMobileEntry(entry.localId)}
+                          />
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          ) : (
+            <Table>
+              <TableHead>
                 <TableRow>
-                  <TableCell
-                    colSpan={isMobileGrooming ? 4 : 5}
-                    className="py-8 text-center text-gray-500"
-                  >
-                    No employee hours for this week.
-                  </TableCell>
+                  <TableHeader className="min-w-[220px]">Employee</TableHeader>
+                  <TableHeader>Business</TableHeader>
+                  <TableHeader className="w-[120px]">Shifts</TableHeader>
+                  <TableHeader className="w-[150px]">Total hours</TableHeader>
+                  <TableHeader className="w-[90px]">Actions</TableHeader>
                 </TableRow>
-              ) : (
-                rows.map((row) => {
-                  const category = categoryForEmployee(row.employeeName, business);
-                  const currentEmployeeName = normalizeEmployeeName(row.employeeName);
-                  return (
-                    <TableRow key={row.localId}>
-                      <TableCell>
-                        {isMobileGrooming ? (
-                          <span className="text-sm font-medium text-gray-900">
-                            {currentEmployeeName}
-                          </span>
-                        ) : (
+              </TableHead>
+              <TableBody>
+                {rows.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={5} className="py-8 text-center text-gray-500">
+                      No employee hours for this week.
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  rows.map((row) => {
+                    const category = categoryForEmployee(row.employeeName, business);
+                    return (
+                      <TableRow key={row.localId}>
+                        <TableCell>
                           <input
                             value={row.employeeName}
                             onChange={(event) =>
@@ -784,57 +973,55 @@ export function PayrollDashboard({
                             className="w-full rounded-md border border-gray-300 px-2.5 py-1.5 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
                             disabled={saving}
                           />
-                        )}
-                      </TableCell>
-                      {!isMobileGrooming && (
+                        </TableCell>
                         <TableCell>
                           <Badge variant={categoryBadgeVariant(category)}>
                             {PAYROLL_CATEGORY_LABELS[category]}
                           </Badge>
                         </TableCell>
-                      )}
-                      <TableCell>
-                        <input
-                          type="number"
-                          min="0"
-                          step="1"
-                          value={row.shifts}
-                          onChange={(event) =>
-                            updateRow(row.localId, { shifts: event.target.value })
-                          }
-                          className="w-24 rounded-md border border-gray-300 px-2.5 py-1.5 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                          disabled={saving}
-                        />
-                      </TableCell>
-                      <TableCell>
-                        <input
-                          type="number"
-                          min="0"
-                          step="0.01"
-                          value={row.decimalHours}
-                          onChange={(event) =>
-                            updateRow(row.localId, { decimalHours: event.target.value })
-                          }
-                          className="w-28 rounded-md border border-gray-300 px-2.5 py-1.5 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                          disabled={saving}
-                        />
-                      </TableCell>
-                      <TableCell>
-                        <button
-                          type="button"
-                          onClick={() => removeRow(row.localId)}
-                          className="rounded-md px-2 py-1 text-xs font-medium text-red-600 transition-colors hover:bg-red-50"
-                          disabled={saving}
-                        >
-                          Remove
-                        </button>
-                      </TableCell>
-                    </TableRow>
-                  );
-                })
-              )}
-            </TableBody>
-          </Table>
+                        <TableCell>
+                          <input
+                            type="number"
+                            min="0"
+                            step="1"
+                            value={row.shifts}
+                            onChange={(event) =>
+                              updateRow(row.localId, { shifts: event.target.value })
+                            }
+                            className="w-24 rounded-md border border-gray-300 px-2.5 py-1.5 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                            disabled={saving}
+                          />
+                        </TableCell>
+                        <TableCell>
+                          <input
+                            type="number"
+                            min="0"
+                            step="0.01"
+                            value={row.decimalHours}
+                            onChange={(event) =>
+                              updateRow(row.localId, { decimalHours: event.target.value })
+                            }
+                            className="w-28 rounded-md border border-gray-300 px-2.5 py-1.5 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                            disabled={saving}
+                          />
+                        </TableCell>
+                        <TableCell>
+                          <button
+                            type="button"
+                            onClick={() => removeRow(row.localId)}
+                            className="rounded-md px-2 py-1 text-xs font-medium text-red-600 transition-colors hover:bg-red-50"
+                            disabled={saving}
+                          >
+                            Remove
+                          </button>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })
+                )}
+              </TableBody>
+            </Table>
+          )}
         </CardContent>
       </Card>
 
@@ -848,6 +1035,140 @@ export function PayrollDashboard({
           {error || message}
         </div>
       )}
+    </div>
+  );
+}
+
+function MobileGroomingEntryEditor({
+  entry,
+  saving,
+  onChange,
+  onRemove,
+}: {
+  entry: EditableMobileGroomingEntry;
+  saving: boolean;
+  onChange: (patch: Partial<EditableMobileGroomingEntry>) => void;
+  onRemove: () => void;
+}) {
+  const fieldClass =
+    "w-full rounded-md border border-gray-300 px-2.5 py-1.5 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500";
+
+  return (
+    <div className="grid gap-3 px-4 py-3 xl:grid-cols-[minmax(160px,1.3fr)_120px_90px_repeat(5,minmax(100px,1fr))_110px_110px_auto] xl:items-end">
+      <div>
+        <label className="block text-xs font-medium uppercase tracking-[0.06em] text-gray-500">
+          Groomer
+        </label>
+        <p className="mt-1 text-sm font-medium text-gray-900">{entry.employeeName}</p>
+      </div>
+      <label className="block">
+        <span className="block text-xs font-medium uppercase tracking-[0.06em] text-gray-500">
+          Payment
+        </span>
+        <select
+          value={entry.paymentType}
+          onChange={(event) =>
+            onChange({ paymentType: event.target.value === "cash" ? "cash" : "credit" })
+          }
+          className={cn(fieldClass, "mt-1")}
+          disabled={saving}
+        >
+          <option value="credit">Credit</option>
+          <option value="cash">Cash</option>
+        </select>
+      </label>
+      <EntryInput
+        label="# Dogs"
+        value={entry.dogs}
+        onChange={(value) => onChange({ dogs: value })}
+        disabled={saving}
+        step="1"
+      />
+      <EntryInput
+        label="Price"
+        value={entry.price}
+        onChange={(value) => onChange({ price: value })}
+        disabled={saving}
+      />
+      <EntryInput
+        label="Upgrades Qty"
+        value={entry.upgradeQuantity}
+        onChange={(value) => onChange({ upgradeQuantity: value })}
+        disabled={saving}
+        step="1"
+      />
+      <EntryInput
+        label="Upgrades $"
+        value={entry.upgradeAmount}
+        onChange={(value) => onChange({ upgradeAmount: value })}
+        disabled={saving}
+      />
+      <EntryInput
+        label="CC Tip"
+        value={entry.creditCardTip}
+        onChange={(value) => onChange({ creditCardTip: value })}
+        disabled={saving}
+      />
+      <EntryInput
+        label="Discount"
+        value={entry.discount}
+        onChange={(value) => onChange({ discount: value })}
+        disabled={saving}
+      />
+      <CalculatedValue label="Groomer Pay" value={formatMoney(mobileEntryGroomerPay(entry))} />
+      <CalculatedValue label="Total Price" value={formatMoney(mobileEntryTotalPrice(entry))} />
+      <button
+        type="button"
+        onClick={onRemove}
+        className="rounded-md px-2 py-1 text-xs font-medium text-red-600 transition-colors hover:bg-red-50"
+        disabled={saving}
+      >
+        Remove
+      </button>
+    </div>
+  );
+}
+
+function EntryInput({
+  label,
+  value,
+  onChange,
+  disabled,
+  step = "0.01",
+}: {
+  label: string;
+  value: string;
+  onChange: (value: string) => void;
+  disabled: boolean;
+  step?: string;
+}) {
+  return (
+    <label className="block">
+      <span className="block text-xs font-medium uppercase tracking-[0.06em] text-gray-500">
+        {label}
+      </span>
+      <input
+        type="number"
+        min="0"
+        step={step}
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
+        className="mt-1 w-full rounded-md border border-gray-300 px-2.5 py-1.5 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+        disabled={disabled}
+      />
+    </label>
+  );
+}
+
+function CalculatedValue({ label, value }: { label: string; value: string }) {
+  return (
+    <div>
+      <span className="block text-xs font-medium uppercase tracking-[0.06em] text-gray-500">
+        {label}
+      </span>
+      <p className="mt-1 rounded-md bg-gray-50 px-2.5 py-1.5 text-sm font-semibold text-gray-900">
+        {value}
+      </p>
     </div>
   );
 }

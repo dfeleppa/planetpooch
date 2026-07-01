@@ -27,6 +27,26 @@ type PayrollRowPayload = {
   hours?: unknown;
 };
 
+type MobileGroomingEntryPayload = {
+  employeeName?: unknown;
+  serviceDate?: unknown;
+  paymentType?: unknown;
+  dogs?: unknown;
+  price?: unknown;
+  priceCents?: unknown;
+  upgradeQuantity?: unknown;
+  upgradesQuantity?: unknown;
+  upgradeAmount?: unknown;
+  upgrade?: unknown;
+  upgrades?: unknown;
+  upgradeCents?: unknown;
+  upgradesCents?: unknown;
+  creditCardTip?: unknown;
+  creditCardTipCents?: unknown;
+  discount?: unknown;
+  discountCents?: unknown;
+};
+
 function unauthorized() {
   return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 }
@@ -115,6 +135,77 @@ function shiftsFromRow(row: PayrollRowPayload): number {
   return Math.max(0, Math.round(shifts));
 }
 
+function centsFromMoney(value: unknown): number {
+  const amount = asNumber(value);
+  if (amount === null) return 0;
+  return Math.max(0, Math.round(amount * 100));
+}
+
+function centsFromPayload(centsValue: unknown, moneyValue: unknown): number {
+  const cents = asNumber(centsValue);
+  if (cents !== null) return Math.max(0, Math.round(cents));
+  return centsFromMoney(moneyValue);
+}
+
+function normalizePaymentType(value: unknown) {
+  const raw = String(value ?? "").trim().toLowerCase();
+  return raw === "cash" ? "cash" : "credit";
+}
+
+function normalizeMobileGroomingEntries(rawEntries: unknown, weekStart: Date, weekEnd: Date) {
+  if (!Array.isArray(rawEntries)) {
+    return { error: "mobileEntries must be an array" as const };
+  }
+
+  const entries: Array<{
+    employeeName: string;
+    serviceDate: Date;
+    paymentType: string;
+    dogs: number;
+    priceCents: number;
+    upgradeQuantity: number;
+    upgradeCents: number;
+    creditCardTipCents: number;
+    discountCents: number;
+  }> = [];
+
+  for (const raw of rawEntries) {
+    const entry = raw as MobileGroomingEntryPayload;
+    const employeeName = normalizeEmployeeName(String(entry.employeeName ?? ""));
+    if (!employeeName) {
+      return { error: "Each mobile grooming entry needs an employee" as const };
+    }
+
+    const serviceDate = parseDateParam(entry.serviceDate);
+    if (!serviceDate) {
+      return { error: `Service date is invalid for ${employeeName}` as const };
+    }
+    if (serviceDate < weekStart || serviceDate > weekEnd) {
+      return { error: `Service date must fall inside the payroll week for ${employeeName}` as const };
+    }
+
+    entries.push({
+      employeeName,
+      serviceDate,
+      paymentType: normalizePaymentType(entry.paymentType),
+      dogs: Math.max(0, Math.round(asNumber(entry.dogs) ?? 0)),
+      priceCents: centsFromPayload(entry.priceCents, entry.price),
+      upgradeQuantity: Math.max(
+        0,
+        Math.round(asNumber(entry.upgradeQuantity ?? entry.upgradesQuantity) ?? 0)
+      ),
+      upgradeCents: centsFromPayload(
+        entry.upgradeCents ?? entry.upgradesCents,
+        entry.upgradeAmount ?? entry.upgrade ?? entry.upgrades
+      ),
+      creditCardTipCents: centsFromPayload(entry.creditCardTipCents, entry.creditCardTip),
+      discountCents: centsFromPayload(entry.discountCents, entry.discount),
+    });
+  }
+
+  return { entries };
+}
+
 function normalizeRows(rawRows: unknown, business: PayrollBusinessValue) {
   if (!Array.isArray(rawRows)) {
     return { error: "rows must be an array" as const };
@@ -174,6 +265,19 @@ function serializeWeek(
       totalSeconds: number;
       rowOrder: number;
     }>;
+    mobileGroomingEntries: Array<{
+      id: string;
+      serviceDate: Date;
+      employeeName: string;
+      paymentType: string;
+      dogs: number;
+      priceCents: number;
+      upgradeQuantity: number;
+      upgradeCents: number;
+      creditCardTipCents: number;
+      discountCents: number;
+      rowOrder: number;
+    }>;
   } | null
 ) {
   if (!week) return null;
@@ -204,6 +308,26 @@ function serializeWeek(
   });
 
   const totalSeconds = rows.reduce((sum, row) => sum + row.totalSeconds, 0);
+  const mobileGroomingEntries = week.mobileGroomingEntries.map((entry) => {
+    const groomerPayCents = Math.round((entry.priceCents + entry.upgradeCents) * 0.4) +
+      entry.creditCardTipCents;
+    const totalPriceCents = entry.priceCents + entry.upgradeCents - entry.discountCents;
+    return {
+      id: entry.id,
+      serviceDate: entry.serviceDate.toISOString().slice(0, 10),
+      employeeName: entry.employeeName,
+      paymentType: entry.paymentType,
+      dogs: entry.dogs,
+      priceCents: entry.priceCents,
+      upgradeQuantity: entry.upgradeQuantity,
+      upgradeCents: entry.upgradeCents,
+      creditCardTipCents: entry.creditCardTipCents,
+      discountCents: entry.discountCents,
+      groomerPayCents,
+      totalPriceCents,
+      rowOrder: entry.rowOrder,
+    };
+  });
 
   return {
     id: week.id,
@@ -213,6 +337,7 @@ function serializeWeek(
     createdAt: week.createdAt.toISOString(),
     updatedAt: week.updatedAt.toISOString(),
     rows,
+    mobileGroomingEntries,
     categoryTotals,
     grandTotal: {
       employeeCount: rows.length,
@@ -230,6 +355,9 @@ async function findWeekWithRows(business: PayrollBusinessValue, weekStart: Date 
     include: {
       rows: {
         orderBy: [{ rowOrder: "asc" }, { employeeName: "asc" }],
+      },
+      mobileGroomingEntries: {
+        orderBy: [{ serviceDate: "asc" }, { rowOrder: "asc" }, { createdAt: "asc" }],
       },
     },
   });
@@ -284,9 +412,22 @@ async function savePayroll(req: NextRequest) {
     Array.isArray(payload.totals) && Array.isArray(payload.dateRange)
       ? payload.totals
       : payload.rows ?? payload.totals;
-  const normalized = normalizeRows(rawRows, business);
+  const normalized =
+    business === "mobile-grooming" ? { rows: [] } : normalizeRows(rawRows, business);
   if ("error" in normalized) {
     return NextResponse.json({ error: normalized.error }, { status: 400 });
+  }
+
+  const normalizedMobileEntries =
+    business === "mobile-grooming"
+      ? normalizeMobileGroomingEntries(
+          payload.mobileEntries ?? payload.entries,
+          weekDates.weekStart,
+          weekDates.weekEnd
+        )
+      : { entries: [] };
+  if ("error" in normalizedMobileEntries) {
+    return NextResponse.json({ error: normalizedMobileEntries.error }, { status: 400 });
   }
 
   const week = await prisma.$transaction(async (tx) => {
@@ -305,6 +446,9 @@ async function savePayroll(req: NextRequest) {
     await tx.financePayrollEmployeeHours.deleteMany({
       where: { payrollWeekId: savedWeek.id },
     });
+    await tx.financeMobileGroomingPayrollEntry.deleteMany({
+      where: { payrollWeekId: savedWeek.id },
+    });
 
     if (normalized.rows.length > 0) {
       await tx.financePayrollEmployeeHours.createMany({
@@ -318,12 +462,32 @@ async function savePayroll(req: NextRequest) {
         })),
       });
     }
+    if (normalizedMobileEntries.entries.length > 0) {
+      await tx.financeMobileGroomingPayrollEntry.createMany({
+        data: normalizedMobileEntries.entries.map((entry, index) => ({
+          payrollWeekId: savedWeek.id,
+          serviceDate: entry.serviceDate,
+          employeeName: entry.employeeName,
+          paymentType: entry.paymentType,
+          dogs: entry.dogs,
+          priceCents: entry.priceCents,
+          upgradeQuantity: entry.upgradeQuantity,
+          upgradeCents: entry.upgradeCents,
+          creditCardTipCents: entry.creditCardTipCents,
+          discountCents: entry.discountCents,
+          rowOrder: index,
+        })),
+      });
+    }
 
     return tx.financePayrollWeek.findUnique({
       where: { id: savedWeek.id },
       include: {
         rows: {
           orderBy: [{ rowOrder: "asc" }, { employeeName: "asc" }],
+        },
+        mobileGroomingEntries: {
+          orderBy: [{ serviceDate: "asc" }, { rowOrder: "asc" }, { createdAt: "asc" }],
         },
       },
     });

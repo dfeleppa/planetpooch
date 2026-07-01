@@ -1006,7 +1006,8 @@ model FinancePayrollWeek {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  rows FinancePayrollEmployeeHours[]
+  rows                  FinancePayrollEmployeeHours[]
+  mobileGroomingEntries FinanceMobileGroomingPayrollEntry[]
 
   @@unique([business, weekStart])
   @@index([business, weekStart, weekEnd])
@@ -1027,6 +1028,28 @@ model FinancePayrollEmployeeHours {
 
   @@unique([payrollWeekId, employeeName])
   @@index([payrollWeekId, category])
+  @@index([employeeName])
+}
+
+model FinanceMobileGroomingPayrollEntry {
+  id                 String   @id @default(cuid())
+  payrollWeekId      String
+  serviceDate        DateTime @db.Date
+  employeeName       String
+  paymentType        String
+  dogs               Int      @default(0)
+  priceCents         Int      @default(0)
+  upgradeQuantity    Int      @default(0)
+  upgradeCents       Int      @default(0)
+  creditCardTipCents Int      @default(0)
+  discountCents      Int      @default(0)
+  rowOrder           Int      @default(0)
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  payrollWeek FinancePayrollWeek @relation(fields: [payrollWeekId], references: [id], onDelete: Cascade)
+
+  @@index([payrollWeekId, serviceDate])
   @@index([employeeName])
 }
 
