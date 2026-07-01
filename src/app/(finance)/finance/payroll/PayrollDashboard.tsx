@@ -17,7 +17,6 @@ import {
 import {
   PAYROLL_CATEGORIES,
   PAYROLL_CATEGORY_LABELS,
-  PAYROLL_BUSINESSES,
   DEFAULT_PAYROLL_BUSINESS,
   categoryForEmployee,
   decimalPayrollHours,
@@ -353,11 +352,13 @@ function mobileEntryDogs(entry: EditableMobileGroomingEntry): number {
 
 export function PayrollDashboard({
   employeeOptionsByBusiness = {},
+  initialBusiness = DEFAULT_PAYROLL_BUSINESS,
 }: {
   employeeOptionsByBusiness?: Partial<Record<PayrollBusinessValue, PayrollEmployeeOption[]>>;
+  initialBusiness?: PayrollBusinessValue;
 }) {
   const [savedWeeks, setSavedWeeks] = useState<SavedWeekSummary[]>([]);
-  const [business, setBusiness] = useState<PayrollBusinessValue>(DEFAULT_PAYROLL_BUSINESS);
+  const [business, setBusiness] = useState<PayrollBusinessValue>(initialBusiness);
   const [weekStart, setWeekStart] = useState(lastCompletedWeekStart);
   const [rows, setRows] = useState<EditableRow[]>([]);
   const [mobileEntries, setMobileEntries] = useState<EditableMobileGroomingEntry[]>([]);
@@ -502,8 +503,8 @@ export function PayrollDashboard({
   }, []);
 
   useEffect(() => {
-    void loadWeek(undefined, DEFAULT_PAYROLL_BUSINESS);
-  }, [loadWeek]);
+    void loadWeek(undefined, initialBusiness);
+  }, [initialBusiness, loadWeek]);
 
   function updateRow(localId: string, patch: Partial<EditableRow>) {
     setRows((current) =>
@@ -708,33 +709,6 @@ export function PayrollDashboard({
 
   return (
     <div className={cn("space-y-5", loading && "opacity-70")}>
-      <div>
-        <p className="mb-1 text-sm font-medium text-gray-700">Business</p>
-        <nav className="pp-tabs" aria-label="Payroll business">
-          {PAYROLL_BUSINESSES.map((option) => {
-            const active = business === option.value;
-            return (
-              <button
-                key={option.value}
-                type="button"
-                className={cn(
-                  "pp-tab",
-                  active && "is-on",
-                  (loading || saving) && "cursor-not-allowed opacity-60"
-                )}
-                aria-pressed={active}
-                onClick={() => {
-                  if (!active) void loadWeek(weekStart, option.value);
-                }}
-                disabled={loading || saving}
-              >
-                {option.label}
-              </button>
-            );
-          })}
-        </nav>
-      </div>
-
       <div>
         <h2 className="text-xl font-semibold text-gray-900">Payroll</h2>
         <p className="mt-1 text-gray-500">
