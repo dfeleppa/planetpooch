@@ -347,6 +347,10 @@ function secondsFromEditable(row: EditableRow): number {
   return Math.round(rowDecimalHours(row) * 3600);
 }
 
+function mobileEntryDogs(entry: EditableMobileGroomingEntry): number {
+  return Math.max(0, Math.round(Number(entry.dogs) || 0));
+}
+
 export function PayrollDashboard({
   employeeOptionsByBusiness = {},
 }: {
@@ -440,6 +444,29 @@ export function PayrollDashboard({
     };
   }, [business, rows]);
 
+  const mobileTotals = useMemo(() => {
+    return mobileEntries.reduce(
+      (total, entry) => {
+        const totalPrice = mobileEntryTotalPrice(entry);
+        total.stops += 1;
+        total.dogs += mobileEntryDogs(entry);
+        total.pricing += totalPrice;
+        total.cash += entry.paymentType === "cash" ? totalPrice : 0;
+        total.groomerPay += mobileEntryGroomerPay(entry);
+        total.upgrades += moneyValue(entry.upgradeAmount);
+        return total;
+      },
+      {
+        stops: 0,
+        dogs: 0,
+        pricing: 0,
+        cash: 0,
+        groomerPay: 0,
+        upgrades: 0,
+      }
+    );
+  }, [mobileEntries]);
+
   const loadWeek = useCallback(async (
     selectedWeekStart: string | undefined,
     selectedBusiness: PayrollBusinessValue
@@ -507,7 +534,7 @@ export function PayrollDashboard({
   function addMobileEntry(serviceDate: string) {
     const employeeName = normalizeEmployeeName(selectedMobileEmployee);
     if (!employeeName) {
-      setError("Select an employee before adding an entry.");
+      setError("Select an employee before adding a stop.");
       return;
     }
     setError(null);
@@ -584,7 +611,7 @@ export function PayrollDashboard({
         })).filter((entry) => entry.employeeName);
 
         if (cleanEntries.length === 0) {
-          throw new Error("Add at least one mobile grooming entry.");
+          throw new Error("Add at least one mobile grooming stop.");
         }
 
         const response = await fetch("/api/finance/payroll", {
@@ -711,7 +738,7 @@ export function PayrollDashboard({
       <div>
         <h2 className="text-xl font-semibold text-gray-900">Payroll</h2>
         <p className="mt-1 text-gray-500">
-          {isMobileGrooming ? "Weekly mobile grooming entries" : "Weekly staff hours"}
+          {isMobileGrooming ? "Weekly mobile grooming stops" : "Weekly staff hours"}
         </p>
       </div>
 
@@ -797,6 +824,41 @@ export function PayrollDashboard({
         </div>
       )}
 
+      {isMobileGrooming && (
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-6">
+          <SummaryCard
+            label="Total Stops"
+            value={String(mobileTotals.stops)}
+            detail="this week"
+          />
+          <SummaryCard
+            label="Total Dogs"
+            value={String(mobileTotals.dogs)}
+            detail="all stops"
+          />
+          <SummaryCard
+            label="Total Pricing"
+            value={formatMoney(mobileTotals.pricing)}
+            detail="after discounts"
+          />
+          <SummaryCard
+            label="Cash Total"
+            value={formatMoney(mobileTotals.cash)}
+            detail="cash stops"
+          />
+          <SummaryCard
+            label="Groomer Pay"
+            value={formatMoney(mobileTotals.groomerPay)}
+            detail="weekly total"
+          />
+          <SummaryCard
+            label="Upgrades ($)"
+            value={formatMoney(mobileTotals.upgrades)}
+            detail="upgrade sales"
+          />
+        </div>
+      )}
+
       {!isMobileGrooming && (
         <Card>
           <CardContent className="space-y-3">
@@ -852,7 +914,7 @@ export function PayrollDashboard({
             )}
           >
             <h2 className="text-base font-semibold text-gray-900">
-              {isMobileGrooming ? "Mobile grooming entries" : "Employee hours"}
+              {isMobileGrooming ? "Mobile grooming stops" : "Employee hours"}
             </h2>
             {isMobileGrooming ? (
               <div className="grid w-full gap-3 md:max-w-lg md:grid-cols-[minmax(220px,1fr)_auto] md:items-end">
@@ -905,7 +967,7 @@ export function PayrollDashboard({
                       <div>
                         <h3 className="text-sm font-semibold text-gray-900">{day.label}</h3>
                         <p className="text-xs text-gray-500">
-                          {dayEntries.length} entries · {formatMoney(dayTotal)} total ·{" "}
+                          {dayEntries.length} stops · {formatMoney(dayTotal)} total ·{" "}
                           {formatMoney(dayPay)} groomer pay
                         </p>
                       </div>
@@ -914,15 +976,15 @@ export function PayrollDashboard({
                         size="sm"
                         variant="secondary"
                         onClick={() => addMobileEntry(day.value)}
-                        disabled={saving || !selectedMobileEmployee}
+                        disabled={saving || mobileEmployeeChoicesUnavailable}
                       >
-                        + Entry
+                        + Stop
                       </Button>
                     </div>
 
                     {dayEntries.length === 0 ? (
                       <p className="px-4 py-6 text-center text-sm text-gray-500">
-                        No entries for this day.
+                        No stops for this day.
                       </p>
                     ) : (
                       <div className="divide-y divide-gray-100">
