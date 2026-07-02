@@ -57,6 +57,11 @@ type AnnualMobileGroomingTotals = {
   upgradeCents: number;
 };
 
+type WeeklyMobileGroomingTotals = Omit<AnnualMobileGroomingTotals, "year"> & {
+  weekStart: string;
+  weekEnd: string;
+};
+
 function unauthorized() {
   return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 }
@@ -112,6 +117,15 @@ function parseWeekDates(payload: Record<string, unknown>) {
   }
 
   return { weekStart, weekEnd };
+}
+
+function addDays(date: Date, days: number): Date {
+  return new Date(date.getTime() + days * MS_PER_DAY);
+}
+
+function mobileGroomingQuarterCycleStart(year: number): Date {
+  const baseCycleStart = new Date(Date.UTC(2026, 0, 10));
+  return addDays(baseCycleStart, (year - 2026) * 52 * 7);
 }
 
 function asNumber(value: unknown): number | null {
@@ -430,6 +444,68 @@ async function loadAnnualMobileGroomingTotals(
   return totals;
 }
 
+async function loadWeeklyMobileGroomingTotals(
+  business: PayrollBusinessValue,
+  selectedWeekStart: Date | null
+): Promise<WeeklyMobileGroomingTotals[]> {
+  if (business !== "mobile-grooming") return [];
+
+  const year = (selectedWeekStart ?? new Date()).getUTCFullYear();
+  const cycleStart = mobileGroomingQuarterCycleStart(year);
+  const cycleEnd = addDays(cycleStart, 52 * 7);
+  const weeks = await prisma.financePayrollWeek.findMany({
+    where: {
+      business,
+      weekStart: {
+        gte: cycleStart,
+        lt: cycleEnd,
+      },
+    },
+    orderBy: { weekStart: "asc" },
+    select: {
+      weekStart: true,
+      weekEnd: true,
+      mobileGroomingEntries: {
+        select: {
+          paymentType: true,
+          dogs: true,
+          priceCents: true,
+          upgradeCents: true,
+          creditCardTipCents: true,
+          discountCents: true,
+        },
+      },
+    },
+  });
+
+  return weeks.map((week) => {
+    const totals: WeeklyMobileGroomingTotals = {
+      weekStart: week.weekStart.toISOString().slice(0, 10),
+      weekEnd: week.weekEnd.toISOString().slice(0, 10),
+      stops: 0,
+      dogs: 0,
+      pricingCents: 0,
+      cashCents: 0,
+      groomerPayCents: 0,
+      upgradeCents: 0,
+    };
+
+    for (const entry of week.mobileGroomingEntries) {
+      const totalPriceCents = entry.priceCents + entry.upgradeCents - entry.discountCents;
+      const groomerPayCents = Math.round((entry.priceCents + entry.upgradeCents) * 0.4) +
+        entry.creditCardTipCents;
+      totals.stops += 1;
+      totals.dogs += entry.dogs;
+      totals.pricingCents += totalPriceCents;
+      totals.cashCents += entry.paymentType === "cash" ? totalPriceCents : 0;
+      totals.groomerPayCents += groomerPayCents;
+      totals.upgradeCents += entry.upgradeCents;
+    }
+
+    return totals;
+  });
+}
+
 export async function GET(req: NextRequest) {
   if (!(await canAccessPayroll())) return unauthorized();
 
@@ -451,6 +527,7 @@ export async function GET(req: NextRequest) {
   const selectedWeekStart = requestedWeekStart ?? weeks[0]?.weekStart ?? null;
   const week = await findWeekWithRows(business, selectedWeekStart);
   const annualTotals = await loadAnnualMobileGroomingTotals(business, selectedWeekStart);
+  const weeklyTotals = await loadWeeklyMobileGroomingTotals(business, selectedWeekStart);
 
   return NextResponse.json({
     business,
@@ -463,6 +540,7 @@ export async function GET(req: NextRequest) {
     })),
     week: serializeWeek(week),
     annualTotals,
+    weeklyTotals,
   });
 }
 
@@ -563,7 +641,8 @@ async function savePayroll(req: NextRequest) {
   });
 
   const annualTotals = await loadAnnualMobileGroomingTotals(business, weekDates.weekStart);
-  return NextResponse.json({ week: serializeWeek(week), annualTotals });
+  const weeklyTotals = await loadWeeklyMobileGroomingTotals(business, weekDates.weekStart);
+  return NextResponse.json({ week: serializeWeek(week), annualTotals, weeklyTotals });
 }
 
 export async function PUT(req: NextRequest) {

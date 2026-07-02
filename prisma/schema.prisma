@@ -997,7 +997,7 @@ enum PayrollCategory {
 }
 
 /// Weekly payroll hours imported from MoeGo clock-in/out or entered manually.
-/// One week is always a Sunday-Saturday range for a single business.
+/// One week is always a Saturday-Friday range for a single business.
 model FinancePayrollWeek {
   id        String   @id @default(cuid())
   business  String   @default("pet-resort")

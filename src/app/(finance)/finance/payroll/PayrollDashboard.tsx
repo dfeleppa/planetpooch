@@ -81,11 +81,17 @@ type AnnualMobileGroomingTotals = {
   upgradeCents: number;
 };
 
+type WeeklyMobileGroomingTotals = Omit<AnnualMobileGroomingTotals, "year"> & {
+  weekStart: string;
+  weekEnd: string;
+};
+
 type PayrollApiResponse = {
   business: PayrollBusinessValue;
   weeks: SavedWeekSummary[];
   week: SavedPayrollWeek | null;
   annualTotals?: AnnualMobileGroomingTotals;
+  weeklyTotals?: WeeklyMobileGroomingTotals[];
 };
 
 type EditableRow = {
@@ -120,6 +126,8 @@ const PAYROLL_BUSINESS_HREFS: Record<PayrollBusinessValue, string> = {
   "mobile-grooming": "/finance/payroll/mobile-grooming",
 };
 
+type MobileSummaryView = "annual" | "weekly";
+
 type ImportRow = {
   employeeName?: unknown;
   name?: unknown;
@@ -145,6 +153,11 @@ function toDateParam(date: Date): string {
 
 function addDaysParam(value: string, days: number): string {
   return toDateParam(new Date(dateFromParam(value).getTime() + days * MS_PER_DAY));
+}
+
+function mobileGroomingQuarterCycleStart(year: number): string {
+  const baseCycleStart = dateFromParam("2026-01-10");
+  return toDateParam(new Date(baseCycleStart.getTime() + (year - 2026) * 52 * 7 * MS_PER_DAY));
 }
 
 function isSaturdayWeekStart(value: string): boolean {
@@ -369,6 +382,17 @@ function secondsFromEditable(row: EditableRow): number {
   return Math.round(rowDecimalHours(row) * 3600);
 }
 
+function emptyMobileGroomingTotals(): Omit<AnnualMobileGroomingTotals, "year"> {
+  return {
+    stops: 0,
+    dogs: 0,
+    pricingCents: 0,
+    cashCents: 0,
+    groomerPayCents: 0,
+    upgradeCents: 0,
+  };
+}
+
 export function PayrollDashboard({
   employeeOptionsByBusiness = {},
   initialBusiness = DEFAULT_PAYROLL_BUSINESS,
@@ -383,6 +407,11 @@ export function PayrollDashboard({
   const [mobileEntries, setMobileEntries] = useState<EditableMobileGroomingEntry[]>([]);
   const [annualMobileTotals, setAnnualMobileTotals] =
     useState<AnnualMobileGroomingTotals | null>(null);
+  const [storedWeeklyMobileTotals, setStoredWeeklyMobileTotals] = useState<
+    WeeklyMobileGroomingTotals[]
+  >([]);
+  const [mobileSummaryView, setMobileSummaryView] = useState<MobileSummaryView>("annual");
+  const [openMobileQuarters, setOpenMobileQuarters] = useState<Record<string, boolean>>({});
   const [selectedMobileEmployee, setSelectedMobileEmployee] = useState("");
   const [mobileStopsOpen, setMobileStopsOpen] = useState(true);
   const [importText, setImportText] = useState("");
@@ -468,7 +497,7 @@ export function PayrollDashboard({
     };
   }, [business, rows]);
 
-  const weeklyMobileTotals = useMemo(() => {
+  const selectedWeekMobileTotals = useMemo(() => {
     return mobileEntries.reduce(
       (total, entry) => {
         const totalPrice = mobileEntryTotalPrice(entry);
@@ -492,6 +521,48 @@ export function PayrollDashboard({
   }, [mobileEntries]);
 
   const annualYear = annualMobileTotals?.year ?? dateFromParam(weekStart).getUTCFullYear();
+  const mobileQuarterGroups = useMemo(() => {
+    const storedByWeek = new Map(storedWeeklyMobileTotals.map((week) => [week.weekStart, week]));
+    const cycleStart = mobileGroomingQuarterCycleStart(annualYear);
+
+    return Array.from({ length: 4 }, (_, quarterIndex) => {
+      const quarterStart = addDaysParam(cycleStart, quarterIndex * 13 * 7);
+      const quarterEnd = addDaysParam(quarterStart, 13 * 7 - 1);
+      const weeks = Array.from({ length: 13 }, (_, weekIndex) => {
+        const rowWeekStart = addDaysParam(quarterStart, weekIndex * 7);
+        const rowWeekEnd = addDaysParam(rowWeekStart, 6);
+        const stored = storedByWeek.get(rowWeekStart);
+        return {
+          weekStart: rowWeekStart,
+          weekEnd: stored?.weekEnd ?? rowWeekEnd,
+          stops: stored?.stops ?? 0,
+          dogs: stored?.dogs ?? 0,
+          pricingCents: stored?.pricingCents ?? 0,
+          cashCents: stored?.cashCents ?? 0,
+          groomerPayCents: stored?.groomerPayCents ?? 0,
+          upgradeCents: stored?.upgradeCents ?? 0,
+          stored: Boolean(stored),
+        };
+      });
+      const totals = weeks.reduce((sum, week) => {
+        sum.stops += week.stops;
+        sum.dogs += week.dogs;
+        sum.pricingCents += week.pricingCents;
+        sum.cashCents += week.cashCents;
+        sum.groomerPayCents += week.groomerPayCents;
+        sum.upgradeCents += week.upgradeCents;
+        return sum;
+      }, emptyMobileGroomingTotals());
+
+      return {
+        id: quarterStart,
+        label: `Quarter ${quarterIndex + 1}`,
+        range: formatWeekRange(quarterStart, quarterEnd),
+        totals,
+        weeks,
+      };
+    });
+  }, [annualYear, storedWeeklyMobileTotals]);
 
   const loadWeek = useCallback(async (
     selectedWeekStart: string | undefined,
@@ -510,6 +581,7 @@ export function PayrollDashboard({
 
       setSavedWeeks(data.weeks);
       setAnnualMobileTotals(data.annualTotals ?? null);
+      setStoredWeeklyMobileTotals(data.weeklyTotals ?? []);
       setBusiness(data.week?.business ?? data.business ?? selectedBusiness);
       if (data.week) {
         setWeekStart(data.week.weekStart);
@@ -654,6 +726,7 @@ export function PayrollDashboard({
         const data = (await response.json()) as {
           week?: SavedPayrollWeek;
           annualTotals?: AnnualMobileGroomingTotals;
+          weeklyTotals?: WeeklyMobileGroomingTotals[];
           error?: string;
         };
         if (!response.ok || !data.week) throw new Error(data.error || "Could not save payroll.");
@@ -663,6 +736,7 @@ export function PayrollDashboard({
         setRows(savedRowsToEditable(data.week.rows));
         setMobileEntries(savedMobileEntriesToEditable(data.week.mobileGroomingEntries));
         setAnnualMobileTotals(data.annualTotals ?? null);
+        setStoredWeeklyMobileTotals(data.weeklyTotals ?? []);
         setSavedWeeks((current) => {
           const summary = {
             id: data.week!.id,
@@ -851,40 +925,162 @@ export function PayrollDashboard({
       {isMobileGrooming && (
         <Card>
           <CardContent className="space-y-4">
-            <div>
-              <p className="text-xs font-medium uppercase tracking-[0.08em] text-gray-500">
-                Annual
-              </p>
-              <h3 className="mt-1 text-base font-semibold text-gray-900">
-                Mobile grooming totals for {annualYear}
-              </h3>
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+              <div>
+                <h3 className="text-base font-semibold text-gray-900">
+                  Mobile grooming totals for {annualYear}
+                </h3>
+              </div>
+              <div className="inline-flex rounded-lg border border-gray-200 bg-gray-50 p-1">
+                {(["annual", "weekly"] as const).map((view) => (
+                  <button
+                    key={view}
+                    type="button"
+                    onClick={() => setMobileSummaryView(view)}
+                    className={cn(
+                      "rounded-md px-3 py-1.5 text-sm font-medium capitalize transition-colors",
+                      mobileSummaryView === view
+                        ? "bg-white text-gray-900 shadow-sm"
+                        : "text-gray-600 hover:text-gray-900"
+                    )}
+                  >
+                    {view}
+                  </button>
+                ))}
+              </div>
             </div>
-            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-6">
-              <AnnualMetric
-                label="Total Stops"
-                value={String(annualMobileTotals?.stops ?? 0)}
-              />
-              <AnnualMetric
-                label="Total Dogs"
-                value={String(annualMobileTotals?.dogs ?? 0)}
-              />
-              <AnnualMetric
-                label="Total Pricing"
-                value={formatMoney((annualMobileTotals?.pricingCents ?? 0) / 100)}
-              />
-              <AnnualMetric
-                label="Cash Total"
-                value={formatMoney((annualMobileTotals?.cashCents ?? 0) / 100)}
-              />
-              <AnnualMetric
-                label="Groomer Pay"
-                value={formatMoney((annualMobileTotals?.groomerPayCents ?? 0) / 100)}
-              />
-              <AnnualMetric
-                label="Upgrades ($)"
-                value={formatMoney((annualMobileTotals?.upgradeCents ?? 0) / 100)}
-              />
-            </div>
+            {mobileSummaryView === "annual" ? (
+              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-6">
+                <AnnualMetric
+                  label="Total Stops"
+                  value={String(annualMobileTotals?.stops ?? 0)}
+                />
+                <AnnualMetric
+                  label="Total Dogs"
+                  value={String(annualMobileTotals?.dogs ?? 0)}
+                />
+                <AnnualMetric
+                  label="Total Pricing"
+                  value={formatMoney((annualMobileTotals?.pricingCents ?? 0) / 100)}
+                />
+                <AnnualMetric
+                  label="Cash Total"
+                  value={formatMoney((annualMobileTotals?.cashCents ?? 0) / 100)}
+                />
+                <AnnualMetric
+                  label="Groomer Pay"
+                  value={formatMoney((annualMobileTotals?.groomerPayCents ?? 0) / 100)}
+                />
+                <AnnualMetric
+                  label="Upgrades ($)"
+                  value={formatMoney((annualMobileTotals?.upgradeCents ?? 0) / 100)}
+                />
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {mobileQuarterGroups.map((quarter) => {
+                  const isOpen =
+                    openMobileQuarters[quarter.id] ??
+                    quarter.weeks.some((week) => week.weekStart === weekStart);
+                  return (
+                    <div key={quarter.id} className="rounded-lg border border-gray-200">
+                      <button
+                        type="button"
+                        className="flex w-full flex-col gap-2 px-4 py-3 text-left transition-colors hover:bg-gray-50 sm:flex-row sm:items-center sm:justify-between"
+                        aria-expanded={isOpen}
+                        onClick={() =>
+                          setOpenMobileQuarters((current) => ({
+                            ...current,
+                            [quarter.id]: !isOpen,
+                          }))
+                        }
+                      >
+                        <span>
+                          <span className="block text-sm font-semibold text-gray-900">
+                            {quarter.label}
+                          </span>
+                          <span className="text-xs text-gray-500">{quarter.range}</span>
+                        </span>
+                        <span className="flex flex-wrap gap-x-3 gap-y-1 text-xs text-gray-500">
+                          <span>{quarter.totals.stops} stops</span>
+                          <span>{quarter.totals.dogs} dogs</span>
+                          <span>{formatMoney(quarter.totals.pricingCents / 100)} total</span>
+                          <span className="font-medium text-gray-700">
+                            {isOpen ? "Collapse" : "Expand"}
+                          </span>
+                        </span>
+                      </button>
+                      {isOpen ? (
+                        <div className="overflow-x-auto border-t border-gray-200">
+                          <table className="min-w-full divide-y divide-gray-200 text-sm">
+                            <thead className="bg-gray-50">
+                              <tr>
+                                <th className="px-4 py-2 text-left text-xs font-medium uppercase tracking-[0.06em] text-gray-500">
+                                  Week
+                                </th>
+                                <th className="px-4 py-2 text-left text-xs font-medium uppercase tracking-[0.06em] text-gray-500">
+                                  Stops
+                                </th>
+                                <th className="px-4 py-2 text-left text-xs font-medium uppercase tracking-[0.06em] text-gray-500">
+                                  Dogs
+                                </th>
+                                <th className="px-4 py-2 text-left text-xs font-medium uppercase tracking-[0.06em] text-gray-500">
+                                  Total Pricing
+                                </th>
+                                <th className="px-4 py-2 text-left text-xs font-medium uppercase tracking-[0.06em] text-gray-500">
+                                  Cash Total
+                                </th>
+                                <th className="px-4 py-2 text-left text-xs font-medium uppercase tracking-[0.06em] text-gray-500">
+                                  Groomer Pay
+                                </th>
+                                <th className="px-4 py-2 text-left text-xs font-medium uppercase tracking-[0.06em] text-gray-500">
+                                  Upgrades ($)
+                                </th>
+                              </tr>
+                            </thead>
+                            <tbody className="divide-y divide-gray-100">
+                              {quarter.weeks.map((week) => (
+                                <tr
+                                  key={week.weekStart}
+                                  className={cn(
+                                    "transition-colors",
+                                    week.weekStart === weekStart ? "bg-blue-50" : "bg-white"
+                                  )}
+                                >
+                                  <td className="whitespace-nowrap px-4 py-2 font-medium text-gray-900">
+                                    <button
+                                      type="button"
+                                      className="rounded text-left text-blue-700 hover:text-blue-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+                                      onClick={() => void loadWeek(week.weekStart, business)}
+                                    >
+                                      {formatWeekRange(week.weekStart, week.weekEnd)}
+                                    </button>
+                                  </td>
+                                  <td className="px-4 py-2 text-gray-700">{week.stops}</td>
+                                  <td className="px-4 py-2 text-gray-700">{week.dogs}</td>
+                                  <td className="px-4 py-2 text-gray-700">
+                                    {formatMoney(week.pricingCents / 100)}
+                                  </td>
+                                  <td className="px-4 py-2 text-gray-700">
+                                    {formatMoney(week.cashCents / 100)}
+                                  </td>
+                                  <td className="px-4 py-2 text-gray-700">
+                                    {formatMoney(week.groomerPayCents / 100)}
+                                  </td>
+                                  <td className="px-4 py-2 text-gray-700">
+                                    {formatMoney(week.upgradeCents / 100)}
+                                  </td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                      ) : null}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
           </CardContent>
         </Card>
       )}
@@ -989,20 +1185,20 @@ export function PayrollDashboard({
           {isMobileGrooming ? (
             <>
               <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-6">
-                <WeeklyMetric label="Total Stops" value={String(weeklyMobileTotals.stops)} />
-                <WeeklyMetric label="Total Dogs" value={String(weeklyMobileTotals.dogs)} />
+                <WeeklyMetric label="Total Stops" value={String(selectedWeekMobileTotals.stops)} />
+                <WeeklyMetric label="Total Dogs" value={String(selectedWeekMobileTotals.dogs)} />
                 <WeeklyMetric
                   label="Total Pricing"
-                  value={formatMoney(weeklyMobileTotals.pricing)}
+                  value={formatMoney(selectedWeekMobileTotals.pricing)}
                 />
-                <WeeklyMetric label="Cash Total" value={formatMoney(weeklyMobileTotals.cash)} />
+                <WeeklyMetric label="Cash Total" value={formatMoney(selectedWeekMobileTotals.cash)} />
                 <WeeklyMetric
                   label="Groomer Pay"
-                  value={formatMoney(weeklyMobileTotals.groomerPay)}
+                  value={formatMoney(selectedWeekMobileTotals.groomerPay)}
                 />
                 <WeeklyMetric
                   label="Upgrades ($)"
-                  value={formatMoney(weeklyMobileTotals.upgrades)}
+                  value={formatMoney(selectedWeekMobileTotals.upgrades)}
                 />
               </div>
 
