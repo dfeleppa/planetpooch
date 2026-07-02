@@ -20,6 +20,10 @@ export const maxDuration = 120;
 
 const MS_PER_DAY = 86_400_000;
 const PAYROLL_TIME_ZONE = "America/New_York";
+const MOEGO_STAFF_NAME_ALIASES: Record<string, string> = {
+  "debrah r vesce": "Debbie Vesce",
+  "kathleen-isabel valladares-maldonado": "Kathleen Valladares",
+};
 
 type MobilePayrollImportEntry = {
   serviceDate: string;
@@ -114,6 +118,10 @@ function localIsoDate(dateTime: string | undefined): string | null {
 
 function staffDisplayName(staff: MoegoStaffRow): string {
   return normalizeEmployeeName(`${staff.firstName ?? ""} ${staff.lastName ?? ""}`);
+}
+
+function moegoStaffLookupName(employeeName: string): string {
+  return MOEGO_STAFF_NAME_ALIASES[employeeName.toLowerCase()] ?? employeeName;
 }
 
 function nameWords(value: string): string[] {
@@ -368,12 +376,13 @@ export async function POST(req: NextRequest) {
   }
 
   try {
+    const lookupName = moegoStaffLookupName(employeeName);
     const staffs = await listAllStaffs();
     const staff = staffs.find(
       (candidate) =>
         !candidate.deleted &&
         (candidate.workingBusinessIds ?? []).includes(MOBILE_GROOMING_BUSINESS_ID) &&
-        isStaffNameMatch(staffDisplayName(candidate), employeeName)
+        isStaffNameMatch(staffDisplayName(candidate), lookupName)
     );
     if (!staff) {
       return NextResponse.json(
