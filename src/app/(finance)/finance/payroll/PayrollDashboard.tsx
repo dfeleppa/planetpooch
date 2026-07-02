@@ -666,7 +666,8 @@ export function PayrollDashboard({
 
   const loadWeek = useCallback(async (
     selectedWeekStart: string | undefined,
-    selectedBusiness: PayrollBusinessValue
+    selectedBusiness: PayrollBusinessValue,
+    selectedEmployeeName = ""
   ) => {
     setBusiness(selectedBusiness);
     setLoading(true);
@@ -674,6 +675,10 @@ export function PayrollDashboard({
     try {
       const params = new URLSearchParams({ business: selectedBusiness });
       if (selectedWeekStart) params.set("weekStart", selectedWeekStart);
+      const employeeName = normalizeEmployeeName(selectedEmployeeName);
+      if (selectedBusiness === "mobile-grooming" && employeeName) {
+        params.set("employeeName", employeeName);
+      }
       const url = `/api/finance/payroll?${params.toString()}`;
       const response = await fetch(url);
       const data = (await response.json()) as PayrollApiResponse & { error?: string };
@@ -700,6 +705,29 @@ export function PayrollDashboard({
     }
   }, []);
 
+  const loadMobileSummary = useCallback(async (
+    selectedWeekStart: string,
+    selectedEmployeeName: string
+  ) => {
+    setError(null);
+    try {
+      const params = new URLSearchParams({
+        business: "mobile-grooming",
+        weekStart: selectedWeekStart,
+      });
+      const employeeName = normalizeEmployeeName(selectedEmployeeName);
+      if (employeeName) params.set("employeeName", employeeName);
+      const response = await fetch(`/api/finance/payroll?${params.toString()}`);
+      const data = (await response.json()) as PayrollApiResponse & { error?: string };
+      if (!response.ok) throw new Error(data.error || "Could not load payroll totals.");
+
+      setAnnualMobileTotals(data.annualTotals ?? null);
+      setStoredWeeklyMobileTotals(data.weeklyTotals ?? []);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not load payroll totals.");
+    }
+  }, []);
+
   useEffect(() => {
     void loadWeek(lastCompletedWeekStart(), initialBusiness);
   }, [initialBusiness, loadWeek]);
@@ -723,7 +751,12 @@ export function PayrollDashboard({
   }
 
   function addMobileEmployee(employeeName: string) {
-    setSelectedMobileEmployee(normalizeEmployeeName(employeeName));
+    const normalizedEmployeeName = normalizeEmployeeName(employeeName);
+    setWeeklyTotalsEdit(null);
+    setSelectedMobileEmployee(normalizedEmployeeName);
+    if (isMobileGrooming) {
+      void loadMobileSummary(weekStart, normalizedEmployeeName);
+    }
   }
 
   function removeRow(localId: string) {
@@ -894,8 +927,12 @@ export function PayrollDashboard({
         setBusiness(data.week.business);
         setRows(savedRowsToEditable(data.week.rows));
         setMobileEntries(savedMobileEntriesToEditable(data.week.mobileGroomingEntries));
-        setAnnualMobileTotals(data.annualTotals ?? null);
-        setStoredWeeklyMobileTotals(data.weeklyTotals ?? []);
+        if (selectedMobileEmployeeKey) {
+          await loadMobileSummary(data.week.weekStart, selectedMobileEmployee);
+        } else {
+          setAnnualMobileTotals(data.annualTotals ?? null);
+          setStoredWeeklyMobileTotals(data.weeklyTotals ?? []);
+        }
         setSavedWeeks((current) => {
           const summary = {
             id: data.week!.id,
@@ -1156,7 +1193,9 @@ export function PayrollDashboard({
             <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
               <div>
                 <h3 className="text-base font-semibold text-gray-900">
-                  Mobile grooming totals for {annualYear}
+                  {selectedMobileEmployee
+                    ? `${selectedMobileEmployee} totals for ${annualYear}`
+                    : `Mobile grooming totals for ${annualYear}`}
                 </h3>
               </div>
               <div className="inline-flex rounded-lg border border-gray-200 bg-gray-50 p-1">
@@ -1312,7 +1351,9 @@ export function PayrollDashboard({
                                         <button
                                           type="button"
                                           className="rounded text-left text-blue-700 hover:text-blue-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
-                                          onClick={() => void loadWeek(week.weekStart, business)}
+                                          onClick={() =>
+                                            void loadWeek(week.weekStart, business, selectedMobileEmployee)
+                                          }
                                         >
                                           {formatWeekRange(week.weekStart, week.weekEnd)}
                                         </button>
@@ -1403,7 +1444,7 @@ export function PayrollDashboard({
                                       )}
                                     </td>
                                     <td className="whitespace-nowrap px-4 py-2 text-right">
-                                      {edit ? (
+                                      {selectedMobileEmployeeKey ? null : edit ? (
                                         <div className="flex justify-end gap-2">
                                           <button
                                             type="button"
@@ -1512,7 +1553,9 @@ export function PayrollDashboard({
                   id="payroll-week"
                   label="Week"
                   value={weekStart}
-                  onChange={(event) => void loadWeek(event.target.value, business)}
+                  onChange={(event) =>
+                    void loadWeek(event.target.value, business, selectedMobileEmployee)
+                  }
                   disabled={loading || saving}
                 >
                   {weekOptions.map((option) => (

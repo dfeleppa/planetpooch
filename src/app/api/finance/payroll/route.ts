@@ -466,7 +466,8 @@ function emptyAnnualMobileGroomingTotals(year: number): AnnualMobileGroomingTota
 
 async function loadAnnualMobileGroomingTotals(
   business: PayrollBusinessValue,
-  selectedWeekStart: Date | null
+  selectedWeekStart: Date | null,
+  employeeName: string | null = null
 ): Promise<AnnualMobileGroomingTotals> {
   const year = (selectedWeekStart ?? new Date()).getUTCFullYear();
   const totals = emptyAnnualMobileGroomingTotals(year);
@@ -474,44 +475,47 @@ async function loadAnnualMobileGroomingTotals(
 
   const yearStart = new Date(Date.UTC(year, 0, 1));
   const nextYearStart = new Date(Date.UTC(year + 1, 0, 1));
-  const overrides = await prisma.financePayrollWeek.findMany({
-    where: {
-      business,
-      weekStart: {
-        gte: yearStart,
-        lt: nextYearStart,
-      },
-      mobileGroomingWeeklyOverride: {
-        isNot: null,
-      },
-    },
-    select: {
-      mobileGroomingWeeklyOverride: {
-        select: {
-          stops: true,
-          dogs: true,
-          pricingCents: true,
-          cashCents: true,
-          creditCardTipCents: true,
-          upgradeCents: true,
+  if (!employeeName) {
+    const overrides = await prisma.financePayrollWeek.findMany({
+      where: {
+        business,
+        weekStart: {
+          gte: yearStart,
+          lt: nextYearStart,
+        },
+        mobileGroomingWeeklyOverride: {
+          isNot: null,
         },
       },
-    },
-  });
-  for (const week of overrides) {
-    const override = week.mobileGroomingWeeklyOverride;
-    if (!override) continue;
-    totals.stops += override.stops;
-    totals.dogs += override.dogs;
-    totals.pricingCents += override.pricingCents;
-    totals.cashCents += override.cashCents;
-    totals.creditCardTipCents += override.creditCardTipCents;
-    totals.groomerPayCents += mobileWeeklyGroomerPayCents(override);
-    totals.upgradeCents += override.upgradeCents;
+      select: {
+        mobileGroomingWeeklyOverride: {
+          select: {
+            stops: true,
+            dogs: true,
+            pricingCents: true,
+            cashCents: true,
+            creditCardTipCents: true,
+            upgradeCents: true,
+          },
+        },
+      },
+    });
+    for (const week of overrides) {
+      const override = week.mobileGroomingWeeklyOverride;
+      if (!override) continue;
+      totals.stops += override.stops;
+      totals.dogs += override.dogs;
+      totals.pricingCents += override.pricingCents;
+      totals.cashCents += override.cashCents;
+      totals.creditCardTipCents += override.creditCardTipCents;
+      totals.groomerPayCents += mobileWeeklyGroomerPayCents(override);
+      totals.upgradeCents += override.upgradeCents;
+    }
   }
 
   const entries = await prisma.financeMobileGroomingPayrollEntry.findMany({
     where: {
+      ...(employeeName ? { employeeName } : {}),
       serviceDate: {
         gte: yearStart,
         lt: nextYearStart,
@@ -538,7 +542,7 @@ async function loadAnnualMobileGroomingTotals(
   });
 
   for (const entry of entries) {
-    if (entry.payrollWeek.mobileGroomingWeeklyOverride) continue;
+    if (!employeeName && entry.payrollWeek.mobileGroomingWeeklyOverride) continue;
     const totalPriceCents = entry.priceCents + entry.upgradeCents - entry.discountCents;
     const groomerPayCents = mobileGroomerPayCents(entry);
     totals.stops += 1;
@@ -555,7 +559,8 @@ async function loadAnnualMobileGroomingTotals(
 
 async function loadWeeklyMobileGroomingTotals(
   business: PayrollBusinessValue,
-  selectedWeekStart: Date | null
+  selectedWeekStart: Date | null,
+  employeeName: string | null = null
 ): Promise<WeeklyMobileGroomingTotals[]> {
   if (business !== "mobile-grooming") return [];
 
@@ -585,6 +590,7 @@ async function loadWeeklyMobileGroomingTotals(
         },
       },
       mobileGroomingEntries: {
+        where: employeeName ? { employeeName } : undefined,
         select: {
           paymentType: true,
           dogs: true,
@@ -608,10 +614,10 @@ async function loadWeeklyMobileGroomingTotals(
       creditCardTipCents: 0,
       groomerPayCents: 0,
       upgradeCents: 0,
-      override: Boolean(week.mobileGroomingWeeklyOverride),
+      override: !employeeName && Boolean(week.mobileGroomingWeeklyOverride),
     };
 
-    if (week.mobileGroomingWeeklyOverride) {
+    if (!employeeName && week.mobileGroomingWeeklyOverride) {
       const override = week.mobileGroomingWeeklyOverride;
       totals.stops = override.stops;
       totals.dogs = override.dogs;
@@ -658,9 +664,21 @@ export async function GET(req: NextRequest) {
 
   const requestedWeekStart = parseDateParam(req.nextUrl.searchParams.get("weekStart"));
   const selectedWeekStart = requestedWeekStart ?? weeks[0]?.weekStart ?? null;
+  const employeeName =
+    business === "mobile-grooming"
+      ? normalizeEmployeeName(req.nextUrl.searchParams.get("employeeName") ?? "") || null
+      : null;
   const week = await findWeekWithRows(business, selectedWeekStart);
-  const annualTotals = await loadAnnualMobileGroomingTotals(business, selectedWeekStart);
-  const weeklyTotals = await loadWeeklyMobileGroomingTotals(business, selectedWeekStart);
+  const annualTotals = await loadAnnualMobileGroomingTotals(
+    business,
+    selectedWeekStart,
+    employeeName
+  );
+  const weeklyTotals = await loadWeeklyMobileGroomingTotals(
+    business,
+    selectedWeekStart,
+    employeeName
+  );
 
   return NextResponse.json({
     business,
