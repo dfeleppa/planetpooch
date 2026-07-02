@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { ChangeEvent, useCallback, useEffect, useMemo, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -17,6 +18,7 @@ import {
 import {
   PAYROLL_CATEGORIES,
   PAYROLL_CATEGORY_LABELS,
+  PAYROLL_BUSINESSES,
   DEFAULT_PAYROLL_BUSINESS,
   categoryForEmployee,
   decimalPayrollHours,
@@ -101,6 +103,11 @@ export type PayrollEmployeeOption = {
 };
 
 const EMPTY_EMPLOYEE_OPTIONS: PayrollEmployeeOption[] = [];
+
+const PAYROLL_BUSINESS_HREFS: Record<PayrollBusinessValue, string> = {
+  "pet-resort": "/finance/payroll",
+  "mobile-grooming": "/finance/payroll/mobile-grooming",
+};
 
 type ImportRow = {
   employeeName?: unknown;
@@ -709,6 +716,25 @@ export function PayrollDashboard({
 
   return (
     <div className={cn("space-y-5", loading && "opacity-70")}>
+      <div>
+        <p className="mb-1 text-sm font-medium text-gray-700">Business</p>
+        <nav className="pp-tabs" aria-label="Payroll business">
+          {PAYROLL_BUSINESSES.map((option) => {
+            const active = business === option.value;
+            return (
+              <Link
+                key={option.value}
+                href={PAYROLL_BUSINESS_HREFS[option.value]}
+                className={cn("pp-tab", active && "is-on")}
+                aria-current={active ? "page" : undefined}
+              >
+                {option.label}
+              </Link>
+            );
+          })}
+        </nav>
+      </div>
+
       <div>
         <h2 className="text-xl font-semibold text-gray-900">Payroll</h2>
         <p className="mt-1 text-gray-500">
