@@ -507,6 +507,9 @@ export function PayrollDashboard({
   const mobileEmployeeChoicesUnavailable = isMobileGrooming && employeeOptions.length === 0;
   const mobileEmployeePlaceholder =
     employeeOptions.length === 0 ? "No employees available" : "Select employee";
+  const selectedMobileEmployeeKey = normalizeEmployeeName(
+    selectedMobileEmployee
+  ).toLocaleLowerCase();
   const weekDays = useMemo(
     () =>
       Array.from({ length: 7 }, (_, index) => {
@@ -578,8 +581,17 @@ export function PayrollDashboard({
     };
   }, [business, rows]);
 
+  const visibleMobileEntries = useMemo(() => {
+    if (!selectedMobileEmployeeKey) return mobileEntries;
+    return mobileEntries.filter(
+      (entry) =>
+        normalizeEmployeeName(entry.employeeName).toLocaleLowerCase() ===
+        selectedMobileEmployeeKey
+    );
+  }, [mobileEntries, selectedMobileEmployeeKey]);
+
   const selectedWeekMobileTotals = useMemo(() => {
-    return mobileEntries.reduce(
+    return visibleMobileEntries.reduce(
       (total, entry) => {
         const totalPrice = mobileEntryTotalPrice(entry);
         total.stops += 1;
@@ -603,7 +615,7 @@ export function PayrollDashboard({
         upgrades: 0,
       }
     );
-  }, [mobileEntries]);
+  }, [visibleMobileEntries]);
 
   const annualYear = annualMobileTotals?.year ?? dateFromParam(weekStart).getUTCFullYear();
   const mobileQuarterGroups = useMemo(() => {
@@ -1573,7 +1585,7 @@ export function PayrollDashboard({
               {mobileStopsOpen ? (
                 <div className="grid gap-3">
                   {weekDays.map((day) => {
-                    const dayEntries = mobileEntries.filter(
+                    const dayEntries = visibleMobileEntries.filter(
                       (entry) => entry.serviceDate === day.value
                     );
                     const dayTotal = dayEntries.reduce(
