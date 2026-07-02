@@ -297,6 +297,37 @@ export type MoegoOrderRow = {
   completedTime?: string;
 };
 
+export type MoegoPaymentRow = {
+  id: string;
+  businessId?: string;
+  orderId?: string;
+  customerId?: string;
+  customerName?: string;
+  method?: string;
+  status?: string;
+  module?: string;
+  amount?: MoegoMoney;
+  processingFee?: MoegoMoney;
+  refundAmount?: MoegoMoney;
+  createdTime?: string;
+  lastUpdatedTime?: string;
+};
+
+export type MoegoStaffRow = {
+  id: string;
+  firstName?: string;
+  lastName?: string;
+  email?: string;
+  role?: {
+    id?: string;
+    name?: string;
+  };
+  workingBusinessIds?: string[];
+  mobileVanId?: string;
+  companyId?: string;
+  deleted?: boolean;
+};
+
 export type MoegoAppointmentServiceDetail = {
   id?: string;
   name?: string;
@@ -304,6 +335,7 @@ export type MoegoAppointmentServiceDetail = {
   serviceItemType?: string;
   serviceType?: string;
   category?: string;
+  staffIds?: string[];
 };
 
 export type MoegoAppointmentPetServiceDetail = {
@@ -432,6 +464,20 @@ export function streamOrders(
     filters,
     { businessIds }
   );
+}
+
+export function streamPayments(filters: {
+  orderIds?: string[];
+}): AsyncGenerator<MoegoPaymentRow[]> {
+  return listPages<"payments", MoegoPaymentRow>(
+    "/payments:list",
+    "payments",
+    filters
+  );
+}
+
+export function streamStaffs(): AsyncGenerator<MoegoStaffRow[]> {
+  return listPages<"staffs", MoegoStaffRow>("/staffs:list", "staffs");
 }
 
 export function streamAppointments(

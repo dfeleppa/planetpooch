@@ -1008,6 +1008,7 @@ model FinancePayrollWeek {
 
   rows                  FinancePayrollEmployeeHours[]
   mobileGroomingEntries FinanceMobileGroomingPayrollEntry[]
+  mobileGroomingWeeklyOverride FinanceMobileGroomingWeeklyOverride?
 
   @@unique([business, weekStart])
   @@index([business, weekStart, weekEnd])
@@ -1051,6 +1052,23 @@ model FinanceMobileGroomingPayrollEntry {
 
   @@index([payrollWeekId, serviceDate])
   @@index([employeeName])
+}
+
+model FinanceMobileGroomingWeeklyOverride {
+  id                 String   @id @default(cuid())
+  payrollWeekId      String   @unique
+  stops              Int      @default(0)
+  dogs               Int      @default(0)
+  pricingCents       Int      @default(0)
+  cashCents          Int      @default(0)
+  creditCardTipCents Int      @default(0)
+  upgradeCents       Int      @default(0)
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  payrollWeek FinancePayrollWeek @relation(fields: [payrollWeekId], references: [id], onDelete: Cascade)
+
+  @@index([payrollWeekId])
 }
 
 // Weekly KPI reports per business segment. One weekStart = one report; both

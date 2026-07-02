@@ -47,6 +47,23 @@ type MobileGroomingEntryPayload = {
   discountCents?: unknown;
 };
 
+type MobileWeeklyOverridePayload = {
+  stops?: unknown;
+  dogs?: unknown;
+  totalPricing?: unknown;
+  pricing?: unknown;
+  pricingCents?: unknown;
+  cashTotal?: unknown;
+  cash?: unknown;
+  cashCents?: unknown;
+  creditCardTip?: unknown;
+  creditCardTips?: unknown;
+  creditCardTipCents?: unknown;
+  upgradeAmount?: unknown;
+  upgrades?: unknown;
+  upgradeCents?: unknown;
+};
+
 type AnnualMobileGroomingTotals = {
   year: number;
   stops: number;
@@ -61,6 +78,7 @@ type AnnualMobileGroomingTotals = {
 type WeeklyMobileGroomingTotals = Omit<AnnualMobileGroomingTotals, "year"> & {
   weekStart: string;
   weekEnd: string;
+  override: boolean;
 };
 
 function unauthorized() {
@@ -140,6 +158,15 @@ function mobileGroomerPayCents(entry: {
     entry.priceCents + entry.upgradeCents - entry.dogs * 500
   );
   return Math.round(commissionBaseCents * 0.4) + entry.creditCardTipCents;
+}
+
+function mobileWeeklyGroomerPayCents(total: {
+  dogs: number;
+  pricingCents: number;
+  creditCardTipCents: number;
+}) {
+  const commissionBaseCents = Math.max(0, total.pricingCents - total.dogs * 500);
+  return Math.round(commissionBaseCents * 0.4) + total.creditCardTipCents;
 }
 
 function asNumber(value: unknown): number | null {
@@ -242,6 +269,30 @@ function normalizeMobileGroomingEntries(rawEntries: unknown, weekStart: Date, we
   }
 
   return { entries };
+}
+
+function normalizeMobileWeeklyOverride(rawOverride: unknown) {
+  const override = rawOverride as MobileWeeklyOverridePayload | null | undefined;
+  if (!override || typeof override !== "object") {
+    return { error: "weeklyTotals are required" as const };
+  }
+
+  return {
+    totals: {
+      stops: Math.max(0, Math.round(asNumber(override.stops) ?? 0)),
+      dogs: Math.max(0, Math.round(asNumber(override.dogs) ?? 0)),
+      pricingCents: centsFromPayload(override.pricingCents, override.totalPricing ?? override.pricing),
+      cashCents: centsFromPayload(override.cashCents, override.cashTotal ?? override.cash),
+      creditCardTipCents: centsFromPayload(
+        override.creditCardTipCents,
+        override.creditCardTips ?? override.creditCardTip
+      ),
+      upgradeCents: centsFromPayload(
+        override.upgradeCents,
+        override.upgradeAmount ?? override.upgrades
+      ),
+    },
+  };
 }
 
 function normalizeRows(rawRows: unknown, business: PayrollBusinessValue) {
@@ -423,6 +474,42 @@ async function loadAnnualMobileGroomingTotals(
 
   const yearStart = new Date(Date.UTC(year, 0, 1));
   const nextYearStart = new Date(Date.UTC(year + 1, 0, 1));
+  const overrides = await prisma.financePayrollWeek.findMany({
+    where: {
+      business,
+      weekStart: {
+        gte: yearStart,
+        lt: nextYearStart,
+      },
+      mobileGroomingWeeklyOverride: {
+        isNot: null,
+      },
+    },
+    select: {
+      mobileGroomingWeeklyOverride: {
+        select: {
+          stops: true,
+          dogs: true,
+          pricingCents: true,
+          cashCents: true,
+          creditCardTipCents: true,
+          upgradeCents: true,
+        },
+      },
+    },
+  });
+  for (const week of overrides) {
+    const override = week.mobileGroomingWeeklyOverride;
+    if (!override) continue;
+    totals.stops += override.stops;
+    totals.dogs += override.dogs;
+    totals.pricingCents += override.pricingCents;
+    totals.cashCents += override.cashCents;
+    totals.creditCardTipCents += override.creditCardTipCents;
+    totals.groomerPayCents += mobileWeeklyGroomerPayCents(override);
+    totals.upgradeCents += override.upgradeCents;
+  }
+
   const entries = await prisma.financeMobileGroomingPayrollEntry.findMany({
     where: {
       serviceDate: {
@@ -440,10 +527,18 @@ async function loadAnnualMobileGroomingTotals(
       upgradeCents: true,
       creditCardTipCents: true,
       discountCents: true,
+      payrollWeek: {
+        select: {
+          mobileGroomingWeeklyOverride: {
+            select: { id: true },
+          },
+        },
+      },
     },
   });
 
   for (const entry of entries) {
+    if (entry.payrollWeek.mobileGroomingWeeklyOverride) continue;
     const totalPriceCents = entry.priceCents + entry.upgradeCents - entry.discountCents;
     const groomerPayCents = mobileGroomerPayCents(entry);
     totals.stops += 1;
@@ -479,6 +574,16 @@ async function loadWeeklyMobileGroomingTotals(
     select: {
       weekStart: true,
       weekEnd: true,
+      mobileGroomingWeeklyOverride: {
+        select: {
+          stops: true,
+          dogs: true,
+          pricingCents: true,
+          cashCents: true,
+          creditCardTipCents: true,
+          upgradeCents: true,
+        },
+      },
       mobileGroomingEntries: {
         select: {
           paymentType: true,
@@ -503,7 +608,20 @@ async function loadWeeklyMobileGroomingTotals(
       creditCardTipCents: 0,
       groomerPayCents: 0,
       upgradeCents: 0,
+      override: Boolean(week.mobileGroomingWeeklyOverride),
     };
+
+    if (week.mobileGroomingWeeklyOverride) {
+      const override = week.mobileGroomingWeeklyOverride;
+      totals.stops = override.stops;
+      totals.dogs = override.dogs;
+      totals.pricingCents = override.pricingCents;
+      totals.cashCents = override.cashCents;
+      totals.creditCardTipCents = override.creditCardTipCents;
+      totals.groomerPayCents = mobileWeeklyGroomerPayCents(override);
+      totals.upgradeCents = override.upgradeCents;
+      return totals;
+    }
 
     for (const entry of week.mobileGroomingEntries) {
       const totalPriceCents = entry.priceCents + entry.upgradeCents - entry.discountCents;
@@ -611,6 +729,9 @@ async function savePayroll(req: NextRequest) {
     await tx.financeMobileGroomingPayrollEntry.deleteMany({
       where: { payrollWeekId: savedWeek.id },
     });
+    await tx.financeMobileGroomingWeeklyOverride.deleteMany({
+      where: { payrollWeekId: savedWeek.id },
+    });
 
     if (normalized.rows.length > 0) {
       await tx.financePayrollEmployeeHours.createMany({
@@ -658,6 +779,55 @@ async function savePayroll(req: NextRequest) {
   const annualTotals = await loadAnnualMobileGroomingTotals(business, weekDates.weekStart);
   const weeklyTotals = await loadWeeklyMobileGroomingTotals(business, weekDates.weekStart);
   return NextResponse.json({ week: serializeWeek(week), annualTotals, weeklyTotals });
+}
+
+export async function PATCH(req: NextRequest) {
+  if (!(await canAccessPayroll())) return unauthorized();
+
+  const body = await req.json();
+  const payload = (body?.payrollUpload ?? body) as Record<string, unknown>;
+  const business = cleanPayrollBusiness(payload.business);
+  if (business !== "mobile-grooming") {
+    return NextResponse.json({ error: "Weekly overrides are only for mobile grooming" }, { status: 400 });
+  }
+
+  const weekDates = parseWeekDates(payload);
+  if ("error" in weekDates) {
+    return NextResponse.json({ error: weekDates.error }, { status: 400 });
+  }
+
+  const normalizedOverride = normalizeMobileWeeklyOverride(
+    payload.weeklyTotals ?? payload.mobileWeeklyTotals
+  );
+  if ("error" in normalizedOverride) {
+    return NextResponse.json({ error: normalizedOverride.error }, { status: 400 });
+  }
+
+  const week = await prisma.financePayrollWeek.upsert({
+    where: { business_weekStart: { business, weekStart: weekDates.weekStart } },
+    update: {
+      weekEnd: weekDates.weekEnd,
+    },
+    create: {
+      business,
+      weekStart: weekDates.weekStart,
+      weekEnd: weekDates.weekEnd,
+    },
+  });
+
+  await prisma.financeMobileGroomingWeeklyOverride.upsert({
+    where: { payrollWeekId: week.id },
+    update: normalizedOverride.totals,
+    create: {
+      payrollWeekId: week.id,
+      ...normalizedOverride.totals,
+    },
+  });
+
+  const selectedWeek = await findWeekWithRows(business, weekDates.weekStart);
+  const annualTotals = await loadAnnualMobileGroomingTotals(business, weekDates.weekStart);
+  const weeklyTotals = await loadWeeklyMobileGroomingTotals(business, weekDates.weekStart);
+  return NextResponse.json({ week: serializeWeek(selectedWeek), annualTotals, weeklyTotals });
 }
 
 export async function PUT(req: NextRequest) {
