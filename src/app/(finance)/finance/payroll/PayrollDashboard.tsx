@@ -71,10 +71,21 @@ type SavedPayrollWeek = {
   mobileGroomingEntries: SavedMobileGroomingEntry[];
 };
 
+type AnnualMobileGroomingTotals = {
+  year: number;
+  stops: number;
+  dogs: number;
+  pricingCents: number;
+  cashCents: number;
+  groomerPayCents: number;
+  upgradeCents: number;
+};
+
 type PayrollApiResponse = {
   business: PayrollBusinessValue;
   weeks: SavedWeekSummary[];
   week: SavedPayrollWeek | null;
+  annualTotals?: AnnualMobileGroomingTotals;
 };
 
 type EditableRow = {
@@ -136,12 +147,17 @@ function addDaysParam(value: string, days: number): string {
   return toDateParam(new Date(dateFromParam(value).getTime() + days * MS_PER_DAY));
 }
 
+function isSaturdayWeekStart(value: string): boolean {
+  return dateFromParam(value).getUTCDay() === 6;
+}
+
 function lastCompletedWeekStart() {
   const today = new Date();
   const localTodayUtc = new Date(Date.UTC(today.getFullYear(), today.getMonth(), today.getDate()));
-  const currentSunday = new Date(localTodayUtc);
-  currentSunday.setUTCDate(localTodayUtc.getUTCDate() - localTodayUtc.getUTCDay());
-  return toDateParam(new Date(currentSunday.getTime() - 7 * MS_PER_DAY));
+  const daysSinceSaturday = (localTodayUtc.getUTCDay() + 1) % 7;
+  const currentSaturday = new Date(localTodayUtc);
+  currentSaturday.setUTCDate(localTodayUtc.getUTCDate() - daysSinceSaturday);
+  return toDateParam(new Date(currentSaturday.getTime() - 7 * MS_PER_DAY));
 }
 
 function recentCompletedWeeks(count = 26): string[] {
@@ -353,10 +369,6 @@ function secondsFromEditable(row: EditableRow): number {
   return Math.round(rowDecimalHours(row) * 3600);
 }
 
-function mobileEntryDogs(entry: EditableMobileGroomingEntry): number {
-  return Math.max(0, Math.round(Number(entry.dogs) || 0));
-}
-
 export function PayrollDashboard({
   employeeOptionsByBusiness = {},
   initialBusiness = DEFAULT_PAYROLL_BUSINESS,
@@ -369,7 +381,10 @@ export function PayrollDashboard({
   const [weekStart, setWeekStart] = useState(lastCompletedWeekStart);
   const [rows, setRows] = useState<EditableRow[]>([]);
   const [mobileEntries, setMobileEntries] = useState<EditableMobileGroomingEntry[]>([]);
+  const [annualMobileTotals, setAnnualMobileTotals] =
+    useState<AnnualMobileGroomingTotals | null>(null);
   const [selectedMobileEmployee, setSelectedMobileEmployee] = useState("");
+  const [mobileStopsOpen, setMobileStopsOpen] = useState(true);
   const [importText, setImportText] = useState("");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -403,6 +418,7 @@ export function PayrollDashboard({
   const weekOptions = useMemo(() => {
     const byStart = new Map<string, { weekStart: string; weekEnd: string; stored: boolean }>();
     for (const week of savedWeeks) {
+      if (!isSaturdayWeekStart(week.weekStart)) continue;
       byStart.set(week.weekStart, {
         weekStart: week.weekStart,
         weekEnd: week.weekEnd,
@@ -452,12 +468,12 @@ export function PayrollDashboard({
     };
   }, [business, rows]);
 
-  const mobileTotals = useMemo(() => {
+  const weeklyMobileTotals = useMemo(() => {
     return mobileEntries.reduce(
       (total, entry) => {
         const totalPrice = mobileEntryTotalPrice(entry);
         total.stops += 1;
-        total.dogs += mobileEntryDogs(entry);
+        total.dogs += Math.max(0, Math.round(Number(entry.dogs) || 0));
         total.pricing += totalPrice;
         total.cash += entry.paymentType === "cash" ? totalPrice : 0;
         total.groomerPay += mobileEntryGroomerPay(entry);
@@ -475,6 +491,8 @@ export function PayrollDashboard({
     );
   }, [mobileEntries]);
 
+  const annualYear = annualMobileTotals?.year ?? dateFromParam(weekStart).getUTCFullYear();
+
   const loadWeek = useCallback(async (
     selectedWeekStart: string | undefined,
     selectedBusiness: PayrollBusinessValue
@@ -491,6 +509,7 @@ export function PayrollDashboard({
       if (!response.ok) throw new Error(data.error || "Could not load payroll.");
 
       setSavedWeeks(data.weeks);
+      setAnnualMobileTotals(data.annualTotals ?? null);
       setBusiness(data.week?.business ?? data.business ?? selectedBusiness);
       if (data.week) {
         setWeekStart(data.week.weekStart);
@@ -510,7 +529,7 @@ export function PayrollDashboard({
   }, []);
 
   useEffect(() => {
-    void loadWeek(undefined, initialBusiness);
+    void loadWeek(lastCompletedWeekStart(), initialBusiness);
   }, [initialBusiness, loadWeek]);
 
   function updateRow(localId: string, patch: Partial<EditableRow>) {
@@ -632,13 +651,18 @@ export function PayrollDashboard({
             mobileEntries: cleanEntries,
           }),
         });
-        const data = (await response.json()) as { week?: SavedPayrollWeek; error?: string };
+        const data = (await response.json()) as {
+          week?: SavedPayrollWeek;
+          annualTotals?: AnnualMobileGroomingTotals;
+          error?: string;
+        };
         if (!response.ok || !data.week) throw new Error(data.error || "Could not save payroll.");
 
         setWeekStart(data.week.weekStart);
         setBusiness(data.week.business);
         setRows(savedRowsToEditable(data.week.rows));
         setMobileEntries(savedMobileEntriesToEditable(data.week.mobileGroomingEntries));
+        setAnnualMobileTotals(data.annualTotals ?? null);
         setSavedWeeks((current) => {
           const summary = {
             id: data.week!.id,
@@ -825,38 +849,44 @@ export function PayrollDashboard({
       )}
 
       {isMobileGrooming && (
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-6">
-          <SummaryCard
-            label="Total Stops"
-            value={String(mobileTotals.stops)}
-            detail="this week"
-          />
-          <SummaryCard
-            label="Total Dogs"
-            value={String(mobileTotals.dogs)}
-            detail="all stops"
-          />
-          <SummaryCard
-            label="Total Pricing"
-            value={formatMoney(mobileTotals.pricing)}
-            detail="after discounts"
-          />
-          <SummaryCard
-            label="Cash Total"
-            value={formatMoney(mobileTotals.cash)}
-            detail="cash stops"
-          />
-          <SummaryCard
-            label="Groomer Pay"
-            value={formatMoney(mobileTotals.groomerPay)}
-            detail="weekly total"
-          />
-          <SummaryCard
-            label="Upgrades ($)"
-            value={formatMoney(mobileTotals.upgrades)}
-            detail="upgrade sales"
-          />
-        </div>
+        <Card>
+          <CardContent className="space-y-4">
+            <div>
+              <p className="text-xs font-medium uppercase tracking-[0.08em] text-gray-500">
+                Annual
+              </p>
+              <h3 className="mt-1 text-base font-semibold text-gray-900">
+                Mobile grooming totals for {annualYear}
+              </h3>
+            </div>
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-6">
+              <AnnualMetric
+                label="Total Stops"
+                value={String(annualMobileTotals?.stops ?? 0)}
+              />
+              <AnnualMetric
+                label="Total Dogs"
+                value={String(annualMobileTotals?.dogs ?? 0)}
+              />
+              <AnnualMetric
+                label="Total Pricing"
+                value={formatMoney((annualMobileTotals?.pricingCents ?? 0) / 100)}
+              />
+              <AnnualMetric
+                label="Cash Total"
+                value={formatMoney((annualMobileTotals?.cashCents ?? 0) / 100)}
+              />
+              <AnnualMetric
+                label="Groomer Pay"
+                value={formatMoney((annualMobileTotals?.groomerPayCents ?? 0) / 100)}
+              />
+              <AnnualMetric
+                label="Upgrades ($)"
+                value={formatMoney((annualMobileTotals?.upgradeCents ?? 0) / 100)}
+              />
+            </div>
+          </CardContent>
+        </Card>
       )}
 
       {!isMobileGrooming && (
@@ -875,7 +905,7 @@ export function PayrollDashboard({
                   value={importText}
                   onChange={(event) => setImportText(event.target.value)}
                   className="mt-1 block min-h-[90px] w-full rounded-lg border border-gray-300 px-3 py-2 text-sm shadow-sm placeholder:text-gray-400 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                  placeholder='{"weekStart":"2026-06-07","weekEnd":"2026-06-13","rows":[...]}'
+                  placeholder='{"weekStart":"2026-06-06","weekEnd":"2026-06-12","rows":[...]}'
                 />
               </div>
               <div className="flex flex-wrap gap-2">
@@ -917,7 +947,7 @@ export function PayrollDashboard({
               {isMobileGrooming ? "Mobile grooming stops" : "Employee hours"}
             </h2>
             {isMobileGrooming ? (
-              <div className="grid w-full gap-3 md:max-w-lg md:grid-cols-[minmax(220px,1fr)_auto] md:items-end">
+              <div className="grid w-full gap-3 md:max-w-2xl md:grid-cols-[minmax(220px,1fr)_auto_auto] md:items-end">
                 <Select
                   id="payroll-week"
                   label="Week"
@@ -935,6 +965,13 @@ export function PayrollDashboard({
                 <Button type="button" onClick={savePayroll} disabled={loading || saving}>
                   {saving ? "Saving..." : "Save payroll"}
                 </Button>
+                <Button
+                  type="button"
+                  variant="secondary"
+                  onClick={() => setMobileStopsOpen((current) => !current)}
+                >
+                  {mobileStopsOpen ? "Collapse" : "Expand"}
+                </Button>
               </div>
             ) : (
               <Button
@@ -950,59 +987,83 @@ export function PayrollDashboard({
           </div>
 
           {isMobileGrooming ? (
-            <div className="grid gap-3">
-              {weekDays.map((day) => {
-                const dayEntries = mobileEntries.filter((entry) => entry.serviceDate === day.value);
-                const dayTotal = dayEntries.reduce(
-                  (sum, entry) => sum + mobileEntryTotalPrice(entry),
-                  0
-                );
-                const dayPay = dayEntries.reduce(
-                  (sum, entry) => sum + mobileEntryGroomerPay(entry),
-                  0
-                );
-                return (
-                  <div key={day.value} className="rounded-lg border border-gray-200 bg-white">
-                    <div className="flex flex-col gap-3 border-b border-gray-100 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
-                      <div>
-                        <h3 className="text-sm font-semibold text-gray-900">{day.label}</h3>
-                        <p className="text-xs text-gray-500">
-                          {dayEntries.length} stops · {formatMoney(dayTotal)} total ·{" "}
-                          {formatMoney(dayPay)} groomer pay
-                        </p>
-                      </div>
-                      <Button
-                        type="button"
-                        size="sm"
-                        variant="secondary"
-                        onClick={() => addMobileEntry(day.value)}
-                        disabled={saving || mobileEmployeeChoicesUnavailable}
-                      >
-                        + Stop
-                      </Button>
-                    </div>
+            <>
+              <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-6">
+                <WeeklyMetric label="Total Stops" value={String(weeklyMobileTotals.stops)} />
+                <WeeklyMetric label="Total Dogs" value={String(weeklyMobileTotals.dogs)} />
+                <WeeklyMetric
+                  label="Total Pricing"
+                  value={formatMoney(weeklyMobileTotals.pricing)}
+                />
+                <WeeklyMetric label="Cash Total" value={formatMoney(weeklyMobileTotals.cash)} />
+                <WeeklyMetric
+                  label="Groomer Pay"
+                  value={formatMoney(weeklyMobileTotals.groomerPay)}
+                />
+                <WeeklyMetric
+                  label="Upgrades ($)"
+                  value={formatMoney(weeklyMobileTotals.upgrades)}
+                />
+              </div>
 
-                    {dayEntries.length === 0 ? (
-                      <p className="px-4 py-6 text-center text-sm text-gray-500">
-                        No stops for this day.
-                      </p>
-                    ) : (
-                      <div className="divide-y divide-gray-100">
-                        {dayEntries.map((entry) => (
-                          <MobileGroomingEntryEditor
-                            key={entry.localId}
-                            entry={entry}
-                            saving={saving}
-                            onChange={(patch) => updateMobileEntry(entry.localId, patch)}
-                            onRemove={() => removeMobileEntry(entry.localId)}
-                          />
-                        ))}
+              {mobileStopsOpen ? (
+                <div className="grid gap-3">
+                  {weekDays.map((day) => {
+                    const dayEntries = mobileEntries.filter(
+                      (entry) => entry.serviceDate === day.value
+                    );
+                    const dayTotal = dayEntries.reduce(
+                      (sum, entry) => sum + mobileEntryTotalPrice(entry),
+                      0
+                    );
+                    const dayPay = dayEntries.reduce(
+                      (sum, entry) => sum + mobileEntryGroomerPay(entry),
+                      0
+                    );
+                    return (
+                      <div key={day.value} className="rounded-lg border border-gray-200 bg-white">
+                        <div className="flex flex-col gap-3 border-b border-gray-100 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+                          <div>
+                            <h3 className="text-sm font-semibold text-gray-900">{day.label}</h3>
+                            <p className="text-xs text-gray-500">
+                              {dayEntries.length} stops · {formatMoney(dayTotal)} total ·{" "}
+                              {formatMoney(dayPay)} groomer pay
+                            </p>
+                          </div>
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="secondary"
+                            onClick={() => addMobileEntry(day.value)}
+                            disabled={saving || mobileEmployeeChoicesUnavailable}
+                          >
+                            + Stop
+                          </Button>
+                        </div>
+
+                        {dayEntries.length === 0 ? (
+                          <p className="px-4 py-6 text-center text-sm text-gray-500">
+                            No stops for this day.
+                          </p>
+                        ) : (
+                          <div className="divide-y divide-gray-100">
+                            {dayEntries.map((entry) => (
+                              <MobileGroomingEntryEditor
+                                key={entry.localId}
+                                entry={entry}
+                                saving={saving}
+                                onChange={(patch) => updateMobileEntry(entry.localId, patch)}
+                                onRemove={() => removeMobileEntry(entry.localId)}
+                              />
+                            ))}
+                          </div>
+                        )}
                       </div>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
+                    );
+                  })}
+                </div>
+              ) : null}
+            </>
           ) : (
             <Table>
               <TableHead>
@@ -1231,6 +1292,28 @@ function CalculatedValue({ label, value }: { label: string; value: string }) {
       <p className="mt-1 rounded-md bg-gray-50 px-2.5 py-1.5 text-sm font-semibold text-gray-900">
         {value}
       </p>
+    </div>
+  );
+}
+
+function AnnualMetric({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-lg border border-gray-200 bg-gray-50 px-4 py-3">
+      <p className="text-xs font-medium uppercase tracking-[0.08em] text-gray-500">
+        {label}
+      </p>
+      <p className="mt-1 text-2xl font-bold text-gray-900">{value}</p>
+    </div>
+  );
+}
+
+function WeeklyMetric({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-lg border border-gray-200 px-3 py-2">
+      <p className="text-xs font-medium uppercase tracking-[0.06em] text-gray-500">
+        {label}
+      </p>
+      <p className="mt-1 text-lg font-semibold text-gray-900">{value}</p>
     </div>
   );
 }
