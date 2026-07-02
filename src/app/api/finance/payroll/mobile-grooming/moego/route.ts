@@ -124,13 +124,56 @@ function nameWords(value: string): string[] {
     .filter((word) => word.length > 1);
 }
 
+function isEditDistanceAtMostOne(left: string, right: string): boolean {
+  if (left === right) return true;
+  if (Math.abs(left.length - right.length) > 1) return false;
+
+  if (left.length === right.length) {
+    let differences = 0;
+    for (let index = 0; index < left.length; index++) {
+      if (left[index] !== right[index]) differences++;
+      if (differences > 1) return false;
+    }
+    return true;
+  }
+
+  const shorter = left.length < right.length ? left : right;
+  const longer = left.length < right.length ? right : left;
+  let shorterIndex = 0;
+  let longerIndex = 0;
+  let differences = 0;
+
+  while (shorterIndex < shorter.length && longerIndex < longer.length) {
+    if (shorter[shorterIndex] === longer[longerIndex]) {
+      shorterIndex++;
+      longerIndex++;
+      continue;
+    }
+    differences++;
+    if (differences > 1) return false;
+    longerIndex++;
+  }
+
+  return true;
+}
+
+function isSurnameWordMatch(staffWord: string, employeeWord: string): boolean {
+  if (staffWord === employeeWord) return true;
+  if (Math.min(staffWord.length, employeeWord.length) < 5) return false;
+  return isEditDistanceAtMostOne(staffWord, employeeWord);
+}
+
 function isStaffNameMatch(staffName: string, employeeName: string): boolean {
   const staffWords = nameWords(staffName);
   const employeeWords = nameWords(employeeName);
   if (staffWords.length === 0 || employeeWords.length === 0) return false;
   if (staffWords.join(" ") === employeeWords.join(" ")) return true;
-  const staffSet = new Set(staffWords);
-  return employeeWords.every((word) => staffSet.has(word));
+  if (!staffWords.includes(employeeWords[0])) return false;
+  return employeeWords
+    .slice(1)
+    .every((employeeWord) =>
+      staffWords.some((staffWord) => isSurnameWordMatch(staffWord, employeeWord))
+    );
 }
 
 async function listAllStaffs(): Promise<MoegoStaffRow[]> {
