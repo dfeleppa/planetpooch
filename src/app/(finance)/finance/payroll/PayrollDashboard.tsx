@@ -77,6 +77,7 @@ type AnnualMobileGroomingTotals = {
   dogs: number;
   pricingCents: number;
   cashCents: number;
+  creditCardTipCents: number;
   groomerPayCents: number;
   upgradeCents: number;
 };
@@ -355,9 +356,16 @@ function moneyValue(value: string): number {
   return Number.isFinite(parsed) && parsed > 0 ? parsed : 0;
 }
 
+function mobileEntryDogCount(entry: EditableMobileGroomingEntry): number {
+  return Math.max(0, Math.round(Number(entry.dogs) || 0));
+}
+
 function mobileEntryGroomerPay(entry: EditableMobileGroomingEntry): number {
-  return (moneyValue(entry.price) + moneyValue(entry.upgradeAmount)) * 0.4 +
-    moneyValue(entry.creditCardTip);
+  const commissionBase = Math.max(
+    0,
+    moneyValue(entry.price) + moneyValue(entry.upgradeAmount) - mobileEntryDogCount(entry) * 5
+  );
+  return commissionBase * 0.4 + moneyValue(entry.creditCardTip);
 }
 
 function mobileEntryTotalPrice(entry: EditableMobileGroomingEntry): number {
@@ -388,6 +396,7 @@ function emptyMobileGroomingTotals(): Omit<AnnualMobileGroomingTotals, "year"> {
     dogs: 0,
     pricingCents: 0,
     cashCents: 0,
+    creditCardTipCents: 0,
     groomerPayCents: 0,
     upgradeCents: 0,
   };
@@ -502,9 +511,10 @@ export function PayrollDashboard({
       (total, entry) => {
         const totalPrice = mobileEntryTotalPrice(entry);
         total.stops += 1;
-        total.dogs += Math.max(0, Math.round(Number(entry.dogs) || 0));
+        total.dogs += mobileEntryDogCount(entry);
         total.pricing += totalPrice;
         total.cash += entry.paymentType === "cash" ? totalPrice : 0;
+        total.creditCardTips += moneyValue(entry.creditCardTip);
         total.groomerPay += mobileEntryGroomerPay(entry);
         total.upgrades += moneyValue(entry.upgradeAmount);
         return total;
@@ -514,6 +524,7 @@ export function PayrollDashboard({
         dogs: 0,
         pricing: 0,
         cash: 0,
+        creditCardTips: 0,
         groomerPay: 0,
         upgrades: 0,
       }
@@ -539,6 +550,7 @@ export function PayrollDashboard({
           dogs: stored?.dogs ?? 0,
           pricingCents: stored?.pricingCents ?? 0,
           cashCents: stored?.cashCents ?? 0,
+          creditCardTipCents: stored?.creditCardTipCents ?? 0,
           groomerPayCents: stored?.groomerPayCents ?? 0,
           upgradeCents: stored?.upgradeCents ?? 0,
           stored: Boolean(stored),
@@ -549,6 +561,7 @@ export function PayrollDashboard({
         sum.dogs += week.dogs;
         sum.pricingCents += week.pricingCents;
         sum.cashCents += week.cashCents;
+        sum.creditCardTipCents += week.creditCardTipCents;
         sum.groomerPayCents += week.groomerPayCents;
         sum.upgradeCents += week.upgradeCents;
         return sum;
@@ -701,7 +714,7 @@ export function PayrollDashboard({
           serviceDate: entry.serviceDate,
           employeeName: normalizeEmployeeName(entry.employeeName),
           paymentType: entry.paymentType,
-          dogs: Math.max(0, Math.round(Number(entry.dogs) || 0)),
+          dogs: mobileEntryDogCount(entry),
           price: moneyValue(entry.price),
           upgradeQuantity: Math.max(0, Math.round(Number(entry.upgradeQuantity) || 0)),
           upgradesCents: Math.round(moneyValue(entry.upgradeAmount) * 100),
@@ -950,7 +963,7 @@ export function PayrollDashboard({
               </div>
             </div>
             {mobileSummaryView === "annual" ? (
-              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-6">
+              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4 2xl:grid-cols-7">
                 <AnnualMetric
                   label="Total Stops"
                   value={String(annualMobileTotals?.stops ?? 0)}
@@ -966,6 +979,10 @@ export function PayrollDashboard({
                 <AnnualMetric
                   label="Cash Total"
                   value={formatMoney((annualMobileTotals?.cashCents ?? 0) / 100)}
+                />
+                <AnnualMetric
+                  label="CC Tips"
+                  value={formatMoney((annualMobileTotals?.creditCardTipCents ?? 0) / 100)}
                 />
                 <AnnualMetric
                   label="Groomer Pay"
@@ -1005,6 +1022,9 @@ export function PayrollDashboard({
                           <span>{quarter.totals.stops} stops</span>
                           <span>{quarter.totals.dogs} dogs</span>
                           <span>{formatMoney(quarter.totals.pricingCents / 100)} total</span>
+                          <span>
+                            {formatMoney(quarter.totals.creditCardTipCents / 100)} cc tips
+                          </span>
                           <span className="font-medium text-gray-700">
                             {isOpen ? "Collapse" : "Expand"}
                           </span>
@@ -1029,6 +1049,9 @@ export function PayrollDashboard({
                                 </th>
                                 <th className="px-4 py-2 text-left text-xs font-medium uppercase tracking-[0.06em] text-gray-500">
                                   Cash Total
+                                </th>
+                                <th className="px-4 py-2 text-left text-xs font-medium uppercase tracking-[0.06em] text-gray-500">
+                                  CC Tips
                                 </th>
                                 <th className="px-4 py-2 text-left text-xs font-medium uppercase tracking-[0.06em] text-gray-500">
                                   Groomer Pay
@@ -1063,6 +1086,9 @@ export function PayrollDashboard({
                                   </td>
                                   <td className="px-4 py-2 text-gray-700">
                                     {formatMoney(week.cashCents / 100)}
+                                  </td>
+                                  <td className="px-4 py-2 text-gray-700">
+                                    {formatMoney(week.creditCardTipCents / 100)}
                                   </td>
                                   <td className="px-4 py-2 text-gray-700">
                                     {formatMoney(week.groomerPayCents / 100)}
@@ -1184,7 +1210,7 @@ export function PayrollDashboard({
 
           {isMobileGrooming ? (
             <>
-              <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-6">
+              <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4 2xl:grid-cols-7">
                 <WeeklyMetric label="Total Stops" value={String(selectedWeekMobileTotals.stops)} />
                 <WeeklyMetric label="Total Dogs" value={String(selectedWeekMobileTotals.dogs)} />
                 <WeeklyMetric
@@ -1192,6 +1218,10 @@ export function PayrollDashboard({
                   value={formatMoney(selectedWeekMobileTotals.pricing)}
                 />
                 <WeeklyMetric label="Cash Total" value={formatMoney(selectedWeekMobileTotals.cash)} />
+                <WeeklyMetric
+                  label="CC Tips"
+                  value={formatMoney(selectedWeekMobileTotals.creditCardTips)}
+                />
                 <WeeklyMetric
                   label="Groomer Pay"
                   value={formatMoney(selectedWeekMobileTotals.groomerPay)}
@@ -1216,6 +1246,10 @@ export function PayrollDashboard({
                       (sum, entry) => sum + mobileEntryGroomerPay(entry),
                       0
                     );
+                    const dayTips = dayEntries.reduce(
+                      (sum, entry) => sum + moneyValue(entry.creditCardTip),
+                      0
+                    );
                     return (
                       <div key={day.value} className="rounded-lg border border-gray-200 bg-white">
                         <div className="flex flex-col gap-3 border-b border-gray-100 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
@@ -1223,7 +1257,7 @@ export function PayrollDashboard({
                             <h3 className="text-sm font-semibold text-gray-900">{day.label}</h3>
                             <p className="text-xs text-gray-500">
                               {dayEntries.length} stops · {formatMoney(dayTotal)} total ·{" "}
-                              {formatMoney(dayPay)} groomer pay
+                              {formatMoney(dayPay)} groomer pay · {formatMoney(dayTips)} cc tips
                             </p>
                           </div>
                           <Button

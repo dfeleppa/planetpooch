@@ -53,6 +53,7 @@ type AnnualMobileGroomingTotals = {
   dogs: number;
   pricingCents: number;
   cashCents: number;
+  creditCardTipCents: number;
   groomerPayCents: number;
   upgradeCents: number;
 };
@@ -126,6 +127,19 @@ function addDays(date: Date, days: number): Date {
 function mobileGroomingQuarterCycleStart(year: number): Date {
   const baseCycleStart = new Date(Date.UTC(2026, 0, 10));
   return addDays(baseCycleStart, (year - 2026) * 52 * 7);
+}
+
+function mobileGroomerPayCents(entry: {
+  dogs: number;
+  priceCents: number;
+  upgradeCents: number;
+  creditCardTipCents: number;
+}) {
+  const commissionBaseCents = Math.max(
+    0,
+    entry.priceCents + entry.upgradeCents - entry.dogs * 500
+  );
+  return Math.round(commissionBaseCents * 0.4) + entry.creditCardTipCents;
 }
 
 function asNumber(value: unknown): number | null {
@@ -333,8 +347,7 @@ function serializeWeek(
 
   const totalSeconds = rows.reduce((sum, row) => sum + row.totalSeconds, 0);
   const mobileGroomingEntries = week.mobileGroomingEntries.map((entry) => {
-    const groomerPayCents = Math.round((entry.priceCents + entry.upgradeCents) * 0.4) +
-      entry.creditCardTipCents;
+    const groomerPayCents = mobileGroomerPayCents(entry);
     const totalPriceCents = entry.priceCents + entry.upgradeCents - entry.discountCents;
     return {
       id: entry.id,
@@ -394,6 +407,7 @@ function emptyAnnualMobileGroomingTotals(year: number): AnnualMobileGroomingTota
     dogs: 0,
     pricingCents: 0,
     cashCents: 0,
+    creditCardTipCents: 0,
     groomerPayCents: 0,
     upgradeCents: 0,
   };
@@ -431,12 +445,12 @@ async function loadAnnualMobileGroomingTotals(
 
   for (const entry of entries) {
     const totalPriceCents = entry.priceCents + entry.upgradeCents - entry.discountCents;
-    const groomerPayCents = Math.round((entry.priceCents + entry.upgradeCents) * 0.4) +
-      entry.creditCardTipCents;
+    const groomerPayCents = mobileGroomerPayCents(entry);
     totals.stops += 1;
     totals.dogs += entry.dogs;
     totals.pricingCents += totalPriceCents;
     totals.cashCents += entry.paymentType === "cash" ? totalPriceCents : 0;
+    totals.creditCardTipCents += entry.creditCardTipCents;
     totals.groomerPayCents += groomerPayCents;
     totals.upgradeCents += entry.upgradeCents;
   }
@@ -486,18 +500,19 @@ async function loadWeeklyMobileGroomingTotals(
       dogs: 0,
       pricingCents: 0,
       cashCents: 0,
+      creditCardTipCents: 0,
       groomerPayCents: 0,
       upgradeCents: 0,
     };
 
     for (const entry of week.mobileGroomingEntries) {
       const totalPriceCents = entry.priceCents + entry.upgradeCents - entry.discountCents;
-      const groomerPayCents = Math.round((entry.priceCents + entry.upgradeCents) * 0.4) +
-        entry.creditCardTipCents;
+      const groomerPayCents = mobileGroomerPayCents(entry);
       totals.stops += 1;
       totals.dogs += entry.dogs;
       totals.pricingCents += totalPriceCents;
       totals.cashCents += entry.paymentType === "cash" ? totalPriceCents : 0;
+      totals.creditCardTipCents += entry.creditCardTipCents;
       totals.groomerPayCents += groomerPayCents;
       totals.upgradeCents += entry.upgradeCents;
     }
