@@ -11,6 +11,27 @@ export type PayrollBusinessValue = (typeof PAYROLL_BUSINESSES)[number]["value"];
 
 export const DEFAULT_PAYROLL_BUSINESS: PayrollBusinessValue = "pet-resort";
 
+const MS_PER_DAY = 86_400_000;
+
+export type PayrollPayPeriod = {
+  startDay: 0 | 6;
+  rangeLabel: string;
+  errorMessage: string;
+};
+
+export const PAYROLL_PAY_PERIODS: Record<PayrollBusinessValue, PayrollPayPeriod> = {
+  "pet-resort": {
+    startDay: 0,
+    rangeLabel: "Sunday-Saturday",
+    errorMessage: "Pet resort payroll weeks must run Sunday through Saturday",
+  },
+  "mobile-grooming": {
+    startDay: 6,
+    rangeLabel: "Saturday-Friday",
+    errorMessage: "Mobile grooming payroll weeks must run Saturday through Friday",
+  },
+};
+
 export const PAYROLL_CATEGORY_LABELS: Record<PayrollCategoryValue, string> = {
   TRAINING: "Training",
   GROOMING: "Grooming",
@@ -32,6 +53,38 @@ export function isPayrollBusiness(value: unknown): value is PayrollBusinessValue
 
 export function cleanPayrollBusiness(value: unknown): PayrollBusinessValue {
   return isPayrollBusiness(value) ? value : DEFAULT_PAYROLL_BUSINESS;
+}
+
+export function payrollPayPeriodForBusiness(business: PayrollBusinessValue): PayrollPayPeriod {
+  return PAYROLL_PAY_PERIODS[business];
+}
+
+export function isValidPayrollWeekStart(
+  weekStart: Date,
+  business: PayrollBusinessValue
+): boolean {
+  return weekStart.getUTCDay() === payrollPayPeriodForBusiness(business).startDay;
+}
+
+export function isValidPayrollWeekRange(
+  weekStart: Date,
+  weekEnd: Date,
+  business: PayrollBusinessValue
+): boolean {
+  const days = Math.round((weekEnd.getTime() - weekStart.getTime()) / MS_PER_DAY);
+  return days === 6 && isValidPayrollWeekStart(weekStart, business);
+}
+
+export function lastCompletedPayrollWeekStart(
+  business: PayrollBusinessValue,
+  today = new Date()
+): Date {
+  const localTodayUtc = new Date(Date.UTC(today.getFullYear(), today.getMonth(), today.getDate()));
+  const startDay = payrollPayPeriodForBusiness(business).startDay;
+  const daysSinceStart = (localTodayUtc.getUTCDay() - startDay + 7) % 7;
+  const currentStart = new Date(localTodayUtc);
+  currentStart.setUTCDate(localTodayUtc.getUTCDate() - daysSinceStart);
+  return new Date(currentStart.getTime() - 7 * MS_PER_DAY);
 }
 
 export function categoryForEmployee(

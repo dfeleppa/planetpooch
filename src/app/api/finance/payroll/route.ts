@@ -8,7 +8,10 @@ import {
   cleanPayrollBusiness,
   decimalPayrollHours,
   formatPayrollDuration,
+  isValidPayrollWeekRange,
+  isValidPayrollWeekStart,
   normalizeEmployeeName,
+  payrollPayPeriodForBusiness,
   parsePayrollDurationToSeconds,
   type PayrollBusinessValue,
   type PayrollCategoryValue,
@@ -115,7 +118,7 @@ function usDateToIso(value: unknown): string | null {
   return date.toISOString().slice(0, 10);
 }
 
-function parseWeekDates(payload: Record<string, unknown>) {
+function parseWeekDates(payload: Record<string, unknown>, business: PayrollBusinessValue) {
   let weekStartValue = payload.weekStart;
   let weekEndValue = payload.weekEnd;
 
@@ -130,9 +133,8 @@ function parseWeekDates(payload: Record<string, unknown>) {
     return { error: "weekStart and weekEnd must be YYYY-MM-DD dates" as const };
   }
 
-  const days = Math.round((weekEnd.getTime() - weekStart.getTime()) / MS_PER_DAY);
-  if (weekStart.getUTCDay() !== 6 || days !== 6) {
-    return { error: "Payroll weeks must run Saturday through Friday" as const };
+  if (!isValidPayrollWeekRange(weekStart, weekEnd, business)) {
+    return { error: payrollPayPeriodForBusiness(business).errorMessage };
   }
 
   return { weekStart, weekEnd };
@@ -649,7 +651,7 @@ export async function GET(req: NextRequest) {
   if (!(await canAccessPayroll())) return unauthorized();
 
   const business = cleanPayrollBusiness(req.nextUrl.searchParams.get("business"));
-  const weeks = await prisma.financePayrollWeek.findMany({
+  const savedWeeks = await prisma.financePayrollWeek.findMany({
     where: { business },
     orderBy: { weekStart: "desc" },
     take: 60,
@@ -661,9 +663,15 @@ export async function GET(req: NextRequest) {
       updatedAt: true,
     },
   });
+  const weeks = savedWeeks.filter((week) =>
+    isValidPayrollWeekRange(week.weekStart, week.weekEnd, business)
+  );
 
   const requestedWeekStart = parseDateParam(req.nextUrl.searchParams.get("weekStart"));
-  const selectedWeekStart = requestedWeekStart ?? weeks[0]?.weekStart ?? null;
+  const selectedWeekStart =
+    requestedWeekStart && isValidPayrollWeekStart(requestedWeekStart, business)
+      ? requestedWeekStart
+      : weeks[0]?.weekStart ?? null;
   const employeeName =
     business === "mobile-grooming"
       ? normalizeEmployeeName(req.nextUrl.searchParams.get("employeeName") ?? "") || null
@@ -701,7 +709,7 @@ async function savePayroll(req: NextRequest) {
   const body = await req.json();
   const payload = (body?.payrollUpload ?? body) as Record<string, unknown>;
   const business = cleanPayrollBusiness(payload.business);
-  const weekDates = parseWeekDates(payload);
+  const weekDates = parseWeekDates(payload, business);
   if ("error" in weekDates) {
     return NextResponse.json({ error: weekDates.error }, { status: 400 });
   }
@@ -809,7 +817,7 @@ export async function PATCH(req: NextRequest) {
     return NextResponse.json({ error: "Weekly overrides are only for mobile grooming" }, { status: 400 });
   }
 
-  const weekDates = parseWeekDates(payload);
+  const weekDates = parseWeekDates(payload, business);
   if ("error" in weekDates) {
     return NextResponse.json({ error: weekDates.error }, { status: 400 });
   }

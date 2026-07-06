@@ -23,7 +23,11 @@ import {
   categoryForEmployee,
   decimalPayrollHours,
   isPayrollBusiness,
+  isValidPayrollWeekRange,
+  isValidPayrollWeekStart,
+  lastCompletedPayrollWeekStart,
   normalizeEmployeeName,
+  payrollPayPeriodForBusiness,
   parsePayrollDurationToSeconds,
   type PayrollBusinessValue,
   type PayrollCategoryValue,
@@ -196,21 +200,16 @@ function mobileGroomingQuarterCycleStart(year: number): string {
   return toDateParam(new Date(baseCycleStart.getTime() + (year - 2026) * 52 * 7 * MS_PER_DAY));
 }
 
-function isSaturdayWeekStart(value: string): boolean {
-  return dateFromParam(value).getUTCDay() === 6;
+function isPayrollWeekStart(value: string, business: PayrollBusinessValue): boolean {
+  return isValidPayrollWeekStart(dateFromParam(value), business);
 }
 
-function lastCompletedWeekStart() {
-  const today = new Date();
-  const localTodayUtc = new Date(Date.UTC(today.getFullYear(), today.getMonth(), today.getDate()));
-  const daysSinceSaturday = (localTodayUtc.getUTCDay() + 1) % 7;
-  const currentSaturday = new Date(localTodayUtc);
-  currentSaturday.setUTCDate(localTodayUtc.getUTCDate() - daysSinceSaturday);
-  return toDateParam(new Date(currentSaturday.getTime() - 7 * MS_PER_DAY));
+function lastCompletedWeekStart(business: PayrollBusinessValue) {
+  return toDateParam(lastCompletedPayrollWeekStart(business));
 }
 
-function recentCompletedWeeks(count = 26): string[] {
-  const start = dateFromParam(lastCompletedWeekStart());
+function recentCompletedWeeks(business: PayrollBusinessValue, count = 26): string[] {
+  const start = dateFromParam(lastCompletedWeekStart(business));
   return Array.from({ length: count }, (_, index) =>
     toDateParam(new Date(start.getTime() - index * 7 * MS_PER_DAY))
   );
@@ -366,10 +365,18 @@ function extractImportPayload(text: string) {
       : Array.isArray(payload.dateRange)
       ? usDateToIso(payload.dateRange[1])
       : null;
+  const explicitBusiness = isPayrollBusiness(payload.business) ? payload.business : null;
+  const matchingBusinesses =
+    weekStart && weekEnd
+      ? PAYROLL_BUSINESSES.filter((option) =>
+          isValidPayrollWeekRange(dateFromParam(weekStart), dateFromParam(weekEnd), option.value)
+        ).map((option) => option.value)
+      : [];
+  const inferredBusiness = matchingBusinesses.length === 1 ? matchingBusinesses[0] : null;
 
   return {
     rows: importRowsToEditable(rows),
-    business: isPayrollBusiness(payload.business) ? payload.business : null,
+    business: explicitBusiness ?? inferredBusiness,
     weekStart,
     weekEnd,
   };
@@ -480,7 +487,7 @@ export function PayrollDashboard({
 }) {
   const [savedWeeks, setSavedWeeks] = useState<SavedWeekSummary[]>([]);
   const [business, setBusiness] = useState<PayrollBusinessValue>(initialBusiness);
-  const [weekStart, setWeekStart] = useState(lastCompletedWeekStart);
+  const [weekStart, setWeekStart] = useState(() => lastCompletedWeekStart(initialBusiness));
   const [rows, setRows] = useState<EditableRow[]>([]);
   const [mobileEntries, setMobileEntries] = useState<EditableMobileGroomingEntry[]>([]);
   const [annualMobileTotals, setAnnualMobileTotals] =
@@ -503,6 +510,7 @@ export function PayrollDashboard({
 
   const weekEnd = addDaysParam(weekStart, 6);
   const isMobileGrooming = business === "mobile-grooming";
+  const payPeriod = payrollPayPeriodForBusiness(business);
   const employeeOptions = employeeOptionsByBusiness[business] ?? EMPTY_EMPLOYEE_OPTIONS;
   const mobileEmployeeChoicesUnavailable = isMobileGrooming && employeeOptions.length === 0;
   const mobileEmployeePlaceholder =
@@ -531,14 +539,14 @@ export function PayrollDashboard({
   const weekOptions = useMemo(() => {
     const byStart = new Map<string, { weekStart: string; weekEnd: string; stored: boolean }>();
     for (const week of savedWeeks) {
-      if (!isSaturdayWeekStart(week.weekStart)) continue;
+      if (!isPayrollWeekStart(week.weekStart, business)) continue;
       byStart.set(week.weekStart, {
         weekStart: week.weekStart,
         weekEnd: week.weekEnd,
         stored: true,
       });
     }
-    for (const start of recentCompletedWeeks()) {
+    for (const start of recentCompletedWeeks(business)) {
       if (!byStart.has(start)) {
         byStart.set(start, {
           weekStart: start,
@@ -555,7 +563,7 @@ export function PayrollDashboard({
       });
     }
     return Array.from(byStart.values()).sort((a, b) => b.weekStart.localeCompare(a.weekStart));
-  }, [savedWeeks, weekEnd, weekStart]);
+  }, [business, savedWeeks, weekEnd, weekStart]);
 
   const totals = useMemo(() => {
     const categoryTotals = PAYROLL_CATEGORIES.map((category) => {
@@ -693,7 +701,7 @@ export function PayrollDashboard({
         setRows(savedRowsToEditable(data.week.rows));
         setMobileEntries(savedMobileEntriesToEditable(data.week.mobileGroomingEntries));
       } else {
-        const nextWeekStart = selectedWeekStart ?? lastCompletedWeekStart();
+        const nextWeekStart = selectedWeekStart ?? lastCompletedWeekStart(selectedBusiness);
         setWeekStart(nextWeekStart);
         setRows([]);
         setMobileEntries([]);
@@ -729,7 +737,7 @@ export function PayrollDashboard({
   }, []);
 
   useEffect(() => {
-    void loadWeek(lastCompletedWeekStart(), initialBusiness);
+    void loadWeek(lastCompletedWeekStart(initialBusiness), initialBusiness);
   }, [initialBusiness, loadWeek]);
 
   function updateRow(localId: string, patch: Partial<EditableRow>) {
@@ -1101,7 +1109,8 @@ export function PayrollDashboard({
       <div>
         <h2 className="text-xl font-semibold text-gray-900">Payroll</h2>
         <p className="mt-1 text-gray-500">
-          {isMobileGrooming ? "Weekly mobile grooming appointments" : "Weekly staff hours"}
+          {isMobileGrooming ? "Weekly mobile grooming appointments" : "Weekly staff hours"}{" "}
+          ({payPeriod.rangeLabel})
         </p>
       </div>
 
@@ -1506,7 +1515,7 @@ export function PayrollDashboard({
                   value={importText}
                   onChange={(event) => setImportText(event.target.value)}
                   className="mt-1 block min-h-[90px] w-full rounded-lg border border-gray-300 px-3 py-2 text-sm shadow-sm placeholder:text-gray-400 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                  placeholder='{"weekStart":"2026-06-06","weekEnd":"2026-06-12","rows":[...]}'
+                  placeholder='{"weekStart":"2026-06-28","weekEnd":"2026-07-04","rows":[...]}'
                 />
               </div>
               <div className="flex flex-wrap gap-2">
