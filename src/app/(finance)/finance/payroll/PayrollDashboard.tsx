@@ -683,6 +683,7 @@ export function PayrollDashboard({
     mobilePayrollView === "summary"
       ? "All mobile grooming appointments"
       : "Mobile grooming appointments";
+  const showMobileAppointmentDetails = mobilePayrollView === "employee";
   const idlePullMoegoLabel =
     mobilePayrollView === "summary" ? "Pull all from MoeGo" : "Pull from MoeGo";
   const pullMoegoLabel = pullingMoego ? "Pulling..." : idlePullMoegoLabel;
@@ -1627,7 +1628,14 @@ export function PayrollDashboard({
               {isMobileGrooming ? mobileAppointmentsTitle : "Employee hours"}
             </h2>
             {isMobileGrooming ? (
-              <div className="grid w-full gap-3 md:max-w-3xl md:grid-cols-[minmax(220px,1fr)_auto_auto_auto] md:items-end">
+              <div
+                className={cn(
+                  "grid w-full gap-3 md:items-end",
+                  showMobileAppointmentDetails
+                    ? "md:max-w-3xl md:grid-cols-[minmax(220px,1fr)_auto_auto_auto]"
+                    : "md:max-w-2xl md:grid-cols-[minmax(220px,1fr)_auto_auto]"
+                )}
+              >
                 <Select
                   id="payroll-week"
                   label="Week"
@@ -1660,13 +1668,15 @@ export function PayrollDashboard({
                 <Button type="button" onClick={savePayroll} disabled={loading || saving}>
                   {saving ? "Saving..." : "Save payroll"}
                 </Button>
-                <Button
-                  type="button"
-                  variant="secondary"
-                  onClick={() => setMobileStopsOpen((current) => !current)}
-                >
-                  {mobileStopsOpen ? "Collapse" : "Expand"}
-                </Button>
+                {showMobileAppointmentDetails ? (
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    onClick={() => setMobileStopsOpen((current) => !current)}
+                  >
+                    {mobileStopsOpen ? "Collapse" : "Expand"}
+                  </Button>
+                ) : null}
               </div>
             ) : (
               <Button
@@ -1709,7 +1719,7 @@ export function PayrollDashboard({
                 />
               </div>
 
-              {mobileStopsOpen ? (
+              {showMobileAppointmentDetails && mobileStopsOpen ? (
                 <div className="grid gap-3">
                   {weekDays.map((day) => {
                     const dayEntries = visibleMobileEntries.filter(
