@@ -1,6 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSession, isSuperAdmin } from "@/lib/auth-helpers";
-import { normalizeEmployeeName } from "@/lib/payroll";
+import {
+  isValidPayrollWeekRange,
+  normalizeEmployeeName,
+  payrollPayPeriodForBusiness,
+} from "@/lib/payroll";
 import {
   MoegoApiError,
   MoegoConfigError,
@@ -370,9 +374,11 @@ export async function POST(req: NextRequest) {
   if (!weekStart || !weekEnd) {
     return NextResponse.json({ error: "weekStart and weekEnd must be YYYY-MM-DD dates" }, { status: 400 });
   }
-  const days = Math.round((weekEnd.getTime() - weekStart.getTime()) / MS_PER_DAY);
-  if (weekStart.getUTCDay() !== 6 || days !== 6) {
-    return NextResponse.json({ error: "Payroll weeks must run Saturday through Friday" }, { status: 400 });
+  if (!isValidPayrollWeekRange(weekStart, weekEnd, "mobile-grooming")) {
+    return NextResponse.json(
+      { error: payrollPayPeriodForBusiness("mobile-grooming").errorMessage },
+      { status: 400 }
+    );
   }
 
   try {
