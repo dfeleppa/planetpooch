@@ -1652,7 +1652,7 @@ export function PayrollDashboard({
                   {weekOptions.map((option) => (
                     <option key={option.weekStart} value={option.weekStart}>
                       {formatWeekRange(option.weekStart, option.weekEnd)}
-                      {option.stored ? ` (saved)` : ""}
+                      {mobilePayrollView === "summary" && option.stored ? ` (saved)` : ""}
                     </option>
                   ))}
                 </Select>
