@@ -598,13 +598,14 @@ export function PayrollDashboard({
   }, [business, rows]);
 
   const visibleMobileEntries = useMemo(() => {
+    if (mobilePayrollView === "employee" && !mobileViewEmployeeKey) return [];
     if (!mobileViewEmployeeKey) return mobileEntries;
     return mobileEntries.filter(
       (entry) =>
         normalizeEmployeeName(entry.employeeName).toLocaleLowerCase() ===
         mobileViewEmployeeKey
     );
-  }, [mobileEntries, mobileViewEmployeeKey]);
+  }, [mobileEntries, mobilePayrollView, mobileViewEmployeeKey]);
 
   const selectedWeekMobileTotals = useMemo(() => {
     return visibleMobileEntries.reduce(
@@ -683,7 +684,10 @@ export function PayrollDashboard({
     mobilePayrollView === "summary"
       ? "All mobile grooming appointments"
       : "Mobile grooming appointments";
-  const showMobileAppointmentDetails = mobilePayrollView === "employee";
+  const showMobileAppointmentMetrics =
+    mobilePayrollView === "summary" || Boolean(mobileViewEmployeeName);
+  const showMobileAppointmentDetails =
+    mobilePayrollView === "employee" && Boolean(mobileViewEmployeeName);
   const idlePullMoegoLabel =
     mobilePayrollView === "summary" ? "Pull all from MoeGo" : "Pull from MoeGo";
   const pullMoegoLabel = pullingMoego ? "Pulling..." : idlePullMoegoLabel;
@@ -1665,7 +1669,15 @@ export function PayrollDashboard({
                 >
                   {pullMoegoLabel}
                 </Button>
-                <Button type="button" onClick={savePayroll} disabled={loading || saving}>
+                <Button
+                  type="button"
+                  onClick={savePayroll}
+                  disabled={
+                    loading ||
+                    saving ||
+                    (mobilePayrollView === "employee" && !selectedMobileEmployee)
+                  }
+                >
                   {saving ? "Saving..." : "Save payroll"}
                 </Button>
                 {showMobileAppointmentDetails ? (
@@ -1693,31 +1705,43 @@ export function PayrollDashboard({
 
           {isMobileGrooming ? (
             <>
-              <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4 2xl:grid-cols-8">
-                <WeeklyMetric label="Total Appointments" value={String(selectedWeekMobileTotals.stops)} />
-                <WeeklyMetric label="Total Pets" value={String(selectedWeekMobileTotals.dogs)} />
-                <WeeklyMetric
-                  label="Total Price"
-                  value={formatMoney(selectedWeekMobileTotals.pricing)}
-                />
-                <WeeklyMetric
-                  label="Grooming Price"
-                  value={formatMoney(selectedWeekMobileTotals.groomingPrice)}
-                />
-                <WeeklyMetric label="Cash Total" value={formatMoney(selectedWeekMobileTotals.cash)} />
-                <WeeklyMetric
-                  label="CC Tips"
-                  value={formatMoney(selectedWeekMobileTotals.creditCardTips)}
-                />
-                <WeeklyMetric
-                  label="Groomer Pay"
-                  value={formatMoney(selectedWeekMobileTotals.groomerPay)}
-                />
-                <WeeklyMetric
-                  label="Upgrades ($)"
-                  value={formatMoney(selectedWeekMobileTotals.upgrades)}
-                />
-              </div>
+              {showMobileAppointmentMetrics ? (
+                <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4 2xl:grid-cols-8">
+                  <WeeklyMetric
+                    label="Total Appointments"
+                    value={String(selectedWeekMobileTotals.stops)}
+                  />
+                  <WeeklyMetric label="Total Pets" value={String(selectedWeekMobileTotals.dogs)} />
+                  <WeeklyMetric
+                    label="Total Price"
+                    value={formatMoney(selectedWeekMobileTotals.pricing)}
+                  />
+                  <WeeklyMetric
+                    label="Grooming Price"
+                    value={formatMoney(selectedWeekMobileTotals.groomingPrice)}
+                  />
+                  <WeeklyMetric
+                    label="Cash Total"
+                    value={formatMoney(selectedWeekMobileTotals.cash)}
+                  />
+                  <WeeklyMetric
+                    label="CC Tips"
+                    value={formatMoney(selectedWeekMobileTotals.creditCardTips)}
+                  />
+                  <WeeklyMetric
+                    label="Groomer Pay"
+                    value={formatMoney(selectedWeekMobileTotals.groomerPay)}
+                  />
+                  <WeeklyMetric
+                    label="Upgrades ($)"
+                    value={formatMoney(selectedWeekMobileTotals.upgrades)}
+                  />
+                </div>
+              ) : (
+                <p className="rounded-lg border border-dashed border-gray-200 px-4 py-6 text-center text-sm text-gray-500">
+                  Select an employee to view mobile grooming appointments for this week.
+                </p>
+              )}
 
               {showMobileAppointmentDetails && mobileStopsOpen ? (
                 <div className="grid gap-3">
