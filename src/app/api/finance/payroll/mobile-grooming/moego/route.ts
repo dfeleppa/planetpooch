@@ -41,6 +41,11 @@ type MobilePayrollImportEntry = {
   discountCents: number;
 };
 
+type StaffPullTarget = {
+  staff: MoegoStaffRow;
+  employeeName: string;
+};
+
 function unauthorized() {
   return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 }
@@ -128,6 +133,11 @@ function moegoStaffLookupName(employeeName: string): string {
   return MOEGO_STAFF_NAME_ALIASES[employeeName.toLowerCase()] ?? employeeName;
 }
 
+function payrollEmployeeNameForStaff(staff: MoegoStaffRow): string {
+  const displayName = staffDisplayName(staff);
+  return MOEGO_STAFF_NAME_ALIASES[displayName.toLowerCase()] ?? displayName;
+}
+
 function nameWords(value: string): string[] {
   return normalizeEmployeeName(value)
     .toLowerCase()
@@ -186,6 +196,78 @@ function isStaffNameMatch(staffName: string, employeeName: string): boolean {
     .every((employeeWord) =>
       staffWords.some((staffWord) => isSurnameWordMatch(staffWord, employeeWord))
     );
+}
+
+function isMobileGroomingStaff(staff: MoegoStaffRow): boolean {
+  return (
+    !staff.deleted &&
+    (staff.workingBusinessIds ?? []).includes(MOBILE_GROOMING_BUSINESS_ID) &&
+    Boolean(staffDisplayName(staff))
+  );
+}
+
+function isStaffMatchForEmployee(staff: MoegoStaffRow, employeeName: string): boolean {
+  const lookupName = moegoStaffLookupName(employeeName);
+  return (
+    isStaffNameMatch(staffDisplayName(staff), lookupName) ||
+    isStaffNameMatch(payrollEmployeeNameForStaff(staff), employeeName)
+  );
+}
+
+function requestedEmployeeNames(value: unknown): string[] {
+  if (!Array.isArray(value)) return [];
+  const names = value
+    .map((name) => normalizeEmployeeName(String(name ?? "")))
+    .filter(Boolean);
+  return [...new Set(names)];
+}
+
+function staffTargets(options: {
+  staffs: MoegoStaffRow[];
+  employeeName: string;
+  employeeNames: string[];
+}) {
+  const mobileStaffs = options.staffs.filter(isMobileGroomingStaff);
+
+  if (options.employeeName) {
+    const staff = mobileStaffs.find((candidate) =>
+      isStaffMatchForEmployee(candidate, options.employeeName)
+    );
+    return {
+      targets: staff ? [{ staff, employeeName: options.employeeName }] : [],
+      unmatchedEmployeeNames: staff ? [] : [options.employeeName],
+    };
+  }
+
+  if (options.employeeNames.length === 0) {
+    return {
+      targets: mobileStaffs.map((staff) => ({
+        staff,
+        employeeName: payrollEmployeeNameForStaff(staff),
+      })),
+      unmatchedEmployeeNames: [],
+    };
+  }
+
+  const usedStaffIds = new Set<string>();
+  const targets: StaffPullTarget[] = [];
+  const unmatchedEmployeeNames: string[] = [];
+
+  for (const employeeName of options.employeeNames) {
+    const staff = mobileStaffs.find(
+      (candidate) =>
+        !usedStaffIds.has(candidate.id) && isStaffMatchForEmployee(candidate, employeeName)
+    );
+    if (!staff) {
+      unmatchedEmployeeNames.push(employeeName);
+      continue;
+    }
+
+    usedStaffIds.add(staff.id);
+    targets.push({ staff, employeeName });
+  }
+
+  return { targets, unmatchedEmployeeNames };
 }
 
 async function listAllStaffs(): Promise<MoegoStaffRow[]> {
@@ -366,11 +448,9 @@ export async function POST(req: NextRequest) {
   }
 
   const employeeName = normalizeEmployeeName(String(body.employeeName ?? ""));
+  const employeeNames = requestedEmployeeNames(body.employeeNames);
   const weekStart = parseDateParam(body.weekStart);
   const weekEnd = parseDateParam(body.weekEnd);
-  if (!employeeName) {
-    return NextResponse.json({ error: "employeeName is required" }, { status: 400 });
-  }
   if (!weekStart || !weekEnd) {
     return NextResponse.json({ error: "weekStart and weekEnd must be YYYY-MM-DD dates" }, { status: 400 });
   }
@@ -382,17 +462,20 @@ export async function POST(req: NextRequest) {
   }
 
   try {
-    const lookupName = moegoStaffLookupName(employeeName);
     const staffs = await listAllStaffs();
-    const staff = staffs.find(
-      (candidate) =>
-        !candidate.deleted &&
-        (candidate.workingBusinessIds ?? []).includes(MOBILE_GROOMING_BUSINESS_ID) &&
-        isStaffNameMatch(staffDisplayName(candidate), lookupName)
-    );
-    if (!staff) {
+    const { targets, unmatchedEmployeeNames } = staffTargets({
+      staffs,
+      employeeName,
+      employeeNames,
+    });
+    if (targets.length === 0) {
       return NextResponse.json(
-        { error: `Could not find a MoeGo mobile grooming staff match for ${employeeName}.` },
+        {
+          error: employeeName
+            ? `Could not find a MoeGo mobile grooming staff match for ${employeeName}.`
+            : "Could not find any MoeGo mobile grooming staff matches.",
+          unmatchedEmployeeNames,
+        },
         { status: 404 }
       );
     }
@@ -401,10 +484,11 @@ export async function POST(req: NextRequest) {
       toDateParam(weekStart),
       toDateParam(weekEnd)
     );
+    const targetStaffIds = new Set(targets.map((target) => target.staff.id));
     const matchedAppointments = appointments.filter((appointment) =>
       (appointment.petServiceDetails ?? []).some((petDetail) =>
         (petDetail.serviceDetails ?? []).some((service) =>
-          (service.staffIds ?? []).includes(staff.id)
+          (service.staffIds ?? []).some((staffId) => targetStaffIds.has(staffId))
         )
       )
     );
@@ -415,13 +499,17 @@ export async function POST(req: NextRequest) {
       ordersById(orderIds),
       paymentsByOrderId(orderIds),
     ]);
-    const entries = entriesForStaff({
-      appointments: matchedAppointments,
-      orders,
-      payments,
-      staffId: staff.id,
-      employeeName,
-    });
+    const entriesByStaff = targets.map((target) => ({
+      target,
+      entries: entriesForStaff({
+        appointments: matchedAppointments,
+        orders,
+        payments,
+        staffId: target.staff.id,
+        employeeName: target.employeeName,
+      }),
+    }));
+    const entries = entriesByStaff.flatMap((staffEntries) => staffEntries.entries);
     const statusCounts = matchedAppointments.reduce<Record<string, number>>((counts, appointment) => {
       const status = appointment.status ?? "UNKNOWN";
       counts[status] = (counts[status] ?? 0) + 1;
@@ -429,16 +517,25 @@ export async function POST(req: NextRequest) {
     }, {});
 
     return NextResponse.json({
-      staff: {
-        id: staff.id,
-        name: staffDisplayName(staff),
-      },
+      staff:
+        targets.length === 1
+          ? {
+              id: targets[0].staff.id,
+              name: staffDisplayName(targets[0].staff),
+            }
+          : undefined,
+      staffs: entriesByStaff.map((staffEntries) => ({
+        id: staffEntries.target.staff.id,
+        name: staffEntries.target.employeeName,
+        entries: staffEntries.entries.length,
+      })),
       businessId: MOBILE_GROOMING_BUSINESS_ID,
       weekStart: toDateParam(weekStart),
       weekEnd: toDateParam(weekEnd),
       entries,
       totals: totalsFor(entries),
       statusCounts,
+      unmatchedEmployeeNames,
     });
   } catch (err) {
     if (err instanceof MoegoConfigError) {

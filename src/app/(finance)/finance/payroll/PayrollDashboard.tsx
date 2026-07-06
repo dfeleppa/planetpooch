@@ -109,6 +109,11 @@ type MobileGroomingPullResponse = {
     id: string;
     name: string;
   };
+  staffs?: Array<{
+    id: string;
+    name: string;
+    entries: number;
+  }>;
   entries?: MobileGroomingEntryRecord[];
   totals?: {
     appointments: number;
@@ -120,6 +125,7 @@ type MobileGroomingPullResponse = {
     upgradeCents: number;
   };
   statusCounts?: Record<string, number>;
+  unmatchedEmployeeNames?: string[];
   error?: string;
 };
 
@@ -156,6 +162,7 @@ const PAYROLL_BUSINESS_HREFS: Record<PayrollBusinessValue, string> = {
 };
 
 type MobileSummaryView = "annual" | "weekly";
+type MobilePayrollView = "summary" | "employee";
 
 type WeeklyTotalsEdit = {
   weekStart: string;
@@ -496,6 +503,7 @@ export function PayrollDashboard({
     WeeklyMobileGroomingTotals[]
   >([]);
   const [mobileSummaryView, setMobileSummaryView] = useState<MobileSummaryView>("annual");
+  const [mobilePayrollView, setMobilePayrollView] = useState<MobilePayrollView>("employee");
   const [openMobileQuarters, setOpenMobileQuarters] = useState<Record<string, boolean>>({});
   const [weeklyTotalsEdit, setWeeklyTotalsEdit] = useState<WeeklyTotalsEdit | null>(null);
   const [savingWeeklyTotals, setSavingWeeklyTotals] = useState(false);
@@ -515,9 +523,9 @@ export function PayrollDashboard({
   const mobileEmployeeChoicesUnavailable = isMobileGrooming && employeeOptions.length === 0;
   const mobileEmployeePlaceholder =
     employeeOptions.length === 0 ? "No employees available" : "Select employee";
-  const selectedMobileEmployeeKey = normalizeEmployeeName(
-    selectedMobileEmployee
-  ).toLocaleLowerCase();
+  const mobileViewEmployeeName =
+    mobilePayrollView === "employee" ? normalizeEmployeeName(selectedMobileEmployee) : "";
+  const mobileViewEmployeeKey = mobileViewEmployeeName.toLocaleLowerCase();
   const weekDays = useMemo(
     () =>
       Array.from({ length: 7 }, (_, index) => {
@@ -590,13 +598,13 @@ export function PayrollDashboard({
   }, [business, rows]);
 
   const visibleMobileEntries = useMemo(() => {
-    if (!selectedMobileEmployeeKey) return mobileEntries;
+    if (!mobileViewEmployeeKey) return mobileEntries;
     return mobileEntries.filter(
       (entry) =>
         normalizeEmployeeName(entry.employeeName).toLocaleLowerCase() ===
-        selectedMobileEmployeeKey
+        mobileViewEmployeeKey
     );
-  }, [mobileEntries, selectedMobileEmployeeKey]);
+  }, [mobileEntries, mobileViewEmployeeKey]);
 
   const selectedWeekMobileTotals = useMemo(() => {
     return visibleMobileEntries.reduce(
@@ -671,6 +679,13 @@ export function PayrollDashboard({
       };
     });
   }, [annualYear, storedWeeklyMobileTotals]);
+  const mobileAppointmentsTitle =
+    mobilePayrollView === "summary"
+      ? "All mobile grooming appointments"
+      : "Mobile grooming appointments";
+  const idlePullMoegoLabel =
+    mobilePayrollView === "summary" ? "Pull all from MoeGo" : "Pull from MoeGo";
+  const pullMoegoLabel = pullingMoego ? "Pulling..." : idlePullMoegoLabel;
 
   const loadWeek = useCallback(async (
     selectedWeekStart: string | undefined,
@@ -758,8 +773,17 @@ export function PayrollDashboard({
     ]);
   }
 
+  function selectMobilePayrollView(view: MobilePayrollView) {
+    setMobilePayrollView(view);
+    setWeeklyTotalsEdit(null);
+    if (isMobileGrooming) {
+      void loadMobileSummary(weekStart, view === "employee" ? selectedMobileEmployee : "");
+    }
+  }
+
   function addMobileEmployee(employeeName: string) {
     const normalizedEmployeeName = normalizeEmployeeName(employeeName);
+    setMobilePayrollView("employee");
     setWeeklyTotalsEdit(null);
     setSelectedMobileEmployee(normalizedEmployeeName);
     if (isMobileGrooming) {
@@ -809,11 +833,16 @@ export function PayrollDashboard({
   }
 
   async function pullMobileGroomingFromMoego() {
-    const employeeName = normalizeEmployeeName(selectedMobileEmployee);
-    if (!employeeName) {
+    const employeeName =
+      mobilePayrollView === "employee" ? normalizeEmployeeName(selectedMobileEmployee) : "";
+    if (mobilePayrollView === "employee" && !employeeName) {
       setError("Select an employee before pulling from MoeGo.");
       return;
     }
+    const employeeNames =
+      mobilePayrollView === "summary"
+        ? employeeOptions.map((employee) => normalizeEmployeeName(employee.name)).filter(Boolean)
+        : [];
 
     setPullingMoego(true);
     setError(null);
@@ -823,7 +852,8 @@ export function PayrollDashboard({
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          employeeName,
+          ...(employeeName ? { employeeName } : {}),
+          ...(employeeNames.length > 0 ? { employeeNames } : {}),
           weekStart,
           weekEnd,
         }),
@@ -834,11 +864,21 @@ export function PayrollDashboard({
       }
 
       const importedEntries = savedMobileEntriesToEditable(data.entries);
-      const employeeKey = employeeName.toLocaleLowerCase();
+      const pulledEmployeeKeys = new Set(
+        (
+          mobilePayrollView === "summary"
+            ? data.staffs?.map((staff) => staff.name) ??
+              importedEntries.map((entry) => entry.employeeName)
+            : [employeeName]
+        )
+          .map((name) => normalizeEmployeeName(name).toLocaleLowerCase())
+          .filter(Boolean)
+      );
       setMobileEntries((current) =>
         [
           ...current.filter(
-            (entry) => normalizeEmployeeName(entry.employeeName).toLocaleLowerCase() !== employeeKey
+            (entry) =>
+              !pulledEmployeeKeys.has(normalizeEmployeeName(entry.employeeName).toLocaleLowerCase())
           ),
           ...importedEntries,
         ].sort((a, b) => {
@@ -855,10 +895,17 @@ export function PayrollDashboard({
             .map(([status, count]) => `${count} ${status.toLowerCase()}`)
             .join(", ")
         : "";
+      const unmatched = data.unmatchedEmployeeNames?.length
+        ? ` Could not match ${data.unmatchedEmployeeNames.join(", ")}.`
+        : "";
+      const staffLabel =
+        mobilePayrollView === "summary"
+          ? `across ${data.staffs?.length ?? pulledEmployeeKeys.size} employees`
+          : `for ${data.staff?.name ?? employeeName}`;
       setMessage(
         `Pulled ${totals?.appointments ?? importedEntries.length} appointments and ${
           totals?.pets ?? importedEntries.reduce((sum, entry) => sum + mobileEntryDogCount(entry), 0)
-        } pets for ${data.staff?.name ?? employeeName}.${skipped ? ` Excluded ${skipped}.` : ""}`
+        } pets ${staffLabel}.${skipped ? ` Excluded ${skipped}.` : ""}${unmatched}`
       );
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not pull MoeGo payroll data.");
@@ -935,8 +982,8 @@ export function PayrollDashboard({
         setBusiness(data.week.business);
         setRows(savedRowsToEditable(data.week.rows));
         setMobileEntries(savedMobileEntriesToEditable(data.week.mobileGroomingEntries));
-        if (selectedMobileEmployeeKey) {
-          await loadMobileSummary(data.week.weekStart, selectedMobileEmployee);
+        if (mobileViewEmployeeKey) {
+          await loadMobileSummary(data.week.weekStart, mobileViewEmployeeName);
         } else {
           setAnnualMobileTotals(data.annualTotals ?? null);
           setStoredWeeklyMobileTotals(data.weeklyTotals ?? []);
@@ -1106,6 +1153,29 @@ export function PayrollDashboard({
         </nav>
       </div>
 
+      {isMobileGrooming && (
+        <div>
+          <p className="mb-1 text-sm font-medium text-gray-700">View</p>
+          <div className="pp-tabs" role="tablist" aria-label="Mobile grooming payroll view">
+            {(["summary", "employee"] as const).map((view) => {
+              const active = mobilePayrollView === view;
+              return (
+                <button
+                  key={view}
+                  type="button"
+                  role="tab"
+                  aria-selected={active}
+                  className={cn("pp-tab capitalize", active && "is-on")}
+                  onClick={() => selectMobilePayrollView(view)}
+                >
+                  {view}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
       <div>
         <h2 className="text-xl font-semibold text-gray-900">Payroll</h2>
         <p className="mt-1 text-gray-500">
@@ -1152,7 +1222,7 @@ export function PayrollDashboard({
         </Card>
       )}
 
-      {isMobileGrooming && (
+      {isMobileGrooming && mobilePayrollView === "employee" && (
         <Card>
           <CardContent>
             <div className="max-w-sm">
@@ -1202,8 +1272,8 @@ export function PayrollDashboard({
             <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
               <div>
                 <h3 className="text-base font-semibold text-gray-900">
-                  {selectedMobileEmployee
-                    ? `${selectedMobileEmployee} totals for ${annualYear}`
+                  {mobileViewEmployeeName
+                    ? `${mobileViewEmployeeName} totals for ${annualYear}`
                     : `Mobile grooming totals for ${annualYear}`}
                 </h3>
               </div>
@@ -1361,7 +1431,7 @@ export function PayrollDashboard({
                                           type="button"
                                           className="rounded text-left text-blue-700 hover:text-blue-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
                                           onClick={() =>
-                                            void loadWeek(week.weekStart, business, selectedMobileEmployee)
+                                            void loadWeek(week.weekStart, business, mobileViewEmployeeName)
                                           }
                                         >
                                           {formatWeekRange(week.weekStart, week.weekEnd)}
@@ -1453,7 +1523,7 @@ export function PayrollDashboard({
                                       )}
                                     </td>
                                     <td className="whitespace-nowrap px-4 py-2 text-right">
-                                      {selectedMobileEmployeeKey ? null : edit ? (
+                                      {mobileViewEmployeeKey ? null : edit ? (
                                         <div className="flex justify-end gap-2">
                                           <button
                                             type="button"
@@ -1554,7 +1624,7 @@ export function PayrollDashboard({
             )}
           >
             <h2 className="text-base font-semibold text-gray-900">
-              {isMobileGrooming ? "Mobile grooming appointments" : "Employee hours"}
+              {isMobileGrooming ? mobileAppointmentsTitle : "Employee hours"}
             </h2>
             {isMobileGrooming ? (
               <div className="grid w-full gap-3 md:max-w-3xl md:grid-cols-[minmax(220px,1fr)_auto_auto_auto] md:items-end">
@@ -1563,7 +1633,7 @@ export function PayrollDashboard({
                   label="Week"
                   value={weekStart}
                   onChange={(event) =>
-                    void loadWeek(event.target.value, business, selectedMobileEmployee)
+                    void loadWeek(event.target.value, business, mobileViewEmployeeName)
                   }
                   disabled={loading || saving}
                 >
@@ -1578,9 +1648,14 @@ export function PayrollDashboard({
                   type="button"
                   variant="secondary"
                   onClick={pullMobileGroomingFromMoego}
-                  disabled={loading || saving || pullingMoego || !selectedMobileEmployee}
+                  disabled={
+                    loading ||
+                    saving ||
+                    pullingMoego ||
+                    (mobilePayrollView === "employee" && !selectedMobileEmployee)
+                  }
                 >
-                  {pullingMoego ? "Pulling..." : "Pull from MoeGo"}
+                  {pullMoegoLabel}
                 </Button>
                 <Button type="button" onClick={savePayroll} disabled={loading || saving}>
                   {saving ? "Saving..." : "Save payroll"}
@@ -1667,7 +1742,12 @@ export function PayrollDashboard({
                             size="sm"
                             variant="secondary"
                             onClick={() => addMobileEntry(day.value)}
-                            disabled={saving || mobileEmployeeChoicesUnavailable}
+                            disabled={
+                              saving ||
+                              mobilePayrollView !== "employee" ||
+                              mobileEmployeeChoicesUnavailable ||
+                              !selectedMobileEmployee
+                            }
                           >
                             + Appointment
                           </Button>
