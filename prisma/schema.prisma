@@ -43,6 +43,11 @@ enum MaintenanceTaskStatus {
   SKIPPED
 }
 
+enum ChecklistPeriod {
+  AM
+  PM
+}
+
 // ============================================================
 // Onboarding enums (Phase 2+)
 // ============================================================
@@ -183,6 +188,7 @@ model User {
   notes       EmployeeNote[]
 
   // Maintenance relations
+  checklistCompletions        DailyChecklistCompletion[] @relation("ChecklistCompleter")
   maintenanceSchedulesCreated MaintenanceSchedule[] @relation("MaintenanceCreator")
   maintenanceTasksAssigned    MaintenanceTask[]     @relation("MaintenanceAssignee")
   maintenanceTasksCompleted   MaintenanceTask[]     @relation("MaintenanceCompleter")
@@ -384,6 +390,42 @@ model EmployeeNote {
 // ============================================================
 // Maintenance Models
 // ============================================================
+
+/// One line of the resort's daily AM or PM checklist template. Managers
+/// edit these; the same items repeat every day. Removing an item that has
+/// history archives it (isActive=false) so past days still render the
+/// items that were checked off at the time.
+model DailyChecklistItem {
+  id        String          @id @default(cuid())
+  period    ChecklistPeriod
+  title     String
+  order     Int             @default(0)
+  isActive  Boolean         @default(true)
+  createdAt DateTime        @default(now())
+  updatedAt DateTime        @updatedAt
+
+  completions DailyChecklistCompletion[]
+
+  @@index([period, isActive])
+}
+
+/// One checkmark: item X was completed on calendar day Y. `completedAt`
+/// is the real timestamp of the click (the sign-off record); `date` is the
+/// checklist day it counts toward. Unchecking deletes the row.
+model DailyChecklistCompletion {
+  id            String   @id @default(cuid())
+  itemId        String
+  date          DateTime @db.Date
+  completedById String?
+  completedAt   DateTime @default(now())
+
+  item        DailyChecklistItem @relation(fields: [itemId], references: [id], onDelete: Cascade)
+  completedBy User?              @relation("ChecklistCompleter", fields: [completedById], references: [id], onDelete: SetNull)
+
+  @@unique([itemId, date])
+  @@index([date])
+  @@index([completedById])
+}
 
 model MaintenanceSchedule {
   id                 String             @id @default(cuid())
