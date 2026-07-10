@@ -1,0 +1,1709 @@
+{
+  "createdAt": "2026-07-06T15:22:35.720Z",
+  "csv": "C:/Users/Daniel/Downloads/MoeGo-Export-Client-PlanetPooch-2026-07-06-15-17-08.csv",
+  "conflictPhones": 74,
+  "conflicts": [
+    {
+      "phone": "5166447910",
+      "totals": [
+        "11145.01",
+        "253.84"
+      ],
+      "rows": [
+        {
+          "idx": 217,
+          "name": "Ismael Ortiz",
+          "totalPaid": "$11145.01",
+          "totalPaidNumber": 11145.01,
+          "phoneRaw": "5166447910"
+        },
+        {
+          "idx": 631,
+          "name": "Chris Nastri",
+          "totalPaid": "$253.84",
+          "totalPaidNumber": 253.84,
+          "phoneRaw": "5166447910"
+        }
+      ]
+    },
+    {
+      "phone": "7187559744",
+      "totals": [
+        "7867.83",
+        "4700.00"
+      ],
+      "rows": [
+        {
+          "idx": 355,
+          "name": "David Ostreicher",
+          "totalPaid": "$7867.83",
+          "totalPaidNumber": 7867.83,
+          "phoneRaw": "7187559744"
+        },
+        {
+          "idx": 13680,
+          "name": "Danise Zambomino",
+          "totalPaid": "$4700.0",
+          "totalPaidNumber": 4700,
+          "phoneRaw": "7187559744"
+        }
+      ]
+    },
+    {
+      "phone": "9178078198",
+      "totals": [
+        "85.00",
+        "11076.78"
+      ],
+      "rows": [
+        {
+          "idx": 496,
+          "name": "Michelle Boratta",
+          "totalPaid": "$85.0",
+          "totalPaidNumber": 85,
+          "phoneRaw": "9178078198"
+        },
+        {
+          "idx": 1856,
+          "name": "James Baratta",
+          "totalPaid": "$11076.78",
+          "totalPaidNumber": 11076.78,
+          "phoneRaw": "9178078198"
+        }
+      ]
+    },
+    {
+      "phone": "9177760289",
+      "totals": [
+        "85.00",
+        "0.00"
+      ],
+      "rows": [
+        {
+          "idx": 546,
+          "name": "Blanca Ovalles",
+          "totalPaid": "$85.0",
+          "totalPaidNumber": 85,
+          "phoneRaw": "9177760289"
+        },
+        {
+          "idx": 2441,
+          "name": "Blanca ovalles",
+          "totalPaid": "$0",
+          "totalPaidNumber": 0,
+          "phoneRaw": "9177760289"
+        }
+      ]
+    },
+    {
+      "phone": "5162798919",
+      "totals": [
+        "656.62",
+        "0.00"
+      ],
+      "rows": [
+        {
+          "idx": 647,
+          "name": "Helena Terzulli",
+          "totalPaid": "$656.62",
+          "totalPaidNumber": 656.62,
+          "phoneRaw": "5162798919"
+        },
+        {
+          "idx": 1750,
+          "name": "Heather Terzullo",
+          "totalPaid": "$0",
+          "totalPaidNumber": 0,
+          "phoneRaw": "5162798919"
+        }
+      ]
+    },
+    {
+      "phone": "5163959812",
+      "totals": [
+        "750.00",
+        "1230.00"
+      ],
+      "rows": [
+        {
+          "idx": 974,
+          "name": "Tony & Chris Desaro",
+          "totalPaid": "$750.0",
+          "totalPaidNumber": 750,
+          "phoneRaw": "5163959812"
+        },
+        {
+          "idx": 11385,
+          "name": "Tony Dasaro",
+          "totalPaid": "$1230.0",
+          "totalPaidNumber": 1230,
+          "phoneRaw": "5163959812"
+        }
+      ]
+    },
+    {
+      "phone": "5162342218",
+      "totals": [
+        "3476.31",
+        "145.00"
+      ],
+      "rows": [
+        {
+          "idx": 1046,
+          "name": "Kathy Trumpatori",
+          "totalPaid": "$3476.31",
+          "totalPaidNumber": 3476.31,
+          "phoneRaw": "5162342218"
+        },
+        {
+          "idx": 13981,
+          "name": "kathleen trumpatori",
+          "totalPaid": "$145.0",
+          "totalPaidNumber": 145,
+          "phoneRaw": "5162342218"
+        }
+      ]
+    },
+    {
+      "phone": "5165781932",
+      "totals": [
+        "435.00",
+        "0.00"
+      ],
+      "rows": [
+        {
+          "idx": 1170,
+          "name": "Ann Marie Collica",
+          "totalPaid": "$435.0",
+          "totalPaidNumber": 435,
+          "phoneRaw": "5165781932"
+        },
+        {
+          "idx": 14803,
+          "name": "Ann Marie Collica",
+          "totalPaid": "$0",
+          "totalPaidNumber": 0,
+          "phoneRaw": "15165781932"
+        }
+      ]
+    },
+    {
+      "phone": "5169930776",
+      "totals": [
+        "0.00",
+        "450.76"
+      ],
+      "rows": [
+        {
+          "idx": 1811,
+          "name": "Doris Colberg",
+          "totalPaid": "$0",
+          "totalPaidNumber": 0,
+          "phoneRaw": "5169930776"
+        },
+        {
+          "idx": 1906,
+          "name": "Dorris Colberd",
+          "totalPaid": "$450.76",
+          "totalPaidNumber": 450.76,
+          "phoneRaw": "5169930776"
+        }
+      ]
+    },
+    {
+      "phone": "5163131028",
+      "totals": [
+        "5755.00",
+        "0.00"
+      ],
+      "rows": [
+        {
+          "idx": 1903,
+          "name": "Donna Moneta",
+          "totalPaid": "$5755.0",
+          "totalPaidNumber": 5755,
+          "phoneRaw": "5163131028"
+        },
+        {
+          "idx": 10079,
+          "name": "Donna Moneta",
+          "totalPaid": "$0",
+          "totalPaidNumber": 0,
+          "phoneRaw": "5163131028"
+        }
+      ]
+    },
+    {
+      "phone": "5164507728",
+      "totals": [
+        "1607.72",
+        "0.00"
+      ],
+      "rows": [
+        {
+          "idx": 2080,
+          "name": "Lucille Moran",
+          "totalPaid": "$1607.72",
+          "totalPaidNumber": 1607.72,
+          "phoneRaw": "5164507728"
+        },
+        {
+          "idx": 12654,
+          "name": "?? ??",
+          "totalPaid": "$0",
+          "totalPaidNumber": 0,
+          "phoneRaw": "5164507728"
+        }
+      ]
+    },
+    {
+      "phone": "5164748921",
+      "totals": [
+        "775.77",
+        "135.00"
+      ],
+      "rows": [
+        {
+          "idx": 2126,
+          "name": "Anne Butler",
+          "totalPaid": "$775.77",
+          "totalPaidNumber": 775.77,
+          "phoneRaw": "5164748921"
+        },
+        {
+          "idx": 3604,
+          "name": "Anne Butler",
+          "totalPaid": "$135.0",
+          "totalPaidNumber": 135,
+          "phoneRaw": "5164748921"
+        }
+      ]
+    },
+    {
+      "phone": "5166333796",
+      "totals": [
+        "3732.78",
+        "100.00"
+      ],
+      "rows": [
+        {
+          "idx": 2149,
+          "name": "Andrew & Kathy Pellegrini",
+          "totalPaid": "$3732.78",
+          "totalPaidNumber": 3732.78,
+          "phoneRaw": "5166333796"
+        },
+        {
+          "idx": 3163,
+          "name": "Andrew Pellegrini",
+          "totalPaid": "$100.0",
+          "totalPaidNumber": 100,
+          "phoneRaw": "5166333796"
+        }
+      ]
+    },
+    {
+      "phone": "5165826401",
+      "totals": [
+        "5445.00",
+        "0.00"
+      ],
+      "rows": [
+        {
+          "idx": 2168,
+          "name": "Josephine & John Curcio",
+          "totalPaid": "$5445.0",
+          "totalPaidNumber": 5445,
+          "phoneRaw": "5165826401"
+        },
+        {
+          "idx": 3221,
+          "name": "5165826401",
+          "totalPaid": "$0",
+          "totalPaidNumber": 0,
+          "phoneRaw": "5165826401"
+        }
+      ]
+    },
+    {
+      "phone": "0000000000",
+      "totals": [
+        "0.00",
+        "175.00"
+      ],
+      "rows": [
+        {
+          "idx": 2479,
+          "name": "Jimmy J",
+          "totalPaid": "$0",
+          "totalPaidNumber": 0,
+          "phoneRaw": "0000000000"
+        },
+        {
+          "idx": 5919,
+          "name": "JAMES michaels",
+          "totalPaid": "$175.0",
+          "totalPaidNumber": 175,
+          "phoneRaw": "00000000000"
+        }
+      ]
+    },
+    {
+      "phone": "5164587907",
+      "totals": [
+        "6155.09",
+        "5188.00"
+      ],
+      "rows": [
+        {
+          "idx": 2596,
+          "name": "Jenn Wassnebergh",
+          "totalPaid": "$6155.09",
+          "totalPaidNumber": 6155.09,
+          "phoneRaw": "5164587907"
+        },
+        {
+          "idx": 14715,
+          "name": "Jenn , John Wassenbergh",
+          "totalPaid": "$5188.0",
+          "totalPaidNumber": 5188,
+          "phoneRaw": "5164587907"
+        }
+      ]
+    },
+    {
+      "phone": "9548046484",
+      "totals": [
+        "0.00",
+        "144.95"
+      ],
+      "rows": [
+        {
+          "idx": 2837,
+          "name": "Sandra Cohen",
+          "totalPaid": "$0.0",
+          "totalPaidNumber": 0,
+          "phoneRaw": "19548046484"
+        },
+        {
+          "idx": 14421,
+          "name": "Sandra Cohen",
+          "totalPaid": "$144.95",
+          "totalPaidNumber": 144.95,
+          "phoneRaw": "9548046484"
+        }
+      ]
+    },
+    {
+      "phone": "2122038793",
+      "totals": [
+        "2446.71",
+        "0.00"
+      ],
+      "rows": [
+        {
+          "idx": 2855,
+          "name": "Michael O'Brien",
+          "totalPaid": "$2446.71",
+          "totalPaidNumber": 2446.71,
+          "phoneRaw": "2122038793"
+        },
+        {
+          "idx": 12621,
+          "name": "Emma O’Brien",
+          "totalPaid": "$0",
+          "totalPaidNumber": 0,
+          "phoneRaw": "2122038793"
+        }
+      ]
+    },
+    {
+      "phone": "5162365199",
+      "totals": [
+        "6108.68",
+        "324.25"
+      ],
+      "rows": [
+        {
+          "idx": 2919,
+          "name": "Joan Axelrod",
+          "totalPaid": "$6108.68",
+          "totalPaidNumber": 6108.68,
+          "phoneRaw": "5162365199"
+        },
+        {
+          "idx": 9937,
+          "name": "Joan Axelrod",
+          "totalPaid": "$324.25",
+          "totalPaidNumber": 324.25,
+          "phoneRaw": "5162365199"
+        }
+      ]
+    },
+    {
+      "phone": "5164566593",
+      "totals": [
+        "0.00",
+        "4840.00"
+      ],
+      "rows": [
+        {
+          "idx": 2923,
+          "name": "5164566593",
+          "totalPaid": "$0",
+          "totalPaidNumber": 0,
+          "phoneRaw": "5164566593"
+        },
+        {
+          "idx": 14938,
+          "name": "Kelly Perdomo",
+          "totalPaid": "$4840.0",
+          "totalPaidNumber": 4840,
+          "phoneRaw": "5164566593"
+        }
+      ]
+    },
+    {
+      "phone": "5162603053",
+      "totals": [
+        "135.00",
+        "0.00"
+      ],
+      "rows": [
+        {
+          "idx": 3261,
+          "name": "Frances Safina",
+          "totalPaid": "$135.0",
+          "totalPaidNumber": 135,
+          "phoneRaw": "5162603053"
+        },
+        {
+          "idx": 14738,
+          "name": "Fran Safina",
+          "totalPaid": "$0",
+          "totalPaidNumber": 0,
+          "phoneRaw": "5162603053"
+        }
+      ]
+    },
+    {
+      "phone": "2393700559",
+      "totals": [
+        "8497.89",
+        "0.00"
+      ],
+      "rows": [
+        {
+          "idx": 3614,
+          "name": "Patty Baker",
+          "totalPaid": "$8497.89",
+          "totalPaidNumber": 8497.89,
+          "phoneRaw": "2393700559"
+        },
+        {
+          "idx": 4274,
+          "name": "2393700559 by_sms",
+          "totalPaid": "$0",
+          "totalPaidNumber": 0,
+          "phoneRaw": "2393700559"
+        }
+      ]
+    },
+    {
+      "phone": "5163147685",
+      "totals": [
+        "895.40",
+        "0.00"
+      ],
+      "rows": [
+        {
+          "idx": 4022,
+          "name": "Lori Schor",
+          "totalPaid": "$895.4",
+          "totalPaidNumber": 895.4,
+          "phoneRaw": "5163147685"
+        },
+        {
+          "idx": 5551,
+          "name": "LORI schor",
+          "totalPaid": "$0",
+          "totalPaidNumber": 0,
+          "phoneRaw": "15163147685"
+        }
+      ]
+    },
+    {
+      "phone": "5164259231",
+      "totals": [
+        "0.00",
+        "5678.68"
+      ],
+      "rows": [
+        {
+          "idx": 4204,
+          "name": "5164259231 by_sms",
+          "totalPaid": "$0",
+          "totalPaidNumber": 0,
+          "phoneRaw": "5164259231"
+        },
+        {
+          "idx": 16462,
+          "name": "Barbara Manning",
+          "totalPaid": "$5678.68",
+          "totalPaidNumber": 5678.68,
+          "phoneRaw": "5164259231"
+        }
+      ]
+    },
+    {
+      "phone": "5162200458",
+      "totals": [
+        "572.11",
+        "0.00"
+      ],
+      "rows": [
+        {
+          "idx": 4282,
+          "name": "Amanda Wiltshire",
+          "totalPaid": "$572.11",
+          "totalPaidNumber": 572.11,
+          "phoneRaw": "5162200458"
+        },
+        {
+          "idx": 10261,
+          "name": "Amanda Gardner",
+          "totalPaid": "$0",
+          "totalPaidNumber": 0,
+          "phoneRaw": "5162200458"
+        }
+      ]
+    },
+    {
+      "phone": "9172468354",
+      "totals": [
+        "516.08",
+        "0.00"
+      ],
+      "rows": [
+        {
+          "idx": 4349,
+          "name": "Christian Reynolds",
+          "totalPaid": "$516.08",
+          "totalPaidNumber": 516.08,
+          "phoneRaw": "9172468354"
+        },
+        {
+          "idx": 4359,
+          "name": "Sara Burack",
+          "totalPaid": "$0.0",
+          "totalPaidNumber": 0,
+          "phoneRaw": "9172468354"
+        }
+      ]
+    },
+    {
+      "phone": "6316053678",
+      "totals": [
+        "0.00",
+        "6193.30"
+      ],
+      "rows": [
+        {
+          "idx": 4367,
+          "name": "6316053678 by_sms",
+          "totalPaid": "$0",
+          "totalPaidNumber": 0,
+          "phoneRaw": "6316053678"
+        },
+        {
+          "idx": 13765,
+          "name": "Claudine Nussdorf",
+          "totalPaid": "$6193.3",
+          "totalPaidNumber": 6193.3,
+          "phoneRaw": "6316053678"
+        }
+      ]
+    },
+    {
+      "phone": "5167619066",
+      "totals": [
+        "0.00",
+        "4704.07"
+      ],
+      "rows": [
+        {
+          "idx": 4429,
+          "name": "Maddy Norton",
+          "totalPaid": "$0",
+          "totalPaidNumber": 0,
+          "phoneRaw": "5167619066"
+        },
+        {
+          "idx": 12816,
+          "name": "Kristen Norton",
+          "totalPaid": "$4704.07",
+          "totalPaidNumber": 4704.07,
+          "phoneRaw": "5167619066"
+        }
+      ]
+    },
+    {
+      "phone": "5164390011",
+      "totals": [
+        "0.00",
+        "2167.42"
+      ],
+      "rows": [
+        {
+          "idx": 4520,
+          "name": "5164390011 by_sms",
+          "totalPaid": "$0",
+          "totalPaidNumber": 0,
+          "phoneRaw": "5164390011"
+        },
+        {
+          "idx": 13134,
+          "name": "Angelo Noutsis",
+          "totalPaid": "$2167.42",
+          "totalPaidNumber": 2167.42,
+          "phoneRaw": "5164390011"
+        }
+      ]
+    },
+    {
+      "phone": "5165247603",
+      "totals": [
+        "6957.55",
+        "53.18"
+      ],
+      "rows": [
+        {
+          "idx": 4719,
+          "name": "Jennifer frederick",
+          "totalPaid": "$6957.55",
+          "totalPaidNumber": 6957.55,
+          "phoneRaw": "5165247603"
+        },
+        {
+          "idx": 12922,
+          "name": "Susan Giangrasso",
+          "totalPaid": "$53.18",
+          "totalPaidNumber": 53.18,
+          "phoneRaw": "5165247603"
+        }
+      ]
+    },
+    {
+      "phone": "5163757792",
+      "totals": [
+        "0.00",
+        "2625.56"
+      ],
+      "rows": [
+        {
+          "idx": 4969,
+          "name": "5163757792 by_sms",
+          "totalPaid": "$0",
+          "totalPaidNumber": 0,
+          "phoneRaw": "5163757792"
+        },
+        {
+          "idx": 13097,
+          "name": "Jennifer Juliano",
+          "totalPaid": "$2625.56",
+          "totalPaidNumber": 2625.56,
+          "phoneRaw": "5163757792"
+        }
+      ]
+    },
+    {
+      "phone": "3473020520",
+      "totals": [
+        "0.00",
+        "337.77"
+      ],
+      "rows": [
+        {
+          "idx": 5317,
+          "name": "3473020520 by_call",
+          "totalPaid": "$0",
+          "totalPaidNumber": 0,
+          "phoneRaw": "3473020520"
+        },
+        {
+          "idx": 5362,
+          "name": "domna stanton",
+          "totalPaid": "$337.77",
+          "totalPaidNumber": 337.77,
+          "phoneRaw": "3473020520"
+        }
+      ]
+    },
+    {
+      "phone": "9176981036",
+      "totals": [
+        "0.00",
+        "1394.79"
+      ],
+      "rows": [
+        {
+          "idx": 5330,
+          "name": "9176981036 by_call",
+          "totalPaid": "$0",
+          "totalPaidNumber": 0,
+          "phoneRaw": "9176981036"
+        },
+        {
+          "idx": 5345,
+          "name": "Stephanie Hessler",
+          "totalPaid": "$1394.79",
+          "totalPaidNumber": 1394.79,
+          "phoneRaw": "9176981036"
+        }
+      ]
+    },
+    {
+      "phone": "5168307367",
+      "totals": [
+        "798.89",
+        "0.00"
+      ],
+      "rows": [
+        {
+          "idx": 5477,
+          "name": "Devinn Butler",
+          "totalPaid": "$798.89",
+          "totalPaidNumber": 798.89,
+          "phoneRaw": "5168307367"
+        },
+        {
+          "idx": 5712,
+          "name": "Vannessa Gatlin",
+          "totalPaid": "$0",
+          "totalPaidNumber": 0,
+          "phoneRaw": "5168307367"
+        }
+      ]
+    },
+    {
+      "phone": "6469451919",
+      "totals": [
+        "460.00",
+        "0.00"
+      ],
+      "rows": [
+        {
+          "idx": 5516,
+          "name": "Taylor Minzie",
+          "totalPaid": "$460.0",
+          "totalPaidNumber": 460,
+          "phoneRaw": "6469451919"
+        },
+        {
+          "idx": 12682,
+          "name": "Taylor Minzie",
+          "totalPaid": "$0",
+          "totalPaidNumber": 0,
+          "phoneRaw": "6469451919"
+        }
+      ]
+    },
+    {
+      "phone": "9179953964",
+      "totals": [
+        "0.00",
+        "2087.16"
+      ],
+      "rows": [
+        {
+          "idx": 5610,
+          "name": "Patricia Jarvis",
+          "totalPaid": "$0",
+          "totalPaidNumber": 0,
+          "phoneRaw": "9179953964"
+        },
+        {
+          "idx": 11896,
+          "name": "Brian Jarvis",
+          "totalPaid": "$2087.16",
+          "totalPaidNumber": 2087.16,
+          "phoneRaw": "9179953964"
+        }
+      ]
+    },
+    {
+      "phone": "3479447500",
+      "totals": [
+        "1060.40",
+        "0.00"
+      ],
+      "rows": [
+        {
+          "idx": 5862,
+          "name": "Jillian Dookran",
+          "totalPaid": "$1060.4",
+          "totalPaidNumber": 1060.4,
+          "phoneRaw": "13479447500"
+        },
+        {
+          "idx": 12404,
+          "name": "New Client",
+          "totalPaid": "$0",
+          "totalPaidNumber": 0,
+          "phoneRaw": "3479447500"
+        }
+      ]
+    },
+    {
+      "phone": "6462966396",
+      "totals": [
+        "0.00",
+        "8302.19"
+      ],
+      "rows": [
+        {
+          "idx": 5954,
+          "name": "6462966396 by_sms",
+          "totalPaid": "$0",
+          "totalPaidNumber": 0,
+          "phoneRaw": "6462966396"
+        },
+        {
+          "idx": 16947,
+          "name": "Erica Wachs",
+          "totalPaid": "$8302.19",
+          "totalPaidNumber": 8302.19,
+          "phoneRaw": "6462966396"
+        }
+      ]
+    },
+    {
+      "phone": "9175133461",
+      "totals": [
+        "0.00",
+        "12324.79"
+      ],
+      "rows": [
+        {
+          "idx": 6034,
+          "name": "9175133461 by_call",
+          "totalPaid": "$0",
+          "totalPaidNumber": 0,
+          "phoneRaw": "9175133461"
+        },
+        {
+          "idx": 12069,
+          "name": "Patrick Alesi",
+          "totalPaid": "$12324.79",
+          "totalPaidNumber": 12324.79,
+          "phoneRaw": "9175133461"
+        }
+      ]
+    },
+    {
+      "phone": "5163303836",
+      "totals": [
+        "0.00",
+        "412.79"
+      ],
+      "rows": [
+        {
+          "idx": 6428,
+          "name": "Tim Quinn",
+          "totalPaid": "$0",
+          "totalPaidNumber": 0,
+          "phoneRaw": "5163303836"
+        },
+        {
+          "idx": 14386,
+          "name": "Michelle Quinn",
+          "totalPaid": "$412.79",
+          "totalPaidNumber": 412.79,
+          "phoneRaw": "5163303836"
+        }
+      ]
+    },
+    {
+      "phone": "5164770020",
+      "totals": [
+        "293.46",
+        "0.00"
+      ],
+      "rows": [
+        {
+          "idx": 6615,
+          "name": "Shira Halevy",
+          "totalPaid": "$293.46",
+          "totalPaidNumber": 293.46,
+          "phoneRaw": "5164770020"
+        },
+        {
+          "idx": 12352,
+          "name": "? ?",
+          "totalPaid": "$0",
+          "totalPaidNumber": 0,
+          "phoneRaw": "5164770020"
+        }
+      ]
+    },
+    {
+      "phone": "5163130584",
+      "totals": [
+        "0.00",
+        "3392.24"
+      ],
+      "rows": [
+        {
+          "idx": 9821,
+          "name": "5163130584 by_sms",
+          "totalPaid": "$0",
+          "totalPaidNumber": 0,
+          "phoneRaw": "5163130584"
+        },
+        {
+          "idx": 13984,
+          "name": "Christopher Bolos",
+          "totalPaid": "$3392.24",
+          "totalPaidNumber": 3392.24,
+          "phoneRaw": "5163130584"
+        }
+      ]
+    },
+    {
+      "phone": "5164990428",
+      "totals": [
+        "0.00",
+        "1340.60"
+      ],
+      "rows": [
+        {
+          "idx": 9869,
+          "name": "Earl street Lynbrook",
+          "totalPaid": "$0",
+          "totalPaidNumber": 0,
+          "phoneRaw": "5164990428"
+        },
+        {
+          "idx": 11877,
+          "name": "Brittany Sinopoli",
+          "totalPaid": "$1340.6",
+          "totalPaidNumber": 1340.6,
+          "phoneRaw": "5164990428"
+        }
+      ]
+    },
+    {
+      "phone": "3475513281",
+      "totals": [
+        "0.00",
+        "1169.50"
+      ],
+      "rows": [
+        {
+          "idx": 9928,
+          "name": "3475513281 by_sms",
+          "totalPaid": "$0",
+          "totalPaidNumber": 0,
+          "phoneRaw": "3475513281"
+        },
+        {
+          "idx": 13116,
+          "name": "Rocio Coyne",
+          "totalPaid": "$1169.5",
+          "totalPaidNumber": 1169.5,
+          "phoneRaw": "3475513281"
+        }
+      ]
+    },
+    {
+      "phone": "9179217216",
+      "totals": [
+        "3580.38",
+        "43798.63"
+      ],
+      "rows": [
+        {
+          "idx": 9941,
+          "name": "Mason Hughes",
+          "totalPaid": "$3580.38",
+          "totalPaidNumber": 3580.38,
+          "phoneRaw": "9179217216"
+        },
+        {
+          "idx": 13743,
+          "name": "Kelly Powers",
+          "totalPaid": "$43798.63",
+          "totalPaidNumber": 43798.63,
+          "phoneRaw": "9179217216"
+        }
+      ]
+    },
+    {
+      "phone": "2013041656",
+      "totals": [
+        "265.18",
+        "0.00"
+      ],
+      "rows": [
+        {
+          "idx": 10143,
+          "name": "Jennifer McLeod",
+          "totalPaid": "$265.18",
+          "totalPaidNumber": 265.18,
+          "phoneRaw": "2013041656"
+        },
+        {
+          "idx": 10259,
+          "name": "? ?",
+          "totalPaid": "$0",
+          "totalPaidNumber": 0,
+          "phoneRaw": "2013041656"
+        }
+      ]
+    },
+    {
+      "phone": "5163983443",
+      "totals": [
+        "0.00",
+        "4390.00"
+      ],
+      "rows": [
+        {
+          "idx": 10508,
+          "name": "5163983443 by_call",
+          "totalPaid": "$0",
+          "totalPaidNumber": 0,
+          "phoneRaw": "5163983443"
+        },
+        {
+          "idx": 13508,
+          "name": "Catherine Mauro",
+          "totalPaid": "$4390.0",
+          "totalPaidNumber": 4390,
+          "phoneRaw": "5163983443"
+        }
+      ]
+    },
+    {
+      "phone": "3376923305",
+      "totals": [
+        "0.00",
+        "4983.01"
+      ],
+      "rows": [
+        {
+          "idx": 10715,
+          "name": "Riva Horwitz",
+          "totalPaid": "$0",
+          "totalPaidNumber": 0,
+          "phoneRaw": "3376923305"
+        },
+        {
+          "idx": 17312,
+          "name": "Riva Horwitz",
+          "totalPaid": "$4983.01",
+          "totalPaidNumber": 4983.01,
+          "phoneRaw": "3376923305"
+        }
+      ]
+    },
+    {
+      "phone": "5163163452",
+      "totals": [
+        "0.00",
+        "477.94"
+      ],
+      "rows": [
+        {
+          "idx": 10841,
+          "name": "Abigail S",
+          "totalPaid": "$0",
+          "totalPaidNumber": 0,
+          "phoneRaw": "5163163452"
+        },
+        {
+          "idx": 11723,
+          "name": "Eli Rosenberg",
+          "totalPaid": "$477.94",
+          "totalPaidNumber": 477.94,
+          "phoneRaw": "5163163452"
+        }
+      ]
+    },
+    {
+      "phone": "3478351012",
+      "totals": [
+        "0.00",
+        "2758.25"
+      ],
+      "rows": [
+        {
+          "idx": 10848,
+          "name": "3478351012 by_sms",
+          "totalPaid": "$0",
+          "totalPaidNumber": 0,
+          "phoneRaw": "3478351012"
+        },
+        {
+          "idx": 14706,
+          "name": "Charan Mohan",
+          "totalPaid": "$2758.25",
+          "totalPaidNumber": 2758.25,
+          "phoneRaw": "3478351012"
+        }
+      ]
+    },
+    {
+      "phone": "5167801348",
+      "totals": [
+        "0.00",
+        "1914.93"
+      ],
+      "rows": [
+        {
+          "idx": 10870,
+          "name": "5167801348 by_call",
+          "totalPaid": "$0",
+          "totalPaidNumber": 0,
+          "phoneRaw": "5167801348"
+        },
+        {
+          "idx": 12886,
+          "name": "jodi cangemi",
+          "totalPaid": "$1914.93",
+          "totalPaidNumber": 1914.93,
+          "phoneRaw": "5167801348"
+        }
+      ]
+    },
+    {
+      "phone": "5165063040",
+      "totals": [
+        "0.00",
+        "253.75"
+      ],
+      "rows": [
+        {
+          "idx": 10934,
+          "name": "Tara Bark",
+          "totalPaid": "$0",
+          "totalPaidNumber": 0,
+          "phoneRaw": "5165063040"
+        },
+        {
+          "idx": 10935,
+          "name": "Tara Romano",
+          "totalPaid": "$253.75",
+          "totalPaidNumber": 253.75,
+          "phoneRaw": "5165063040"
+        }
+      ]
+    },
+    {
+      "phone": "9176628975",
+      "totals": [
+        "0.00",
+        "2585.46"
+      ],
+      "rows": [
+        {
+          "idx": 11088,
+          "name": "9176628975 by_sms",
+          "totalPaid": "$0",
+          "totalPaidNumber": 0,
+          "phoneRaw": "9176628975"
+        },
+        {
+          "idx": 13014,
+          "name": "Pamela Maingon",
+          "totalPaid": "$2585.46",
+          "totalPaidNumber": 2585.46,
+          "phoneRaw": "9176628975"
+        }
+      ]
+    },
+    {
+      "phone": "5164061145",
+      "totals": [
+        "0.00",
+        "118.53"
+      ],
+      "rows": [
+        {
+          "idx": 11269,
+          "name": "5164061145 by_sms",
+          "totalPaid": "$0",
+          "totalPaidNumber": 0,
+          "phoneRaw": "5164061145"
+        },
+        {
+          "idx": 16168,
+          "name": "Jenny Abraham",
+          "totalPaid": "$118.53",
+          "totalPaidNumber": 118.53,
+          "phoneRaw": "5164061145"
+        }
+      ]
+    },
+    {
+      "phone": "6462766669",
+      "totals": [
+        "0.00",
+        "2241.42"
+      ],
+      "rows": [
+        {
+          "idx": 11813,
+          "name": "6462766669 by_call",
+          "totalPaid": "$0",
+          "totalPaidNumber": 0,
+          "phoneRaw": "6462766669"
+        },
+        {
+          "idx": 11909,
+          "name": "Maureen Callahan",
+          "totalPaid": "$2241.42",
+          "totalPaidNumber": 2241.42,
+          "phoneRaw": "6462766669"
+        }
+      ]
+    },
+    {
+      "phone": "5169280519",
+      "totals": [
+        "380.41",
+        "0.00"
+      ],
+      "rows": [
+        {
+          "idx": 12078,
+          "name": "katherine simmons",
+          "totalPaid": "$380.41",
+          "totalPaidNumber": 380.41,
+          "phoneRaw": "5169280519"
+        },
+        {
+          "idx": 12936,
+          "name": "Jamie Freedman",
+          "totalPaid": "$0",
+          "totalPaidNumber": 0,
+          "phoneRaw": "5169280519"
+        }
+      ]
+    },
+    {
+      "phone": "5163848931",
+      "totals": [
+        "0.00",
+        "163.25"
+      ],
+      "rows": [
+        {
+          "idx": 12733,
+          "name": "? ???",
+          "totalPaid": "$0",
+          "totalPaidNumber": 0,
+          "phoneRaw": "5163848931"
+        },
+        {
+          "idx": 13621,
+          "name": "Margaret Carpenter",
+          "totalPaid": "$163.25",
+          "totalPaidNumber": 163.25,
+          "phoneRaw": "5163848931"
+        }
+      ]
+    },
+    {
+      "phone": "5165675195",
+      "totals": [
+        "7850.05",
+        "0.00"
+      ],
+      "rows": [
+        {
+          "idx": 12829,
+          "name": "Chris Dabrowski",
+          "totalPaid": "$7850.05",
+          "totalPaidNumber": 7850.05,
+          "phoneRaw": "5165675195"
+        },
+        {
+          "idx": 15213,
+          "name": "Ellen Dabrowski",
+          "totalPaid": "$0",
+          "totalPaidNumber": 0,
+          "phoneRaw": "5165675195"
+        }
+      ]
+    },
+    {
+      "phone": "9173379036",
+      "totals": [
+        "3794.17",
+        "9340.28"
+      ],
+      "rows": [
+        {
+          "idx": 12998,
+          "name": "Julie Scheibeler",
+          "totalPaid": "$3794.17",
+          "totalPaidNumber": 3794.17,
+          "phoneRaw": "9173379036"
+        },
+        {
+          "idx": 14855,
+          "name": "Julie Scheibeler",
+          "totalPaid": "$9340.28",
+          "totalPaidNumber": 9340.28,
+          "phoneRaw": "9173379036"
+        }
+      ]
+    },
+    {
+      "phone": "5164396624",
+      "totals": [
+        "9970.73",
+        "8094.36"
+      ],
+      "rows": [
+        {
+          "idx": 13000,
+          "name": "Gizelle Aguilar",
+          "totalPaid": "$9970.73",
+          "totalPaidNumber": 9970.73,
+          "phoneRaw": "5164396624"
+        },
+        {
+          "idx": 13001,
+          "name": "Norma Cornejo",
+          "totalPaid": "$8094.36",
+          "totalPaidNumber": 8094.36,
+          "phoneRaw": "5164396624"
+        }
+      ]
+    },
+    {
+      "phone": "9174941286",
+      "totals": [
+        "169.01",
+        "0.00"
+      ],
+      "rows": [
+        {
+          "idx": 13719,
+          "name": "Keith Carmichael",
+          "totalPaid": "$169.01",
+          "totalPaidNumber": 169.01,
+          "phoneRaw": "9174941286"
+        },
+        {
+          "idx": 14984,
+          "name": "Keith Carmichael",
+          "totalPaid": "$0",
+          "totalPaidNumber": 0,
+          "phoneRaw": "19174941286"
+        }
+      ]
+    },
+    {
+      "phone": "9178461133",
+      "totals": [
+        "106.05",
+        "0.00"
+      ],
+      "rows": [
+        {
+          "idx": 13898,
+          "name": "Linda Flagg",
+          "totalPaid": "$106.05",
+          "totalPaidNumber": 106.05,
+          "phoneRaw": "9178461133"
+        },
+        {
+          "idx": 14820,
+          "name": "Traycee Flagg",
+          "totalPaid": "$0",
+          "totalPaidNumber": 0,
+          "phoneRaw": "19178461133"
+        }
+      ]
+    },
+    {
+      "phone": "5169723403",
+      "totals": [
+        "0.00",
+        "1400.00"
+      ],
+      "rows": [
+        {
+          "idx": 13972,
+          "name": "5169723403 by_call",
+          "totalPaid": "$0",
+          "totalPaidNumber": 0,
+          "phoneRaw": "5169723403"
+        },
+        {
+          "idx": 13973,
+          "name": "Frank Marcovecchio",
+          "totalPaid": "$1400.0",
+          "totalPaidNumber": 1400,
+          "phoneRaw": "5169723403"
+        }
+      ]
+    },
+    {
+      "phone": "5164921505",
+      "totals": [
+        "7500.29",
+        "0.00"
+      ],
+      "rows": [
+        {
+          "idx": 14058,
+          "name": "Deborah Bass",
+          "totalPaid": "$7500.29",
+          "totalPaidNumber": 7500.29,
+          "phoneRaw": "5164921505"
+        },
+        {
+          "idx": 14162,
+          "name": "Deborah Bass",
+          "totalPaid": "$0",
+          "totalPaidNumber": 0,
+          "phoneRaw": "5164921505"
+        }
+      ]
+    },
+    {
+      "phone": "5167846632",
+      "totals": [
+        "0.00",
+        "825.77"
+      ],
+      "rows": [
+        {
+          "idx": 14081,
+          "name": "5167846632 by_sms",
+          "totalPaid": "$0",
+          "totalPaidNumber": 0,
+          "phoneRaw": "5167846632"
+        },
+        {
+          "idx": 14087,
+          "name": "Loida Brisbane",
+          "totalPaid": "$825.77",
+          "totalPaidNumber": 825.77,
+          "phoneRaw": "5167846632"
+        }
+      ]
+    },
+    {
+      "phone": "5166901733",
+      "totals": [
+        "3681.12",
+        "2017.66"
+      ],
+      "rows": [
+        {
+          "idx": 14124,
+          "name": "Patricia Gonsieski",
+          "totalPaid": "$3681.12",
+          "totalPaidNumber": 3681.12,
+          "phoneRaw": "5166901733"
+        },
+        {
+          "idx": 15977,
+          "name": "Patricia Gonsieski",
+          "totalPaid": "$2017.66",
+          "totalPaidNumber": 2017.66,
+          "phoneRaw": "5166901733"
+        }
+      ]
+    },
+    {
+      "phone": "5168514187",
+      "totals": [
+        "0.00",
+        "177.00"
+      ],
+      "rows": [
+        {
+          "idx": 14889,
+          "name": "Melanee Reis",
+          "totalPaid": "$0",
+          "totalPaidNumber": 0,
+          "phoneRaw": "5168514187"
+        },
+        {
+          "idx": 14961,
+          "name": "Melanee Reis",
+          "totalPaid": "$177.0",
+          "totalPaidNumber": 177,
+          "phoneRaw": "15168514187"
+        }
+      ]
+    },
+    {
+      "phone": "5169744649",
+      "totals": [
+        "598.00",
+        "0.00"
+      ],
+      "rows": [
+        {
+          "idx": 15018,
+          "name": "Felicia Seenauth",
+          "totalPaid": "$598.0",
+          "totalPaidNumber": 598,
+          "phoneRaw": "5169744649"
+        },
+        {
+          "idx": 15369,
+          "name": "Felicia Seenauth",
+          "totalPaid": "$0",
+          "totalPaidNumber": 0,
+          "phoneRaw": "15169744649"
+        }
+      ]
+    },
+    {
+      "phone": "5166583894",
+      "totals": [
+        "0.00",
+        "329.96"
+      ],
+      "rows": [
+        {
+          "idx": 15348,
+          "name": "Susan Squillace",
+          "totalPaid": "$0",
+          "totalPaidNumber": 0,
+          "phoneRaw": "15166583894"
+        },
+        {
+          "idx": 16475,
+          "name": "Susan Squillace",
+          "totalPaid": "$329.96",
+          "totalPaidNumber": 329.96,
+          "phoneRaw": "5166583894"
+        }
+      ]
+    },
+    {
+      "phone": "9172099096",
+      "totals": [
+        "0.00",
+        "745.73"
+      ],
+      "rows": [
+        {
+          "idx": 15372,
+          "name": "Lynn Pichardo",
+          "totalPaid": "$0",
+          "totalPaidNumber": 0,
+          "phoneRaw": "9172099096"
+        },
+        {
+          "idx": 15374,
+          "name": "Tara Xethalis",
+          "totalPaid": "$745.73",
+          "totalPaidNumber": 745.73,
+          "phoneRaw": "9172099096"
+        }
+      ]
+    },
+    {
+      "phone": "5165921264",
+      "totals": [
+        "0.00",
+        "344.50"
+      ],
+      "rows": [
+        {
+          "idx": 15553,
+          "name": "Christina Alvarez-Kemmet",
+          "totalPaid": "$0",
+          "totalPaidNumber": 0,
+          "phoneRaw": "15165921264"
+        },
+        {
+          "idx": 17307,
+          "name": "Christina Kemmet",
+          "totalPaid": "$344.5",
+          "totalPaidNumber": 344.5,
+          "phoneRaw": "5165921264"
+        }
+      ]
+    },
+    {
+      "phone": "5165514912",
+      "totals": [
+        "338.04",
+        "945.71"
+      ],
+      "rows": [
+        {
+          "idx": 15919,
+          "name": "Rachel Frenner",
+          "totalPaid": "$338.04",
+          "totalPaidNumber": 338.04,
+          "phoneRaw": "5165514912"
+        },
+        {
+          "idx": 16220,
+          "name": "Rachel Fener",
+          "totalPaid": "$945.71",
+          "totalPaidNumber": 945.71,
+          "phoneRaw": "5165514912"
+        }
+      ]
+    },
+    {
+      "phone": "3476134081",
+      "totals": [
+        "0.00",
+        "313.89"
+      ],
+      "rows": [
+        {
+          "idx": 16354,
+          "name": "Maui R",
+          "totalPaid": "$0",
+          "totalPaidNumber": 0,
+          "phoneRaw": "3476134081"
+        },
+        {
+          "idx": 16362,
+          "name": "Natasha Rivera",
+          "totalPaid": "$313.89",
+          "totalPaidNumber": 313.89,
+          "phoneRaw": "3476134081"
+        }
+      ]
+    },
+    {
+      "phone": "6463069370",
+      "totals": [
+        "0.00",
+        "173.01"
+      ],
+      "rows": [
+        {
+          "idx": 16820,
+          "name": "Loki Elmont",
+          "totalPaid": "$0",
+          "totalPaidNumber": 0,
+          "phoneRaw": "16463069370"
+        },
+        {
+          "idx": 17247,
+          "name": "Shaniece Franklin",
+          "totalPaid": "$173.01",
+          "totalPaidNumber": 173.01,
+          "phoneRaw": "6463069370"
+        }
+      ]
+    }
+  ]
+}

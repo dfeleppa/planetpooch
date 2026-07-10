@@ -1,0 +1,5849 @@
+{
+  "createdAt": "2026-07-06T15:22:35.720Z",
+  "currentCsv": "C:/Users/Daniel/Downloads/MoeGo-Export-Client-PlanetPooch-2026-07-06-15-17-08.csv",
+  "lastAppliedCsv": "C:/Users/Daniel/Downloads/MoeGo-Export-Client-PlanetPooch-2026-06-26-13-51-50.csv",
+  "previousCsv": "C:/Users/Daniel/Downloads/MoeGo-Export-Client-PlanetPooch-2026-06-29-19-04-50.csv",
+  "lastKnownGhlList": "C:/Users/Daniel/Documents/Planet Pooch/sync-audits/ghl-opportunity-list-2026-06-26.json",
+  "lastAppliedAudit": "C:/Users/Daniel/Documents/Planet Pooch/sync-audits/ghl-ui-update-results-2026-06-26.json",
+  "currentRows": 17473,
+  "currentUsableRows": 17349,
+  "currentUniquePhones": 17166,
+  "currentConflictPhones": 74,
+  "knownGhlPhones": 2070,
+  "candidateCount": 425,
+  "reasonCounts": {
+    "known-ghl-value-diff": 104,
+    "moego-total-changed": 318,
+    "new-moego-phone": 3
+  },
+  "candidates": [
+    {
+      "phone": "7328655335",
+      "ghlName": "Bill Terrarosa - Website lead",
+      "currentValue": 870.8,
+      "currentValueText": "$870.80",
+      "knownRows": [
+        {
+          "name": "Bill Terrarosa - Website lead",
+          "value": 264.59,
+          "valueText": "$264.59",
+          "page": 47
+        }
+      ],
+      "moegoName": "Bill Terrarosa",
+      "moegoTotal": "$2445.56",
+      "moegoTotalNumber": 2445.56,
+      "reason": "known-ghl-value-diff",
+      "source": "prev-audit-updated"
+    },
+    {
+      "phone": "6462992288",
+      "ghlName": "Nayyirah Abdullah",
+      "currentValue": 2393.83,
+      "currentValueText": "$2393.83",
+      "knownRows": [
+        {
+          "name": "Nayyirah Abdullah",
+          "value": 2393.83,
+          "valueText": "$2393.83",
+          "page": 94
+        }
+      ],
+      "moegoName": "Nayyirah Abdullah",
+      "moegoTotal": "$3849.3",
+      "moegoTotalNumber": 3849.3,
+      "reason": "known-ghl-value-diff",
+      "source": "prev-ghl-list"
+    },
+    {
+      "phone": "7184315257",
+      "ghlName": "Timothy Riffle",
+      "currentValue": 2057.77,
+      "currentValueText": "$2057.77",
+      "knownRows": [
+        {
+          "name": "Timothy Riffle",
+          "value": 2057.77,
+          "valueText": "$2057.77",
+          "page": 94
+        }
+      ],
+      "moegoName": "Timothy Riffle",
+      "moegoTotal": "$3093.28",
+      "moegoTotalNumber": 3093.28,
+      "reason": "known-ghl-value-diff",
+      "source": "prev-ghl-list"
+    },
+    {
+      "phone": "5168403925",
+      "ghlName": "Migdalia Reid",
+      "currentValue": 1728.66,
+      "currentValueText": "$1728.66",
+      "knownRows": [
+        {
+          "name": "Migdalia Reid",
+          "value": 1728.66,
+          "valueText": "$1728.66",
+          "page": 95
+        }
+      ],
+      "moegoName": "Migdalia Reid",
+      "moegoTotal": "$2569.47",
+      "moegoTotalNumber": 2569.47,
+      "reason": "known-ghl-value-diff",
+      "source": "prev-ghl-list"
+    },
+    {
+      "phone": "7188137761",
+      "ghlName": "Winston Deane - Website lead",
+      "currentValue": 621.43,
+      "currentValueText": "$621.43",
+      "knownRows": [
+        {
+          "name": "Winston Deane - Website lead",
+          "value": 0,
+          "valueText": "$0",
+          "page": 79
+        }
+      ],
+      "moegoName": "Winston Deane",
+      "moegoTotal": "$1458.28",
+      "moegoTotalNumber": 1458.28,
+      "reason": "known-ghl-value-diff",
+      "source": "prev-audit-updated"
+    },
+    {
+      "phone": "3476515689",
+      "ghlName": "Brianna Baptiste - Website lead",
+      "currentValue": 2233.5,
+      "currentValueText": "$2233.50",
+      "knownRows": [
+        {
+          "name": "Brianna Baptiste - Website lead",
+          "value": 2118.47,
+          "valueText": "$2118.47",
+          "page": 53
+        }
+      ],
+      "moegoName": "Brianna Baptiste",
+      "moegoTotal": "$2890.08",
+      "moegoTotalNumber": 2890.08,
+      "reason": "known-ghl-value-diff",
+      "source": "prev-audit-updated"
+    },
+    {
+      "phone": "5166509501",
+      "ghlName": "Melissa O'Sullivan - Training(Meta)",
+      "currentValue": 901.85,
+      "currentValueText": "$901.85",
+      "knownRows": [
+        {
+          "name": "Melissa O'Sullivan - Training(Meta)",
+          "value": 0,
+          "valueText": "$0",
+          "page": 78
+        }
+      ],
+      "moegoName": "Melissa Osullivan",
+      "moegoTotal": "$1472.41",
+      "moegoTotalNumber": 1472.41,
+      "reason": "known-ghl-value-diff",
+      "source": "prev-audit-updated"
+    },
+    {
+      "phone": "9172951403",
+      "ghlName": "Penelope Bastidas",
+      "currentValue": 453.07,
+      "currentValueText": "$453.07",
+      "knownRows": [
+        {
+          "name": "Penelope Bastidas",
+          "value": 453.07,
+          "valueText": "$453.07",
+          "page": 96
+        }
+      ],
+      "moegoName": "Penelope Bastidas",
+      "moegoTotal": "$1023.63",
+      "moegoTotalNumber": 1023.63,
+      "reason": "known-ghl-value-diff",
+      "source": "prev-ghl-list"
+    },
+    {
+      "phone": "5167549746",
+      "ghlName": "Marisa Matura - Website lead",
+      "currentValue": 5600.29,
+      "currentValueText": "$5600.29",
+      "knownRows": [
+        {
+          "name": "Marisa Matura - Website lead",
+          "value": 4410.87,
+          "valueText": "$4410.87",
+          "page": 90
+        }
+      ],
+      "moegoName": "Marisa Matura",
+      "moegoTotal": "$6107.09",
+      "moegoTotalNumber": 6107.09,
+      "reason": "known-ghl-value-diff",
+      "source": "prev-audit-updated"
+    },
+    {
+      "phone": "5166407771",
+      "ghlName": "Sarah Rich",
+      "currentValue": 216.41,
+      "currentValueText": "$216.41",
+      "knownRows": [
+        {
+          "name": "Sarah Rich",
+          "value": 216.41,
+          "valueText": "$216.41",
+          "page": 99
+        }
+      ],
+      "moegoName": "Sarah Rich",
+      "moegoTotal": "$659.36",
+      "moegoTotalNumber": 659.36,
+      "reason": "known-ghl-value-diff",
+      "source": "prev-ghl-list"
+    },
+    {
+      "phone": "3475287288",
+      "ghlName": "Adrienne Lowry - Website lead",
+      "currentValue": 1013.76,
+      "currentValueText": "$1013.76",
+      "knownRows": [
+        {
+          "name": "Adrienne Lowry - Website lead",
+          "value": 718.57,
+          "valueText": "$718.57",
+          "page": 89
+        }
+      ],
+      "moegoName": "Adrienne Lowry",
+      "moegoTotal": "$1419.10",
+      "moegoTotalNumber": 1419.1,
+      "reason": "known-ghl-value-diff",
+      "source": "prev-audit-updated"
+    },
+    {
+      "phone": "5165780009",
+      "ghlName": "Laurie Rosen - Website lead",
+      "currentValue": 686.81,
+      "currentValueText": "$686.81",
+      "knownRows": [
+        {
+          "name": "Laurie Rosen - Website lead",
+          "value": 355,
+          "valueText": "$355",
+          "page": 34
+        }
+      ],
+      "moegoName": "Laurie Rosen",
+      "moegoTotal": "$1086.51",
+      "moegoTotalNumber": 1086.51,
+      "reason": "known-ghl-value-diff",
+      "source": "prev-audit-updated"
+    },
+    {
+      "phone": "4016491642",
+      "ghlName": "John Sikie - Website lead",
+      "currentValue": 0,
+      "currentValueText": "$0",
+      "knownRows": [
+        {
+          "name": "John Sikie - Website lead",
+          "value": 0,
+          "valueText": "$0",
+          "page": 105
+        }
+      ],
+      "moegoName": "John Sikie",
+      "moegoTotal": "$371.79",
+      "moegoTotalNumber": 371.79,
+      "reason": "known-ghl-value-diff",
+      "source": "prev-ghl-list"
+    },
+    {
+      "phone": "5165820062",
+      "ghlName": "Rosalie Maiorno",
+      "currentValue": 30,
+      "currentValueText": "$30",
+      "knownRows": [
+        {
+          "name": "Rosalie Maiorno",
+          "value": 30,
+          "valueText": "$30",
+          "page": 98
+        }
+      ],
+      "moegoName": "Rosalie Maiorno",
+      "moegoTotal": "$395.17",
+      "moegoTotalNumber": 395.17,
+      "reason": "known-ghl-value-diff",
+      "source": "prev-ghl-list"
+    },
+    {
+      "phone": "9148046758",
+      "ghlName": "BriAna Pechin",
+      "currentValue": 1855.32,
+      "currentValueText": "$1855.32",
+      "knownRows": [
+        {
+          "name": "BriAna Pechin",
+          "value": 1855.32,
+          "valueText": "$1855.32",
+          "page": 82
+        }
+      ],
+      "moegoName": "BriAna Pechin",
+      "moegoTotal": "$2195.32",
+      "moegoTotalNumber": 2195.32,
+      "reason": "known-ghl-value-diff",
+      "source": "prev-ghl-list"
+    },
+    {
+      "phone": "3473047366",
+      "ghlName": "Jhon Sesme",
+      "currentValue": 329,
+      "currentValueText": "$329",
+      "knownRows": [
+        {
+          "name": "Jhon Sesme",
+          "value": 329,
+          "valueText": "$329",
+          "page": 97
+        }
+      ],
+      "moegoName": "Jhon Semse",
+      "moegoTotal": "$658.0",
+      "moegoTotalNumber": 658,
+      "reason": "known-ghl-value-diff",
+      "source": "prev-ghl-list"
+    },
+    {
+      "phone": "5167782902",
+      "ghlName": "Debra G Training",
+      "currentValue": 0,
+      "currentValueText": "$0",
+      "knownRows": [
+        {
+          "name": "Debra G Training",
+          "value": 0,
+          "valueText": "$0",
+          "page": 78
+        }
+      ],
+      "moegoName": "Debora Gonzalez",
+      "moegoTotal": "$287.92",
+      "moegoTotalNumber": 287.92,
+      "reason": "known-ghl-value-diff",
+      "source": "prev-ghl-list"
+    },
+    {
+      "phone": "6463023114",
+      "ghlName": "Tania Considine - Boarding(Meta)",
+      "currentValue": 7303.84,
+      "currentValueText": "$7303.84",
+      "knownRows": [
+        {
+          "name": "Tania Considine - Boarding(Meta)",
+          "value": 0,
+          "valueText": "$0",
+          "page": 71
+        }
+      ],
+      "moegoName": "Justin Vetrano",
+      "moegoTotal": "$7533.84",
+      "moegoTotalNumber": 7533.84,
+      "reason": "known-ghl-value-diff",
+      "source": "prev-audit-updated"
+    },
+    {
+      "phone": "6468533266",
+      "ghlName": "Andrea Sunara - Website lead",
+      "currentValue": 115.34,
+      "currentValueText": "$115.34",
+      "knownRows": [
+        {
+          "name": "Andrea Sunara - Website lead",
+          "value": 57.67,
+          "valueText": "$57.67",
+          "page": 89
+        }
+      ],
+      "moegoName": "Andrea Sunara",
+      "moegoTotal": "$317.6",
+      "moegoTotalNumber": 317.6,
+      "reason": "known-ghl-value-diff",
+      "source": "prev-audit-updated"
+    },
+    {
+      "phone": "6313982451",
+      "ghlName": "Iryna Sam",
+      "currentValue": 150,
+      "currentValueText": "$150",
+      "knownRows": [
+        {
+          "name": "Iryna Sam",
+          "value": 150,
+          "valueText": "$150",
+          "page": 98
+        }
+      ],
+      "moegoName": "Iryna Sam",
+      "moegoTotal": "$348.89",
+      "moegoTotalNumber": 348.89,
+      "reason": "known-ghl-value-diff",
+      "source": "prev-ghl-list"
+    },
+    {
+      "phone": "5166147193",
+      "ghlName": "Katlyn",
+      "currentValue": 181,
+      "currentValueText": "$181",
+      "knownRows": [
+        {
+          "name": "Katlyn",
+          "value": 181,
+          "valueText": "$181",
+          "page": 55
+        }
+      ],
+      "moegoName": "Katlyn Giordano",
+      "moegoTotal": "$377.65",
+      "moegoTotalNumber": 377.65,
+      "reason": "known-ghl-value-diff",
+      "source": "prev-ghl-list"
+    },
+    {
+      "phone": "3476530072",
+      "ghlName": "Dafne Arévalo - - Resort(Meta)",
+      "currentValue": 338.02,
+      "currentValueText": "$338.02",
+      "knownRows": [
+        {
+          "name": "Dafne Arévalo - - Resort(Meta)",
+          "value": 234.28,
+          "valueText": "$234.28",
+          "page": 60
+        }
+      ],
+      "moegoName": "Dafne Arevalo",
+      "moegoTotal": "$517.05",
+      "moegoTotalNumber": 517.05,
+      "reason": "known-ghl-value-diff",
+      "source": "prev-audit-no-change"
+    },
+    {
+      "phone": "9178286190",
+      "ghlName": "Rose Benjamin",
+      "currentValue": 1342.38,
+      "currentValueText": "$1342.38",
+      "knownRows": [
+        {
+          "name": "Rose Benjamin",
+          "value": 1342.38,
+          "valueText": "$1342.38",
+          "page": 95
+        }
+      ],
+      "moegoName": "Rose Benjamin",
+      "moegoTotal": "$1515.39",
+      "moegoTotalNumber": 1515.39,
+      "reason": "known-ghl-value-diff",
+      "source": "prev-ghl-list"
+    },
+    {
+      "phone": "7186445560",
+      "ghlName": "Regina Cohen",
+      "currentValue": 1523.09,
+      "currentValueText": "$1523.09",
+      "knownRows": [
+        {
+          "name": "Regina Cohen",
+          "value": 1523.09,
+          "valueText": "$1523.09",
+          "page": 95
+        }
+      ],
+      "moegoName": "Regina Cohen",
+      "moegoTotal": "$1691.98",
+      "moegoTotalNumber": 1691.98,
+      "reason": "known-ghl-value-diff",
+      "source": "prev-ghl-list"
+    },
+    {
+      "phone": "5163830601",
+      "ghlName": "Tina Petrik",
+      "currentValue": 150,
+      "currentValueText": "$150",
+      "knownRows": [
+        {
+          "name": "Tina Petrik",
+          "value": 150,
+          "valueText": "$150",
+          "page": 98
+        }
+      ],
+      "moegoName": "Tina Petrik",
+      "moegoTotal": "$300.0",
+      "moegoTotalNumber": 300,
+      "reason": "known-ghl-value-diff",
+      "source": "prev-ghl-list"
+    },
+    {
+      "phone": "9292257296",
+      "ghlName": "Megan Goller",
+      "currentValue": 135,
+      "currentValueText": "$135",
+      "knownRows": [
+        {
+          "name": "Megan Goller",
+          "value": 135,
+          "valueText": "$135",
+          "page": 98
+        }
+      ],
+      "moegoName": "Megan Goller",
+      "moegoTotal": "$285.0",
+      "moegoTotalNumber": 285,
+      "reason": "known-ghl-value-diff",
+      "source": "prev-ghl-list"
+    },
+    {
+      "phone": "5163959547",
+      "ghlName": "Rosemary Almonte - Website lead",
+      "currentValue": 108.65,
+      "currentValueText": "$108.65",
+      "knownRows": [
+        {
+          "name": "Rosemary Almonte - Website lead",
+          "value": 108.65,
+          "valueText": "$108.65",
+          "page": 95
+        }
+      ],
+      "moegoName": "Rosemary Almonte",
+      "moegoTotal": "$258.65",
+      "moegoTotalNumber": 258.65,
+      "reason": "known-ghl-value-diff",
+      "source": "prev-ghl-list"
+    },
+    {
+      "phone": "6469121698",
+      "ghlName": "Laurie Ann - - Resort(Meta)",
+      "currentValue": 0,
+      "currentValueText": "$0",
+      "knownRows": [
+        {
+          "name": "Laurie Ann - - Resort(Meta)",
+          "value": 0,
+          "valueText": "$0",
+          "page": 104
+        }
+      ],
+      "moegoName": "Laurie Barish",
+      "moegoTotal": "$135.0",
+      "moegoTotalNumber": 135,
+      "reason": "known-ghl-value-diff",
+      "source": "prev-ghl-list"
+    },
+    {
+      "phone": "2103864694",
+      "ghlName": "Vivian Moncada - Website lead",
+      "currentValue": 2086.87,
+      "currentValueText": "$2086.87",
+      "knownRows": [
+        {
+          "name": "Vivian Moncada - Website lead",
+          "value": 2086.87,
+          "valueText": "$2086.87",
+          "page": 90
+        }
+      ],
+      "moegoName": "Vivian Moncada",
+      "moegoTotal": "$2211.22",
+      "moegoTotalNumber": 2211.22,
+      "reason": "known-ghl-value-diff",
+      "source": "prev-ghl-list"
+    },
+    {
+      "phone": "5163184408",
+      "ghlName": "Noah Hohner - Website lead",
+      "currentValue": 0,
+      "currentValueText": "$0",
+      "knownRows": [
+        {
+          "name": "Noah Hohner - Website lead",
+          "value": 0,
+          "valueText": "$0",
+          "page": 105
+        }
+      ],
+      "moegoName": "Noah Hohner",
+      "moegoTotal": "$112.78",
+      "moegoTotalNumber": 112.78,
+      "reason": "known-ghl-value-diff",
+      "source": "prev-ghl-list"
+    },
+    {
+      "phone": "3472101734",
+      "ghlName": "Ron Waitzman - - Resort(Meta)",
+      "currentValue": 222.88,
+      "currentValueText": "$222.88",
+      "knownRows": [
+        {
+          "name": "Ron Waitzman - - Resort(Meta)",
+          "value": 0,
+          "valueText": "$0",
+          "page": 74
+        }
+      ],
+      "moegoName": "Ron Waitzman",
+      "moegoTotal": "$326.8",
+      "moegoTotalNumber": 326.8,
+      "reason": "known-ghl-value-diff",
+      "source": "prev-audit-updated"
+    },
+    {
+      "phone": "9547072807",
+      "ghlName": "Freysa Santos - Website lead",
+      "currentValue": 0,
+      "currentValueText": "$0",
+      "knownRows": [
+        {
+          "name": "Freysa Santos - Website lead",
+          "value": 0,
+          "valueText": "$0",
+          "page": 72
+        }
+      ],
+      "moegoName": "Freysa Santos",
+      "moegoTotal": "$90.29",
+      "moegoTotalNumber": 90.29,
+      "reason": "known-ghl-value-diff",
+      "source": "prev-ghl-list"
+    },
+    {
+      "phone": "7188257496",
+      "ghlName": "Simone Persad-Kissoon - Website lead",
+      "currentValue": 0,
+      "currentValueText": "$0",
+      "knownRows": [
+        {
+          "name": "Simone Persad-Kissoon - Website lead",
+          "value": 0,
+          "valueText": "$0",
+          "page": 105
+        }
+      ],
+      "moegoName": "Simone Persad-Kissoon",
+      "moegoTotal": "$83.86",
+      "moegoTotalNumber": 83.86,
+      "reason": "known-ghl-value-diff",
+      "source": "prev-ghl-list"
+    },
+    {
+      "phone": "6462579759",
+      "ghlName": "KP - Meta Lead",
+      "currentValue": 614.77,
+      "currentValueText": "$614.77",
+      "knownRows": [
+        {
+          "name": "KP - Meta Lead",
+          "value": 499.43,
+          "valueText": "$499.43",
+          "page": 90
+        }
+      ],
+      "moegoName": "Krystallee Perez",
+      "moegoTotal": "$672.44",
+      "moegoTotalNumber": 672.44,
+      "reason": "known-ghl-value-diff",
+      "source": "prev-audit-updated"
+    },
+    {
+      "phone": "9513181072",
+      "ghlName": "Yingqi Li",
+      "currentValue": 728.89,
+      "currentValueText": "$728.89",
+      "knownRows": [
+        {
+          "name": "Yingqi Li",
+          "value": 728.89,
+          "valueText": "$728.89",
+          "page": 95
+        }
+      ],
+      "moegoName": "Yingqi Li",
+      "moegoTotal": "$786.56",
+      "moegoTotalNumber": 786.56,
+      "reason": "known-ghl-value-diff",
+      "source": "prev-ghl-list"
+    },
+    {
+      "phone": "9342547136",
+      "ghlName": "Frank Covino - Resort(Meta)",
+      "currentValue": 141.53,
+      "currentValueText": "$141.53",
+      "knownRows": [
+        {
+          "name": "Frank Covino - Resort(Meta)",
+          "value": 110.05,
+          "valueText": "$110.05",
+          "page": 48
+        }
+      ],
+      "moegoName": "Frank Covino",
+      "moegoTotal": "$187.96",
+      "moegoTotalNumber": 187.96,
+      "reason": "known-ghl-value-diff",
+      "source": "prev-audit-updated"
+    },
+    {
+      "phone": "5163501928",
+      "ghlName": "Patricia Brewington",
+      "currentValue": 1588.76,
+      "currentValueText": "$1588.76",
+      "knownRows": [
+        {
+          "name": "Patricia Brewington",
+          "value": 1588.76,
+          "valueText": "$1588.76",
+          "page": 95
+        }
+      ],
+      "moegoName": "Patricia Brewington",
+      "moegoTotal": "$1614.95",
+      "moegoTotalNumber": 1614.95,
+      "reason": "known-ghl-value-diff",
+      "source": "prev-ghl-list"
+    },
+    {
+      "phone": "9293167863",
+      "ghlName": "Christina Cebek - Website Boarding Lead",
+      "currentValue": 0,
+      "currentValueText": "$0",
+      "knownRows": [
+        {
+          "name": "Christina Cebek - Website Boarding Lead",
+          "value": 0,
+          "valueText": "$0",
+          "page": 99
+        }
+      ],
+      "moegoName": "Christina Cebek",
+      "moegoTotal": "$26.19",
+      "moegoTotalNumber": 26.19,
+      "reason": "known-ghl-value-diff",
+      "source": "prev-ghl-list"
+    },
+    {
+      "phone": "9176872385",
+      "ghlName": "Denise Taylor-Jeffries - Meta Lead",
+      "currentValue": 330.69,
+      "currentValueText": "$330.69",
+      "knownRows": [
+        {
+          "name": "Denise Taylor-Jeffries - Meta Lead",
+          "value": 0,
+          "valueText": "$0",
+          "page": 3
+        }
+      ],
+      "moegoName": "Denise Jeffries",
+      "moegoTotal": "$330.69",
+      "moegoTotalNumber": 330.69,
+      "reason": "known-ghl-value-diff",
+      "source": "prev-audit-updated"
+    },
+    {
+      "phone": "9174461890",
+      "ghlName": "Ryan Lutchman - Resort(Meta)",
+      "currentValue": 180.15,
+      "currentValueText": "$180.15",
+      "knownRows": [
+        {
+          "name": "Ryan Lutchman - Resort(Meta)",
+          "value": 0,
+          "valueText": "$0",
+          "page": 19
+        }
+      ],
+      "moegoName": "Ryan Lutchman",
+      "moegoTotal": "$180.15",
+      "moegoTotalNumber": 180.15,
+      "reason": "known-ghl-value-diff",
+      "source": "prev-audit-updated"
+    },
+    {
+      "phone": "5163180295",
+      "ghlName": "Lisa Maher VonSalzen - Meta Lead",
+      "currentValue": 1981.01,
+      "currentValueText": "$1981.01",
+      "knownRows": [
+        {
+          "name": "Lisa Maher VonSalzen - Meta Lead",
+          "value": 0,
+          "valueText": "$0",
+          "page": 20
+        }
+      ],
+      "moegoName": "Lisa Vonsalzen",
+      "moegoTotal": "$1981.01",
+      "moegoTotalNumber": 1981.01,
+      "reason": "known-ghl-value-diff",
+      "source": "prev-audit-updated"
+    },
+    {
+      "phone": "5163431918",
+      "ghlName": "Monika Robinson - Meta Grooming Lead",
+      "currentValue": 208.34,
+      "currentValueText": "$208.34",
+      "knownRows": [
+        {
+          "name": "Monika Robinson - Meta Grooming Lead",
+          "value": 0,
+          "valueText": "$0",
+          "page": 28
+        }
+      ],
+      "moegoName": "Monica Robinson",
+      "moegoTotal": "$208.34",
+      "moegoTotalNumber": 208.34,
+      "reason": "known-ghl-value-diff",
+      "source": "prev-audit-updated"
+    },
+    {
+      "phone": "5163827504",
+      "ghlName": "Christine Sweeney - Resort(Meta)",
+      "currentValue": 1423.41,
+      "currentValueText": "$1423.41",
+      "knownRows": [
+        {
+          "name": "Christine Sweeney - Resort(Meta)",
+          "value": 0,
+          "valueText": "$0",
+          "page": 29
+        }
+      ],
+      "moegoName": "Kristina Glynn",
+      "moegoTotal": "$1423.41",
+      "moegoTotalNumber": 1423.41,
+      "reason": "known-ghl-value-diff",
+      "source": "prev-audit-updated"
+    },
+    {
+      "phone": "5164920242",
+      "ghlName": "JustLorieee Balbosa",
+      "currentValue": 1018.29,
+      "currentValueText": "$1018.29",
+      "knownRows": [
+        {
+          "name": "JustLorieee Balbosa",
+          "value": 649.25,
+          "valueText": "$649.25",
+          "page": 31
+        }
+      ],
+      "moegoName": "Lorie Balbosa",
+      "moegoTotal": "$1018.29",
+      "moegoTotalNumber": 1018.29,
+      "reason": "known-ghl-value-diff",
+      "source": "prev-audit-updated"
+    },
+    {
+      "phone": "3476838819",
+      "ghlName": "Johanna Reilly-Morales - Meta Grooming Lead",
+      "currentValue": 250,
+      "currentValueText": "$250",
+      "knownRows": [
+        {
+          "name": "Johanna Reilly-Morales - Meta Grooming Lead",
+          "value": 100,
+          "valueText": "$100",
+          "page": 32
+        }
+      ],
+      "moegoName": "Johanna Reilly Morales",
+      "moegoTotal": "$250.0",
+      "moegoTotalNumber": 250,
+      "reason": "known-ghl-value-diff",
+      "source": "prev-audit-updated"
+    },
+    {
+      "phone": "5164562785",
+      "ghlName": "Laura Herman - 11570 - Website Lead",
+      "currentValue": 2016.93,
+      "currentValueText": "$2016.93",
+      "knownRows": [
+        {
+          "name": "Laura Herman - 11570 - Website Lead",
+          "value": 0,
+          "valueText": "$0",
+          "page": 40
+        }
+      ],
+      "moegoName": "Laura Herman",
+      "moegoTotal": "$2016.93",
+      "moegoTotalNumber": 2016.93,
+      "reason": "known-ghl-value-diff",
+      "source": "prev-audit-updated"
+    },
+    {
+      "phone": "5163166744",
+      "ghlName": "Melina Gordon - 11530 - Website Lead",
+      "currentValue": 404.91,
+      "currentValueText": "$404.91",
+      "knownRows": [
+        {
+          "name": "Melina Gordon - 11530 - Website Lead",
+          "value": 194,
+          "valueText": "$194",
+          "page": 41
+        }
+      ],
+      "moegoName": "Melina Gordon",
+      "moegoTotal": "$404.91",
+      "moegoTotalNumber": 404.91,
+      "reason": "known-ghl-value-diff",
+      "source": "prev-audit-updated"
+    },
+    {
+      "phone": "7184404476",
+      "ghlName": "Sarah Fusco - 11572 - Website Lead",
+      "currentValue": 1053.56,
+      "currentValueText": "$1053.56",
+      "knownRows": [
+        {
+          "name": "Sarah Fusco - 11572 - Website Lead",
+          "value": 0,
+          "valueText": "$0",
+          "page": 42
+        }
+      ],
+      "moegoName": "Sarah Anne Fusco",
+      "moegoTotal": "$1053.56",
+      "moegoTotalNumber": 1053.56,
+      "reason": "known-ghl-value-diff",
+      "source": "prev-audit-updated"
+    },
+    {
+      "phone": "5709541477",
+      "ghlName": "Renee Pricci - - Resort(Meta)",
+      "currentValue": 135,
+      "currentValueText": "$135",
+      "knownRows": [
+        {
+          "name": "Renee Pricci - - Resort(Meta)",
+          "value": 0,
+          "valueText": "$0",
+          "page": 44
+        }
+      ],
+      "moegoName": "RENEE PRICCI",
+      "moegoTotal": "$135.0",
+      "moegoTotalNumber": 135,
+      "reason": "known-ghl-value-diff",
+      "source": "prev-audit-updated"
+    },
+    {
+      "phone": "6462675461",
+      "ghlName": "Claudia Nagy - - Resort(Meta)",
+      "currentValue": 1052.57,
+      "currentValueText": "$1052.57",
+      "knownRows": [
+        {
+          "name": "Claudia Nagy - - Resort(Meta)",
+          "value": 0,
+          "valueText": "$0",
+          "page": 44
+        }
+      ],
+      "moegoName": "Claudia Nagy",
+      "moegoTotal": "$1052.57",
+      "moegoTotalNumber": 1052.57,
+      "reason": "known-ghl-value-diff",
+      "source": "prev-audit-updated"
+    },
+    {
+      "phone": "5165289181",
+      "ghlName": "Joanne Grace - - Resort(Meta)",
+      "currentValue": 1043.25,
+      "currentValueText": "$1043.25",
+      "knownRows": [
+        {
+          "name": "Joanne Grace - - Resort(Meta)",
+          "value": 0,
+          "valueText": "$0",
+          "page": 46
+        }
+      ],
+      "moegoName": "Joanne Spanodemos",
+      "moegoTotal": "$1043.25",
+      "moegoTotalNumber": 1043.25,
+      "reason": "known-ghl-value-diff",
+      "source": "prev-audit-updated"
+    },
+    {
+      "phone": "3474948085",
+      "ghlName": "Sasha Martinez - Website lead",
+      "currentValue": 685,
+      "currentValueText": "$685",
+      "knownRows": [
+        {
+          "name": "Sasha Martinez - Website lead",
+          "value": 167.09,
+          "valueText": "$167.09",
+          "page": 47
+        }
+      ],
+      "moegoName": "Sasha Martinez",
+      "moegoTotal": "$685.0",
+      "moegoTotalNumber": 685,
+      "reason": "known-ghl-value-diff",
+      "source": "prev-audit-updated"
+    },
+    {
+      "phone": "9177973929",
+      "ghlName": "Kimberly Sanford-DeVito - Meta Grooming Lead",
+      "currentValue": 456.62,
+      "currentValueText": "$456.62",
+      "knownRows": [
+        {
+          "name": "Kimberly Sanford-DeVito - Meta Grooming Lead",
+          "value": 297.5,
+          "valueText": "$297.5",
+          "page": 47
+        }
+      ],
+      "moegoName": "kimberly sanford",
+      "moegoTotal": "$456.62",
+      "moegoTotalNumber": 456.62,
+      "reason": "known-ghl-value-diff",
+      "source": "prev-audit-updated"
+    },
+    {
+      "phone": "5164177857",
+      "ghlName": "Lindsay Ward - 11501 - Website Lead",
+      "currentValue": 702.72,
+      "currentValueText": "$702.72",
+      "knownRows": [
+        {
+          "name": "Lindsay Ward - 11501 - Website Lead",
+          "value": 351.36,
+          "valueText": "$351.36",
+          "page": 47
+        }
+      ],
+      "moegoName": "Lindsay Ward",
+      "moegoTotal": "$702.72",
+      "moegoTotalNumber": 702.72,
+      "reason": "known-ghl-value-diff",
+      "source": "prev-audit-updated"
+    },
+    {
+      "phone": "5166720293",
+      "ghlName": "Jenna Connors - 11530 - Website Lead",
+      "currentValue": 169.01,
+      "currentValueText": "$169.01",
+      "knownRows": [
+        {
+          "name": "Jenna Connors - 11530 - Website Lead",
+          "value": 195.2,
+          "valueText": "$195.2",
+          "page": 47
+        }
+      ],
+      "moegoName": "Jenna Connors",
+      "moegoTotal": "$169.01",
+      "moegoTotalNumber": 169.01,
+      "reason": "known-ghl-value-diff",
+      "source": "prev-audit-updated"
+    },
+    {
+      "phone": "5163681227",
+      "ghlName": "Mia Driscoll - Website lead",
+      "currentValue": 450,
+      "currentValueText": "$450",
+      "knownRows": [
+        {
+          "name": "Mia Driscoll - Website lead",
+          "value": 300,
+          "valueText": "$300",
+          "page": 47
+        }
+      ],
+      "moegoName": "Mia Driscoll",
+      "moegoTotal": "$450.0",
+      "moegoTotalNumber": 450,
+      "reason": "known-ghl-value-diff",
+      "source": "prev-audit-updated"
+    },
+    {
+      "phone": "7184271243",
+      "ghlName": "Jenny Batista - - Resort(Meta)",
+      "currentValue": 0,
+      "currentValueText": "$0",
+      "knownRows": [
+        {
+          "name": "Jenny Batista - - Resort(Meta)",
+          "value": 169.03,
+          "valueText": "$169.03",
+          "page": 47
+        }
+      ],
+      "moegoName": "Jenny Batista",
+      "moegoTotal": "$0",
+      "moegoTotalNumber": 0,
+      "reason": "known-ghl-value-diff",
+      "source": "prev-audit-updated"
+    },
+    {
+      "phone": "5166625772",
+      "ghlName": "Stephanie Fox - - Resort(Meta)",
+      "currentValue": 0,
+      "currentValueText": "$0",
+      "knownRows": [
+        {
+          "name": "Stephanie Fox - - Resort(Meta)",
+          "value": 169.03,
+          "valueText": "$169.03",
+          "page": 48
+        }
+      ],
+      "moegoName": "Stephanie Fox",
+      "moegoTotal": "$0",
+      "moegoTotalNumber": 0,
+      "reason": "known-ghl-value-diff",
+      "source": "prev-audit-updated"
+    },
+    {
+      "phone": "5164864547",
+      "ghlName": "Denise Lacerenza - Meta Lead",
+      "currentValue": 0,
+      "currentValueText": "$0",
+      "knownRows": [
+        {
+          "name": "Denise Lacerenza - Meta Lead",
+          "value": 243.56,
+          "valueText": "$243.56",
+          "page": 48
+        }
+      ],
+      "moegoName": "Denise Lacerenza",
+      "moegoTotal": "$0",
+      "moegoTotalNumber": 0,
+      "reason": "known-ghl-value-diff",
+      "source": "prev-audit-updated"
+    },
+    {
+      "phone": "7168005058",
+      "ghlName": "Ryan McNamara - 11570 - Website Lead",
+      "currentValue": 612.31,
+      "currentValueText": "$612.31",
+      "knownRows": [
+        {
+          "name": "Ryan McNamara - 11570 - Website Lead",
+          "value": 406.54,
+          "valueText": "$406.54",
+          "page": 53
+        }
+      ],
+      "moegoName": "Ryan McNamara",
+      "moegoTotal": "$612.31",
+      "moegoTotalNumber": 612.31,
+      "reason": "known-ghl-value-diff",
+      "source": "prev-audit-updated"
+    },
+    {
+      "phone": "6462098955",
+      "ghlName": "Sean Ford - Meta Grooming Lead",
+      "currentValue": 522.43,
+      "currentValueText": "$522.43",
+      "knownRows": [
+        {
+          "name": "Sean Ford - Meta Grooming Lead",
+          "value": 331.04,
+          "valueText": "$331.04",
+          "page": 53
+        }
+      ],
+      "moegoName": "Sean Ford",
+      "moegoTotal": "$522.43",
+      "moegoTotalNumber": 522.43,
+      "reason": "known-ghl-value-diff",
+      "source": "prev-audit-updated"
+    },
+    {
+      "phone": "5164595147",
+      "ghlName": "Anju John",
+      "currentValue": 3409.87,
+      "currentValueText": "$3409.87",
+      "knownRows": [
+        {
+          "name": "Anju John",
+          "value": 2706.13,
+          "valueText": "$2706.13",
+          "page": 55
+        }
+      ],
+      "moegoName": "Anju John",
+      "moegoTotal": "$3409.87",
+      "moegoTotalNumber": 3409.87,
+      "reason": "known-ghl-value-diff",
+      "source": "prev-audit-updated"
+    },
+    {
+      "phone": "5165927512",
+      "ghlName": "Patricia Wilson Longobardi",
+      "currentValue": 0,
+      "currentValueText": "$0",
+      "knownRows": [
+        {
+          "name": "Patricia Wilson Longobardi",
+          "value": 169.03,
+          "valueText": "$169.03",
+          "page": 55
+        }
+      ],
+      "moegoName": "Patty and Mike Longobardi",
+      "moegoTotal": "$0",
+      "moegoTotalNumber": 0,
+      "reason": "known-ghl-value-diff",
+      "source": "prev-audit-updated"
+    },
+    {
+      "phone": "5166520145",
+      "ghlName": "Trish Harris-Darnaud",
+      "currentValue": 0,
+      "currentValueText": "$0",
+      "knownRows": [
+        {
+          "name": "Trish Harris-Darnaud",
+          "value": 169.03,
+          "valueText": "$169.03",
+          "page": 55
+        }
+      ],
+      "moegoName": "Trish Darnaud",
+      "moegoTotal": "$0",
+      "moegoTotalNumber": 0,
+      "reason": "known-ghl-value-diff",
+      "source": "prev-audit-updated"
+    },
+    {
+      "phone": "5164260403",
+      "ghlName": "Nikki Marie - Meta Grooming Lead",
+      "currentValue": 526.67,
+      "currentValueText": "$526.67",
+      "knownRows": [
+        {
+          "name": "Nikki Marie - Meta Grooming Lead",
+          "value": 357.78,
+          "valueText": "$357.78",
+          "page": 55
+        }
+      ],
+      "moegoName": "Nicole Brennan",
+      "moegoTotal": "$526.67",
+      "moegoTotalNumber": 526.67,
+      "reason": "known-ghl-value-diff",
+      "source": "prev-audit-updated"
+    },
+    {
+      "phone": "9734524782",
+      "ghlName": "Jenniffer Molina - Meta Lead",
+      "currentValue": 410.86,
+      "currentValueText": "$410.86",
+      "knownRows": [
+        {
+          "name": "Jenniffer Molina - Meta Lead",
+          "value": 0,
+          "valueText": "$0",
+          "page": 56
+        }
+      ],
+      "moegoName": "Jenniffer Molina",
+      "moegoTotal": "$410.86",
+      "moegoTotalNumber": 410.86,
+      "reason": "known-ghl-value-diff",
+      "source": "prev-audit-updated"
+    },
+    {
+      "phone": "5163759492",
+      "ghlName": "Ginny Ruffolo Barbere - Grooming - Meta Lead",
+      "currentValue": 150,
+      "currentValueText": "$150",
+      "knownRows": [
+        {
+          "name": "Ginny Ruffolo Barbere - Grooming - Meta Lead",
+          "value": 0,
+          "valueText": "$0",
+          "page": 56
+        }
+      ],
+      "moegoName": "Ginny Barbere",
+      "moegoTotal": "$150.0",
+      "moegoTotalNumber": 150,
+      "reason": "known-ghl-value-diff",
+      "source": "prev-audit-updated"
+    },
+    {
+      "phone": "9176966063",
+      "ghlName": "Nicole M. Grant - Resort(Meta)",
+      "currentValue": 110.85,
+      "currentValueText": "$110.85",
+      "knownRows": [
+        {
+          "name": "Nicole M. Grant - Resort(Meta)",
+          "value": 53.18,
+          "valueText": "$53.18",
+          "page": 61
+        }
+      ],
+      "moegoName": "Nicole Grant",
+      "moegoTotal": "$110.85",
+      "moegoTotalNumber": 110.85,
+      "reason": "known-ghl-value-diff",
+      "source": "prev-audit-updated"
+    },
+    {
+      "phone": "5166952824",
+      "ghlName": "Cinthya Lino",
+      "currentValue": 105,
+      "currentValueText": "$105",
+      "knownRows": [
+        {
+          "name": "Cinthya Lino",
+          "value": 150,
+          "valueText": "$150",
+          "page": 61
+        }
+      ],
+      "moegoName": "Cinthya Lino",
+      "moegoTotal": "$105.0",
+      "moegoTotalNumber": 105,
+      "reason": "known-ghl-value-diff",
+      "source": "prev-audit-updated"
+    },
+    {
+      "phone": "9174708467",
+      "ghlName": "Sonia Virani - Grooming - Meta Lead",
+      "currentValue": 255,
+      "currentValueText": "$255",
+      "knownRows": [
+        {
+          "name": "Sonia Virani - Grooming - Meta Lead",
+          "value": 256.77,
+          "valueText": "$256.77",
+          "page": 62
+        }
+      ],
+      "moegoName": "Sajjad Merchant",
+      "moegoTotal": "$255.0",
+      "moegoTotalNumber": 255,
+      "reason": "known-ghl-value-diff",
+      "source": "prev-audit-updated"
+    },
+    {
+      "phone": "5162443710",
+      "ghlName": "Tayvarg - Training(Meta)",
+      "currentValue": 465,
+      "currentValueText": "$465",
+      "knownRows": [
+        {
+          "name": "Tayvarg - Training(Meta)",
+          "value": 0,
+          "valueText": "$0",
+          "page": 68
+        }
+      ],
+      "moegoName": "Taylor Vargas",
+      "moegoTotal": "$465.0",
+      "moegoTotalNumber": 465,
+      "reason": "known-ghl-value-diff",
+      "source": "prev-audit-updated"
+    },
+    {
+      "phone": "9172002647",
+      "ghlName": "⠀⠀⠀⠀⠀⠀Paola Corazza - Training(Meta)",
+      "currentValue": 22.18,
+      "currentValueText": "$22.18",
+      "knownRows": [
+        {
+          "name": "⠀⠀⠀⠀⠀⠀Paola Corazza - Training(Meta)",
+          "value": 0,
+          "valueText": "$0",
+          "page": 68
+        }
+      ],
+      "moegoName": "Giovanna Jimenez",
+      "moegoTotal": "$22.18",
+      "moegoTotalNumber": 22.18,
+      "reason": "known-ghl-value-diff",
+      "source": "prev-audit-updated"
+    },
+    {
+      "phone": "5162869469",
+      "ghlName": "Julianne Sabino - Website lead",
+      "currentValue": 4436.11,
+      "currentValueText": "$4436.11",
+      "knownRows": [
+        {
+          "name": "Julianne Sabino - Website lead",
+          "value": 0,
+          "valueText": "$0",
+          "page": 68
+        }
+      ],
+      "moegoName": "Julianne Sabino",
+      "moegoTotal": "$4436.11",
+      "moegoTotalNumber": 4436.11,
+      "reason": "known-ghl-value-diff",
+      "source": "prev-audit-updated"
+    },
+    {
+      "phone": "5166738986",
+      "ghlName": "Michelle Li - Website lead",
+      "currentValue": 150,
+      "currentValueText": "$150",
+      "knownRows": [
+        {
+          "name": "Michelle Li - Website lead",
+          "value": 0,
+          "valueText": "$0",
+          "page": 69
+        }
+      ],
+      "moegoName": "Michelle Li",
+      "moegoTotal": "$150.0",
+      "moegoTotalNumber": 150,
+      "reason": "known-ghl-value-diff",
+      "source": "prev-audit-updated"
+    },
+    {
+      "phone": "6313565719",
+      "ghlName": "Kayla Mistretta - Website lead",
+      "currentValue": 171.12,
+      "currentValueText": "$171.12",
+      "knownRows": [
+        {
+          "name": "Kayla Mistretta - Website lead",
+          "value": 0,
+          "valueText": "$0",
+          "page": 70
+        }
+      ],
+      "moegoName": "Kayla Mistretta",
+      "moegoTotal": "$171.12",
+      "moegoTotalNumber": 171.12,
+      "reason": "known-ghl-value-diff",
+      "source": "prev-audit-updated"
+    },
+    {
+      "phone": "5169966931",
+      "ghlName": "Eve G - Grooming(Meta)",
+      "currentValue": 864.27,
+      "currentValueText": "$864.27",
+      "knownRows": [
+        {
+          "name": "Eve G - Grooming(Meta)",
+          "value": 0,
+          "valueText": "$0",
+          "page": 71
+        }
+      ],
+      "moegoName": "Evdoxia Gounelas",
+      "moegoTotal": "$864.27",
+      "moegoTotalNumber": 864.27,
+      "reason": "known-ghl-value-diff",
+      "source": "prev-audit-updated"
+    },
+    {
+      "phone": "5168160702",
+      "ghlName": "Denise Rigney Frary - Boarding(Meta)",
+      "currentValue": 2710,
+      "currentValueText": "$2710",
+      "knownRows": [
+        {
+          "name": "Denise Rigney Frary - Boarding(Meta)",
+          "value": 0,
+          "valueText": "$0",
+          "page": 73
+        }
+      ],
+      "moegoName": "Denise Frairy",
+      "moegoTotal": "$2710.0",
+      "moegoTotalNumber": 2710,
+      "reason": "known-ghl-value-diff",
+      "source": "prev-audit-updated"
+    },
+    {
+      "phone": "3478691298",
+      "ghlName": "Dorothy Matinale",
+      "currentValue": 30.68,
+      "currentValueText": "$30.68",
+      "knownRows": [
+        {
+          "name": "Dorothy Matinale",
+          "value": 0,
+          "valueText": "$0",
+          "page": 74
+        }
+      ],
+      "moegoName": "Dorothy Matinale",
+      "moegoTotal": "$30.68",
+      "moegoTotalNumber": 30.68,
+      "reason": "known-ghl-value-diff",
+      "source": "prev-audit-updated"
+    },
+    {
+      "phone": "5169096867",
+      "ghlName": "Amy Karofsky",
+      "currentValue": 1526.58,
+      "currentValueText": "$1526.58",
+      "knownRows": [
+        {
+          "name": "Amy Karofsky",
+          "value": 0,
+          "valueText": "$0",
+          "page": 74
+        }
+      ],
+      "moegoName": "Amy Karofsky",
+      "moegoTotal": "$1526.58",
+      "moegoTotalNumber": 1526.58,
+      "reason": "known-ghl-value-diff",
+      "source": "prev-audit-updated"
+    },
+    {
+      "phone": "5165199980",
+      "ghlName": "Gabby McLean - Website lead",
+      "currentValue": 1526.86,
+      "currentValueText": "$1526.86",
+      "knownRows": [
+        {
+          "name": "Gabby McLean - Website lead",
+          "value": 0,
+          "valueText": "$0",
+          "page": 74
+        }
+      ],
+      "moegoName": "Gabby McLean",
+      "moegoTotal": "$1526.86",
+      "moegoTotalNumber": 1526.86,
+      "reason": "known-ghl-value-diff",
+      "source": "prev-audit-updated"
+    },
+    {
+      "phone": "5168416769",
+      "ghlName": "Frank Radice - Website lead",
+      "currentValue": 188.89,
+      "currentValueText": "$188.89",
+      "knownRows": [
+        {
+          "name": "Frank Radice - Website lead",
+          "value": 0,
+          "valueText": "$0",
+          "page": 75
+        }
+      ],
+      "moegoName": "Frank Radice",
+      "moegoTotal": "$188.89",
+      "moegoTotalNumber": 188.89,
+      "reason": "known-ghl-value-diff",
+      "source": "prev-audit-updated"
+    },
+    {
+      "phone": "5166333220",
+      "ghlName": "Althea Shalto - Website lead",
+      "currentValue": 163.7,
+      "currentValueText": "$163.70",
+      "knownRows": [
+        {
+          "name": "Althea Shalto - Website lead",
+          "value": 0,
+          "valueText": "$0",
+          "page": 76
+        }
+      ],
+      "moegoName": "Althea Shalto",
+      "moegoTotal": "$163.7",
+      "moegoTotalNumber": 163.7,
+      "reason": "known-ghl-value-diff",
+      "source": "prev-audit-updated"
+    },
+    {
+      "phone": "3475120096",
+      "ghlName": "Maureen Salloum - Website lead",
+      "currentValue": 53.18,
+      "currentValueText": "$53.18",
+      "knownRows": [
+        {
+          "name": "Maureen Salloum - Website lead",
+          "value": 0,
+          "valueText": "$0",
+          "page": 77
+        }
+      ],
+      "moegoName": "Maureen Salloum",
+      "moegoTotal": "$53.18",
+      "moegoTotalNumber": 53.18,
+      "reason": "known-ghl-value-diff",
+      "source": "prev-audit-updated"
+    },
+    {
+      "phone": "5162208166",
+      "ghlName": "Paul Peters - Website lead",
+      "currentValue": 459.03,
+      "currentValueText": "$459.03",
+      "knownRows": [
+        {
+          "name": "Paul Peters - Website lead",
+          "value": 0,
+          "valueText": "$0",
+          "page": 79
+        }
+      ],
+      "moegoName": "Paul Peters",
+      "moegoTotal": "$459.03",
+      "moegoTotalNumber": 459.03,
+      "reason": "known-ghl-value-diff",
+      "source": "prev-audit-updated"
+    },
+    {
+      "phone": "5164574797",
+      "ghlName": "Karen Geller Hittleman - Website lead",
+      "currentValue": 165,
+      "currentValueText": "$165",
+      "knownRows": [
+        {
+          "name": "Karen Geller Hittleman - Website lead",
+          "value": 0,
+          "valueText": "$0",
+          "page": 80
+        }
+      ],
+      "moegoName": "Karen Geller Hittleman",
+      "moegoTotal": "$165.0",
+      "moegoTotalNumber": 165,
+      "reason": "known-ghl-value-diff",
+      "source": "prev-audit-updated"
+    },
+    {
+      "phone": "5165787923",
+      "ghlName": "Samantha Kampf - Website lead",
+      "currentValue": 244,
+      "currentValueText": "$244",
+      "knownRows": [
+        {
+          "name": "Samantha Kampf - Website lead",
+          "value": 0,
+          "valueText": "$0",
+          "page": 80
+        }
+      ],
+      "moegoName": "Samantha Kampf",
+      "moegoTotal": "$244.0",
+      "moegoTotalNumber": 244,
+      "reason": "known-ghl-value-diff",
+      "source": "prev-audit-updated"
+    },
+    {
+      "phone": "9173316855",
+      "ghlName": "Aya Asuncion - Training(Meta)",
+      "currentValue": 962,
+      "currentValueText": "$962",
+      "knownRows": [
+        {
+          "name": "Aya Asuncion - Training(Meta)",
+          "value": 0,
+          "valueText": "$0",
+          "page": 81
+        }
+      ],
+      "moegoName": "Aya Asuncion",
+      "moegoTotal": "$962.0",
+      "moegoTotalNumber": 962,
+      "reason": "known-ghl-value-diff",
+      "source": "prev-audit-updated"
+    },
+    {
+      "phone": "5166599201",
+      "ghlName": "Bonnie Katz - - Resort(Meta)",
+      "currentValue": 0,
+      "currentValueText": "$0",
+      "knownRows": [
+        {
+          "name": "Bonnie Katz - - Resort(Meta)",
+          "value": 169.03,
+          "valueText": "$169.03",
+          "page": 82
+        }
+      ],
+      "moegoName": "Bonnie Katz",
+      "moegoTotal": "$0.0",
+      "moegoTotalNumber": 0,
+      "reason": "known-ghl-value-diff",
+      "source": "prev-audit-updated"
+    },
+    {
+      "phone": "9175616208",
+      "ghlName": "Ed Perez - - Resort(Meta)",
+      "currentValue": 314.74,
+      "currentValueText": "$314.74",
+      "knownRows": [
+        {
+          "name": "Ed Perez - - Resort(Meta)",
+          "value": 288.55,
+          "valueText": "$288.55",
+          "page": 82
+        }
+      ],
+      "moegoName": "Edward Perez",
+      "moegoTotal": "$314.74",
+      "moegoTotalNumber": 314.74,
+      "reason": "known-ghl-value-diff",
+      "source": "prev-audit-updated"
+    },
+    {
+      "phone": "5164749345",
+      "ghlName": "Kathleen OConnor - 11040 - Website Lead",
+      "currentValue": 694.83,
+      "currentValueText": "$694.83",
+      "knownRows": [
+        {
+          "name": "Kathleen OConnor - 11040 - Website Lead",
+          "value": 441.5,
+          "valueText": "$441.5",
+          "page": 82
+        }
+      ],
+      "moegoName": "Kathleen OConnor",
+      "moegoTotal": "$694.83",
+      "moegoTotalNumber": 694.83,
+      "reason": "known-ghl-value-diff",
+      "source": "prev-audit-updated"
+    },
+    {
+      "phone": "5164555491",
+      "ghlName": "Diana Backer - Website lead",
+      "currentValue": 225.18,
+      "currentValueText": "$225.18",
+      "knownRows": [
+        {
+          "name": "Diana Backer - Website lead",
+          "value": 0,
+          "valueText": "$0",
+          "page": 83
+        }
+      ],
+      "moegoName": "Diana Backer",
+      "moegoTotal": "$225.18",
+      "moegoTotalNumber": 225.18,
+      "reason": "known-ghl-value-diff",
+      "source": "prev-audit-updated"
+    },
+    {
+      "phone": "5167100686",
+      "ghlName": "Nicole Rodriguez - Website lead",
+      "currentValue": 4377.68,
+      "currentValueText": "$4377.68",
+      "knownRows": [
+        {
+          "name": "Nicole Rodriguez - Website lead",
+          "value": 3725.02,
+          "valueText": "$3725.02",
+          "page": 83
+        }
+      ],
+      "moegoName": "Manuel Franco",
+      "moegoTotal": "$4377.68",
+      "moegoTotalNumber": 4377.68,
+      "reason": "known-ghl-value-diff",
+      "source": "prev-audit-updated"
+    },
+    {
+      "phone": "5162327583",
+      "ghlName": "Breanne P - Training(Meta)",
+      "currentValue": 741.56,
+      "currentValueText": "$741.56",
+      "knownRows": [
+        {
+          "name": "Breanne P - Training(Meta)",
+          "value": 0,
+          "valueText": "$0",
+          "page": 85
+        }
+      ],
+      "moegoName": "Breanne Pinto",
+      "moegoTotal": "$741.56",
+      "moegoTotalNumber": 741.56,
+      "reason": "known-ghl-value-diff",
+      "source": "prev-audit-updated"
+    },
+    {
+      "phone": "9176738235",
+      "ghlName": "Irina Dyner - Grooming - Meta Lead",
+      "currentValue": 150,
+      "currentValueText": "$150",
+      "knownRows": [
+        {
+          "name": "Irina Dyner - Grooming - Meta Lead",
+          "value": 0,
+          "valueText": "$0",
+          "page": 85
+        }
+      ],
+      "moegoName": "Irina Dyner",
+      "moegoTotal": "$150.0",
+      "moegoTotalNumber": 150,
+      "reason": "known-ghl-value-diff",
+      "source": "prev-audit-updated"
+    },
+    {
+      "phone": "6467340266",
+      "ghlName": "Nalinie Pooran - Training(Meta)",
+      "currentValue": 487.84,
+      "currentValueText": "$487.84",
+      "knownRows": [
+        {
+          "name": "Nalinie Pooran - Training(Meta)",
+          "value": 0,
+          "valueText": "$0",
+          "page": 86
+        }
+      ],
+      "moegoName": "Leo Pooran",
+      "moegoTotal": "$487.84",
+      "moegoTotalNumber": 487.84,
+      "reason": "known-ghl-value-diff",
+      "source": "prev-audit-updated"
+    },
+    {
+      "phone": "3474997934",
+      "ghlName": "Christopher Gebauer - Website lead",
+      "currentValue": 3299.26,
+      "currentValueText": "$3299.26",
+      "knownRows": [
+        {
+          "name": "Christopher Gebauer - Website lead",
+          "value": 0,
+          "valueText": "$0",
+          "page": 88
+        }
+      ],
+      "moegoName": "chris gebauer",
+      "moegoTotal": "$3299.26",
+      "moegoTotalNumber": 3299.26,
+      "reason": "known-ghl-value-diff",
+      "source": "prev-audit-updated"
+    },
+    {
+      "phone": "3476157255",
+      "ghlName": "Helen Jackson - Boarding(Meta)",
+      "currentValue": 389.04,
+      "currentValueText": "$389.04",
+      "knownRows": [
+        {
+          "name": "Helen Jackson - Boarding(Meta)",
+          "value": 0,
+          "valueText": "$0",
+          "page": 89
+        }
+      ],
+      "moegoName": "Helen Jackson",
+      "moegoTotal": "$389.04",
+      "moegoTotalNumber": 389.04,
+      "reason": "known-ghl-value-diff",
+      "source": "prev-audit-updated"
+    },
+    {
+      "phone": "9299285685",
+      "ghlName": "Majority Baptist - Boarding(Meta)",
+      "currentValue": 1676.79,
+      "currentValueText": "$1676.79",
+      "knownRows": [
+        {
+          "name": "Majority Baptist - Boarding(Meta)",
+          "value": 517.91,
+          "valueText": "$517.91",
+          "page": 89
+        }
+      ],
+      "moegoName": "Darryl Frazier",
+      "moegoTotal": "$1676.79",
+      "moegoTotalNumber": 1676.79,
+      "reason": "known-ghl-value-diff",
+      "source": "prev-audit-updated"
+    },
+    {
+      "phone": "5167272445",
+      "ghlName": "Esther Lapidus - 11598 - Website Lead",
+      "currentValue": 814,
+      "currentValueText": "$814",
+      "knownRows": [
+        {
+          "name": "Esther Lapidus - 11598 - Website Lead",
+          "value": 627.1,
+          "valueText": "$627.1",
+          "page": 89
+        }
+      ],
+      "moegoName": "Esther Lapidus",
+      "moegoTotal": "$814.0",
+      "moegoTotalNumber": 814,
+      "reason": "known-ghl-value-diff",
+      "source": "prev-audit-updated"
+    },
+    {
+      "phone": "5163181154",
+      "ghlName": "Ida - Andrea grooming client/ boarding lead",
+      "currentValue": 7751.81,
+      "currentValueText": "$7751.81",
+      "knownRows": [
+        {
+          "name": "Ida - Andrea grooming client/ boarding lead",
+          "value": 7960.17,
+          "valueText": "$7960.17",
+          "page": 90
+        }
+      ],
+      "moegoName": "Ida Marciano",
+      "moegoTotal": "$7751.81",
+      "moegoTotalNumber": 7751.81,
+      "reason": "known-ghl-value-diff",
+      "source": "prev-audit-updated"
+    },
+    {
+      "phone": "5165677903",
+      "ghlName": "Lauren Blaney - Website lead",
+      "currentValue": 1312.21,
+      "currentValueText": "$1312.21",
+      "knownRows": [
+        {
+          "name": "Lauren Blaney - Website lead",
+          "value": 26.19,
+          "valueText": "$26.19",
+          "page": 90
+        }
+      ],
+      "moegoName": "Lauren Blaney",
+      "moegoTotal": "$1312.21",
+      "moegoTotalNumber": 1312.21,
+      "reason": "known-ghl-value-diff",
+      "source": "prev-audit-updated"
+    },
+    {
+      "phone": "5164269948",
+      "ghlName": "Alison Brotschol - Boarding(Meta)",
+      "currentValue": 193.26,
+      "currentValueText": "$193.26",
+      "knownRows": [
+        {
+          "name": "Alison Brotschol - Boarding(Meta)",
+          "value": 0,
+          "valueText": "$0",
+          "page": 91
+        }
+      ],
+      "moegoName": "Alison Brotschol",
+      "moegoTotal": "$193.26",
+      "moegoTotalNumber": 193.26,
+      "reason": "known-ghl-value-diff",
+      "source": "prev-audit-updated"
+    },
+    {
+      "phone": "3474761126",
+      "ghlName": "Alexandra Ksepka - Website lead",
+      "currentValue": 90.29,
+      "currentValueText": "$90.29",
+      "knownRows": [
+        {
+          "name": "Alexandra Ksepka - Website lead",
+          "value": 0,
+          "valueText": "$0",
+          "page": 91
+        }
+      ],
+      "moegoName": "Alexandra Delacruz",
+      "moegoTotal": "$90.29",
+      "moegoTotalNumber": 90.29,
+      "reason": "known-ghl-value-diff",
+      "source": "prev-audit-updated"
+    },
+    {
+      "phone": "3478057157",
+      "ghlName": "Shay Alyssa - Training(Meta)",
+      "currentValue": 2905.33,
+      "currentValueText": "$2905.33",
+      "knownRows": [
+        {
+          "name": "Shay Alyssa - Training(Meta)",
+          "value": 0,
+          "valueText": "$0",
+          "page": 92
+        }
+      ],
+      "moegoName": "Shaina Lall",
+      "moegoTotal": "$2905.33",
+      "moegoTotalNumber": 2905.33,
+      "reason": "known-ghl-value-diff",
+      "source": "prev-audit-updated"
+    },
+    {
+      "phone": "5166805543",
+      "ghlName": "",
+      "currentValue": null,
+      "currentValueText": "unknown",
+      "knownRows": [],
+      "moegoName": "Bari David",
+      "moegoTotal": "$58660.98",
+      "moegoTotalNumber": 58660.98,
+      "reason": "moego-total-changed",
+      "source": "moego-delta"
+    },
+    {
+      "phone": "9176841703",
+      "ghlName": "",
+      "currentValue": null,
+      "currentValueText": "unknown",
+      "knownRows": [],
+      "moegoName": "Melissa Lis",
+      "moegoTotal": "$31913.42",
+      "moegoTotalNumber": 31913.42,
+      "reason": "moego-total-changed",
+      "source": "moego-delta"
+    },
+    {
+      "phone": "5166065906",
+      "ghlName": "",
+      "currentValue": null,
+      "currentValueText": "unknown",
+      "knownRows": [],
+      "moegoName": "Michelle Freel",
+      "moegoTotal": "$29002.7",
+      "moegoTotalNumber": 29002.7,
+      "reason": "moego-total-changed",
+      "source": "moego-delta"
+    },
+    {
+      "phone": "5167763779",
+      "ghlName": "",
+      "currentValue": null,
+      "currentValueText": "unknown",
+      "knownRows": [],
+      "moegoName": "Susan Siegel",
+      "moegoTotal": "$26894.27",
+      "moegoTotalNumber": 26894.27,
+      "reason": "moego-total-changed",
+      "source": "moego-delta"
+    },
+    {
+      "phone": "5167240470",
+      "ghlName": "",
+      "currentValue": null,
+      "currentValueText": "unknown",
+      "knownRows": [],
+      "moegoName": "Aly Puccio",
+      "moegoTotal": "$26695.0",
+      "moegoTotalNumber": 26695,
+      "reason": "moego-total-changed",
+      "source": "moego-delta"
+    },
+    {
+      "phone": "9176225711",
+      "ghlName": "",
+      "currentValue": null,
+      "currentValueText": "unknown",
+      "knownRows": [],
+      "moegoName": "Kelli Stanton",
+      "moegoTotal": "$26448.96",
+      "moegoTotalNumber": 26448.96,
+      "reason": "moego-total-changed",
+      "source": "moego-delta"
+    },
+    {
+      "phone": "9176716408",
+      "ghlName": "",
+      "currentValue": null,
+      "currentValueText": "unknown",
+      "knownRows": [],
+      "moegoName": "Kim Weiss",
+      "moegoTotal": "$25247.03",
+      "moegoTotalNumber": 25247.03,
+      "reason": "moego-total-changed",
+      "source": "moego-delta"
+    },
+    {
+      "phone": "5163539880",
+      "ghlName": "",
+      "currentValue": null,
+      "currentValueText": "unknown",
+      "knownRows": [],
+      "moegoName": "Allison Kaminsky",
+      "moegoTotal": "$24079.4",
+      "moegoTotalNumber": 24079.4,
+      "reason": "moego-total-changed",
+      "source": "moego-delta"
+    },
+    {
+      "phone": "5165672960",
+      "ghlName": "",
+      "currentValue": null,
+      "currentValueText": "unknown",
+      "knownRows": [],
+      "moegoName": "Tracy Jordan",
+      "moegoTotal": "$20088.18",
+      "moegoTotalNumber": 20088.18,
+      "reason": "moego-total-changed",
+      "source": "moego-delta"
+    },
+    {
+      "phone": "9174399385",
+      "ghlName": "",
+      "currentValue": null,
+      "currentValueText": "unknown",
+      "knownRows": [],
+      "moegoName": "Adina Itzkowitz",
+      "moegoTotal": "$19778.46",
+      "moegoTotalNumber": 19778.46,
+      "reason": "moego-total-changed",
+      "source": "moego-delta"
+    },
+    {
+      "phone": "9174889962",
+      "ghlName": "",
+      "currentValue": null,
+      "currentValueText": "unknown",
+      "knownRows": [],
+      "moegoName": "Kathleen McHugh",
+      "moegoTotal": "$18311.36",
+      "moegoTotalNumber": 18311.36,
+      "reason": "moego-total-changed",
+      "source": "moego-delta"
+    },
+    {
+      "phone": "6463396071",
+      "ghlName": "",
+      "currentValue": null,
+      "currentValueText": "unknown",
+      "knownRows": [],
+      "moegoName": "Mina Alexander",
+      "moegoTotal": "$17812.06",
+      "moegoTotalNumber": 17812.06,
+      "reason": "moego-total-changed",
+      "source": "moego-delta"
+    },
+    {
+      "phone": "5166501497",
+      "ghlName": "",
+      "currentValue": null,
+      "currentValueText": "unknown",
+      "knownRows": [],
+      "moegoName": "Beth Schiffman",
+      "moegoTotal": "$17538.7",
+      "moegoTotalNumber": 17538.7,
+      "reason": "moego-total-changed",
+      "source": "moego-delta"
+    },
+    {
+      "phone": "7326186429",
+      "ghlName": "",
+      "currentValue": null,
+      "currentValueText": "unknown",
+      "knownRows": [],
+      "moegoName": "Tracy Koenig",
+      "moegoTotal": "$17042.5",
+      "moegoTotalNumber": 17042.5,
+      "reason": "moego-total-changed",
+      "source": "moego-delta"
+    },
+    {
+      "phone": "5166720035",
+      "ghlName": "",
+      "currentValue": null,
+      "currentValueText": "unknown",
+      "knownRows": [],
+      "moegoName": "Ariella Ginsburg",
+      "moegoTotal": "$17017.86",
+      "moegoTotalNumber": 17017.86,
+      "reason": "moego-total-changed",
+      "source": "moego-delta"
+    },
+    {
+      "phone": "5162421498",
+      "ghlName": "",
+      "currentValue": null,
+      "currentValueText": "unknown",
+      "knownRows": [],
+      "moegoName": "Chris Kelly",
+      "moegoTotal": "$16431.41",
+      "moegoTotalNumber": 16431.41,
+      "reason": "moego-total-changed",
+      "source": "moego-delta"
+    },
+    {
+      "phone": "3478860577",
+      "ghlName": "",
+      "currentValue": null,
+      "currentValueText": "unknown",
+      "knownRows": [],
+      "moegoName": "Luisa Tola",
+      "moegoTotal": "$15355.51",
+      "moegoTotalNumber": 15355.51,
+      "reason": "moego-total-changed",
+      "source": "moego-delta"
+    },
+    {
+      "phone": "3863349754",
+      "ghlName": "",
+      "currentValue": null,
+      "currentValueText": "unknown",
+      "knownRows": [],
+      "moegoName": "Vicki Rhodes",
+      "moegoTotal": "$14814.15",
+      "moegoTotalNumber": 14814.15,
+      "reason": "moego-total-changed",
+      "source": "moego-delta"
+    },
+    {
+      "phone": "9173015405",
+      "ghlName": "",
+      "currentValue": null,
+      "currentValueText": "unknown",
+      "knownRows": [],
+      "moegoName": "Neil Wiener",
+      "moegoTotal": "$14629.24",
+      "moegoTotalNumber": 14629.24,
+      "reason": "moego-total-changed",
+      "source": "moego-delta"
+    },
+    {
+      "phone": "5168848050",
+      "ghlName": "",
+      "currentValue": null,
+      "currentValueText": "unknown",
+      "knownRows": [],
+      "moegoName": "Helaine Katz",
+      "moegoTotal": "$14507.75",
+      "moegoTotalNumber": 14507.75,
+      "reason": "moego-total-changed",
+      "source": "moego-delta"
+    },
+    {
+      "phone": "5169841006",
+      "ghlName": "",
+      "currentValue": null,
+      "currentValueText": "unknown",
+      "knownRows": [],
+      "moegoName": "James Salnave",
+      "moegoTotal": "$14451.25",
+      "moegoTotalNumber": 14451.25,
+      "reason": "moego-total-changed",
+      "source": "moego-delta"
+    },
+    {
+      "phone": "6464897959",
+      "ghlName": "",
+      "currentValue": null,
+      "currentValueText": "unknown",
+      "knownRows": [],
+      "moegoName": "Wendy Rathjen",
+      "moegoTotal": "$14177.5",
+      "moegoTotalNumber": 14177.5,
+      "reason": "moego-total-changed",
+      "source": "moego-delta"
+    },
+    {
+      "phone": "5613739713",
+      "ghlName": "",
+      "currentValue": null,
+      "currentValueText": "unknown",
+      "knownRows": [],
+      "moegoName": "Denise Kalland",
+      "moegoTotal": "$13980.39",
+      "moegoTotalNumber": 13980.39,
+      "reason": "moego-total-changed",
+      "source": "moego-delta"
+    },
+    {
+      "phone": "7186416545",
+      "ghlName": "",
+      "currentValue": null,
+      "currentValueText": "unknown",
+      "knownRows": [],
+      "moegoName": "Diann Ferrara",
+      "moegoTotal": "$13441.52",
+      "moegoTotalNumber": 13441.52,
+      "reason": "moego-total-changed",
+      "source": "moego-delta"
+    },
+    {
+      "phone": "7184902359",
+      "ghlName": "",
+      "currentValue": null,
+      "currentValueText": "unknown",
+      "knownRows": [],
+      "moegoName": "Veronica DePaolo",
+      "moegoTotal": "$13373.47",
+      "moegoTotalNumber": 13373.47,
+      "reason": "moego-total-changed",
+      "source": "moego-delta"
+    },
+    {
+      "phone": "5163124129",
+      "ghlName": "",
+      "currentValue": null,
+      "currentValueText": "unknown",
+      "knownRows": [],
+      "moegoName": "Jill Zuckerman",
+      "moegoTotal": "$13213.15",
+      "moegoTotalNumber": 13213.15,
+      "reason": "moego-total-changed",
+      "source": "moego-delta"
+    },
+    {
+      "phone": "5168848377",
+      "ghlName": "",
+      "currentValue": null,
+      "currentValueText": "unknown",
+      "knownRows": [],
+      "moegoName": "Elizabeth Medugno",
+      "moegoTotal": "$13075.64",
+      "moegoTotalNumber": 13075.64,
+      "reason": "moego-total-changed",
+      "source": "moego-delta"
+    },
+    {
+      "phone": "5163137583",
+      "ghlName": "",
+      "currentValue": null,
+      "currentValueText": "unknown",
+      "knownRows": [],
+      "moegoName": "Stefanie Bower",
+      "moegoTotal": "$12655.61",
+      "moegoTotalNumber": 12655.61,
+      "reason": "moego-total-changed",
+      "source": "moego-delta"
+    },
+    {
+      "phone": "5166374043",
+      "ghlName": "",
+      "currentValue": null,
+      "currentValueText": "unknown",
+      "knownRows": [],
+      "moegoName": "Matt Kambie",
+      "moegoTotal": "$12640.76",
+      "moegoTotalNumber": 12640.76,
+      "reason": "moego-total-changed",
+      "source": "moego-delta"
+    },
+    {
+      "phone": "5168591001",
+      "ghlName": "",
+      "currentValue": null,
+      "currentValueText": "unknown",
+      "knownRows": [],
+      "moegoName": "Dianne,Sharon,Eric Rintell",
+      "moegoTotal": "$12480.0",
+      "moegoTotalNumber": 12480,
+      "reason": "moego-total-changed",
+      "source": "moego-delta"
+    },
+    {
+      "phone": "5166803667",
+      "ghlName": "",
+      "currentValue": null,
+      "currentValueText": "unknown",
+      "knownRows": [],
+      "moegoName": "Leslie Eisenberg",
+      "moegoTotal": "$12314.05",
+      "moegoTotalNumber": 12314.05,
+      "reason": "moego-total-changed",
+      "source": "moego-delta"
+    },
+    {
+      "phone": "5163826343",
+      "ghlName": "",
+      "currentValue": null,
+      "currentValueText": "unknown",
+      "knownRows": [],
+      "moegoName": "Dawn Turck",
+      "moegoTotal": "$12251.57",
+      "moegoTotalNumber": 12251.57,
+      "reason": "moego-total-changed",
+      "source": "moego-delta"
+    },
+    {
+      "phone": "9176173979",
+      "ghlName": "",
+      "currentValue": null,
+      "currentValueText": "unknown",
+      "knownRows": [],
+      "moegoName": "Lexie Peterka",
+      "moegoTotal": "$12148.8",
+      "moegoTotalNumber": 12148.8,
+      "reason": "moego-total-changed",
+      "source": "moego-delta"
+    },
+    {
+      "phone": "5163735351",
+      "ghlName": "",
+      "currentValue": null,
+      "currentValueText": "unknown",
+      "knownRows": [],
+      "moegoName": "Dana Kochavi",
+      "moegoTotal": "$12035.0",
+      "moegoTotalNumber": 12035,
+      "reason": "moego-total-changed",
+      "source": "moego-delta"
+    },
+    {
+      "phone": "5166627490",
+      "ghlName": "",
+      "currentValue": null,
+      "currentValueText": "unknown",
+      "knownRows": [],
+      "moegoName": "Jennifer Gallagher",
+      "moegoTotal": "$12018.39",
+      "moegoTotalNumber": 12018.39,
+      "reason": "moego-total-changed",
+      "source": "moego-delta"
+    },
+    {
+      "phone": "5162253488",
+      "ghlName": "",
+      "currentValue": null,
+      "currentValueText": "unknown",
+      "knownRows": [],
+      "moegoName": "Kevin Cooper",
+      "moegoTotal": "$11984.72",
+      "moegoTotalNumber": 11984.72,
+      "reason": "moego-total-changed",
+      "source": "moego-delta"
+    },
+    {
+      "phone": "5163612435",
+      "ghlName": "",
+      "currentValue": null,
+      "currentValueText": "unknown",
+      "knownRows": [],
+      "moegoName": "Jill Sarrica",
+      "moegoTotal": "$11935.04",
+      "moegoTotalNumber": 11935.04,
+      "reason": "moego-total-changed",
+      "source": "moego-delta"
+    },
+    {
+      "phone": "5627464536",
+      "ghlName": "",
+      "currentValue": null,
+      "currentValueText": "unknown",
+      "knownRows": [],
+      "moegoName": "Michelle Mendez",
+      "moegoTotal": "$11564.41",
+      "moegoTotalNumber": 11564.41,
+      "reason": "moego-total-changed",
+      "source": "moego-delta"
+    },
+    {
+      "phone": "9175432474",
+      "ghlName": "",
+      "currentValue": null,
+      "currentValueText": "unknown",
+      "knownRows": [],
+      "moegoName": "Dina Vella",
+      "moegoTotal": "$11502.73",
+      "moegoTotalNumber": 11502.73,
+      "reason": "moego-total-changed",
+      "source": "moego-delta"
+    },
+    {
+      "phone": "5163191586",
+      "ghlName": "",
+      "currentValue": null,
+      "currentValueText": "unknown",
+      "knownRows": [],
+      "moegoName": "Lisa Sparacello",
+      "moegoTotal": "$11357.15",
+      "moegoTotalNumber": 11357.15,
+      "reason": "moego-total-changed",
+      "source": "moego-delta"
+    },
+    {
+      "phone": "3474955576",
+      "ghlName": "",
+      "currentValue": null,
+      "currentValueText": "unknown",
+      "knownRows": [],
+      "moegoName": "Meagan Hobson",
+      "moegoTotal": "$11307.2",
+      "moegoTotalNumber": 11307.2,
+      "reason": "moego-total-changed",
+      "source": "moego-delta"
+    },
+    {
+      "phone": "5164451698",
+      "ghlName": "",
+      "currentValue": null,
+      "currentValueText": "unknown",
+      "knownRows": [],
+      "moegoName": "Muriel Kutner",
+      "moegoTotal": "$11142.42",
+      "moegoTotalNumber": 11142.42,
+      "reason": "moego-total-changed",
+      "source": "moego-delta"
+    },
+    {
+      "phone": "5168166566",
+      "ghlName": "",
+      "currentValue": null,
+      "currentValueText": "unknown",
+      "knownRows": [],
+      "moegoName": "Lori Rosenthal",
+      "moegoTotal": "$10895.0",
+      "moegoTotalNumber": 10895,
+      "reason": "moego-total-changed",
+      "source": "moego-delta"
+    },
+    {
+      "phone": "5165325687",
+      "ghlName": "",
+      "currentValue": null,
+      "currentValueText": "unknown",
+      "knownRows": [],
+      "moegoName": "Cathy Shannon",
+      "moegoTotal": "$10796.83",
+      "moegoTotalNumber": 10796.83,
+      "reason": "moego-total-changed",
+      "source": "moego-delta"
+    },
+    {
+      "phone": "5164911683",
+      "ghlName": "",
+      "currentValue": null,
+      "currentValueText": "unknown",
+      "knownRows": [],
+      "moegoName": "Denise DeCrescito",
+      "moegoTotal": "$10588.3",
+      "moegoTotalNumber": 10588.3,
+      "reason": "moego-total-changed",
+      "source": "moego-delta"
+    },
+    {
+      "phone": "9179572798",
+      "ghlName": "",
+      "currentValue": null,
+      "currentValueText": "unknown",
+      "knownRows": [],
+      "moegoName": "Bethany Harding",
+      "moegoTotal": "$10564.35",
+      "moegoTotalNumber": 10564.35,
+      "reason": "moego-total-changed",
+      "source": "moego-delta"
+    },
+    {
+      "phone": "5168879705",
+      "ghlName": "",
+      "currentValue": null,
+      "currentValueText": "unknown",
+      "knownRows": [],
+      "moegoName": "Renee Klein",
+      "moegoTotal": "$10546.5",
+      "moegoTotalNumber": 10546.5,
+      "reason": "moego-total-changed",
+      "source": "moego-delta"
+    },
+    {
+      "phone": "3472198437",
+      "ghlName": "",
+      "currentValue": null,
+      "currentValueText": "unknown",
+      "knownRows": [],
+      "moegoName": "Melissa Varuzzi",
+      "moegoTotal": "$10430.0",
+      "moegoTotalNumber": 10430,
+      "reason": "moego-total-changed",
+      "source": "moego-delta"
+    },
+    {
+      "phone": "5166972356",
+      "ghlName": "",
+      "currentValue": null,
+      "currentValueText": "unknown",
+      "knownRows": [],
+      "moegoName": "Patricia Jahelka",
+      "moegoTotal": "$10187.03",
+      "moegoTotalNumber": 10187.03,
+      "reason": "moego-total-changed",
+      "source": "moego-delta"
+    },
+    {
+      "phone": "5165511352",
+      "ghlName": "",
+      "currentValue": null,
+      "currentValueText": "unknown",
+      "knownRows": [],
+      "moegoName": "Maddy Cunningham",
+      "moegoTotal": "$9950.0",
+      "moegoTotalNumber": 9950,
+      "reason": "moego-total-changed",
+      "source": "moego-delta"
+    },
+    {
+      "phone": "5168402121",
+      "ghlName": "",
+      "currentValue": null,
+      "currentValueText": "unknown",
+      "knownRows": [],
+      "moegoName": "Donna Burack-Mailman",
+      "moegoTotal": "$9882.45",
+      "moegoTotalNumber": 9882.45,
+      "reason": "moego-total-changed",
+      "source": "moego-delta"
+    },
+    {
+      "phone": "9175972573",
+      "ghlName": "",
+      "currentValue": null,
+      "currentValueText": "unknown",
+      "knownRows": [],
+      "moegoName": "Melanie Flatow",
+      "moegoTotal": "$9612.73",
+      "moegoTotalNumber": 9612.73,
+      "reason": "moego-total-changed",
+      "source": "moego-delta"
+    },
+    {
+      "phone": "9179453239",
+      "ghlName": "",
+      "currentValue": null,
+      "currentValueText": "unknown",
+      "knownRows": [],
+      "moegoName": "Roza Khaitova",
+      "moegoTotal": "$9596.89",
+      "moegoTotalNumber": 9596.89,
+      "reason": "moego-total-changed",
+      "source": "moego-delta"
+    },
+    {
+      "phone": "5163161720",
+      "ghlName": "",
+      "currentValue": null,
+      "currentValueText": "unknown",
+      "knownRows": [],
+      "moegoName": "Scott Fessler",
+      "moegoTotal": "$9541.62",
+      "moegoTotalNumber": 9541.62,
+      "reason": "moego-total-changed",
+      "source": "moego-delta"
+    },
+    {
+      "phone": "5162442395",
+      "ghlName": "",
+      "currentValue": null,
+      "currentValueText": "unknown",
+      "knownRows": [],
+      "moegoName": "Melissa Coyne",
+      "moegoTotal": "$9495.0",
+      "moegoTotalNumber": 9495,
+      "reason": "moego-total-changed",
+      "source": "moego-delta"
+    },
+    {
+      "phone": "6463206654",
+      "ghlName": "",
+      "currentValue": null,
+      "currentValueText": "unknown",
+      "knownRows": [],
+      "moegoName": "Susan Lowe",
+      "moegoTotal": "$9457.49",
+      "moegoTotalNumber": 9457.49,
+      "reason": "moego-total-changed",
+      "source": "moego-delta"
+    },
+    {
+      "phone": "5165787258",
+      "ghlName": "",
+      "currentValue": null,
+      "currentValueText": "unknown",
+      "knownRows": [],
+      "moegoName": "Judy Gray",
+      "moegoTotal": "$9347.5",
+      "moegoTotalNumber": 9347.5,
+      "reason": "moego-total-changed",
+      "source": "moego-delta"
+    },
+    {
+      "phone": "9177335411",
+      "ghlName": "",
+      "currentValue": null,
+      "currentValueText": "unknown",
+      "knownRows": [],
+      "moegoName": "Tara Krolick",
+      "moegoTotal": "$9234.57",
+      "moegoTotalNumber": 9234.57,
+      "reason": "moego-total-changed",
+      "source": "moego-delta"
+    },
+    {
+      "phone": "5169936520",
+      "ghlName": "",
+      "currentValue": null,
+      "currentValueText": "unknown",
+      "knownRows": [],
+      "moegoName": "Michael Weintraub",
+      "moegoTotal": "$9217.61",
+      "moegoTotalNumber": 9217.61,
+      "reason": "moego-total-changed",
+      "source": "moego-delta"
+    },
+    {
+      "phone": "5162550322",
+      "ghlName": "",
+      "currentValue": null,
+      "currentValueText": "unknown",
+      "knownRows": [],
+      "moegoName": "Linda Charnan-Browdy",
+      "moegoTotal": "$9201.68",
+      "moegoTotalNumber": 9201.68,
+      "reason": "moego-total-changed",
+      "source": "moego-delta"
+    },
+    {
+      "phone": "5167270498",
+      "ghlName": "",
+      "currentValue": null,
+      "currentValueText": "unknown",
+      "knownRows": [],
+      "moegoName": "Natasha Levin",
+      "moegoTotal": "$9035.97",
+      "moegoTotalNumber": 9035.97,
+      "reason": "moego-total-changed",
+      "source": "moego-delta"
+    },
+    {
+      "phone": "6314888872",
+      "ghlName": "",
+      "currentValue": null,
+      "currentValueText": "unknown",
+      "knownRows": [],
+      "moegoName": "Ali Hawes",
+      "moegoTotal": "$9015.89",
+      "moegoTotalNumber": 9015.89,
+      "reason": "moego-total-changed",
+      "source": "moego-delta"
+    },
+    {
+      "phone": "5166809801",
+      "ghlName": "",
+      "currentValue": null,
+      "currentValueText": "unknown",
+      "knownRows": [],
+      "moegoName": "Maria McMahon",
+      "moegoTotal": "$8781.88",
+      "moegoTotalNumber": 8781.88,
+      "reason": "moego-total-changed",
+      "source": "moego-delta"
+    },
+    {
+      "phone": "9087642520",
+      "ghlName": "",
+      "currentValue": null,
+      "currentValueText": "unknown",
+      "knownRows": [],
+      "moegoName": "Rohan Balgobin",
+      "moegoTotal": "$8762.59",
+      "moegoTotalNumber": 8762.59,
+      "reason": "moego-total-changed",
+      "source": "moego-delta"
+    },
+    {
+      "phone": "5167903325",
+      "ghlName": "",
+      "currentValue": null,
+      "currentValueText": "unknown",
+      "knownRows": [],
+      "moegoName": "Maria Puleo",
+      "moegoTotal": "$8615.0",
+      "moegoTotalNumber": 8615,
+      "reason": "moego-total-changed",
+      "source": "moego-delta"
+    },
+    {
+      "phone": "5164592893",
+      "ghlName": "",
+      "currentValue": null,
+      "currentValueText": "unknown",
+      "knownRows": [],
+      "moegoName": "Megan Ceglie",
+      "moegoTotal": "$8511.0",
+      "moegoTotalNumber": 8511,
+      "reason": "moego-total-changed",
+      "source": "moego-delta"
+    },
+    {
+      "phone": "5169964486",
+      "ghlName": "",
+      "currentValue": null,
+      "currentValueText": "unknown",
+      "knownRows": [],
+      "moegoName": "Allison Creagh",
+      "moegoTotal": "$8489.25",
+      "moegoTotalNumber": 8489.25,
+      "reason": "moego-total-changed",
+      "source": "moego-delta"
+    },
+    {
+      "phone": "9174490275",
+      "ghlName": "",
+      "currentValue": null,
+      "currentValueText": "unknown",
+      "knownRows": [],
+      "moegoName": "Jennifer Wizel",
+      "moegoTotal": "$8369.24",
+      "moegoTotalNumber": 8369.24,
+      "reason": "moego-total-changed",
+      "source": "moego-delta"
+    },
+    {
+      "phone": "5167879000",
+      "ghlName": "",
+      "currentValue": null,
+      "currentValueText": "unknown",
+      "knownRows": [],
+      "moegoName": "Jim Byrnes",
+      "moegoTotal": "$8368.94",
+      "moegoTotalNumber": 8368.94,
+      "reason": "moego-total-changed",
+      "source": "moego-delta"
+    },
+    {
+      "phone": "9178487664",
+      "ghlName": "",
+      "currentValue": null,
+      "currentValueText": "unknown",
+      "knownRows": [],
+      "moegoName": "Kristen Donelan",
+      "moegoTotal": "$8291.51",
+      "moegoTotalNumber": 8291.51,
+      "reason": "moego-total-changed",
+      "source": "moego-delta"
+    },
+    {
+      "phone": "5163590825",
+      "ghlName": "",
+      "currentValue": null,
+      "currentValueText": "unknown",
+      "knownRows": [],
+      "moegoName": "Kevin Shields",
+      "moegoTotal": "$8234.96",
+      "moegoTotalNumber": 8234.96,
+      "reason": "moego-total-changed",
+      "source": "moego-delta"
+    },
+    {
+      "phone": "5169785801",
+      "ghlName": "",
+      "currentValue": null,
+      "currentValueText": "unknown",
+      "knownRows": [],
+      "moegoName": "Meril Eisenberg",
+      "moegoTotal": "$8189.48",
+      "moegoTotalNumber": 8189.48,
+      "reason": "moego-total-changed",
+      "source": "moego-delta"
+    },
+    {
+      "phone": "5165269477",
+      "ghlName": "",
+      "currentValue": null,
+      "currentValueText": "unknown",
+      "knownRows": [],
+      "moegoName": "Dominique Cilmi",
+      "moegoTotal": "$8161.52",
+      "moegoTotalNumber": 8161.52,
+      "reason": "moego-total-changed",
+      "source": "moego-delta"
+    },
+    {
+      "phone": "5164181116",
+      "ghlName": "",
+      "currentValue": null,
+      "currentValueText": "unknown",
+      "knownRows": [],
+      "moegoName": "George Carman",
+      "moegoTotal": "$8155.0",
+      "moegoTotalNumber": 8155,
+      "reason": "moego-total-changed",
+      "source": "moego-delta"
+    },
+    {
+      "phone": "3309906708",
+      "ghlName": "",
+      "currentValue": null,
+      "currentValueText": "unknown",
+      "knownRows": [],
+      "moegoName": "Mary Vaccaro",
+      "moegoTotal": "$8023.57",
+      "moegoTotalNumber": 8023.57,
+      "reason": "moego-total-changed",
+      "source": "moego-delta"
+    },
+    {
+      "phone": "7186447870",
+      "ghlName": "",
+      "currentValue": null,
+      "currentValueText": "unknown",
+      "knownRows": [],
+      "moegoName": "Cherise Dwyer",
+      "moegoTotal": "$7982.89",
+      "moegoTotalNumber": 7982.89,
+      "reason": "moego-total-changed",
+      "source": "moego-delta"
+    },
+    {
+      "phone": "7188694045",
+      "ghlName": "",
+      "currentValue": null,
+      "currentValueText": "unknown",
+      "knownRows": [],
+      "moegoName": "Angelo Beninati",
+      "moegoTotal": "$7910.86",
+      "moegoTotalNumber": 7910.86,
+      "reason": "moego-total-changed",
+      "source": "moego-delta"
+    },
+    {
+      "phone": "6467732846",
+      "ghlName": "",
+      "currentValue": null,
+      "currentValueText": "unknown",
+      "knownRows": [],
+      "moegoName": "Rosemarie Gandolfo",
+      "moegoTotal": "$7700.0",
+      "moegoTotalNumber": 7700,
+      "reason": "moego-total-changed",
+      "source": "moego-delta"
+    },
+    {
+      "phone": "5168401097",
+      "ghlName": "",
+      "currentValue": null,
+      "currentValueText": "unknown",
+      "knownRows": [],
+      "moegoName": "Nicole Rodgers",
+      "moegoTotal": "$7669.13",
+      "moegoTotalNumber": 7669.13,
+      "reason": "moego-total-changed",
+      "source": "moego-delta"
+    },
+    {
+      "phone": "5169652033",
+      "ghlName": "",
+      "currentValue": null,
+      "currentValueText": "unknown",
+      "knownRows": [],
+      "moegoName": "Jennifer Masone",
+      "moegoTotal": "$7609.59",
+      "moegoTotalNumber": 7609.59,
+      "reason": "moego-total-changed",
+      "source": "moego-delta"
+    },
+    {
+      "phone": "5166418310",
+      "ghlName": "",
+      "currentValue": null,
+      "currentValueText": "unknown",
+      "knownRows": [],
+      "moegoName": "Jody Filoso",
+      "moegoTotal": "$7609.07",
+      "moegoTotalNumber": 7609.07,
+      "reason": "moego-total-changed",
+      "source": "moego-delta"
+    },
+    {
+      "phone": "9176271562",
+      "ghlName": "",
+      "currentValue": null,
+      "currentValueText": "unknown",
+      "knownRows": [],
+      "moegoName": "Carmen Benitez",
+      "moegoTotal": "$7605.33",
+      "moegoTotalNumber": 7605.33,
+      "reason": "moego-total-changed",
+      "source": "moego-delta"
+    },
+    {
+      "phone": "9149600486",
+      "ghlName": "",
+      "currentValue": null,
+      "currentValueText": "unknown",
+      "knownRows": [],
+      "moegoName": "Lora Keatim",
+      "moegoTotal": "$7597.38",
+      "moegoTotalNumber": 7597.38,
+      "reason": "moego-total-changed",
+      "source": "moego-delta"
+    },
+    {
+      "phone": "9177479698",
+      "ghlName": "",
+      "currentValue": null,
+      "currentValueText": "unknown",
+      "knownRows": [],
+      "moegoName": "Christine Amoroso",
+      "moegoTotal": "$7518.06",
+      "moegoTotalNumber": 7518.06,
+      "reason": "moego-total-changed",
+      "source": "moego-delta"
+    },
+    {
+      "phone": "9175752275",
+      "ghlName": "",
+      "currentValue": null,
+      "currentValueText": "unknown",
+      "knownRows": [],
+      "moegoName": "Ari Goldman",
+      "moegoTotal": "$7516.13",
+      "moegoTotalNumber": 7516.13,
+      "reason": "moego-total-changed",
+      "source": "moego-delta"
+    },
+    {
+      "phone": "5162055974",
+      "ghlName": "",
+      "currentValue": null,
+      "currentValueText": "unknown",
+      "knownRows": [],
+      "moegoName": "Cheryl Pav",
+      "moegoTotal": "$7339.25",
+      "moegoTotalNumber": 7339.25,
+      "reason": "moego-total-changed",
+      "source": "moego-delta"
+    },
+    {
+      "phone": "5166474642",
+      "ghlName": "",
+      "currentValue": null,
+      "currentValueText": "unknown",
+      "knownRows": [],
+      "moegoName": "Michelle Laskin",
+      "moegoTotal": "$7302.29",
+      "moegoTotalNumber": 7302.29,
+      "reason": "moego-total-changed",
+      "source": "moego-delta"
+    },
+    {
+      "phone": "5165248328",
+      "ghlName": "",
+      "currentValue": null,
+      "currentValueText": "unknown",
+      "knownRows": [],
+      "moegoName": "Jacklyn Cerrone",
+      "moegoTotal": "$7142.18",
+      "moegoTotalNumber": 7142.18,
+      "reason": "moego-total-changed",
+      "source": "moego-delta"
+    },
+    {
+      "phone": "5163759841",
+      "ghlName": "",
+      "currentValue": null,
+      "currentValueText": "unknown",
+      "knownRows": [],
+      "moegoName": "Mallory Citron",
+      "moegoTotal": "$7049.65",
+      "moegoTotalNumber": 7049.65,
+      "reason": "moego-total-changed",
+      "source": "moego-delta"
+    },
+    {
+      "phone": "3472397581",
+      "ghlName": "",
+      "currentValue": null,
+      "currentValueText": "unknown",
+      "knownRows": [],
+      "moegoName": "Natasha Yasin",
+      "moegoTotal": "$7047.29",
+      "moegoTotalNumber": 7047.29,
+      "reason": "moego-total-changed",
+      "source": "moego-delta"
+    },
+    {
+      "phone": "5163164307",
+      "ghlName": "",
+      "currentValue": null,
+      "currentValueText": "unknown",
+      "knownRows": [],
+      "moegoName": "Heather Whitman",
+      "moegoTotal": "$7021.26",
+      "moegoTotalNumber": 7021.26,
+      "reason": "moego-total-changed",
+      "source": "moego-delta"
+    },
+    {
+      "phone": "5166397598",
+      "ghlName": "",
+      "currentValue": null,
+      "currentValueText": "unknown",
+      "knownRows": [],
+      "moegoName": "Keith Feinberg",
+      "moegoTotal": "$6934.7",
+      "moegoTotalNumber": 6934.7,
+      "reason": "moego-total-changed",
+      "source": "moego-delta"
+    },
+    {
+      "phone": "5169033188",
+      "ghlName": "",
+      "currentValue": null,
+      "currentValueText": "unknown",
+      "knownRows": [],
+      "moegoName": "Jackie Furino",
+      "moegoTotal": "$6897.19",
+      "moegoTotalNumber": 6897.19,
+      "reason": "moego-total-changed",
+      "source": "moego-delta"
+    },
+    {
+      "phone": "9177570810",
+      "ghlName": "",
+      "currentValue": null,
+      "currentValueText": "unknown",
+      "knownRows": [],
+      "moegoName": "Lise Zeloof",
+      "moegoTotal": "$6887.25",
+      "moegoTotalNumber": 6887.25,
+      "reason": "moego-total-changed",
+      "source": "moego-delta"
+    },
+    {
+      "phone": "6314636101",
+      "ghlName": "",
+      "currentValue": null,
+      "currentValueText": "unknown",
+      "knownRows": [],
+      "moegoName": "Jason Contegni",
+      "moegoTotal": "$6864.72",
+      "moegoTotalNumber": 6864.72,
+      "reason": "moego-total-changed",
+      "source": "moego-delta"
+    },
+    {
+      "phone": "5163142668",
+      "ghlName": "",
+      "currentValue": null,
+      "currentValueText": "unknown",
+      "knownRows": [],
+      "moegoName": "Dana Frenkel",
+      "moegoTotal": "$6738.45",
+      "moegoTotalNumber": 6738.45,
+      "reason": "moego-total-changed",
+      "source": "moego-delta"
+    },
+    {
+      "phone": "5164483183",
+      "ghlName": "",
+      "currentValue": null,
+      "currentValueText": "unknown",
+      "knownRows": [],
+      "moegoName": "Daniel Gorecki",
+      "moegoTotal": "$6715.91",
+      "moegoTotalNumber": 6715.91,
+      "reason": "moego-total-changed",
+      "source": "moego-delta"
+    },
+    {
+      "phone": "9176401957",
+      "ghlName": "",
+      "currentValue": null,
+      "currentValueText": "unknown",
+      "knownRows": [],
+      "moegoName": "Stephen Littman",
+      "moegoTotal": "$6681.73",
+      "moegoTotalNumber": 6681.73,
+      "reason": "moego-total-changed",
+      "source": "moego-delta"
+    },
+    {
+      "phone": "5162706913",
+      "ghlName": "",
+      "currentValue": null,
+      "currentValueText": "unknown",
+      "knownRows": [],
+      "moegoName": "Kathleen Wehrman",
+      "moegoTotal": "$6638.03",
+      "moegoTotalNumber": 6638.03,
+      "reason": "moego-total-changed",
+      "source": "moego-delta"
+    },
+    {
+      "phone": "3472457394",
+      "ghlName": "",
+      "currentValue": null,
+      "currentValueText": "unknown",
+      "knownRows": [],
+      "moegoName": "Gaetano Giammarino",
+      "moegoTotal": "$6629.18",
+      "moegoTotalNumber": 6629.18,
+      "reason": "moego-total-changed",
+      "source": "moego-delta"
+    },
+    {
+      "phone": "5166410795",
+      "ghlName": "",
+      "currentValue": null,
+      "currentValueText": "unknown",
+      "knownRows": [],
+      "moegoName": "Stacey Markman",
+      "moegoTotal": "$6525.0",
+      "moegoTotalNumber": 6525,
+      "reason": "moego-total-changed",
+      "source": "moego-delta"
+    },
+    {
+      "phone": "3056063403",
+      "ghlName": "",
+      "currentValue": null,
+      "currentValueText": "unknown",
+      "knownRows": [],
+      "moegoName": "Karen Dornfield",
+      "moegoTotal": "$6501.5",
+      "moegoTotalNumber": 6501.5,
+      "reason": "moego-total-changed",
+      "source": "moego-delta"
+    },
+    {
+      "phone": "9175898106",
+      "ghlName": "",
+      "currentValue": null,
+      "currentValueText": "unknown",
+      "knownRows": [],
+      "moegoName": "Vivian Duenas",
+      "moegoTotal": "$6475.56",
+      "moegoTotalNumber": 6475.56,
+      "reason": "moego-total-changed",
+      "source": "moego-delta"
+    },
+    {
+      "phone": "5166422159",
+      "ghlName": "",
+      "currentValue": null,
+      "currentValueText": "unknown",
+      "knownRows": [],
+      "moegoName": "Jorge Martinez",
+      "moegoTotal": "$6410.93",
+      "moegoTotalNumber": 6410.93,
+      "reason": "moego-total-changed",
+      "source": "moego-delta"
+    },
+    {
+      "phone": "5162410743",
+      "ghlName": "",
+      "currentValue": null,
+      "currentValueText": "unknown",
+      "knownRows": [],
+      "moegoName": "Tim Butler",
+      "moegoTotal": "$6400.0",
+      "moegoTotalNumber": 6400,
+      "reason": "moego-total-changed",
+      "source": "moego-delta"
+    },
+    {
+      "phone": "9178260762",
+      "ghlName": "",
+      "currentValue": null,
+      "currentValueText": "unknown",
+      "knownRows": [],
+      "moegoName": "Roseann Pitakis",
+      "moegoTotal": "$6177.32",
+      "moegoTotalNumber": 6177.32,
+      "reason": "moego-total-changed",
+      "source": "moego-delta"
+    },
+    {
+      "phone": "5169830155",
+      "ghlName": "",
+      "currentValue": null,
+      "currentValueText": "unknown",
+      "knownRows": [],
+      "moegoName": "Regina Tehan",
+      "moegoTotal": "$6170.38",
+      "moegoTotalNumber": 6170.38,
+      "reason": "moego-total-changed",
+      "source": "moego-delta"
+    },
+    {
+      "phone": "7187448906",
+      "ghlName": "",
+      "currentValue": null,
+      "currentValueText": "unknown",
+      "knownRows": [],
+      "moegoName": "Rodolpho Miller",
+      "moegoTotal": "$6115.59",
+      "moegoTotalNumber": 6115.59,
+      "reason": "moego-total-changed",
+      "source": "moego-delta"
+    },
+    {
+      "phone": "5164599502",
+      "ghlName": "",
+      "currentValue": null,
+      "currentValueText": "unknown",
+      "knownRows": [],
+      "moegoName": "Paul Pipia",
+      "moegoTotal": "$6070.0",
+      "moegoTotalNumber": 6070,
+      "reason": "moego-total-changed",
+      "source": "moego-delta"
+    },
+    {
+      "phone": "5169469902",
+      "ghlName": "",
+      "currentValue": null,
+      "currentValueText": "unknown",
+      "knownRows": [],
+      "moegoName": "Karen Lazar",
+      "moegoTotal": "$6070.0",
+      "moegoTotalNumber": 6070,
+      "reason": "moego-total-changed",
+      "source": "moego-delta"
+    },
+    {
+      "phone": "9173644360",
+      "ghlName": "",
+      "currentValue": null,
+      "currentValueText": "unknown",
+      "knownRows": [],
+      "moegoName": "Jen Brown",
+      "moegoTotal": "$6019.14",
+      "moegoTotalNumber": 6019.14,
+      "reason": "moego-total-changed",
+      "source": "moego-delta"
+    },
+    {
+      "phone": "5164495967",
+      "ghlName": "",
+      "currentValue": null,
+      "currentValueText": "unknown",
+      "knownRows": [],
+      "moegoName": "Karen Peck",
+      "moegoTotal": "$5995.72",
+      "moegoTotalNumber": 5995.72,
+      "reason": "moego-total-changed",
+      "source": "moego-delta"
+    },
+    {
+      "phone": "5163805123",
+      "ghlName": "",
+      "currentValue": null,
+      "currentValueText": "unknown",
+      "knownRows": [],
+      "moegoName": "Kristin Facenda",
+      "moegoTotal": "$5925.0",
+      "moegoTotalNumber": 5925,
+      "reason": "moego-total-changed",
+      "source": "moego-delta"
+    },
+    {
+      "phone": "5163229463",
+      "ghlName": "",
+      "currentValue": null,
+      "currentValueText": "unknown",
+      "knownRows": [],
+      "moegoName": "Mike & Diana Loguidice",
+      "moegoTotal": "$5907.11",
+      "moegoTotalNumber": 5907.11,
+      "reason": "moego-total-changed",
+      "source": "moego-delta"
+    },
+    {
+      "phone": "5165780201",
+      "ghlName": "",
+      "currentValue": null,
+      "currentValueText": "unknown",
+      "knownRows": [],
+      "moegoName": "Rocco Dalleva",
+      "moegoTotal": "$5852.73",
+      "moegoTotalNumber": 5852.73,
+      "reason": "moego-total-changed",
+      "source": "moego-delta"
+    },
+    {
+      "phone": "5167321237",
+      "ghlName": "",
+      "currentValue": null,
+      "currentValueText": "unknown",
+      "knownRows": [],
+      "moegoName": "Janine Malkowski",
+      "moegoTotal": "$5810.35",
+      "moegoTotalNumber": 5810.35,
+      "reason": "moego-total-changed",
+      "source": "moego-delta"
+    },
+    {
+      "phone": "5162877092",
+      "ghlName": "",
+      "currentValue": null,
+      "currentValueText": "unknown",
+      "knownRows": [],
+      "moegoName": "Amanda Park",
+      "moegoTotal": "$5753.03",
+      "moegoTotalNumber": 5753.03,
+      "reason": "moego-total-changed",
+      "source": "moego-delta"
+    },
+    {
+      "phone": "5168183064",
+      "ghlName": "",
+      "currentValue": null,
+      "currentValueText": "unknown",
+      "knownRows": [],
+      "moegoName": "Eileen Murphy",
+      "moegoTotal": "$5611.65",
+      "moegoTotalNumber": 5611.65,
+      "reason": "moego-total-changed",
+      "source": "moego-delta"
+    },
+    {
+      "phone": "9194924892",
+      "ghlName": "",
+      "currentValue": null,
+      "currentValueText": "unknown",
+      "knownRows": [],
+      "moegoName": "Vitallia Williams",
+      "moegoTotal": "$5602.04",
+      "moegoTotalNumber": 5602.04,
+      "reason": "moego-total-changed",
+      "source": "moego-delta"
+    },
+    {
+      "phone": "5162446602",
+      "ghlName": "",
+      "currentValue": null,
+      "currentValueText": "unknown",
+      "knownRows": [],
+      "moegoName": "Andrei Kranz",
+      "moegoTotal": "$5595.0",
+      "moegoTotalNumber": 5595,
+      "reason": "moego-total-changed",
+      "source": "moego-delta"
+    },
+    {
+      "phone": "6468588915",
+      "ghlName": "",
+      "currentValue": null,
+      "currentValueText": "unknown",
+      "knownRows": [],
+      "moegoName": "Anna Cesarano",
+      "moegoTotal": "$5436.79",
+      "moegoTotalNumber": 5436.79,
+      "reason": "moego-total-changed",
+      "source": "moego-delta"
+    },
+    {
+      "phone": "5169936386",
+      "ghlName": "",
+      "currentValue": null,
+      "currentValueText": "unknown",
+      "knownRows": [],
+      "moegoName": "Gabriella Haskoor",
+      "moegoTotal": "$5418.29",
+      "moegoTotalNumber": 5418.29,
+      "reason": "moego-total-changed",
+      "source": "moego-delta"
+    },
+    {
+      "phone": "5164485966",
+      "ghlName": "",
+      "currentValue": null,
+      "currentValueText": "unknown",
+      "knownRows": [],
+      "moegoName": "Lisa Callahan",
+      "moegoTotal": "$5361.49",
+      "moegoTotalNumber": 5361.49,
+      "reason": "moego-total-changed",
+      "source": "moego-delta"
+    },
+    {
+      "phone": "5167285685",
+      "ghlName": "",
+      "currentValue": null,
+      "currentValueText": "unknown",
+      "knownRows": [],
+      "moegoName": "Lori Salvoni",
+      "moegoTotal": "$5304.06",
+      "moegoTotalNumber": 5304.06,
+      "reason": "moego-total-changed",
+      "source": "moego-delta"
+    },
+    {
+      "phone": "5164251619",
+      "ghlName": "",
+      "currentValue": null,
+      "currentValueText": "unknown",
+      "knownRows": [],
+      "moegoName": "Ken Vinci",
+      "moegoTotal": "$5138.95",
+      "moegoTotalNumber": 5138.95,
+      "reason": "moego-total-changed",
+      "source": "moego-delta"
+    },
+    {
+      "phone": "5163129547",
+      "ghlName": "",
+      "currentValue": null,
+      "currentValueText": "unknown",
+      "knownRows": [],
+      "moegoName": "Mary Caroff",
+      "moegoTotal": "$5108.47",
+      "moegoTotalNumber": 5108.47,
+      "reason": "moego-total-changed",
+      "source": "moego-delta"
+    },
+    {
+      "phone": "3364075032",
+      "ghlName": "",
+      "currentValue": null,
+      "currentValueText": "unknown",
+      "knownRows": [],
+      "moegoName": "Kate Gold",
+      "moegoTotal": "$5064.53",
+      "moegoTotalNumber": 5064.53,
+      "reason": "moego-total-changed",
+      "source": "moego-delta"
+    },
+    {
+      "phone": "5166038532",
+      "ghlName": "",
+      "currentValue": null,
+      "currentValueText": "unknown",
+      "knownRows": [],
+      "moegoName": "Nancy Kornfeld",
+      "moegoTotal": "$5015.0",
+      "moegoTotalNumber": 5015,
+      "reason": "moego-total-changed",
+      "source": "moego-delta"
+    },
+    {
+      "phone": "5163984638",
+      "ghlName": "",
+      "currentValue": null,
+      "currentValueText": "unknown",
+      "knownRows": [],
+      "moegoName": "Ann Marie Tuzzolino",
+      "moegoTotal": "$5006.51",
+      "moegoTotalNumber": 5006.51,
+      "reason": "moego-total-changed",
+      "source": "moego-delta"
+    },
+    {
+      "phone": "5164553903",
+      "ghlName": "",
+      "currentValue": null,
+      "currentValueText": "unknown",
+      "knownRows": [],
+      "moegoName": "Jennifer Mallon",
+      "moegoTotal": "$5003.15",
+      "moegoTotalNumber": 5003.15,
+      "reason": "moego-total-changed",
+      "source": "moego-delta"
+    },
+    {
+      "phone": "9175180932",
+      "ghlName": "",
+      "currentValue": null,
+      "currentValueText": "unknown",
+      "knownRows": [],
+      "moegoName": "Claire Tomasi",
+      "moegoTotal": "$4983.89",
+      "moegoTotalNumber": 4983.89,
+      "reason": "moego-total-changed",
+      "source": "moego-delta"
+    },
+    {
+      "phone": "8454162929",
+      "ghlName": "",
+      "currentValue": null,
+      "currentValueText": "unknown",
+      "knownRows": [],
+      "moegoName": "Ed Gleason",
+      "moegoTotal": "$4939.43",
+      "moegoTotalNumber": 4939.43,
+      "reason": "moego-total-changed",
+      "source": "moego-delta"
+    },
+    {
+      "phone": "5165269205",
+      "ghlName": "",
+      "currentValue": null,
+      "currentValueText": "unknown",
+      "knownRows": [],
+      "moegoName": "Vicky Desano",
+      "moegoTotal": "$4935.0",
+      "moegoTotalNumber": 4935,
+      "reason": "moego-total-changed",
+      "source": "moego-delta"
+    },
+    {
+      "phone": "5164591838",
+      "ghlName": "",
+      "currentValue": null,
+      "currentValueText": "unknown",
+      "knownRows": [],
+      "moegoName": "Carol Mathlic",
+      "moegoTotal": "$4880.0",
+      "moegoTotalNumber": 4880,
+      "reason": "moego-total-changed",
+      "source": "moego-delta"
+    },
+    {
+      "phone": "5166723255",
+      "ghlName": "",
+      "currentValue": null,
+      "currentValueText": "unknown",
+      "knownRows": [],
+      "moegoName": "Robin Turano",
+      "moegoTotal": "$4872.32",
+      "moegoTotalNumber": 4872.32,
+      "reason": "moego-total-changed",
+      "source": "moego-delta"
+    },
+    {
+      "phone": "5165286664",
+      "ghlName": "",
+      "currentValue": null,
+      "currentValueText": "unknown",
+      "knownRows": [],
+      "moegoName": "Sheri Weiss",
+      "moegoTotal": "$4735.32",
+      "moegoTotalNumber": 4735.32,
+      "reason": "moego-total-changed",
+      "source": "moego-delta"
+    },
+    {
+      "phone": "9174495582",
+      "ghlName": "",
+      "currentValue": null,
+      "currentValueText": "unknown",
+      "knownRows": [],
+      "moegoName": "Erica Schwartz",
+      "moegoTotal": "$4729.12",
+      "moegoTotalNumber": 4729.12,
+      "reason": "moego-total-changed",
+      "source": "moego-delta"
+    },
+    {
+      "phone": "5169461393",
+      "ghlName": "",
+      "currentValue": null,
+      "currentValueText": "unknown",
+      "knownRows": [],
+      "moegoName": "Carolyn Curfman",
+      "moegoTotal": "$4681.01",
+      "moegoTotalNumber": 4681.01,
+      "reason": "moego-total-changed",
+      "source": "moego-delta"
+    },
+    {
+      "phone": "5166592783",
+      "ghlName": "",
+      "currentValue": null,
+      "currentValueText": "unknown",
+      "knownRows": [],
+      "moegoName": "Amanda Talty",
+      "moegoTotal": "$4650.95",
+      "moegoTotalNumber": 4650.95,
+      "reason": "moego-total-changed",
+      "source": "moego-delta"
+    },
+    {
+      "phone": "5163152811",
+      "ghlName": "",
+      "currentValue": null,
+      "currentValueText": "unknown",
+      "knownRows": [],
+      "moegoName": "Barbara Ribacoff",
+      "moegoTotal": "$4631.96",
+      "moegoTotalNumber": 4631.96,
+      "reason": "moego-total-changed",
+      "source": "moego-delta"
+    },
+    {
+      "phone": "3472850252",
+      "ghlName": "",
+      "currentValue": null,
+      "currentValueText": "unknown",
+      "knownRows": [],
+      "moegoName": "Shaena Mohammed",
+      "moegoTotal": "$4628.29",
+      "moegoTotalNumber": 4628.29,
+      "reason": "moego-total-changed",
+      "source": "moego-delta"
+    },
+    {
+      "phone": "5162384533",
+      "ghlName": "",
+      "currentValue": null,
+      "currentValueText": "unknown",
+      "knownRows": [],
+      "moegoName": "Renee Cottrell",
+      "moegoTotal": "$4603.88",
+      "moegoTotalNumber": 4603.88,
+      "reason": "moego-total-changed",
+      "source": "moego-delta"
+    },
+    {
+      "phone": "5169653249",
+      "ghlName": "",
+      "currentValue": null,
+      "currentValueText": "unknown",
+      "knownRows": [],
+      "moegoName": "Jaclyn Thanasas",
+      "moegoTotal": "$4598.84",
+      "moegoTotalNumber": 4598.84,
+      "reason": "moego-total-changed",
+      "source": "moego-delta"
+    },
+    {
+      "phone": "5164572981",
+      "ghlName": "",
+      "currentValue": null,
+      "currentValueText": "unknown",
+      "knownRows": [],
+      "moegoName": "Stacey Karlis",
+      "moegoTotal": "$4548.68",
+      "moegoTotalNumber": 4548.68,
+      "reason": "moego-total-changed",
+      "source": "moego-delta"
+    },
+    {
+      "phone": "5163198401",
+      "ghlName": "",
+      "currentValue": null,
+      "currentValueText": "unknown",
+      "knownRows": [],
+      "moegoName": "Diana Corshen",
+      "moegoTotal": "$4486.84",
+      "moegoTotalNumber": 4486.84,
+      "reason": "moego-total-changed",
+      "source": "moego-delta"
+    },
+    {
+      "phone": "9179039231",
+      "ghlName": "",
+      "currentValue": null,
+      "currentValueText": "unknown",
+      "knownRows": [],
+      "moegoName": "Sharon Fogel",
+      "moegoTotal": "$4476.44",
+      "moegoTotalNumber": 4476.44,
+      "reason": "moego-total-changed",
+      "source": "moego-delta"
+    },
+    {
+      "phone": "9179122514",
+      "ghlName": "",
+      "currentValue": null,
+      "currentValueText": "unknown",
+      "knownRows": [],
+      "moegoName": "Amanda Ricciarini",
+      "moegoTotal": "$4465.66",
+      "moegoTotalNumber": 4465.66,
+      "reason": "moego-total-changed",
+      "source": "moego-delta"
+    },
+    {
+      "phone": "5169029534",
+      "ghlName": "",
+      "currentValue": null,
+      "currentValueText": "unknown",
+      "knownRows": [],
+      "moegoName": "Michele Coker",
+      "moegoTotal": "$4351.68",
+      "moegoTotalNumber": 4351.68,
+      "reason": "moego-total-changed",
+      "source": "moego-delta"
+    },
+    {
+      "phone": "9175232272",
+      "ghlName": "",
+      "currentValue": null,
+      "currentValueText": "unknown",
+      "knownRows": [],
+      "moegoName": "Clare Peters",
+      "moegoTotal": "$4265.02",
+      "moegoTotalNumber": 4265.02,
+      "reason": "moego-total-changed",
+      "source": "moego-delta"
+    },
+    {
+      "phone": "9148825446",
+      "ghlName": "",
+      "currentValue": null,
+      "currentValueText": "unknown",
+      "knownRows": [],
+      "moegoName": "Melissa Betancourt",
+      "moegoTotal": "$4091.27",
+      "moegoTotalNumber": 4091.27,
+      "reason": "moego-total-changed",
+      "source": "moego-delta"
+    },
+    {
+      "phone": "9179238670",
+      "ghlName": "",
+      "currentValue": null,
+      "currentValueText": "unknown",
+      "knownRows": [],
+      "moegoName": "CarrieAnn Paukowits",
+      "moegoTotal": "$4091.07",
+      "moegoTotalNumber": 4091.07,
+      "reason": "moego-total-changed",
+      "source": "moego-delta"
+    },
+    {
+      "phone": "5163135662",
+      "ghlName": "",
+      "currentValue": null,
+      "currentValueText": "unknown",
+      "knownRows": [],
+      "moegoName": "HILARY ROSSER",
+      "moegoTotal": "$4040.0",
+      "moegoTotalNumber": 4040,
+      "reason": "moego-total-changed",
+      "source": "moego-delta"
+    },
+    {
+      "phone": "5167805614",
+      "ghlName": "",
+      "currentValue": null,
+      "currentValueText": "unknown",
+      "knownRows": [],
+      "moegoName": "Mary Filippi",
+      "moegoTotal": "$3945.0",
+      "moegoTotalNumber": 3945,
+      "reason": "moego-total-changed",
+      "source": "moego-delta"
+    },
+    {
+      "phone": "5169932924",
+      "ghlName": "",
+      "currentValue": null,
+      "currentValueText": "unknown",
+      "knownRows": [],
+      "moegoName": "leslie gang",
+      "moegoTotal": "$3913.6",
+      "moegoTotalNumber": 3913.6,
+      "reason": "moego-total-changed",
+      "source": "moego-delta"
+    },
+    {
+      "phone": "5167828667",
+      "ghlName": "",
+      "currentValue": null,
+      "currentValueText": "unknown",
+      "knownRows": [],
+      "moegoName": "Joan Strach",
+      "moegoTotal": "$3895.0",
+      "moegoTotalNumber": 3895,
+      "reason": "moego-total-changed",
+      "source": "moego-delta"
+    },
+    {
+      "phone": "5164281736",
+      "ghlName": "",
+      "currentValue": null,
+      "currentValueText": "unknown",
+      "knownRows": [],
+      "moegoName": "Sharon Lipsky",
+      "moegoTotal": "$3860.0",
+      "moegoTotalNumber": 3860,
+      "reason": "moego-total-changed",
+      "source": "moego-delta"
+    },
+    {
+      "phone": "5166472988",
+      "ghlName": "",
+      "currentValue": null,
+      "currentValueText": "unknown",
+      "knownRows": [],
+      "moegoName": "Colette Lambrinon",
+      "moegoTotal": "$3829.9",
+      "moegoTotalNumber": 3829.9,
+      "reason": "moego-total-changed",
+      "source": "moego-delta"
+    },
+    {
+      "phone": "5165246319",
+      "ghlName": "",
+      "currentValue": null,
+      "currentValueText": "unknown",
+      "knownRows": [],
+      "moegoName": "Matt Corrado",
+      "moegoTotal": "$3792.44",
+      "moegoTotalNumber": 3792.44,
+      "reason": "moego-total-changed",
+      "source": "moego-delta"
+    },
+    {
+      "phone": "3475853422",
+      "ghlName": "",
+      "currentValue": null,
+      "currentValueText": "unknown",
+      "knownRows": [],
+      "moegoName": "Denise Sinclair",
+      "moegoTotal": "$3776.78",
+      "moegoTotalNumber": 3776.78,
+      "reason": "moego-total-changed",
+      "source": "moego-delta"
+    },
+    {
+      "phone": "5166985751",
+      "ghlName": "",
+      "currentValue": null,
+      "currentValueText": "unknown",
+      "knownRows": [],
+      "moegoName": "Nick Pavic",
+      "moegoTotal": "$3765.0",
+      "moegoTotalNumber": 3765,
+      "reason": "moego-total-changed",
+      "source": "moego-delta"
+    },
+    {
+      "phone": "6466457031",
+      "ghlName": "",
+      "currentValue": null,
+      "currentValueText": "unknown",
+      "knownRows": [],
+      "moegoName": "Hugo Brun",
+      "moegoTotal": "$3764.1",
+      "moegoTotalNumber": 3764.1,
+      "reason": "moego-total-changed",
+      "source": "moego-delta"
+    },
+    {
+      "phone": "5164593229",
+      "ghlName": "",
+      "currentValue": null,
+      "currentValueText": "unknown",
+      "knownRows": [],
+      "moegoName": "Renee Cahn",
+      "moegoTotal": "$3732.35",
+      "moegoTotalNumber": 3732.35,
+      "reason": "moego-total-changed",
+      "source": "moego-delta"
+    },
+    {
+      "phone": "5163757749",
+      "ghlName": "",
+      "currentValue": null,
+      "currentValueText": "unknown",
+      "knownRows": [],
+      "moegoName": "Ann Turner",
+      "moegoTotal": "$3687.35",
+      "moegoTotalNumber": 3687.35,
+      "reason": "moego-total-changed",
+      "source": "moego-delta"
+    },
+    {
+      "phone": "5162705073",
+      "ghlName": "",
+      "currentValue": null,
+      "currentValueText": "unknown",
+      "knownRows": [],
+      "moegoName": "Simone DeBellis",
+      "moegoTotal": "$3685.51",
+      "moegoTotalNumber": 3685.51,
+      "reason": "moego-total-changed",
+      "source": "moego-delta"
+    },
+    {
+      "phone": "5166686571",
+      "ghlName": "",
+      "currentValue": null,
+      "currentValueText": "unknown",
+      "knownRows": [],
+      "moegoName": "Karen Crowley",
+      "moegoTotal": "$3601.7",
+      "moegoTotalNumber": 3601.7,
+      "reason": "moego-total-changed",
+      "source": "moego-delta"
+    },
+    {
+      "phone": "5167074882",
+      "ghlName": "",
+      "currentValue": null,
+      "currentValueText": "unknown",
+      "knownRows": [],
+      "moegoName": "Stuart Goodman",
+      "moegoTotal": "$3590.0",
+      "moegoTotalNumber": 3590,
+      "reason": "moego-total-changed",
+      "source": "moego-delta"
+    },
+    {
+      "phone": "5162383847",
+      "ghlName": "",
+      "currentValue": null,
+      "currentValueText": "unknown",
+      "knownRows": [],
+      "moegoName": "Theresa Faughnan",
+      "moegoTotal": "$3580.77",
+      "moegoTotalNumber": 3580.77,
+      "reason": "moego-total-changed",
+      "source": "moego-delta"
+    },
+    {
+      "phone": "5167767030",
+      "ghlName": "",
+      "currentValue": null,
+      "currentValueText": "unknown",
+      "knownRows": [],
+      "moegoName": "Annabel Bazante",
+      "moegoTotal": "$3547.27",
+      "moegoTotalNumber": 3547.27,
+      "reason": "moego-total-changed",
+      "source": "moego-delta"
+    },
+    {
+      "phone": "5166610557",
+      "ghlName": "",
+      "currentValue": null,
+      "currentValueText": "unknown",
+      "knownRows": [],
+      "moegoName": "Paul Trentadue",
+      "moegoTotal": "$3535.0",
+      "moegoTotalNumber": 3535,
+      "reason": "moego-total-changed",
+      "source": "moego-delta"
+    },
+    {
+      "phone": "5166553382",
+      "ghlName": "",
+      "currentValue": null,
+      "currentValueText": "unknown",
+      "knownRows": [],
+      "moegoName": "Susie Hurwitz",
+      "moegoTotal": "$3535.0",
+      "moegoTotalNumber": 3535,
+      "reason": "moego-total-changed",
+      "source": "moego-delta"
+    },
+    {
+      "phone": "5166065707",
+      "ghlName": "",
+      "currentValue": null,
+      "currentValueText": "unknown",
+      "knownRows": [],
+      "moegoName": "Nancey Costanzo",
+      "moegoTotal": "$3431.31",
+      "moegoTotalNumber": 3431.31,
+      "reason": "moego-total-changed",
+      "source": "moego-delta"
+    },
+    {
+      "phone": "5164573087",
+      "ghlName": "",
+      "currentValue": null,
+      "currentValueText": "unknown",
+      "knownRows": [],
+      "moegoName": "Deanna Cisternas",
+      "moegoTotal": "$3394.39",
+      "moegoTotalNumber": 3394.39,
+      "reason": "moego-total-changed",
+      "source": "moego-delta"
+    },
+    {
+      "phone": "6468811769",
+      "ghlName": "",
+      "currentValue": null,
+      "currentValueText": "unknown",
+      "knownRows": [],
+      "moegoName": "Jillian Castellano",
+      "moegoTotal": "$3391.02",
+      "moegoTotalNumber": 3391.02,
+      "reason": "moego-total-changed",
+      "source": "moego-delta"
+    },
+    {
+      "phone": "9177472505",
+      "ghlName": "",
+      "currentValue": null,
+      "currentValueText": "unknown",
+      "knownRows": [],
+      "moegoName": "Daniela Fiss",
+      "moegoTotal": "$3327.6",
+      "moegoTotalNumber": 3327.6,
+      "reason": "moego-total-changed",
+      "source": "moego-delta"
+    },
+    {
+      "phone": "5169248421",
+      "ghlName": "",
+      "currentValue": null,
+      "currentValueText": "unknown",
+      "knownRows": [],
+      "moegoName": "Heather Licata Aguggia",
+      "moegoTotal": "$3306.38",
+      "moegoTotalNumber": 3306.38,
+      "reason": "moego-total-changed",
+      "source": "moego-delta"
+    },
+    {
+      "phone": "9172828162",
+      "ghlName": "",
+      "currentValue": null,
+      "currentValueText": "unknown",
+      "knownRows": [],
+      "moegoName": "Michele Papapietro",
+      "moegoTotal": "$3280.0",
+      "moegoTotalNumber": 3280,
+      "reason": "moego-total-changed",
+      "source": "moego-delta"
+    },
+    {
+      "phone": "3472566534",
+      "ghlName": "",
+      "currentValue": null,
+      "currentValueText": "unknown",
+      "knownRows": [],
+      "moegoName": "Teasha Crawford",
+      "moegoTotal": "$3279.36",
+      "moegoTotalNumber": 3279.36,
+      "reason": "moego-total-changed",
+      "source": "moego-delta"
+    },
+    {
+      "phone": "6468950191",
+      "ghlName": "",
+      "currentValue": null,
+      "currentValueText": "unknown",
+      "knownRows": [],
+      "moegoName": "Tiffany Hughes",
+      "moegoTotal": "$3260.28",
+      "moegoTotalNumber": 3260.28,
+      "reason": "moego-total-changed",
+      "source": "moego-delta"
+    },
+    {
+      "phone": "9178416109",
+      "ghlName": "",
+      "currentValue": null,
+      "currentValueText": "unknown",
+      "knownRows": [],
+      "moegoName": "Jessica Rosin",
+      "moegoTotal": "$3251.54",
+      "moegoTotalNumber": 3251.54,
+      "reason": "moego-total-changed",
+      "source": "moego-delta"
+    },
+    {
+      "phone": "9173644875",
+      "ghlName": "",
+      "currentValue": null,
+      "currentValueText": "unknown",
+      "knownRows": [],
+      "moegoName": "Antoinette Renzo",
+      "moegoTotal": "$3160.0",
+      "moegoTotalNumber": 3160,
+      "reason": "moego-total-changed",
+      "source": "moego-delta"
+    },
+    {
+      "phone": "9176131871",
+      "ghlName": "",
+      "currentValue": null,
+      "currentValueText": "unknown",
+      "knownRows": [],
+      "moegoName": "Judith Moscato",
+      "moegoTotal": "$3147.11",
+      "moegoTotalNumber": 3147.11,
+      "reason": "moego-total-changed",
+      "source": "moego-delta"
+    },
+    {
+      "phone": "7183446659",
+      "ghlName": "",
+      "currentValue": null,
+      "currentValueText": "unknown",
+      "knownRows": [],
+      "moegoName": "Lisa Vona",
+      "moegoTotal": "$3122.79",
+      "moegoTotalNumber": 3122.79,
+      "reason": "moego-total-changed",
+      "source": "moego-delta"
+    },
+    {
+      "phone": "5167437433",
+      "ghlName": "",
+      "currentValue": null,
+      "currentValueText": "unknown",
+      "knownRows": [],
+      "moegoName": "Elliott Balder",
+      "moegoTotal": "$3059.3",
+      "moegoTotalNumber": 3059.3,
+      "reason": "moego-total-changed",
+      "source": "moego-delta"
+    },
+    {
+      "phone": "9175435216",
+      "ghlName": "",
+      "currentValue": null,
+      "currentValueText": "unknown",
+      "knownRows": [],
+      "moegoName": "Liz Gateley",
+      "moegoTotal": "$3023.11",
+      "moegoTotalNumber": 3023.11,
+      "reason": "moego-total-changed",
+      "source": "moego-delta"
+    },
+    {
+      "phone": "5168163526",
+      "ghlName": "",
+      "currentValue": null,
+      "currentValueText": "unknown",
+      "knownRows": [],
+      "moegoName": "Gwynne Suttenberg",
+      "moegoTotal": "$3010.0",
+      "moegoTotalNumber": 3010,
+      "reason": "moego-total-changed",
+      "source": "moego-delta"
+    },
+    {
+      "phone": "5165368718",
+      "ghlName": "",
+      "currentValue": null,
+      "currentValueText": "unknown",
+      "knownRows": [],
+      "moegoName": "Tina Proman",
+      "moegoTotal": "$3001.9",
+      "moegoTotalNumber": 3001.9,
+      "reason": "moego-total-changed",
+      "source": "moego-delta"
+    },
+    {
+      "phone": "5168578287",
+      "ghlName": "",
+      "currentValue": null,
+      "currentValueText": "unknown",
+      "knownRows": [],
+      "moegoName": "Jaime Bank",
+      "moegoTotal": "$2970.13",
+      "moegoTotalNumber": 2970.13,
+      "reason": "moego-total-changed",
+      "source": "moego-delta"
+    },
+    {
+      "phone": "3475378124",
+      "ghlName": "",
+      "currentValue": null,
+      "currentValueText": "unknown",
+      "knownRows": [],
+      "moegoName": "Kasia Pantina",
+      "moegoTotal": "$2954.07",
+      "moegoTotalNumber": 2954.07,
+      "reason": "moego-total-changed",
+      "source": "moego-delta"
+    },
+    {
+      "phone": "5169243010",
+      "ghlName": "",
+      "currentValue": null,
+      "currentValueText": "unknown",
+      "knownRows": [],
+      "moegoName": "Kristy Bourne-Jaime",
+      "moegoTotal": "$2868.24",
+      "moegoTotalNumber": 2868.24,
+      "reason": "moego-total-changed",
+      "source": "moego-delta"
+    },
+    {
+      "phone": "5166731526",
+      "ghlName": "",
+      "currentValue": null,
+      "currentValueText": "unknown",
+      "knownRows": [],
+      "moegoName": "michelle kohn",
+      "moegoTotal": "$2867.92",
+      "moegoTotalNumber": 2867.92,
+      "reason": "moego-total-changed",
+      "source": "moego-delta"
+    },
+    {
+      "phone": "5163418233",
+      "ghlName": "",
+      "currentValue": null,
+      "currentValueText": "unknown",
+      "knownRows": [],
+      "moegoName": "Fabrice Robin",
+      "moegoTotal": "$2854.81",
+      "moegoTotalNumber": 2854.81,
+      "reason": "moego-total-changed",
+      "source": "moego-delta"
+    },
+    {
+      "phone": "5166599538",
+      "ghlName": "",
+      "currentValue": null,
+      "currentValueText": "unknown",
+      "knownRows": [],
+      "moegoName": "Jill Nass",
+      "moegoTotal": "$2825.87",
+      "moegoTotalNumber": 2825.87,
+      "reason": "moego-total-changed",
+      "source": "moego-delta"
+    },
+    {
+      "phone": "5165139981",
+      "ghlName": "",
+      "currentValue": null,
+      "currentValueText": "unknown",
+      "knownRows": [],
+      "moegoName": "Janice Ray",
+      "moegoTotal": "$2791.32",
+      "moegoTotalNumber": 2791.32,
+      "reason": "moego-total-changed",
+      "source": "moego-delta"
+    },
+    {
+      "phone": "5166470811",
+      "ghlName": "",
+      "currentValue": null,
+      "currentValueText": "unknown",
+      "knownRows": [],
+      "moegoName": "Judi Ginsburg",
+      "moegoTotal": "$2790.0",
+      "moegoTotalNumber": 2790,
+      "reason": "moego-total-changed",
+      "source": "moego-delta"
+    },
+    {
+      "phone": "5163003828",
+      "ghlName": "",
+      "currentValue": null,
+      "currentValueText": "unknown",
+      "knownRows": [],
+      "moegoName": "Leonora Dapontes",
+      "moegoTotal": "$2732.93",
+      "moegoTotalNumber": 2732.93,
+      "reason": "moego-total-changed",
+      "source": "moego-delta"
+    },
+    {
+      "phone": "3479945977",
+      "ghlName": "",
+      "currentValue": null,
+      "currentValueText": "unknown",
+      "knownRows": [],
+      "moegoName": "Sherraine White",
+      "moegoTotal": "$2726.44",
+      "moegoTotalNumber": 2726.44,
+      "reason": "moego-total-changed",
+      "source": "moego-delta"
+    },
+    {
+      "phone": "5165000795",
+      "ghlName": "",
+      "currentValue": null,
+      "currentValueText": "unknown",
+      "knownRows": [],
+      "moegoName": "Joseph Scali",
+      "moegoTotal": "$2702.47",
+      "moegoTotalNumber": 2702.47,
+      "reason": "moego-total-changed",
+      "source": "moego-delta"
+    },
+    {
+      "phone": "9295949012",
+      "ghlName": "",
+      "currentValue": null,
+      "currentValueText": "unknown",
+      "knownRows": [],
+      "moegoName": "Jay Robinson",
+      "moegoTotal": "$2630.0",
+      "moegoTotalNumber": 2630,
+      "reason": "moego-total-changed",
+      "source": "moego-delta"
+    },
+    {
+      "phone": "9142621484",
+      "ghlName": "",
+      "currentValue": null,
+      "currentValueText": "unknown",
+      "knownRows": [],
+      "moegoName": "Tracey Berkential",
+      "moegoTotal": "$2623.33",
+      "moegoTotalNumber": 2623.33,
+      "reason": "moego-total-changed",
+      "source": "moego-delta"
+    },
+    {
+      "phone": "5162382143",
+      "ghlName": "",
+      "currentValue": null,
+      "currentValueText": "unknown",
+      "knownRows": [],
+      "moegoName": "Sherry Tavella",
+      "moegoTotal": "$2570.42",
+      "moegoTotalNumber": 2570.42,
+      "reason": "moego-total-changed",
+      "source": "moego-delta"
+    },
+    {
+      "phone": "9173279059",
+      "ghlName": "",
+      "currentValue": null,
+      "currentValueText": "unknown",
+      "knownRows": [],
+      "moegoName": "Kimberly Elliott",
+      "moegoTotal": "$2503.93",
+      "moegoTotalNumber": 2503.93,
+      "reason": "moego-total-changed",
+      "source": "moego-delta"
+    },
+    {
+      "phone": "9174960676",
+      "ghlName": "",
+      "currentValue": null,
+      "currentValueText": "unknown",
+      "knownRows": [],
+      "moegoName": "Richard Marin",
+      "moegoTotal": "$2500.88",
+      "moegoTotalNumber": 2500.88,
+      "reason": "moego-total-changed",
+      "source": "moego-delta"
+    },
+    {
+      "phone": "5165246129",
+      "ghlName": "",
+      "currentValue": null,
+      "currentValueText": "unknown",
+      "knownRows": [],
+      "moegoName": "Gina Malfa",
+      "moegoTotal": "$2484.58",
+      "moegoTotalNumber": 2484.58,
+      "reason": "moego-total-changed",
+      "source": "moego-delta"
+    },
+    {
+      "phone": "7188011205",
+      "ghlName": "",
+      "currentValue": null,
+      "currentValueText": "unknown",
+      "knownRows": [],
+      "moegoName": "Jaswinderjit Singh",
+      "moegoTotal": "$2423.90",
+      "moegoTotalNumber": 2423.9,
+      "reason": "moego-total-changed",
+      "source": "moego-delta"
+    },
+    {
+      "phone": "4017877115",
+      "ghlName": "",
+      "currentValue": null,
+      "currentValueText": "unknown",
+      "knownRows": [],
+      "moegoName": "Kelan Sullivan",
+      "moegoTotal": "$2419.69",
+      "moegoTotalNumber": 2419.69,
+      "reason": "moego-total-changed",
+      "source": "moego-delta"
+    },
+    {
+      "phone": "9174173663",
+      "ghlName": "",
+      "currentValue": null,
+      "currentValueText": "unknown",
+      "knownRows": [],
+      "moegoName": "Alexander Dunn",
+      "moegoTotal": "$2409.02",
+      "moegoTotalNumber": 2409.02,
+      "reason": "moego-total-changed",
+      "source": "moego-delta"
+    },
+    {
+      "phone": "9173376628",
+      "ghlName": "",
+      "currentValue": null,
+      "currentValueText": "unknown",
+      "knownRows": [],
+      "moegoName": "Tiffany Bourne",
+      "moegoTotal": "$2406.37",
+      "moegoTotalNumber": 2406.37,
+      "reason": "moego-total-changed",
+      "source": "moego-delta"
+    },
+    {
+      "phone": "9174502035",
+      "ghlName": "",
+      "currentValue": null,
+      "currentValueText": "unknown",
+      "knownRows": [],
+      "moegoName": "Juliana Cardella",
+      "moegoTotal": "$2379.43",
+      "moegoTotalNumber": 2379.43,
+      "reason": "moego-total-changed",
+      "source": "moego-delta"
+    },
+    {
+      "phone": "9175752895",
+      "ghlName": "",
+      "currentValue": null,
+      "currentValueText": "unknown",
+      "knownRows": [],
+      "moegoName": "Elizabeth Golden",
+      "moegoTotal": "$2283.19",
+      "moegoTotalNumber": 2283.19,
+      "reason": "moego-total-changed",
+      "source": "moego-delta"
+    },
+    {
+      "phone": "5169463464",
+      "ghlName": "",
+      "currentValue": null,
+      "currentValueText": "unknown",
+      "knownRows": [],
+      "moegoName": "Mary Mcmahon",
+      "moegoTotal": "$2168.17",
+      "moegoTotalNumber": 2168.17,
+      "reason": "moego-total-changed",
+      "source": "moego-delta"
+    },
+    {
+      "phone": "9173786540",
+      "ghlName": "",
+      "currentValue": null,
+      "currentValueText": "unknown",
+      "knownRows": [],
+      "moegoName": "Luis Guanga",
+      "moegoTotal": "$2137.40",
+      "moegoTotalNumber": 2137.4,
+      "reason": "moego-total-changed",
+      "source": "moego-delta"
+    },
+    {
+      "phone": "5165511898",
+      "ghlName": "",
+      "currentValue": null,
+      "currentValueText": "unknown",
+      "knownRows": [],
+      "moegoName": "Joan Williams",
+      "moegoTotal": "$2130.08",
+      "moegoTotalNumber": 2130.08,
+      "reason": "moego-total-changed",
+      "source": "moego-delta"
+    },
+    {
+      "phone": "5162826611",
+      "ghlName": "",
+      "currentValue": null,
+      "currentValueText": "unknown",
+      "knownRows": [],
+      "moegoName": "Aviva Geigel",
+      "moegoTotal": "$2126.32",
+      "moegoTotalNumber": 2126.32,
+      "reason": "moego-total-changed",
+      "source": "moego-delta"
+    },
+    {
+      "phone": "2017380606",
+      "ghlName": "",
+      "currentValue": null,
+      "currentValueText": "unknown",
+      "knownRows": [],
+      "moegoName": "Hillary Gershenson",
+      "moegoTotal": "$2119.72",
+      "moegoTotalNumber": 2119.72,
+      "reason": "moego-total-changed",
+      "source": "moego-delta"
+    },
+    {
+      "phone": "5164390659",
+      "ghlName": "",
+      "currentValue": null,
+      "currentValueText": "unknown",
+      "knownRows": [],
+      "moegoName": "Nicole Lee",
+      "moegoTotal": "$2112.81",
+      "moegoTotalNumber": 2112.81,
+      "reason": "moego-total-changed",
+      "source": "moego-delta"
+    },
+    {
+      "phone": "5163126501",
+      "ghlName": "",
+      "currentValue": null,
+      "currentValueText": "unknown",
+      "knownRows": [],
+      "moegoName": "Juliana Lee",
+      "moegoTotal": "$2086.61",
+      "moegoTotalNumber": 2086.61,
+      "reason": "moego-total-changed",
+      "source": "moego-delta"
+    },
+    {
+      "phone": "9144943090",
+      "ghlName": "",
+      "currentValue": null,
+      "currentValueText": "unknown",
+      "knownRows": [],
+      "moegoName": "Erica Carvino",
+      "moegoTotal": "$2014.26",
+      "moegoTotalNumber": 2014.26,
+      "reason": "moego-total-changed",
+      "source": "moego-delta"
+    },
+    {
+      "phone": "3479566983",
+      "ghlName": "",
+      "currentValue": null,
+      "currentValueText": "unknown",
+      "knownRows": [],
+      "moegoName": "Sarah Hogan",
+      "moegoTotal": "$1975.0",
+      "moegoTotalNumber": 1975,
+      "reason": "moego-total-changed",
+      "source": "moego-delta"
+    },
+    {
+      "phone": "5165212824",
+      "ghlName": "",
+      "currentValue": null,
+      "currentValueText": "unknown",
+      "knownRows": [],
+      "moegoName": "Michael Geller",
+      "moegoTotal": "$1959.05",
+      "moegoTotalNumber": 1959.05,
+      "reason": "moego-total-changed",
+      "source": "moego-delta"
+    },
+    {
+      "phone": "5168164485",
+      "ghlName": "",
+      "currentValue": null,
+      "currentValueText": "unknown",
+      "knownRows": [],
+      "moegoName": "MILAGROS HUERTA",
+      "moegoTotal": "$1959.0",
+      "moegoTotalNumber": 1959,
+      "reason": "moego-total-changed",
+      "source": "moego-delta"
+    },
+    {
+      "phone": "5167840609",
+      "ghlName": "",
+      "currentValue": null,
+      "currentValueText": "unknown",
+      "knownRows": [],
+      "moegoName": "Tony n Kathy Streffacio",
+      "moegoTotal": "$1935.91",
+      "moegoTotalNumber": 1935.91,
+      "reason": "moego-total-changed",
+      "source": "moego-delta"
+    },
+    {
+      "phone": "5163825725",
+      "ghlName": "",
+      "currentValue": null,
+      "currentValueText": "unknown",
+      "knownRows": [],
+      "moegoName": "William Fetter",
+      "moegoTotal": "$1910.24",
+      "moegoTotalNumber": 1910.24,
+      "reason": "moego-total-changed",
+      "source": "moego-delta"
+    },
+    {
+      "phone": "3479512520",
+      "ghlName": "",
+      "currentValue": null,
+      "currentValueText": "unknown",
+      "knownRows": [],
+      "moegoName": "Sasha Singh",
+      "moegoTotal": "$1902.44",
+      "moegoTotalNumber": 1902.44,
+      "reason": "moego-total-changed",
+      "source": "moego-delta"
+    },
+    {
+      "phone": "9179392923",
+      "ghlName": "",
+      "currentValue": null,
+      "currentValueText": "unknown",
+      "knownRows": [],
+      "moegoName": "Allyson Shankman",
+      "moegoTotal": "$1890.85",
+      "moegoTotalNumber": 1890.85,
+      "reason": "moego-total-changed",
+      "source": "moego-delta"
+    },
+    {
+      "phone": "9175541070",
+      "ghlName": "",
+      "currentValue": null,
+      "currentValueText": "unknown",
+      "knownRows": [],
+      "moegoName": "Gina Quinn",
+      "moegoTotal": "$1879.0",
+      "moegoTotalNumber": 1879,
+      "reason": "moego-total-changed",
+      "source": "moego-delta"
+    },
+    {
+      "phone": "5169025888",
+      "ghlName": "",
+      "currentValue": null,
+      "currentValueText": "unknown",
+      "knownRows": [],
+      "moegoName": "Angelina Alongi",
+      "moegoTotal": "$1869.5",
+      "moegoTotalNumber": 1869.5,
+      "reason": "moego-total-changed",
+      "source": "moego-delta"
+    },
+    {
+      "phone": "5163036153",
+      "ghlName": "",
+      "currentValue": null,
+      "currentValueText": "unknown",
+      "knownRows": [],
+      "moegoName": "Lindsey Breidenbach",
+      "moegoTotal": "$1795.0",
+      "moegoTotalNumber": 1795,
+      "reason": "moego-total-changed",
+      "source": "moego-delta"
+    },
+    {
+      "phone": "5104354330",
+      "ghlName": "",
+      "currentValue": null,
+      "currentValueText": "unknown",
+      "knownRows": [],
+      "moegoName": "Kristine Newell",
+      "moegoTotal": "$1732.95",
+      "moegoTotalNumber": 1732.95,
+      "reason": "moego-total-changed",
+      "source": "moego-delta"
+    },
+    {
+      "phone": "9176012770",
+      "ghlName": "",
+      "currentValue": null,
+      "currentValueText": "unknown",
+      "knownRows": [],
+      "moegoName": "JOE VALENTINO",
+      "moegoTotal": "$1689.0",
+      "moegoTotalNumber": 1689,
+      "reason": "moego-total-changed",
+      "source": "moego-delta"
+    },
+    {
+      "phone": "5164245426",
+      "ghlName": "",
+      "currentValue": null,
+      "currentValueText": "unknown",
+      "knownRows": [],
+      "moegoName": "ALEXANDRA DIGIOVANNI",
+      "moegoTotal": "$1676.0",
+      "moegoTotalNumber": 1676,
+      "reason": "moego-total-changed",
+      "source": "moego-delta"
+    },
+    {
+      "phone": "3473613024",
+      "ghlName": "",
+      "currentValue": null,
+      "currentValueText": "unknown",
+      "knownRows": [],
+      "moegoName": "Jasmeet Kaur",
+      "moegoTotal": "$1671.36",
+      "moegoTotalNumber": 1671.36,
+      "reason": "moego-total-changed",
+      "source": "moego-delta"
+    },
+    {
+      "phone": "5164481915",
+      "ghlName": "",
+      "currentValue": null,
+      "currentValueText": "unknown",
+      "knownRows": [],
+      "moegoName": "Alison Ladd",
+      "moegoTotal": "$1656.25",
+      "moegoTotalNumber": 1656.25,
+      "reason": "moego-total-changed",
+      "source": "moego-delta"
+    },
+    {
+      "phone": "5168641560",
+      "ghlName": "",
+      "currentValue": null,
+      "currentValueText": "unknown",
+      "knownRows": [],
+      "moegoName": "Nicole Randazzo",
+      "moegoTotal": "$1638.99",
+      "moegoTotalNumber": 1638.99,
+      "reason": "moego-total-changed",
+      "source": "moego-delta"
+    },
+    {
+      "phone": "9176717195",
+      "ghlName": "",
+      "currentValue": null,
+      "currentValueText": "unknown",
+      "knownRows": [],
+      "moegoName": "Brenda Tardugno",
+      "moegoTotal": "$1628.0",
+      "moegoTotalNumber": 1628,
+      "reason": "moego-total-changed",
+      "source": "moego-delta"
+    },
+    {
+      "phone": "9179958010",
+      "ghlName": "",
+      "currentValue": null,
+      "currentValueText": "unknown",
+      "knownRows": [],
+      "moegoName": "Andre Hannah",
+      "moegoTotal": "$1554.0",
+      "moegoTotalNumber": 1554,
+      "reason": "moego-total-changed",
+      "source": "moego-delta"
+    },
+    {
+      "phone": "9292101903",
+      "ghlName": "",
+      "currentValue": null,
+      "currentValueText": "unknown",
+      "knownRows": [],
+      "moegoName": "Beck Roman",
+      "moegoTotal": "$1528.66",
+      "moegoTotalNumber": 1528.66,
+      "reason": "moego-total-changed",
+      "source": "moego-delta"
+    },
+    {
+      "phone": "5169782829",
+      "ghlName": "",
+      "currentValue": null,
+      "currentValueText": "unknown",
+      "knownRows": [],
+      "moegoName": "Juliet Colella",
+      "moegoTotal": "$1508.49",
+      "moegoTotalNumber": 1508.49,
+      "reason": "moego-total-changed",
+      "source": "moego-delta"
+    },
+    {
+      "phone": "6465991518",
+      "ghlName": "",
+      "currentValue": null,
+      "currentValueText": "unknown",
+      "knownRows": [],
+      "moegoName": "Alyssa Vanderhoef",
+      "moegoTotal": "$1458.52",
+      "moegoTotalNumber": 1458.52,
+      "reason": "moego-total-changed",
+      "source": "moego-delta"
+    },
+    {
+      "phone": "4012581395",
+      "ghlName": "",
+      "currentValue": null,
+      "currentValueText": "unknown",
+      "knownRows": [],
+      "moegoName": "Madeleine Savoie",
+      "moegoTotal": "$1448.44",
+      "moegoTotalNumber": 1448.44,
+      "reason": "moego-total-changed",
+      "source": "moego-delta"
+    },
+    {
+      "phone": "5169932810",
+      "ghlName": "",
+      "currentValue": null,
+      "currentValueText": "unknown",
+      "knownRows": [],
+      "moegoName": "Erin Camoia",
+      "moegoTotal": "$1438.38",
+      "moegoTotalNumber": 1438.38,
+      "reason": "moego-total-changed",
+      "source": "moego-delta"
+    },
+    {
+      "phone": "6465299645",
+      "ghlName": "",
+      "currentValue": null,
+      "currentValueText": "unknown",
+      "knownRows": [],
+      "moegoName": "Dana Ferrara",
+      "moegoTotal": "$1409.38",
+      "moegoTotalNumber": 1409.38,
+      "reason": "moego-total-changed",
+      "source": "moego-delta"
+    },
+    {
+      "phone": "5166580798",
+      "ghlName": "",
+      "currentValue": null,
+      "currentValueText": "unknown",
+      "knownRows": [],
+      "moegoName": "Elizabeth DeFrancisco",
+      "moegoTotal": "$1371.51",
+      "moegoTotalNumber": 1371.51,
+      "reason": "moego-total-changed",
+      "source": "moego-delta"
+    },
+    {
+      "phone": "6468532757",
+      "ghlName": "",
+      "currentValue": null,
+      "currentValueText": "unknown",
+      "knownRows": [],
+      "moegoName": "Juliet Brown",
+      "moegoTotal": "$1352.03",
+      "moegoTotalNumber": 1352.03,
+      "reason": "moego-total-changed",
+      "source": "moego-delta"
+    },
+    {
+      "phone": "6464835558",
+      "ghlName": "",
+      "currentValue": null,
+      "currentValueText": "unknown",
+      "knownRows": [],
+      "moegoName": "Julie Klein",
+      "moegoTotal": "$1351.08",
+      "moegoTotalNumber": 1351.08,
+      "reason": "moego-total-changed",
+      "source": "moego-delta"
+    },
+    {
+      "phone": "5162419867",
+      "ghlName": "",
+      "currentValue": null,
+      "currentValueText": "unknown",
+      "knownRows": [],
+      "moegoName": "Paula Ragusa",
+      "moegoTotal": "$1344.46",
+      "moegoTotalNumber": 1344.46,
+      "reason": "moego-total-changed",
+      "source": "moego-delta"
+    },
+    {
+      "phone": "5163828006",
+      "ghlName": "",
+      "currentValue": null,
+      "currentValueText": "unknown",
+      "knownRows": [],
+      "moegoName": "Karen Alexander",
+      "moegoTotal": "$1320.0",
+      "moegoTotalNumber": 1320,
+      "reason": "moego-total-changed",
+      "source": "moego-delta"
+    },
+    {
+      "phone": "9178553438",
+      "ghlName": "",
+      "currentValue": null,
+      "currentValueText": "unknown",
+      "knownRows": [],
+      "moegoName": "Aimee Carrara",
+      "moegoTotal": "$1242.34",
+      "moegoTotalNumber": 1242.34,
+      "reason": "moego-total-changed",
+      "source": "moego-delta"
+    },
+    {
+      "phone": "5166476125",
+      "ghlName": "",
+      "currentValue": null,
+      "currentValueText": "unknown",
+      "knownRows": [],
+      "moegoName": "LAURA STERN",
+      "moegoTotal": "$1228.51",
+      "moegoTotalNumber": 1228.51,
+      "reason": "moego-total-changed",
+      "source": "moego-delta"
+    },
+    {
+      "phone": "5163142224",
+      "ghlName": "",
+      "currentValue": null,
+      "currentValueText": "unknown",
+      "knownRows": [],
+      "moegoName": "Maria Solomon",
+      "moegoTotal": "$1223.48",
+      "moegoTotalNumber": 1223.48,
+      "reason": "moego-total-changed",
+      "source": "moego-delta"
+    },
+    {
+      "phone": "5163167096",
+      "ghlName": "",
+      "currentValue": null,
+      "currentValueText": "unknown",
+      "knownRows": [],
+      "moegoName": "Michelle Rothman",
+      "moegoTotal": "$1185.0",
+      "moegoTotalNumber": 1185,
+      "reason": "moego-total-changed",
+      "source": "moego-delta"
+    },
+    {
+      "phone": "6318044271",
+      "ghlName": "",
+      "currentValue": null,
+      "currentValueText": "unknown",
+      "knownRows": [],
+      "moegoName": "Cottie Winfield",
+      "moegoTotal": "$1167.39",
+      "moegoTotalNumber": 1167.39,
+      "reason": "moego-total-changed",
+      "source": "moego-delta"
+    },
+    {
+      "phone": "5166904249",
+      "ghlName": "",
+      "currentValue": null,
+      "currentValueText": "unknown",
+      "knownRows": [],
+      "moegoName": "KAREN POSIMATO",
+      "moegoTotal": "$1160.0",
+      "moegoTotalNumber": 1160,
+      "reason": "moego-total-changed",
+      "source": "moego-delta"
+    },
+    {
+      "phone": "9178426854",
+      "ghlName": "",
+      "currentValue": null,
+      "currentValueText": "unknown",
+      "knownRows": [],
+      "moegoName": "Danielle Fitzgerald",
+      "moegoTotal": "$1131.43",
+      "moegoTotalNumber": 1131.43,
+      "reason": "moego-total-changed",
+      "source": "moego-delta"
+    },
+    {
+      "phone": "5164742611",
+      "ghlName": "",
+      "currentValue": null,
+      "currentValueText": "unknown",
+      "knownRows": [],
+      "moegoName": "Santos Bojorge",
+      "moegoTotal": "$1130.14",
+      "moegoTotalNumber": 1130.14,
+      "reason": "moego-total-changed",
+      "source": "moego-delta"
+    },
+    {
+      "phone": "3472971378",
+      "ghlName": "",
+      "currentValue": null,
+      "currentValueText": "unknown",
+      "knownRows": [],
+      "moegoName": "Glenn Freese",
+      "moegoTotal": "$1086.62",
+      "moegoTotalNumber": 1086.62,
+      "reason": "moego-total-changed",
+      "source": "moego-delta"
+    },
+    {
+      "phone": "6312354894",
+      "ghlName": "",
+      "currentValue": null,
+      "currentValueText": "unknown",
+      "knownRows": [],
+      "moegoName": "Christie Marrano",
+      "moegoTotal": "$1060.72",
+      "moegoTotalNumber": 1060.72,
+      "reason": "moego-total-changed",
+      "source": "moego-delta"
+    },
+    {
+      "phone": "5163826962",
+      "ghlName": "",
+      "currentValue": null,
+      "currentValueText": "unknown",
+      "knownRows": [],
+      "moegoName": "Anthony DeLorenzo",
+      "moegoTotal": "$1029.23",
+      "moegoTotalNumber": 1029.23,
+      "reason": "moego-total-changed",
+      "source": "moego-delta"
+    },
+    {
+      "phone": "5163752122",
+      "ghlName": "",
+      "currentValue": null,
+      "currentValueText": "unknown",
+      "knownRows": [],
+      "moegoName": "Meg Sullivan-eng",
+      "moegoTotal": "$1011.35",
+      "moegoTotalNumber": 1011.35,
+      "reason": "moego-total-changed",
+      "source": "moego-delta"
+    },
+    {
+      "phone": "3179028068",
+      "ghlName": "",
+      "currentValue": null,
+      "currentValueText": "unknown",
+      "knownRows": [],
+      "moegoName": "Jason Gloye",
+      "moegoTotal": "$1008.56",
+      "moegoTotalNumber": 1008.56,
+      "reason": "moego-total-changed",
+      "source": "moego-delta"
+    },
+    {
+      "phone": "6462888583",
+      "ghlName": "",
+      "currentValue": null,
+      "currentValueText": "unknown",
+      "knownRows": [],
+      "moegoName": "Aleisha Khan",
+      "moegoTotal": "$1006.57",
+      "moegoTotalNumber": 1006.57,
+      "reason": "moego-total-changed",
+      "source": "moego-delta"
+    },
+    {
+      "phone": "5166590183",
+      "ghlName": "",
+      "currentValue": null,
+      "currentValueText": "unknown",
+      "knownRows": [],
+      "moegoName": "Judith Posimato",
+      "moegoTotal": "$995.0",
+      "moegoTotalNumber": 995,
+      "reason": "moego-total-changed",
+      "source": "moego-delta"
+    },
+    {
+      "phone": "5167216948",
+      "ghlName": "",
+      "currentValue": null,
+      "currentValueText": "unknown",
+      "knownRows": [],
+      "moegoName": "Chuck Elder",
+      "moegoTotal": "$987.63",
+      "moegoTotalNumber": 987.63,
+      "reason": "moego-total-changed",
+      "source": "moego-delta"
+    },
+    {
+      "phone": "7186199687",
+      "ghlName": "",
+      "currentValue": null,
+      "currentValueText": "unknown",
+      "knownRows": [],
+      "moegoName": "Daniel RIvera",
+      "moegoTotal": "$982.03",
+      "moegoTotalNumber": 982.03,
+      "reason": "moego-total-changed",
+      "source": "moego-delta"
+    },
+    {
+      "phone": "5166508133",
+      "ghlName": "",
+      "currentValue": null,
+      "currentValueText": "unknown",
+      "knownRows": [],
+      "moegoName": "Nellie Raimondi",
+      "moegoTotal": "$960.0",
+      "moegoTotalNumber": 960,
+      "reason": "moego-total-changed",
+      "source": "moego-delta"
+    },
+    {
+      "phone": "6464001859",
+      "ghlName": "",
+      "currentValue": null,
+      "currentValueText": "unknown",
+      "knownRows": [],
+      "moegoName": "megan obrien",
+      "moegoTotal": "$946.0",
+      "moegoTotalNumber": 946,
+      "reason": "moego-total-changed",
+      "source": "moego-delta"
+    },
+    {
+      "phone": "5164895482",
+      "ghlName": "",
+      "currentValue": null,
+      "currentValueText": "unknown",
+      "knownRows": [],
+      "moegoName": "Dori Ehrenrich",
+      "moegoTotal": "$872.6",
+      "moegoTotalNumber": 872.6,
+      "reason": "moego-total-changed",
+      "source": "moego-delta"
+    },
+    {
+      "phone": "5169467574",
+      "ghlName": "",
+      "currentValue": null,
+      "currentValueText": "unknown",
+      "knownRows": [],
+      "moegoName": "Gina DeStaebler",
+      "moegoTotal": "$844.22",
+      "moegoTotalNumber": 844.22,
+      "reason": "moego-total-changed",
+      "source": "moego-delta"
+    },
+    {
+      "phone": "5165477418",
+      "ghlName": "",
+      "currentValue": null,
+      "currentValueText": "unknown",
+      "knownRows": [],
+      "moegoName": "Pat Tortorici",
+      "moegoTotal": "$840.81",
+      "moegoTotalNumber": 840.81,
+      "reason": "moego-total-changed",
+      "source": "moego-delta"
+    },
+    {
+      "phone": "9178152612",
+      "ghlName": "",
+      "currentValue": null,
+      "currentValueText": "unknown",
+      "knownRows": [],
+      "moegoName": "Alex Nakos",
+      "moegoTotal": "$834.5",
+      "moegoTotalNumber": 834.5,
+      "reason": "moego-total-changed",
+      "source": "moego-delta"
+    },
+    {
+      "phone": "5162200179",
+      "ghlName": "",
+      "currentValue": null,
+      "currentValueText": "unknown",
+      "knownRows": [],
+      "moegoName": "Claudia Caruana",
+      "moegoTotal": "$827.31",
+      "moegoTotalNumber": 827.31,
+      "reason": "moego-total-changed",
+      "source": "moego-delta"
+    },
+    {
+      "phone": "6465230289",
+      "ghlName": "",
+      "currentValue": null,
+      "currentValueText": "unknown",
+      "knownRows": [],
+      "moegoName": "Woodrow Whittaker",
+      "moegoTotal": "$803.04",
+      "moegoTotalNumber": 803.04,
+      "reason": "moego-total-changed",
+      "source": "moego-delta"
+    },
+    {
+      "phone": "5166397091",
+      "ghlName": "",
+      "currentValue": null,
+      "currentValueText": "unknown",
+      "knownRows": [],
+      "moegoName": "Dawn Spinner Davis",
+      "moegoTotal": "$778.71",
+      "moegoTotalNumber": 778.71,
+      "reason": "moego-total-changed",
+      "source": "moego-delta"
+    },
+    {
+      "phone": "9179216959",
+      "ghlName": "",
+      "currentValue": null,
+      "currentValueText": "unknown",
+      "knownRows": [],
+      "moegoName": "Graceann Porter",
+      "moegoTotal": "$761.52",
+      "moegoTotalNumber": 761.52,
+      "reason": "moego-total-changed",
+      "source": "moego-delta"
+    },
+    {
+      "phone": "5168609011",
+      "ghlName": "",
+      "currentValue": null,
+      "currentValueText": "unknown",
+      "knownRows": [],
+      "moegoName": "Ellen Donohur",
+      "moegoTotal": "$754.2",
+      "moegoTotalNumber": 754.2,
+      "reason": "moego-total-changed",
+      "source": "moego-delta"
+    },
+    {
+      "phone": "6467086306",
+      "ghlName": "",
+      "currentValue": null,
+      "currentValueText": "unknown",
+      "knownRows": [],
+      "moegoName": "Scott Morrison",
+      "moegoTotal": "$731.03",
+      "moegoTotalNumber": 731.03,
+      "reason": "moego-total-changed",
+      "source": "moego-delta"
+    },
+    {
+      "phone": "5164580243",
+      "ghlName": "",
+      "currentValue": null,
+      "currentValueText": "unknown",
+      "knownRows": [],
+      "moegoName": "Brant Kasschau",
+      "moegoTotal": "$689.0",
+      "moegoTotalNumber": 689,
+      "reason": "moego-total-changed",
+      "source": "moego-delta"
+    },
+    {
+      "phone": "3477285037",
+      "ghlName": "",
+      "currentValue": null,
+      "currentValueText": "unknown",
+      "knownRows": [],
+      "moegoName": "Andrea Flete",
+      "moegoTotal": "$687.0",
+      "moegoTotalNumber": 687,
+      "reason": "moego-total-changed",
+      "source": "moego-delta"
+    },
+    {
+      "phone": "5163437679",
+      "ghlName": "",
+      "currentValue": null,
+      "currentValueText": "unknown",
+      "knownRows": [],
+      "moegoName": "Ifeoma Onyeike",
+      "moegoTotal": "$613.3",
+      "moegoTotalNumber": 613.3,
+      "reason": "moego-total-changed",
+      "source": "moego-delta"
+    },
+    {
+      "phone": "7185947751",
+      "ghlName": "",
+      "currentValue": null,
+      "currentValueText": "unknown",
+      "knownRows": [],
+      "moegoName": "Thomas Kosak",
+      "moegoTotal": "$606.21",
+      "moegoTotalNumber": 606.21,
+      "reason": "moego-total-changed",
+      "source": "moego-delta"
+    },
+    {
+      "phone": "3472548453",
+      "ghlName": "",
+      "currentValue": null,
+      "currentValueText": "unknown",
+      "knownRows": [],
+      "moegoName": "Vanessa Leal",
+      "moegoTotal": "$560.43",
+      "moegoTotalNumber": 560.43,
+      "reason": "moego-total-changed",
+      "source": "moego-delta"
+    },
+    {
+      "phone": "5164576198",
+      "ghlName": "",
+      "currentValue": null,
+      "currentValueText": "unknown",
+      "knownRows": [],
+      "moegoName": "Jolene Mack",
+      "moegoTotal": "$549.0",
+      "moegoTotalNumber": 549,
+      "reason": "moego-total-changed",
+      "source": "moego-delta"
+    },
+    {
+      "phone": "5163951342",
+      "ghlName": "",
+      "currentValue": null,
+      "currentValueText": "unknown",
+      "knownRows": [],
+      "moegoName": "Victoria Donovan",
+      "moegoTotal": "$541.44",
+      "moegoTotalNumber": 541.44,
+      "reason": "moego-total-changed",
+      "source": "moego-delta"
+    },
+    {
+      "phone": "9173457095",
+      "ghlName": "",
+      "currentValue": null,
+      "currentValueText": "unknown",
+      "knownRows": [],
+      "moegoName": "Kathryn Baldwin",
+      "moegoTotal": "$538.83",
+      "moegoTotalNumber": 538.83,
+      "reason": "moego-total-changed",
+      "source": "moego-delta"
+    },
+    {
+      "phone": "6317644191",
+      "ghlName": "",
+      "currentValue": null,
+      "currentValueText": "unknown",
+      "knownRows": [],
+      "moegoName": "Natalia Vassilieva",
+      "moegoTotal": "$520.44",
+      "moegoTotalNumber": 520.44,
+      "reason": "moego-total-changed",
+      "source": "moego-delta"
+    },
+    {
+      "phone": "7182497642",
+      "ghlName": "",
+      "currentValue": null,
+      "currentValueText": "unknown",
+      "knownRows": [],
+      "moegoName": "Carolina Nardello",
+      "moegoTotal": "$517.91",
+      "moegoTotalNumber": 517.91,
+      "reason": "moego-total-changed",
+      "source": "moego-delta"
+    },
+    {
+      "phone": "5162201262",
+      "ghlName": "",
+      "currentValue": null,
+      "currentValueText": "unknown",
+      "knownRows": [],
+      "moegoName": "Jaclyn Hochberg",
+      "moegoTotal": "$500.36",
+      "moegoTotalNumber": 500.36,
+      "reason": "moego-total-changed",
+      "source": "moego-delta"
+    },
+    {
+      "phone": "3474532582",
+      "ghlName": "",
+      "currentValue": null,
+      "currentValueText": "unknown",
+      "knownRows": [],
+      "moegoName": "Jackie Quiros",
+      "moegoTotal": "$487.84",
+      "moegoTotalNumber": 487.84,
+      "reason": "moego-total-changed",
+      "source": "moego-delta"
+    },
+    {
+      "phone": "5164917575",
+      "ghlName": "",
+      "currentValue": null,
+      "currentValueText": "unknown",
+      "knownRows": [],
+      "moegoName": "Anisha Jadav",
+      "moegoTotal": "$476.5",
+      "moegoTotalNumber": 476.5,
+      "reason": "moego-total-changed",
+      "source": "moego-delta"
+    },
+    {
+      "phone": "6462992036",
+      "ghlName": "",
+      "currentValue": null,
+      "currentValueText": "unknown",
+      "knownRows": [],
+      "moegoName": "David santos",
+      "moegoTotal": "$474.68",
+      "moegoTotalNumber": 474.68,
+      "reason": "moego-total-changed",
+      "source": "moego-delta"
+    },
+    {
+      "phone": "5166106494",
+      "ghlName": "",
+      "currentValue": null,
+      "currentValueText": "unknown",
+      "knownRows": [],
+      "moegoName": "Andrea Mangan",
+      "moegoTotal": "$465.94",
+      "moegoTotalNumber": 465.94,
+      "reason": "moego-total-changed",
+      "source": "moego-delta"
+    },
+    {
+      "phone": "5164044105",
+      "ghlName": "",
+      "currentValue": null,
+      "currentValueText": "unknown",
+      "knownRows": [],
+      "moegoName": "Gabrielle Rechler Bank",
+      "moegoTotal": "$458.75",
+      "moegoTotalNumber": 458.75,
+      "reason": "moego-total-changed",
+      "source": "moego-delta"
+    },
+    {
+      "phone": "5183308191",
+      "ghlName": "",
+      "currentValue": null,
+      "currentValueText": "unknown",
+      "knownRows": [],
+      "moegoName": "Kevin Chean",
+      "moegoTotal": "$451.94",
+      "moegoTotalNumber": 451.94,
+      "reason": "moego-total-changed",
+      "source": "moego-delta"
+    },
+    {
+      "phone": "5168608874",
+      "ghlName": "",
+      "currentValue": null,
+      "currentValueText": "unknown",
+      "knownRows": [],
+      "moegoName": "Dawn Marzullo",
+      "moegoTotal": "$450.36",
+      "moegoTotalNumber": 450.36,
+      "reason": "moego-total-changed",
+      "source": "moego-delta"
+    },
+    {
+      "phone": "7188408787",
+      "ghlName": "",
+      "currentValue": null,
+      "currentValueText": "unknown",
+      "knownRows": [],
+      "moegoName": "Kristin Panagiotopoulos",
+      "moegoTotal": "$430.34",
+      "moegoTotalNumber": 430.34,
+      "reason": "moego-total-changed",
+      "source": "moego-delta"
+    },
+    {
+      "phone": "5163170062",
+      "ghlName": "",
+      "currentValue": null,
+      "currentValueText": "unknown",
+      "knownRows": [],
+      "moegoName": "Bryan Curry",
+      "moegoTotal": "$424.66",
+      "moegoTotalNumber": 424.66,
+      "reason": "moego-total-changed",
+      "source": "moego-delta"
+    },
+    {
+      "phone": "3479053884",
+      "ghlName": "",
+      "currentValue": null,
+      "currentValueText": "unknown",
+      "knownRows": [],
+      "moegoName": "Suzette Tapia",
+      "moegoTotal": "$417.34",
+      "moegoTotalNumber": 417.34,
+      "reason": "moego-total-changed",
+      "source": "moego-delta"
+    },
+    {
+      "phone": "2032312059",
+      "ghlName": "",
+      "currentValue": null,
+      "currentValueText": "unknown",
+      "knownRows": [],
+      "moegoName": "Michael Boken",
+      "moegoTotal": "$404.54",
+      "moegoTotalNumber": 404.54,
+      "reason": "moego-total-changed",
+      "source": "moego-delta"
+    },
+    {
+      "phone": "6462557215",
+      "ghlName": "",
+      "currentValue": null,
+      "currentValueText": "unknown",
+      "knownRows": [],
+      "moegoName": "David Seepersaud",
+      "moegoTotal": "$397.82",
+      "moegoTotalNumber": 397.82,
+      "reason": "moego-total-changed",
+      "source": "moego-delta"
+    },
+    {
+      "phone": "5166378028",
+      "ghlName": "",
+      "currentValue": null,
+      "currentValueText": "unknown",
+      "knownRows": [],
+      "moegoName": "Frederica Lewis",
+      "moegoTotal": "$397.78",
+      "moegoTotalNumber": 397.78,
+      "reason": "moego-total-changed",
+      "source": "moego-delta"
+    },
+    {
+      "phone": "9176033016",
+      "ghlName": "",
+      "currentValue": null,
+      "currentValueText": "unknown",
+      "knownRows": [],
+      "moegoName": "Melissa Nakos",
+      "moegoTotal": "$395.71",
+      "moegoTotalNumber": 395.71,
+      "reason": "moego-total-changed",
+      "source": "moego-delta"
+    },
+    {
+      "phone": "8458634342",
+      "ghlName": "",
+      "currentValue": null,
+      "currentValueText": "unknown",
+      "knownRows": [],
+      "moegoName": "Darren Jackson",
+      "moegoTotal": "$361.41",
+      "moegoTotalNumber": 361.41,
+      "reason": "moego-total-changed",
+      "source": "moego-delta"
+    },
+    {
+      "phone": "9179570318",
+      "ghlName": "",
+      "currentValue": null,
+      "currentValueText": "unknown",
+      "knownRows": [],
+      "moegoName": "Christy Qu",
+      "moegoTotal": "$330.0",
+      "moegoTotalNumber": 330,
+      "reason": "moego-total-changed",
+      "source": "moego-delta"
+    },
+    {
+      "phone": "5162427313",
+      "ghlName": "",
+      "currentValue": null,
+      "currentValueText": "unknown",
+      "knownRows": [],
+      "moegoName": "Jessica Wright",
+      "moegoTotal": "$325.8",
+      "moegoTotalNumber": 325.8,
+      "reason": "moego-total-changed",
+      "source": "moego-delta"
+    },
+    {
+      "phone": "6313983677",
+      "ghlName": "",
+      "currentValue": null,
+      "currentValueText": "unknown",
+      "knownRows": [],
+      "moegoName": "Christi Hinko",
+      "moegoTotal": "$320.88",
+      "moegoTotalNumber": 320.88,
+      "reason": "moego-total-changed",
+      "source": "moego-delta"
+    },
+    {
+      "phone": "6464645085",
+      "ghlName": "",
+      "currentValue": null,
+      "currentValueText": "unknown",
+      "knownRows": [],
+      "moegoName": "Diana Carpio",
+      "moegoTotal": "$320.0",
+      "moegoTotalNumber": 320,
+      "reason": "moego-total-changed",
+      "source": "moego-delta"
+    },
+    {
+      "phone": "5162632475",
+      "ghlName": "",
+      "currentValue": null,
+      "currentValueText": "unknown",
+      "knownRows": [],
+      "moegoName": "Renee Hall",
+      "moegoTotal": "$318.89",
+      "moegoTotalNumber": 318.89,
+      "reason": "moego-total-changed",
+      "source": "moego-delta"
+    },
+    {
+      "phone": "5163752900",
+      "ghlName": "",
+      "currentValue": null,
+      "currentValueText": "unknown",
+      "knownRows": [],
+      "moegoName": "Jeffrey Clark",
+      "moegoTotal": "$301.22",
+      "moegoTotalNumber": 301.22,
+      "reason": "moego-total-changed",
+      "source": "moego-delta"
+    },
+    {
+      "phone": "5169840632",
+      "ghlName": "",
+      "currentValue": null,
+      "currentValueText": "unknown",
+      "knownRows": [],
+      "moegoName": "Janet Porcher",
+      "moegoTotal": "$262.85",
+      "moegoTotalNumber": 262.85,
+      "reason": "moego-total-changed",
+      "source": "moego-delta"
+    },
+    {
+      "phone": "5168352819",
+      "ghlName": "",
+      "currentValue": null,
+      "currentValueText": "unknown",
+      "knownRows": [],
+      "moegoName": "doreen Loxtritto",
+      "moegoTotal": "$225.18",
+      "moegoTotalNumber": 225.18,
+      "reason": "moego-total-changed",
+      "source": "moego-delta"
+    },
+    {
+      "phone": "5164213982",
+      "ghlName": "",
+      "currentValue": null,
+      "currentValueText": "unknown",
+      "knownRows": [],
+      "moegoName": "Faith Anderson",
+      "moegoTotal": "$212.41",
+      "moegoTotalNumber": 212.41,
+      "reason": "moego-total-changed",
+      "source": "moego-delta"
+    },
+    {
+      "phone": "5163888114",
+      "ghlName": "",
+      "currentValue": null,
+      "currentValueText": "unknown",
+      "knownRows": [],
+      "moegoName": "Lauren Valentini",
+      "moegoTotal": "$206.65",
+      "moegoTotalNumber": 206.65,
+      "reason": "moego-total-changed",
+      "source": "moego-delta"
+    },
+    {
+      "phone": "5168207041",
+      "ghlName": "",
+      "currentValue": null,
+      "currentValueText": "unknown",
+      "knownRows": [],
+      "moegoName": "Hashley Padilla",
+      "moegoTotal": "$150.0",
+      "moegoTotalNumber": 150,
+      "reason": "moego-total-changed",
+      "source": "moego-delta"
+    },
+    {
+      "phone": "5166959508",
+      "ghlName": "",
+      "currentValue": null,
+      "currentValueText": "unknown",
+      "knownRows": [],
+      "moegoName": "Natalie Aller",
+      "moegoTotal": "$150.0",
+      "moegoTotalNumber": 150,
+      "reason": "moego-total-changed",
+      "source": "moego-delta"
+    },
+    {
+      "phone": "3477582559",
+      "ghlName": "",
+      "currentValue": null,
+      "currentValueText": "unknown",
+      "knownRows": [],
+      "moegoName": "Georgette Pascual",
+      "moegoTotal": "$140.0",
+      "moegoTotalNumber": 140,
+      "reason": "moego-total-changed",
+      "source": "moego-delta"
+    },
+    {
+      "phone": "5167325912",
+      "ghlName": "",
+      "currentValue": null,
+      "currentValueText": "unknown",
+      "knownRows": [],
+      "moegoName": "Lenny Giuliante",
+      "moegoTotal": "$57.67",
+      "moegoTotalNumber": 57.67,
+      "reason": "moego-total-changed",
+      "source": "moego-delta"
+    },
+    {
+      "phone": "5163140677",
+      "ghlName": "",
+      "currentValue": null,
+      "currentValueText": "unknown",
+      "knownRows": [],
+      "moegoName": "Veronica Rutigliano",
+      "moegoTotal": "$57.67",
+      "moegoTotalNumber": 57.67,
+      "reason": "moego-total-changed",
+      "source": "moego-delta"
+    },
+    {
+      "phone": "5168009630",
+      "ghlName": "",
+      "currentValue": null,
+      "currentValueText": "unknown",
+      "knownRows": [],
+      "moegoName": "Kenia Cruz",
+      "moegoTotal": "$55.41",
+      "moegoTotalNumber": 55.41,
+      "reason": "moego-total-changed",
+      "source": "moego-delta"
+    },
+    {
+      "phone": "3474519248",
+      "ghlName": "",
+      "currentValue": null,
+      "currentValueText": "unknown",
+      "knownRows": [],
+      "moegoName": "Melissa Jean-Baptiste",
+      "moegoTotal": "$46.43",
+      "moegoTotalNumber": 46.43,
+      "reason": "moego-total-changed",
+      "source": "moego-delta"
+    },
+    {
+      "phone": "6318975918",
+      "ghlName": "",
+      "currentValue": null,
+      "currentValueText": "unknown",
+      "knownRows": [],
+      "moegoName": "Barbara Brathwaite",
+      "moegoTotal": "$322.01",
+      "moegoTotalNumber": 322.01,
+      "reason": "new-moego-phone",
+      "source": "moego-delta"
+    },
+    {
+      "phone": "5164599710",
+      "ghlName": "",
+      "currentValue": null,
+      "currentValueText": "unknown",
+      "knownRows": [],
+      "moegoName": "Lisa Bloore",
+      "moegoTotal": "$26.19",
+      "moegoTotalNumber": 26.19,
+      "reason": "new-moego-phone",
+      "source": "moego-delta"
+    },
+    {
+      "phone": "5164765026",
+      "ghlName": "",
+      "currentValue": null,
+      "currentValueText": "unknown",
+      "knownRows": [],
+      "moegoName": "Patty and Mike Longobardi",
+      "moegoTotal": "$26.19",
+      "moegoTotalNumber": 26.19,
+      "reason": "new-moego-phone",
+      "source": "moego-delta"
+    }
+  ]
+}

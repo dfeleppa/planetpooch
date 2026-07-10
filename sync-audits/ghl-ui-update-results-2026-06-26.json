@@ -1,0 +1,5405 @@
+{
+  "startedAt": "2026-06-26T14:08:44.198Z",
+  "nextIndex": 86,
+  "results": [
+    {
+      "queueIndex": 0,
+      "ghlName": "Denise Taylor-Jeffries - Meta Lead",
+      "phone": "9176872385",
+      "listValue": "$0",
+      "moegoName": "Denise Jeffries",
+      "moegoTotal": "$330.69",
+      "moegoTotalNumber": 330.69,
+      "action": "updated",
+      "rows": [
+        {
+          "last10": "9176872385",
+          "name": "Denise Taylor-Jeffries - Meta Lead",
+          "phoneDigits": "1917687238519176872385",
+          "phoneText": "+19176872385 +19176872385",
+          "rowIndex": 0,
+          "text": "Denise Taylor-Jeffries - Meta Lead +19176872385 +19176872385 $0",
+          "valueText": "$0"
+        }
+      ],
+      "opened": {
+        "name": "Denise Taylor-Jeffries - Meta Lead",
+        "phoneText": "+19176872385 +19176872385",
+        "rowIndex": 0,
+        "valueText": "$0",
+        "x": 369,
+        "y": 310
+      },
+      "before": {
+        "phone": "+19176872385",
+        "status": "Lost",
+        "titleInputs": [
+          "9176872385",
+          "9176872385",
+          "on",
+          "on",
+          "denisejeffries69@gmail.com",
+          "+19176872385",
+          "Denise Taylor-Jeffries - Meta Lead",
+          "0"
+        ],
+        "value": "0"
+      },
+      "after": {
+        "phone": "+19176872385",
+        "status": "Won",
+        "titleInputs": [
+          "9176872385",
+          "9176872385",
+          "on",
+          "on",
+          "denisejeffries69@gmail.com",
+          "+19176872385",
+          "Denise Taylor-Jeffries - Meta Lead",
+          "330.69"
+        ],
+        "value": "330.69"
+      },
+      "phoneMatches": true,
+      "needValue": true,
+      "needStatus": true,
+      "statusSet": {
+        "text": "Won",
+        "x": 623,
+        "y": 600
+      },
+      "saved": true
+    },
+    {
+      "queueIndex": 1,
+      "ghlName": "Ryan Lutchman - Resort(Meta)",
+      "phone": "9174461890",
+      "listValue": "$0",
+      "moegoName": "Ryan Lutchman",
+      "moegoTotal": "$180.15",
+      "moegoTotalNumber": 180.15,
+      "action": "updated",
+      "rows": [
+        {
+          "last10": "9174461890",
+          "name": "Ryan Lutchman - Resort(Meta)",
+          "phoneDigits": "1917446189019174461890",
+          "phoneText": "+19174461890 +19174461890",
+          "rowIndex": 0,
+          "text": "Ryan Lutchman - Resort(Meta) +19174461890 +19174461890 $0",
+          "valueText": "$0"
+        }
+      ],
+      "opened": {
+        "name": "Ryan Lutchman - Resort(Meta)",
+        "phoneText": "+19174461890 +19174461890",
+        "rowIndex": 0,
+        "valueText": "$0",
+        "x": 369,
+        "y": 310
+      },
+      "before": {
+        "phone": "+19174461890",
+        "status": "Lost",
+        "titleInputs": [
+          "9174461890",
+          "9174461890",
+          "on",
+          "on",
+          "ryan04sti@gmail.com",
+          "+19174461890",
+          "Ryan Lutchman - Resort(Meta)",
+          "0",
+          "Meta Ads"
+        ],
+        "value": "0"
+      },
+      "after": {
+        "phone": "+19174461890",
+        "status": "Won",
+        "titleInputs": [
+          "9174461890",
+          "9174461890",
+          "on",
+          "on",
+          "ryan04sti@gmail.com",
+          "+19174461890",
+          "Ryan Lutchman - Resort(Meta)",
+          "180.15",
+          "Meta Ads"
+        ],
+        "value": "180.15"
+      },
+      "phoneMatches": true,
+      "needValue": true,
+      "needStatus": true,
+      "statusSet": {
+        "text": "Won",
+        "x": 623,
+        "y": 600
+      },
+      "saved": true
+    },
+    {
+      "queueIndex": 2,
+      "ghlName": "Lisa Maher VonSalzen - Meta Lead",
+      "phone": "5163180295",
+      "listValue": "$0",
+      "moegoName": "Lisa Vonsalzen",
+      "moegoTotal": "$1981.01",
+      "moegoTotalNumber": 1981.01,
+      "action": "updated",
+      "rows": [
+        {
+          "last10": "5163180295",
+          "name": "Lisa Maher VonSalzen - Meta Lead",
+          "phoneDigits": "1516318029515163180295",
+          "phoneText": "+15163180295 +15163180295",
+          "rowIndex": 0,
+          "text": "Lisa Maher VonSalzen - Meta Lead +15163180295 +15163180295 $0",
+          "valueText": "$0"
+        }
+      ],
+      "opened": {
+        "name": "Lisa Maher VonSalzen - Meta Lead",
+        "phoneText": "+15163180295 +15163180295",
+        "rowIndex": 0,
+        "valueText": "$0",
+        "x": 369,
+        "y": 310
+      },
+      "before": {
+        "phone": "+15163180295",
+        "status": "Lost",
+        "titleInputs": [
+          "5163180295",
+          "5163180295",
+          "on",
+          "on",
+          "ljmv9562@aol.com",
+          "+15163180295",
+          "Lisa Maher VonSalzen - Meta Lead",
+          "0",
+          "Meta Ads"
+        ],
+        "value": "0"
+      },
+      "after": {
+        "phone": "+15163180295",
+        "status": "Won",
+        "titleInputs": [
+          "5163180295",
+          "5163180295",
+          "on",
+          "on",
+          "ljmv9562@aol.com",
+          "+15163180295",
+          "Lisa Maher VonSalzen - Meta Lead",
+          "1981.01",
+          "Meta Ads"
+        ],
+        "value": "1981.01"
+      },
+      "phoneMatches": true,
+      "needValue": true,
+      "needStatus": true,
+      "statusSet": {
+        "text": "Won",
+        "x": 623,
+        "y": 600
+      },
+      "saved": true
+    },
+    {
+      "queueIndex": 3,
+      "ghlName": "Monika Robinson - Meta Grooming Lead",
+      "phone": "5163431918",
+      "listValue": "$0",
+      "moegoName": "Monica Robinson",
+      "moegoTotal": "$208.34",
+      "moegoTotalNumber": 208.34,
+      "action": "updated",
+      "rows": [
+        {
+          "last10": "5163431918",
+          "name": "Monika Robinson - Meta Grooming Lead",
+          "phoneDigits": "1516343191815163431918",
+          "phoneText": "+15163431918 +15163431918",
+          "rowIndex": 0,
+          "text": "Monika Robinson - Meta Grooming Lead +15163431918 +15163431918 $0",
+          "valueText": "$0"
+        }
+      ],
+      "opened": {
+        "name": "Monika Robinson - Meta Grooming Lead",
+        "phoneText": "+15163431918 +15163431918",
+        "rowIndex": 0,
+        "valueText": "$0",
+        "x": 369,
+        "y": 310
+      },
+      "before": {
+        "phone": "+15163431918",
+        "status": "Lost",
+        "titleInputs": [
+          "5163431918",
+          "5163431918",
+          "on",
+          "on",
+          "monika.robinson@gmail.com",
+          "+15163431918",
+          "Monika Robinson - Meta Grooming Lead",
+          "0",
+          "Meta Ads"
+        ],
+        "value": "0"
+      },
+      "after": {
+        "phone": "+15163431918",
+        "status": "Won",
+        "titleInputs": [
+          "5163431918",
+          "5163431918",
+          "on",
+          "on",
+          "monika.robinson@gmail.com",
+          "+15163431918",
+          "Monika Robinson - Meta Grooming Lead",
+          "208.34",
+          "Meta Ads"
+        ],
+        "value": "208.34"
+      },
+      "phoneMatches": true,
+      "needValue": true,
+      "needStatus": true,
+      "statusSet": {
+        "text": "Won",
+        "x": 623,
+        "y": 600
+      },
+      "saved": true
+    },
+    {
+      "queueIndex": 4,
+      "ghlName": "Christine Sweeney - Resort(Meta)",
+      "phone": "5163827504",
+      "listValue": "$0",
+      "moegoName": "Kristina Glynn",
+      "moegoTotal": "$1423.41",
+      "moegoTotalNumber": 1423.41,
+      "action": "updated",
+      "rows": [
+        {
+          "last10": "5163827504",
+          "name": "Christine Sweeney - Resort(Meta)",
+          "phoneDigits": "1516382750415163827504",
+          "phoneText": "+15163827504 +15163827504",
+          "rowIndex": 0,
+          "text": "Christine Sweeney - Resort(Meta) +15163827504 +15163827504 $0",
+          "valueText": "$0"
+        }
+      ],
+      "opened": {
+        "name": "Christine Sweeney - Resort(Meta)",
+        "phoneText": "+15163827504 +15163827504",
+        "rowIndex": 0,
+        "valueText": "$0",
+        "x": 369,
+        "y": 310
+      },
+      "before": {
+        "phone": "+15163827504",
+        "status": "Lost",
+        "titleInputs": [
+          "5163827504",
+          "5163827504",
+          "on",
+          "on",
+          "cglynn711@yahoo.com",
+          "+15163827504",
+          "Christine Sweeney - Resort(Meta)",
+          "0",
+          "Meta Ads"
+        ],
+        "value": "0"
+      },
+      "after": {
+        "phone": "+15163827504",
+        "status": "Won",
+        "titleInputs": [
+          "5163827504",
+          "5163827504",
+          "on",
+          "on",
+          "cglynn711@yahoo.com",
+          "+15163827504",
+          "Christine Sweeney - Resort(Meta)",
+          "1423.41",
+          "Meta Ads"
+        ],
+        "value": "1423.41"
+      },
+      "phoneMatches": true,
+      "needValue": true,
+      "needStatus": true,
+      "statusSet": {
+        "text": "Won",
+        "x": 623,
+        "y": 600
+      },
+      "saved": true
+    },
+    {
+      "queueIndex": 5,
+      "ghlName": "JustLorieee Balbosa",
+      "phone": "5164920242",
+      "listValue": "$649.25",
+      "moegoName": "Lorie Balbosa",
+      "moegoTotal": "$1018.29",
+      "moegoTotalNumber": 1018.29,
+      "action": "updated",
+      "rows": [
+        {
+          "last10": "5164920242",
+          "name": "JustLorieee Balbosa",
+          "phoneDigits": "1516492024215164920242",
+          "phoneText": "+15164920242 +15164920242",
+          "rowIndex": 0,
+          "text": "JustLorieee Balbosa +15164920242 +15164920242 $649.25",
+          "valueText": "$649.25"
+        }
+      ],
+      "opened": {
+        "name": "JustLorieee Balbosa",
+        "phoneText": "+15164920242 +15164920242",
+        "rowIndex": 0,
+        "valueText": "$649.25",
+        "x": 369,
+        "y": 310
+      },
+      "before": {
+        "phone": "+15164920242",
+        "status": "Won",
+        "titleInputs": [
+          "5164920242",
+          "5164920242",
+          "on",
+          "on",
+          "loriebalbosa@hotmail.com",
+          "+15164920242",
+          "JustLorieee Balbosa",
+          "649.25",
+          "Meta Ads"
+        ],
+        "value": "649.25"
+      },
+      "after": {
+        "phone": "+15164920242",
+        "status": "Won",
+        "titleInputs": [
+          "5164920242",
+          "5164920242",
+          "on",
+          "on",
+          "loriebalbosa@hotmail.com",
+          "+15164920242",
+          "JustLorieee Balbosa",
+          "1018.29",
+          "Meta Ads"
+        ],
+        "value": "1018.29"
+      },
+      "phoneMatches": true,
+      "needValue": true,
+      "needStatus": false,
+      "statusSet": null,
+      "saved": true
+    },
+    {
+      "queueIndex": 6,
+      "ghlName": "Johanna Reilly-Morales - Meta Grooming Lead",
+      "phone": "3476838819",
+      "listValue": "$100",
+      "moegoName": "Johanna Reilly Morales",
+      "moegoTotal": "$250.0",
+      "moegoTotalNumber": 250,
+      "action": "updated",
+      "rows": [
+        {
+          "last10": "3476838819",
+          "name": "Johanna Reilly-Morales - Meta Grooming Lead",
+          "phoneDigits": "1347683881913476838819",
+          "phoneText": "+13476838819 +13476838819",
+          "rowIndex": 0,
+          "text": "Johanna Reilly-Morales - Meta Grooming Lead +13476838819 +13476838819 $100",
+          "valueText": "$100"
+        }
+      ],
+      "opened": {
+        "name": "Johanna Reilly-Morales - Meta Grooming Lead",
+        "phoneText": "+13476838819 +13476838819",
+        "rowIndex": 0,
+        "valueText": "$100",
+        "x": 369,
+        "y": 310
+      },
+      "before": {
+        "phone": "+13476838819",
+        "status": "Won",
+        "titleInputs": [
+          "3476838819",
+          "3476838819",
+          "on",
+          "on",
+          "johanna77bklyn@aol.com",
+          "+13476838819",
+          "Johanna Reilly-Morales - Meta Grooming Lead",
+          "100",
+          "Meta Ads"
+        ],
+        "value": "100"
+      },
+      "after": {
+        "phone": "+13476838819",
+        "status": "Won",
+        "titleInputs": [
+          "3476838819",
+          "3476838819",
+          "on",
+          "on",
+          "johanna77bklyn@aol.com",
+          "+13476838819",
+          "Johanna Reilly-Morales - Meta Grooming Lead",
+          "250.00",
+          "Meta Ads"
+        ],
+        "value": "250.00"
+      },
+      "phoneMatches": true,
+      "needValue": true,
+      "needStatus": false,
+      "statusSet": null,
+      "saved": true
+    },
+    {
+      "queueIndex": 7,
+      "ghlName": "Laurie Rosen - Website lead",
+      "phone": "5165780009",
+      "listValue": "$355",
+      "moegoName": "Laurie Rosen",
+      "moegoTotal": "$686.81",
+      "moegoTotalNumber": 686.81,
+      "action": "updated",
+      "rows": [
+        {
+          "last10": "5165780009",
+          "name": "Laurie Rosen - Website lead",
+          "phoneDigits": "1516578000915165780009",
+          "phoneText": "+15165780009 +15165780009",
+          "rowIndex": 0,
+          "text": "Laurie Rosen - Website lead +15165780009 +15165780009 $355",
+          "valueText": "$355"
+        }
+      ],
+      "opened": {
+        "name": "Laurie Rosen - Website lead",
+        "phoneText": "+15165780009 +15165780009",
+        "rowIndex": 0,
+        "valueText": "$355",
+        "x": 369,
+        "y": 310
+      },
+      "before": {
+        "phone": "+15165780009",
+        "status": "Won",
+        "titleInputs": [
+          "5165780009",
+          "5165780009",
+          "on",
+          "on",
+          "rosenbyz@gmail.com",
+          "+15165780009",
+          "Laurie Rosen - Website lead",
+          "355",
+          "Website"
+        ],
+        "value": "355"
+      },
+      "after": {
+        "phone": "+15165780009",
+        "status": "Won",
+        "titleInputs": [
+          "5165780009",
+          "5165780009",
+          "on",
+          "on",
+          "rosenbyz@gmail.com",
+          "+15165780009",
+          "Laurie Rosen - Website lead",
+          "686.81",
+          "Website"
+        ],
+        "value": "686.81"
+      },
+      "phoneMatches": true,
+      "needValue": true,
+      "needStatus": false,
+      "statusSet": null,
+      "saved": true
+    },
+    {
+      "queueIndex": 8,
+      "ghlName": "Laura Herman - 11570 - Website Lead",
+      "phone": "5164562785",
+      "listValue": "$0",
+      "moegoName": "Laura Herman",
+      "moegoTotal": "$2016.93",
+      "moegoTotalNumber": 2016.93,
+      "action": "updated",
+      "rows": [
+        {
+          "last10": "5164562785",
+          "name": "Laura Herman - 11570 - Website Lead",
+          "phoneDigits": "1516456278515164562785",
+          "phoneText": "+15164562785 +15164562785",
+          "rowIndex": 0,
+          "text": "Laura Herman - 11570 - Website Lead +15164562785 +15164562785 $0",
+          "valueText": "$0"
+        }
+      ],
+      "opened": {
+        "name": "Laura Herman - 11570 - Website Lead",
+        "phoneText": "+15164562785 +15164562785",
+        "rowIndex": 0,
+        "valueText": "$0",
+        "x": 369,
+        "y": 310
+      },
+      "before": {
+        "phone": "+15164562785",
+        "status": "Lost",
+        "titleInputs": [
+          "5164562785",
+          "5164562785",
+          "on",
+          "on",
+          "laura.munzing@gmail.com",
+          "+15164562785",
+          "Laura Herman - 11570 - Website Lead",
+          "0",
+          "Website"
+        ],
+        "value": "0"
+      },
+      "after": {
+        "phone": "+15164562785",
+        "status": "Won",
+        "titleInputs": [
+          "5164562785",
+          "5164562785",
+          "on",
+          "on",
+          "laura.munzing@gmail.com",
+          "+15164562785",
+          "Laura Herman - 11570 - Website Lead",
+          "2016.93",
+          "Website"
+        ],
+        "value": "2016.93"
+      },
+      "phoneMatches": true,
+      "needValue": true,
+      "needStatus": true,
+      "statusSet": {
+        "text": "Won",
+        "x": 623,
+        "y": 600
+      },
+      "saved": true
+    },
+    {
+      "queueIndex": 9,
+      "ghlName": "Melina Gordon - 11530 - Website Lead",
+      "phone": "5163166744",
+      "listValue": "$194",
+      "moegoName": "Melina Gordon",
+      "moegoTotal": "$404.91",
+      "moegoTotalNumber": 404.91,
+      "action": "updated",
+      "rows": [
+        {
+          "last10": "5163166744",
+          "name": "Melina Gordon - 11530 - Website Lead",
+          "phoneDigits": "1516316674415163166744",
+          "phoneText": "+15163166744 +15163166744",
+          "rowIndex": 0,
+          "text": "Melina Gordon - 11530 - Website Lead +15163166744 +15163166744 $194",
+          "valueText": "$194"
+        }
+      ],
+      "opened": {
+        "name": "Melina Gordon - 11530 - Website Lead",
+        "phoneText": "+15163166744 +15163166744",
+        "rowIndex": 0,
+        "valueText": "$194",
+        "x": 369,
+        "y": 310
+      },
+      "before": {
+        "phone": "+15163166744",
+        "status": "Won",
+        "titleInputs": [
+          "5163166744",
+          "5163166744",
+          "on",
+          "on",
+          "melina.gordon@icloud.com",
+          "+15163166744",
+          "Melina Gordon - 11530 - Website Lead",
+          "194",
+          "Website"
+        ],
+        "value": "194"
+      },
+      "after": {
+        "phone": "+15163166744",
+        "status": "Won",
+        "titleInputs": [
+          "5163166744",
+          "5163166744",
+          "on",
+          "on",
+          "melina.gordon@icloud.com",
+          "+15163166744",
+          "Melina Gordon - 11530 - Website Lead",
+          "404.91",
+          "Website"
+        ],
+        "value": "404.91"
+      },
+      "phoneMatches": true,
+      "needValue": true,
+      "needStatus": false,
+      "statusSet": null,
+      "saved": true
+    },
+    {
+      "queueIndex": 10,
+      "ghlName": "Sarah Fusco - 11572 - Website Lead",
+      "phone": "7184404476",
+      "listValue": "$0",
+      "moegoName": "Sarah Anne Fusco",
+      "moegoTotal": "$1053.56",
+      "moegoTotalNumber": 1053.56,
+      "action": "updated",
+      "rows": [
+        {
+          "last10": "7184404476",
+          "name": "Sarah Fusco - 11572 - Website Lead",
+          "phoneDigits": "1718440447617184404476",
+          "phoneText": "+17184404476 +17184404476",
+          "rowIndex": 0,
+          "text": "Sarah Fusco - 11572 - Website Lead +17184404476 +17184404476 $0",
+          "valueText": "$0"
+        }
+      ],
+      "opened": {
+        "name": "Sarah Fusco - 11572 - Website Lead",
+        "phoneText": "+17184404476 +17184404476",
+        "rowIndex": 0,
+        "valueText": "$0",
+        "x": 369,
+        "y": 310
+      },
+      "before": {
+        "phone": "+17184404476",
+        "status": "Lost",
+        "titleInputs": [
+          "7184404476",
+          "7184404476",
+          "on",
+          "on",
+          "sarah_fusco@hotmail.com",
+          "+17184404476",
+          "Sarah  Fusco - 11572 - Website Lead",
+          "0",
+          "Website"
+        ],
+        "value": "0"
+      },
+      "after": {
+        "phone": "+17184404476",
+        "status": "Won",
+        "titleInputs": [
+          "7184404476",
+          "7184404476",
+          "on",
+          "on",
+          "sarah_fusco@hotmail.com",
+          "+17184404476",
+          "Sarah  Fusco - 11572 - Website Lead",
+          "1053.56",
+          "Website"
+        ],
+        "value": "1053.56"
+      },
+      "phoneMatches": true,
+      "needValue": true,
+      "needStatus": true,
+      "statusSet": {
+        "text": "Won",
+        "x": 623,
+        "y": 600
+      },
+      "saved": true
+    },
+    {
+      "queueIndex": 11,
+      "ghlName": "Renee Pricci - - Resort(Meta)",
+      "phone": "5709541477",
+      "listValue": "$0",
+      "moegoName": "RENEE PRICCI",
+      "moegoTotal": "$135.0",
+      "moegoTotalNumber": 135,
+      "action": "updated",
+      "rows": [
+        {
+          "last10": "5709541477",
+          "name": "Renee Pricci - - Resort(Meta)",
+          "phoneDigits": "1570954147715709541477",
+          "phoneText": "+15709541477 +15709541477",
+          "rowIndex": 0,
+          "text": "Renee Pricci - - Resort(Meta) +15709541477 +15709541477 $0",
+          "valueText": "$0"
+        }
+      ],
+      "opened": {
+        "name": "Renee Pricci - - Resort(Meta)",
+        "phoneText": "+15709541477 +15709541477",
+        "rowIndex": 0,
+        "valueText": "$0",
+        "x": 369,
+        "y": 310
+      },
+      "before": {
+        "phone": "+15709541477",
+        "status": "Lost",
+        "titleInputs": [
+          "5709541477",
+          "5709541477",
+          "on",
+          "on",
+          "renee.pricci@comcast.net",
+          "+15709541477",
+          "Renee Pricci -  - Resort(Meta)",
+          "0",
+          "Meta Ads"
+        ],
+        "value": "0"
+      },
+      "after": {
+        "phone": "+15709541477",
+        "status": "Won",
+        "titleInputs": [
+          "5709541477",
+          "5709541477",
+          "on",
+          "on",
+          "renee.pricci@comcast.net",
+          "+15709541477",
+          "Renee Pricci -  - Resort(Meta)",
+          "135.00",
+          "Meta Ads"
+        ],
+        "value": "135.00"
+      },
+      "phoneMatches": true,
+      "needValue": true,
+      "needStatus": true,
+      "statusSet": {
+        "text": "Won",
+        "x": 623,
+        "y": 600
+      },
+      "saved": true
+    },
+    {
+      "queueIndex": 12,
+      "ghlName": "Claudia Nagy - - Resort(Meta)",
+      "phone": "6462675461",
+      "listValue": "$0",
+      "moegoName": "Claudia Nagy",
+      "moegoTotal": "$1052.57",
+      "moegoTotalNumber": 1052.57,
+      "action": "updated",
+      "rows": [
+        {
+          "last10": "6462675461",
+          "name": "Claudia Nagy - - Resort(Meta)",
+          "phoneDigits": "1646267546116462675461",
+          "phoneText": "+16462675461 +16462675461",
+          "rowIndex": 0,
+          "text": "Claudia Nagy - - Resort(Meta) +16462675461 +16462675461 $0",
+          "valueText": "$0"
+        }
+      ],
+      "opened": {
+        "name": "Claudia Nagy - - Resort(Meta)",
+        "phoneText": "+16462675461 +16462675461",
+        "rowIndex": 0,
+        "valueText": "$0",
+        "x": 369,
+        "y": 310
+      },
+      "before": {
+        "phone": "+16462675461",
+        "status": "Lost",
+        "titleInputs": [
+          "6462675461",
+          "6462675461",
+          "on",
+          "on",
+          "claudiasljukic@aol.com",
+          "+16462675461",
+          "Claudia Nagy -  - Resort(Meta)",
+          "0",
+          "Meta Ads"
+        ],
+        "value": "0"
+      },
+      "after": {
+        "phone": "+16462675461",
+        "status": "Won",
+        "titleInputs": [
+          "6462675461",
+          "6462675461",
+          "on",
+          "on",
+          "claudiasljukic@aol.com",
+          "+16462675461",
+          "Claudia Nagy -  - Resort(Meta)",
+          "1052.57",
+          "Meta Ads"
+        ],
+        "value": "1052.57"
+      },
+      "phoneMatches": true,
+      "needValue": true,
+      "needStatus": true,
+      "statusSet": {
+        "text": "Won",
+        "x": 623,
+        "y": 600
+      },
+      "saved": true
+    },
+    {
+      "queueIndex": 13,
+      "ghlName": "Joanne Grace - - Resort(Meta)",
+      "phone": "5165289181",
+      "listValue": "$0",
+      "moegoName": "Joanne Spanodemos",
+      "moegoTotal": "$1043.25",
+      "moegoTotalNumber": 1043.25,
+      "action": "updated",
+      "rows": [
+        {
+          "last10": "5165289181",
+          "name": "Joanne Grace - - Resort(Meta)",
+          "phoneDigits": "1516528918115165289181",
+          "phoneText": "+15165289181 +15165289181",
+          "rowIndex": 0,
+          "text": "Joanne Grace - - Resort(Meta) +15165289181 +15165289181 $0",
+          "valueText": "$0"
+        }
+      ],
+      "opened": {
+        "name": "Joanne Grace - - Resort(Meta)",
+        "phoneText": "+15165289181 +15165289181",
+        "rowIndex": 0,
+        "valueText": "$0",
+        "x": 369,
+        "y": 310
+      },
+      "before": {
+        "phone": "+15165289181",
+        "status": "Lost",
+        "titleInputs": [
+          "5165289181",
+          "5165289181",
+          "on",
+          "on",
+          "jgspanodemos@aol.com",
+          "+15165289181",
+          "Joanne Grace -  - Resort(Meta)",
+          "0",
+          "Meta Ads"
+        ],
+        "value": "0"
+      },
+      "after": {
+        "phone": "+15165289181",
+        "status": "Won",
+        "titleInputs": [
+          "5165289181",
+          "5165289181",
+          "on",
+          "on",
+          "jgspanodemos@aol.com",
+          "+15165289181",
+          "Joanne Grace -  - Resort(Meta)",
+          "1043.25",
+          "Meta Ads"
+        ],
+        "value": "1043.25"
+      },
+      "phoneMatches": true,
+      "needValue": true,
+      "needStatus": true,
+      "statusSet": {
+        "text": "Won",
+        "x": 623,
+        "y": 600
+      },
+      "saved": true
+    },
+    {
+      "queueIndex": 14,
+      "ghlName": "Sasha Martinez - Website lead",
+      "phone": "3474948085",
+      "listValue": "$167.09",
+      "moegoName": "Sasha Martinez",
+      "moegoTotal": "$685.0",
+      "moegoTotalNumber": 685,
+      "action": "updated",
+      "rows": [
+        {
+          "last10": "3474948085",
+          "name": "Sasha Martinez - Website lead",
+          "phoneDigits": "1347494808513474948085",
+          "phoneText": "+13474948085 +13474948085",
+          "rowIndex": 0,
+          "text": "Sasha Martinez - Website lead +13474948085 +13474948085 $167.09",
+          "valueText": "$167.09"
+        }
+      ],
+      "opened": {
+        "name": "Sasha Martinez - Website lead",
+        "phoneText": "+13474948085 +13474948085",
+        "rowIndex": 0,
+        "valueText": "$167.09",
+        "x": 369,
+        "y": 310
+      },
+      "before": {
+        "phone": "+13474948085",
+        "status": "Won",
+        "titleInputs": [
+          "3474948085",
+          "3474948085",
+          "on",
+          "on",
+          "ssashaamartinezz@gmail.com",
+          "+13474948085",
+          "Sasha Martinez - Website lead",
+          "167.09",
+          "Website"
+        ],
+        "value": "167.09"
+      },
+      "after": {
+        "phone": "+13474948085",
+        "status": "Won",
+        "titleInputs": [
+          "3474948085",
+          "3474948085",
+          "on",
+          "on",
+          "ssashaamartinezz@gmail.com",
+          "+13474948085",
+          "Sasha Martinez - Website lead",
+          "685.00",
+          "Website"
+        ],
+        "value": "685.00"
+      },
+      "phoneMatches": true,
+      "needValue": true,
+      "needStatus": false,
+      "statusSet": null,
+      "saved": true
+    },
+    {
+      "queueIndex": 15,
+      "ghlName": "Bill Terrarosa - Website lead",
+      "phone": "7328655335",
+      "listValue": "$264.59",
+      "moegoName": "Bill Terrarosa",
+      "moegoTotal": "$870.8",
+      "moegoTotalNumber": 870.8,
+      "action": "updated",
+      "rows": [
+        {
+          "last10": "7328655335",
+          "name": "Bill Terrarosa - Website lead",
+          "phoneDigits": "1732865533517328655335",
+          "phoneText": "+17328655335 +17328655335",
+          "rowIndex": 0,
+          "text": "Bill Terrarosa - Website lead +17328655335 +17328655335 $264.59",
+          "valueText": "$264.59"
+        }
+      ],
+      "opened": {
+        "name": "Bill Terrarosa - Website lead",
+        "phoneText": "+17328655335 +17328655335",
+        "rowIndex": 0,
+        "valueText": "$264.59",
+        "x": 369,
+        "y": 310
+      },
+      "before": {
+        "phone": "+17328655335",
+        "status": "Won",
+        "titleInputs": [
+          "7328655335",
+          "7328655335",
+          "on",
+          "on",
+          "pudgy_chapeau.1r@icloud.com",
+          "+17328655335",
+          "Bill Terrarosa - Website lead",
+          "264.59",
+          "Website"
+        ],
+        "value": "264.59"
+      },
+      "after": {
+        "phone": "+17328655335",
+        "status": "Won",
+        "titleInputs": [
+          "7328655335",
+          "7328655335",
+          "on",
+          "on",
+          "pudgy_chapeau.1r@icloud.com",
+          "+17328655335",
+          "Bill Terrarosa - Website lead",
+          "870.80",
+          "Website"
+        ],
+        "value": "870.80"
+      },
+      "phoneMatches": true,
+      "needValue": true,
+      "needStatus": false,
+      "statusSet": null,
+      "saved": true
+    },
+    {
+      "queueIndex": 16,
+      "ghlName": "Kimberly Sanford-DeVito - Meta Grooming Lead",
+      "phone": "9177973929",
+      "listValue": "$297.5",
+      "moegoName": "kimberly sanford",
+      "moegoTotal": "$456.62",
+      "moegoTotalNumber": 456.62,
+      "action": "updated",
+      "rows": [
+        {
+          "last10": "9177973929",
+          "name": "Kimberly Sanford-DeVito - Meta Grooming Lead",
+          "phoneDigits": "1917797392919177973929",
+          "phoneText": "+19177973929 +19177973929",
+          "rowIndex": 0,
+          "text": "Kimberly Sanford-DeVito - Meta Grooming Lead +19177973929 +19177973929 $297.5",
+          "valueText": "$297.5"
+        }
+      ],
+      "opened": {
+        "name": "Kimberly Sanford-DeVito - Meta Grooming Lead",
+        "phoneText": "+19177973929 +19177973929",
+        "rowIndex": 0,
+        "valueText": "$297.5",
+        "x": 369,
+        "y": 310
+      },
+      "before": {
+        "phone": "+19177973929",
+        "status": "Won",
+        "titleInputs": [
+          "9177973929",
+          "9177973929",
+          "on",
+          "on",
+          "devitoks@gmail.com",
+          "+19177973929",
+          "Kimberly Sanford-DeVito - Meta Grooming Lead",
+          "297.5",
+          "Meta Ads"
+        ],
+        "value": "297.5"
+      },
+      "after": {
+        "phone": "+19177973929",
+        "status": "Won",
+        "titleInputs": [
+          "9177973929",
+          "9177973929",
+          "on",
+          "on",
+          "devitoks@gmail.com",
+          "+19177973929",
+          "Kimberly Sanford-DeVito - Meta Grooming Lead",
+          "456.62",
+          "Meta Ads"
+        ],
+        "value": "456.62"
+      },
+      "phoneMatches": true,
+      "needValue": true,
+      "needStatus": false,
+      "statusSet": null,
+      "saved": true
+    },
+    {
+      "queueIndex": 17,
+      "ghlName": "Lindsay Ward - 11501 - Website Lead",
+      "phone": "5164177857",
+      "listValue": "$351.36",
+      "moegoName": "Lindsay Ward",
+      "moegoTotal": "$702.72",
+      "moegoTotalNumber": 702.72,
+      "action": "updated",
+      "rows": [
+        {
+          "last10": "5164177857",
+          "name": "Lindsay Ward - 11501 - Website Lead",
+          "phoneDigits": "1516417785715164177857",
+          "phoneText": "+15164177857 +15164177857",
+          "rowIndex": 0,
+          "text": "Lindsay Ward - 11501 - Website Lead +15164177857 +15164177857 $351.36",
+          "valueText": "$351.36"
+        }
+      ],
+      "opened": {
+        "name": "Lindsay Ward - 11501 - Website Lead",
+        "phoneText": "+15164177857 +15164177857",
+        "rowIndex": 0,
+        "valueText": "$351.36",
+        "x": 369,
+        "y": 310
+      },
+      "before": {
+        "phone": "+15164177857",
+        "status": "Won",
+        "titleInputs": [
+          "5164177857",
+          "5164177857",
+          "on",
+          "on",
+          "lindsay.bleistein@gmail.com",
+          "+15164177857",
+          "Lindsay Ward - 11501 - Website Lead",
+          "351.36",
+          "Website"
+        ],
+        "value": "351.36"
+      },
+      "after": {
+        "phone": "+15164177857",
+        "status": "Won",
+        "titleInputs": [
+          "5164177857",
+          "5164177857",
+          "on",
+          "on",
+          "lindsay.bleistein@gmail.com",
+          "+15164177857",
+          "Lindsay Ward - 11501 - Website Lead",
+          "702.72",
+          "Website"
+        ],
+        "value": "702.72"
+      },
+      "phoneMatches": true,
+      "needValue": true,
+      "needStatus": false,
+      "statusSet": null,
+      "saved": true
+    },
+    {
+      "queueIndex": 18,
+      "ghlName": "Jenna Connors - 11530 - Website Lead",
+      "phone": "5166720293",
+      "listValue": "$195.2",
+      "moegoName": "Jenna Connors",
+      "moegoTotal": "$169.01",
+      "moegoTotalNumber": 169.01,
+      "action": "updated",
+      "rows": [
+        {
+          "last10": "5166720293",
+          "name": "Jenna Connors - 11530 - Website Lead",
+          "phoneDigits": "1516672029315166720293",
+          "phoneText": "+15166720293 +15166720293",
+          "rowIndex": 0,
+          "text": "Jenna Connors - 11530 - Website Lead +15166720293 +15166720293 $195.2",
+          "valueText": "$195.2"
+        }
+      ],
+      "opened": {
+        "name": "Jenna Connors - 11530 - Website Lead",
+        "phoneText": "+15166720293 +15166720293",
+        "rowIndex": 0,
+        "valueText": "$195.2",
+        "x": 369,
+        "y": 310
+      },
+      "before": {
+        "phone": "+15166720293",
+        "status": "Won",
+        "titleInputs": [
+          "5166720293",
+          "5166720293",
+          "on",
+          "on",
+          "jenna.galizia@gmail.com",
+          "+15166720293",
+          "Jenna Connors - 11530 - Website Lead",
+          "195.2",
+          "Website"
+        ],
+        "value": "195.2"
+      },
+      "after": {
+        "phone": "+15166720293",
+        "status": "Won",
+        "titleInputs": [
+          "5166720293",
+          "5166720293",
+          "on",
+          "on",
+          "jenna.galizia@gmail.com",
+          "+15166720293",
+          "Jenna Connors - 11530 - Website Lead",
+          "169.01",
+          "Website"
+        ],
+        "value": "169.01"
+      },
+      "phoneMatches": true,
+      "needValue": true,
+      "needStatus": false,
+      "statusSet": null,
+      "saved": true
+    },
+    {
+      "queueIndex": 19,
+      "ghlName": "Mia Driscoll - Website lead",
+      "phone": "5163681227",
+      "listValue": "$300",
+      "moegoName": "Mia Driscoll",
+      "moegoTotal": "$450.0",
+      "moegoTotalNumber": 450,
+      "action": "updated",
+      "rows": [
+        {
+          "last10": "5163681227",
+          "name": "Mia Driscoll - Website lead",
+          "phoneDigits": "1516368122715163681227",
+          "phoneText": "+15163681227 +15163681227",
+          "rowIndex": 0,
+          "text": "Mia Driscoll - Website lead +15163681227 +15163681227 $300",
+          "valueText": "$300"
+        }
+      ],
+      "opened": {
+        "name": "Mia Driscoll - Website lead",
+        "phoneText": "+15163681227 +15163681227",
+        "rowIndex": 0,
+        "valueText": "$300",
+        "x": 369,
+        "y": 310
+      },
+      "before": {
+        "phone": "+15163681227",
+        "status": "Won",
+        "titleInputs": [
+          "5163681227",
+          "5163681227",
+          "on",
+          "on",
+          "miadriscoll123@icloud.com",
+          "+15163681227",
+          "Mia Driscoll - Website lead",
+          "300",
+          "Website"
+        ],
+        "value": "300"
+      },
+      "after": {
+        "phone": "+15163681227",
+        "status": "Won",
+        "titleInputs": [
+          "5163681227",
+          "5163681227",
+          "on",
+          "on",
+          "miadriscoll123@icloud.com",
+          "+15163681227",
+          "Mia Driscoll - Website lead",
+          "450.00",
+          "Website"
+        ],
+        "value": "450.00"
+      },
+      "phoneMatches": true,
+      "needValue": true,
+      "needStatus": false,
+      "statusSet": null,
+      "saved": true
+    },
+    {
+      "queueIndex": 20,
+      "ghlName": "Jenny Batista - - Resort(Meta)",
+      "phone": "7184271243",
+      "listValue": "$169.03",
+      "moegoName": "Jenny Batista",
+      "moegoTotal": "$0",
+      "moegoTotalNumber": 0,
+      "action": "updated",
+      "rows": [
+        {
+          "last10": "7184271243",
+          "name": "Jenny Batista - - Resort(Meta)",
+          "phoneDigits": "1718427124317184271243",
+          "phoneText": "+17184271243 +17184271243",
+          "rowIndex": 0,
+          "text": "Jenny Batista - - Resort(Meta) +17184271243 +17184271243 $169.03",
+          "valueText": "$169.03"
+        }
+      ],
+      "opened": {
+        "name": "Jenny Batista - - Resort(Meta)",
+        "phoneText": "+17184271243 +17184271243",
+        "rowIndex": 0,
+        "valueText": "$169.03",
+        "x": 369,
+        "y": 310
+      },
+      "before": {
+        "phone": "+17184271243",
+        "status": "Won",
+        "titleInputs": [
+          "7184271243",
+          "7184271243",
+          "on",
+          "on",
+          "jaylyn07@gmail.com",
+          "+17184271243",
+          "Jenny Batista -  - Resort(Meta)",
+          "169.03",
+          "Meta Ads"
+        ],
+        "value": "169.03"
+      },
+      "after": {
+        "phone": "+17184271243",
+        "status": "Won",
+        "titleInputs": [
+          "7184271243",
+          "7184271243",
+          "on",
+          "on",
+          "jaylyn07@gmail.com",
+          "+17184271243",
+          "Jenny Batista -  - Resort(Meta)",
+          "0.00",
+          "Meta Ads"
+        ],
+        "value": "0.00"
+      },
+      "phoneMatches": true,
+      "needValue": true,
+      "needStatus": false,
+      "statusSet": null,
+      "saved": true
+    },
+    {
+      "queueIndex": 21,
+      "ghlName": "Frank Covino - Resort(Meta)",
+      "phone": "9342547136",
+      "listValue": "$110.05",
+      "moegoName": "Frank Covino",
+      "moegoTotal": "$141.53",
+      "moegoTotalNumber": 141.53,
+      "action": "updated",
+      "rows": [
+        {
+          "last10": "9342547136",
+          "name": "Frank Covino - Resort(Meta)",
+          "phoneDigits": "1934254713619342547136",
+          "phoneText": "+19342547136 +19342547136",
+          "rowIndex": 0,
+          "text": "Frank Covino - Resort(Meta) +19342547136 +19342547136 $110.05",
+          "valueText": "$110.05"
+        }
+      ],
+      "opened": {
+        "name": "Frank Covino - Resort(Meta)",
+        "phoneText": "+19342547136 +19342547136",
+        "rowIndex": 0,
+        "valueText": "$110.05",
+        "x": 369,
+        "y": 310
+      },
+      "before": {
+        "phone": "+19342547136",
+        "status": "Won",
+        "titleInputs": [
+          "9342547136",
+          "9342547136",
+          "on",
+          "on",
+          "frankiecheech249@gmail.com",
+          "+19342547136",
+          "Frank Covino - Resort(Meta)",
+          "110.05",
+          "Meta Ads"
+        ],
+        "value": "110.05"
+      },
+      "after": {
+        "phone": "+19342547136",
+        "status": "Won",
+        "titleInputs": [
+          "9342547136",
+          "9342547136",
+          "on",
+          "on",
+          "frankiecheech249@gmail.com",
+          "+19342547136",
+          "Frank Covino - Resort(Meta)",
+          "141.53",
+          "Meta Ads"
+        ],
+        "value": "141.53"
+      },
+      "phoneMatches": true,
+      "needValue": true,
+      "needStatus": false,
+      "statusSet": null,
+      "saved": true
+    },
+    {
+      "queueIndex": 22,
+      "ghlName": "Stephanie Fox - - Resort(Meta)",
+      "phone": "5166625772",
+      "listValue": "$169.03",
+      "moegoName": "Stephanie Fox",
+      "moegoTotal": "$0",
+      "moegoTotalNumber": 0,
+      "action": "updated",
+      "rows": [
+        {
+          "last10": "5166625772",
+          "name": "Stephanie Fox - - Resort(Meta)",
+          "phoneDigits": "1516662577215166625772",
+          "phoneText": "+15166625772 +15166625772",
+          "rowIndex": 0,
+          "text": "Stephanie Fox - - Resort(Meta) +15166625772 +15166625772 $169.03",
+          "valueText": "$169.03"
+        }
+      ],
+      "opened": {
+        "name": "Stephanie Fox - - Resort(Meta)",
+        "phoneText": "+15166625772 +15166625772",
+        "rowIndex": 0,
+        "valueText": "$169.03",
+        "x": 369,
+        "y": 310
+      },
+      "before": {
+        "phone": "+15166625772",
+        "status": "Won",
+        "titleInputs": [
+          "5166625772",
+          "5166625772",
+          "on",
+          "on",
+          "stephanie.fox@hotmail.com",
+          "+15166625772",
+          "Stephanie Fox -  - Resort(Meta)",
+          "169.03",
+          "Meta Ads"
+        ],
+        "value": "169.03"
+      },
+      "after": {
+        "phone": "+15166625772",
+        "status": "Won",
+        "titleInputs": [
+          "5166625772",
+          "5166625772",
+          "on",
+          "on",
+          "stephanie.fox@hotmail.com",
+          "+15166625772",
+          "Stephanie Fox -  - Resort(Meta)",
+          "0.00",
+          "Meta Ads"
+        ],
+        "value": "0.00"
+      },
+      "phoneMatches": true,
+      "needValue": true,
+      "needStatus": false,
+      "statusSet": null,
+      "saved": true
+    },
+    {
+      "queueIndex": 23,
+      "ghlName": "Denise Lacerenza - Meta Lead",
+      "phone": "5164864547",
+      "listValue": "$243.56",
+      "moegoName": "Denise Lacerenza",
+      "moegoTotal": "$0",
+      "moegoTotalNumber": 0,
+      "action": "updated",
+      "rows": [
+        {
+          "last10": "5164864547",
+          "name": "Denise Lacerenza - Meta Lead",
+          "phoneDigits": "1516486454715164864547",
+          "phoneText": "+15164864547 +15164864547",
+          "rowIndex": 0,
+          "text": "Denise Lacerenza - Meta Lead +15164864547 +15164864547 $243.56",
+          "valueText": "$243.56"
+        }
+      ],
+      "opened": {
+        "name": "Denise Lacerenza - Meta Lead",
+        "phoneText": "+15164864547 +15164864547",
+        "rowIndex": 0,
+        "valueText": "$243.56",
+        "x": 369,
+        "y": 310
+      },
+      "before": {
+        "phone": "+15164864547",
+        "status": "Won",
+        "titleInputs": [
+          "5164864547",
+          "5164864547",
+          "on",
+          "on",
+          "cruella0909@aol.com",
+          "+15164864547",
+          "Denise Lacerenza - Meta Lead",
+          "243.56",
+          "Meta Ads"
+        ],
+        "value": "243.56"
+      },
+      "after": {
+        "phone": "+15164864547",
+        "status": "Won",
+        "titleInputs": [
+          "5164864547",
+          "5164864547",
+          "on",
+          "on",
+          "cruella0909@aol.com",
+          "+15164864547",
+          "Denise Lacerenza - Meta Lead",
+          "0.00",
+          "Meta Ads"
+        ],
+        "value": "0.00"
+      },
+      "phoneMatches": true,
+      "needValue": true,
+      "needStatus": false,
+      "statusSet": null,
+      "saved": true
+    },
+    {
+      "queueIndex": 24,
+      "ghlName": "Brianna Baptiste - Website lead",
+      "phone": "3476515689",
+      "listValue": "$2118.47",
+      "moegoName": "Brianna Baptiste",
+      "moegoTotal": "$2233.50",
+      "moegoTotalNumber": 2233.5,
+      "action": "updated",
+      "rows": [
+        {
+          "last10": "3476515689",
+          "name": "Brianna Baptiste - Website lead",
+          "phoneDigits": "1347651568913476515689",
+          "phoneText": "+13476515689 +13476515689",
+          "rowIndex": 0,
+          "text": "Brianna Baptiste - Website lead +13476515689 +13476515689 $2118.47",
+          "valueText": "$2118.47"
+        }
+      ],
+      "opened": {
+        "name": "Brianna Baptiste - Website lead",
+        "phoneText": "+13476515689 +13476515689",
+        "rowIndex": 0,
+        "valueText": "$2118.47",
+        "x": 369,
+        "y": 310
+      },
+      "before": {
+        "phone": "+13476515689",
+        "status": "Won",
+        "titleInputs": [
+          "3476515689",
+          "3476515689",
+          "on",
+          "on",
+          "baptisbj01@gmail.com",
+          "+13476515689",
+          "Brianna Baptiste - Website lead",
+          "2118.47",
+          "Website"
+        ],
+        "value": "2118.47"
+      },
+      "after": {
+        "phone": "+13476515689",
+        "status": "Won",
+        "titleInputs": [
+          "3476515689",
+          "3476515689",
+          "on",
+          "on",
+          "baptisbj01@gmail.com",
+          "+13476515689",
+          "Brianna Baptiste - Website lead",
+          "2233.50",
+          "Website"
+        ],
+        "value": "2233.50"
+      },
+      "phoneMatches": true,
+      "needValue": true,
+      "needStatus": false,
+      "statusSet": null,
+      "saved": true
+    },
+    {
+      "queueIndex": 25,
+      "ghlName": "Ryan McNamara - 11570 - Website Lead",
+      "phone": "7168005058",
+      "listValue": "$406.54",
+      "moegoName": "Ryan McNamara",
+      "moegoTotal": "$612.31",
+      "moegoTotalNumber": 612.31,
+      "action": "updated",
+      "rows": [
+        {
+          "last10": "7168005058",
+          "name": "Ryan McNamara - 11570 - Website Lead",
+          "phoneDigits": "1716800505817168005058",
+          "phoneText": "+17168005058 +17168005058",
+          "rowIndex": 0,
+          "text": "Ryan McNamara - 11570 - Website Lead +17168005058 +17168005058 $406.54",
+          "valueText": "$406.54"
+        }
+      ],
+      "opened": {
+        "name": "Ryan McNamara - 11570 - Website Lead",
+        "phoneText": "+17168005058 +17168005058",
+        "rowIndex": 0,
+        "valueText": "$406.54",
+        "x": 369,
+        "y": 310
+      },
+      "before": {
+        "phone": "+17168005058",
+        "status": "Won",
+        "titleInputs": [
+          "7168005058",
+          "7168005058",
+          "on",
+          "on",
+          "ryanjmac90@icloud.con",
+          "+17168005058",
+          "Ryan McNamara - 11570 - Website Lead",
+          "406.54",
+          "Website"
+        ],
+        "value": "406.54"
+      },
+      "after": {
+        "phone": "+17168005058",
+        "status": "Won",
+        "titleInputs": [
+          "7168005058",
+          "7168005058",
+          "on",
+          "on",
+          "ryanjmac90@icloud.con",
+          "+17168005058",
+          "Ryan McNamara - 11570 - Website Lead",
+          "612.31",
+          "Website"
+        ],
+        "value": "612.31"
+      },
+      "phoneMatches": true,
+      "needValue": true,
+      "needStatus": false,
+      "statusSet": null,
+      "saved": true
+    },
+    {
+      "queueIndex": 26,
+      "ghlName": "Sean Ford - Meta Grooming Lead",
+      "phone": "6462098955",
+      "listValue": "$331.04",
+      "moegoName": "Sean Ford",
+      "moegoTotal": "$522.43",
+      "moegoTotalNumber": 522.43,
+      "action": "updated",
+      "rows": [
+        {
+          "last10": "6462098955",
+          "name": "Sean Ford - Meta Grooming Lead",
+          "phoneDigits": "1646209895516462098955",
+          "phoneText": "+16462098955 +16462098955",
+          "rowIndex": 0,
+          "text": "Sean Ford - Meta Grooming Lead +16462098955 +16462098955 $331.04",
+          "valueText": "$331.04"
+        }
+      ],
+      "opened": {
+        "name": "Sean Ford - Meta Grooming Lead",
+        "phoneText": "+16462098955 +16462098955",
+        "rowIndex": 0,
+        "valueText": "$331.04",
+        "x": 369,
+        "y": 310
+      },
+      "before": {
+        "phone": "+16462098955",
+        "status": "Won",
+        "titleInputs": [
+          "6462098955",
+          "6462098955",
+          "on",
+          "on",
+          "srford84@gmail.com",
+          "+16462098955",
+          "Sean Ford - Meta Grooming Lead",
+          "331.04",
+          "Meta Ads"
+        ],
+        "value": "331.04"
+      },
+      "after": {
+        "phone": "+16462098955",
+        "status": "Won",
+        "titleInputs": [
+          "6462098955",
+          "6462098955",
+          "on",
+          "on",
+          "srford84@gmail.com",
+          "+16462098955",
+          "Sean Ford - Meta Grooming Lead",
+          "522.43",
+          "Meta Ads"
+        ],
+        "value": "522.43"
+      },
+      "phoneMatches": true,
+      "needValue": true,
+      "needStatus": false,
+      "statusSet": null,
+      "saved": true
+    },
+    {
+      "queueIndex": 27,
+      "ghlName": "Anju John",
+      "phone": "5164595147",
+      "listValue": "$2706.13",
+      "moegoName": "Anju John",
+      "moegoTotal": "$3409.87",
+      "moegoTotalNumber": 3409.87,
+      "action": "updated",
+      "rows": [
+        {
+          "last10": "5164595147",
+          "name": "Anju John",
+          "phoneDigits": "1516459514715164595147",
+          "phoneText": "+15164595147 +15164595147",
+          "rowIndex": 0,
+          "text": "Anju John +15164595147 +15164595147 $2706.13",
+          "valueText": "$2706.13"
+        }
+      ],
+      "opened": {
+        "name": "Anju John",
+        "phoneText": "+15164595147 +15164595147",
+        "rowIndex": 0,
+        "valueText": "$2706.13",
+        "x": 369,
+        "y": 310
+      },
+      "before": {
+        "phone": "+15164595147",
+        "status": "Won",
+        "titleInputs": [
+          "5164595147",
+          "5164595147",
+          "on",
+          "on",
+          "anjunblessen@gmail.com",
+          "+15164595147",
+          "Anju John",
+          "2706.13",
+          "Website"
+        ],
+        "value": "2706.13"
+      },
+      "after": {
+        "phone": "+15164595147",
+        "status": "Won",
+        "titleInputs": [
+          "5164595147",
+          "5164595147",
+          "on",
+          "on",
+          "anjunblessen@gmail.com",
+          "+15164595147",
+          "Anju John",
+          "3409.87",
+          "Website"
+        ],
+        "value": "3409.87"
+      },
+      "phoneMatches": true,
+      "needValue": true,
+      "needStatus": false,
+      "statusSet": null,
+      "saved": true
+    },
+    {
+      "queueIndex": 28,
+      "ghlName": "Patricia Wilson Longobardi",
+      "phone": "5165927512",
+      "listValue": "$169.03",
+      "moegoName": "Patty and Mike Longobardi",
+      "moegoTotal": "$0",
+      "moegoTotalNumber": 0,
+      "action": "updated",
+      "rows": [
+        {
+          "last10": "5165927512",
+          "name": "Patricia Wilson Longobardi",
+          "phoneDigits": "1516592751215165927512",
+          "phoneText": "+15165927512 +15165927512",
+          "rowIndex": 0,
+          "text": "Patricia Wilson Longobardi +15165927512 +15165927512 $169.03",
+          "valueText": "$169.03"
+        }
+      ],
+      "opened": {
+        "name": "Patricia Wilson Longobardi",
+        "phoneText": "+15165927512 +15165927512",
+        "rowIndex": 0,
+        "valueText": "$169.03",
+        "x": 369,
+        "y": 310
+      },
+      "before": {
+        "phone": "+15165927512",
+        "status": "Won",
+        "titleInputs": [
+          "5165927512",
+          "5165927512",
+          "on",
+          "on",
+          "pattyk166@gmail.com",
+          "+15165927512",
+          "Patricia Wilson Longobardi",
+          "169.03",
+          "Meta Ads"
+        ],
+        "value": "169.03"
+      },
+      "after": {
+        "phone": "+15165927512",
+        "status": "Won",
+        "titleInputs": [
+          "5165927512",
+          "5165927512",
+          "on",
+          "on",
+          "pattyk166@gmail.com",
+          "+15165927512",
+          "Patricia Wilson Longobardi",
+          "0.00",
+          "Meta Ads"
+        ],
+        "value": "0.00"
+      },
+      "phoneMatches": true,
+      "needValue": true,
+      "needStatus": false,
+      "statusSet": null,
+      "saved": true
+    },
+    {
+      "queueIndex": 29,
+      "ghlName": "Trish Harris-Darnaud",
+      "phone": "5166520145",
+      "listValue": "$169.03",
+      "moegoName": "Trish Darnaud",
+      "moegoTotal": "$0",
+      "moegoTotalNumber": 0,
+      "action": "updated",
+      "rows": [
+        {
+          "last10": "5166520145",
+          "name": "Trish Harris-Darnaud",
+          "phoneDigits": "1516652014515166520145",
+          "phoneText": "+15166520145 +15166520145",
+          "rowIndex": 0,
+          "text": "Trish Harris-Darnaud +15166520145 +15166520145 $169.03",
+          "valueText": "$169.03"
+        }
+      ],
+      "opened": {
+        "name": "Trish Harris-Darnaud",
+        "phoneText": "+15166520145 +15166520145",
+        "rowIndex": 0,
+        "valueText": "$169.03",
+        "x": 369,
+        "y": 310
+      },
+      "before": {
+        "phone": "+15166520145",
+        "status": "Won",
+        "titleInputs": [
+          "5166520145",
+          "5166520145",
+          "on",
+          "on",
+          "td10@optonline.net",
+          "+15166520145",
+          "Trish Harris-Darnaud",
+          "169.03",
+          "Meta Ads"
+        ],
+        "value": "169.03"
+      },
+      "after": {
+        "phone": "+15166520145",
+        "status": "Won",
+        "titleInputs": [
+          "5166520145",
+          "5166520145",
+          "on",
+          "on",
+          "td10@optonline.net",
+          "+15166520145",
+          "Trish Harris-Darnaud",
+          "0.00",
+          "Meta Ads"
+        ],
+        "value": "0.00"
+      },
+      "phoneMatches": true,
+      "needValue": true,
+      "needStatus": false,
+      "statusSet": null,
+      "saved": true
+    },
+    {
+      "queueIndex": 30,
+      "ghlName": "Nikki Marie - Meta Grooming Lead",
+      "phone": "5164260403",
+      "listValue": "$357.78",
+      "moegoName": "Nicole Brennan",
+      "moegoTotal": "$526.67",
+      "moegoTotalNumber": 526.67,
+      "action": "updated",
+      "rows": [
+        {
+          "last10": "5164260403",
+          "name": "Nikki Marie - Meta Grooming Lead",
+          "phoneDigits": "1516426040315164260403",
+          "phoneText": "+15164260403 +15164260403",
+          "rowIndex": 0,
+          "text": "Nikki Marie - Meta Grooming Lead +15164260403 +15164260403 $357.78",
+          "valueText": "$357.78"
+        }
+      ],
+      "opened": {
+        "name": "Nikki Marie - Meta Grooming Lead",
+        "phoneText": "+15164260403 +15164260403",
+        "rowIndex": 0,
+        "valueText": "$357.78",
+        "x": 369,
+        "y": 310
+      },
+      "before": {
+        "phone": "+15164260403",
+        "status": "Won",
+        "titleInputs": [
+          "5164260403",
+          "5164260403",
+          "on",
+          "on",
+          "nbrennan516@gmail.com",
+          "+15164260403",
+          "Nikki Marie - Meta Grooming Lead",
+          "357.78",
+          "Meta Ads"
+        ],
+        "value": "357.78"
+      },
+      "after": {
+        "phone": "+15164260403",
+        "status": "Won",
+        "titleInputs": [
+          "5164260403",
+          "5164260403",
+          "on",
+          "on",
+          "nbrennan516@gmail.com",
+          "+15164260403",
+          "Nikki Marie - Meta Grooming Lead",
+          "526.67",
+          "Meta Ads"
+        ],
+        "value": "526.67"
+      },
+      "phoneMatches": true,
+      "needValue": true,
+      "needStatus": false,
+      "statusSet": null,
+      "saved": true
+    },
+    {
+      "queueIndex": 31,
+      "ghlName": "Jenniffer Molina - Meta Lead",
+      "phone": "9734524782",
+      "listValue": "$0",
+      "moegoName": "Jenniffer Molina",
+      "moegoTotal": "$410.86",
+      "moegoTotalNumber": 410.86,
+      "action": "updated",
+      "rows": [
+        {
+          "last10": "9734524782",
+          "name": "Jenniffer Molina - Meta Lead",
+          "phoneDigits": "1973452478219734524782",
+          "phoneText": "+19734524782 +19734524782",
+          "rowIndex": 0,
+          "text": "Jenniffer Molina - Meta Lead +19734524782 +19734524782 $0",
+          "valueText": "$0"
+        }
+      ],
+      "opened": {
+        "name": "Jenniffer Molina - Meta Lead",
+        "phoneText": "+19734524782 +19734524782",
+        "rowIndex": 0,
+        "valueText": "$0",
+        "x": 369,
+        "y": 310
+      },
+      "before": {
+        "phone": "+19734524782",
+        "status": "Lost",
+        "titleInputs": [
+          "9734524782",
+          "9734524782",
+          "on",
+          "on",
+          "jennifferm222@gmail.com",
+          "+19734524782",
+          "Jenniffer Molina - Meta Lead",
+          "0",
+          "meta ads"
+        ],
+        "value": "0"
+      },
+      "after": {
+        "phone": "+19734524782",
+        "status": "Won",
+        "titleInputs": [
+          "9734524782",
+          "9734524782",
+          "on",
+          "on",
+          "jennifferm222@gmail.com",
+          "+19734524782",
+          "Jenniffer Molina - Meta Lead",
+          "410.86",
+          "meta ads"
+        ],
+        "value": "410.86"
+      },
+      "phoneMatches": true,
+      "needValue": true,
+      "needStatus": true,
+      "statusSet": {
+        "text": "Won",
+        "x": 623,
+        "y": 600
+      },
+      "saved": true
+    },
+    {
+      "queueIndex": 32,
+      "ghlName": "Ginny Ruffolo Barbere - Grooming - Meta Lead",
+      "phone": "5163759492",
+      "listValue": "$0",
+      "moegoName": "Ginny Barbere",
+      "moegoTotal": "$150.0",
+      "moegoTotalNumber": 150,
+      "action": "updated",
+      "rows": [
+        {
+          "last10": "5163759492",
+          "name": "Ginny Ruffolo Barbere - Grooming - Meta Lead",
+          "phoneDigits": "1516375949215163759492",
+          "phoneText": "+15163759492 +15163759492",
+          "rowIndex": 0,
+          "text": "Ginny Ruffolo Barbere - Grooming - Meta Lead +15163759492 +15163759492 $0",
+          "valueText": "$0"
+        }
+      ],
+      "opened": {
+        "name": "Ginny Ruffolo Barbere - Grooming - Meta Lead",
+        "phoneText": "+15163759492 +15163759492",
+        "rowIndex": 0,
+        "valueText": "$0",
+        "x": 369,
+        "y": 310
+      },
+      "before": {
+        "phone": "+15163759492",
+        "status": "Lost",
+        "titleInputs": [
+          "5163759492",
+          "5163759492",
+          "on",
+          "on",
+          "vbarbere55@gmail.com",
+          "+15163759492",
+          "Ginny Ruffolo Barbere - Grooming - Meta Lead",
+          "0",
+          "meta ads"
+        ],
+        "value": "0"
+      },
+      "after": {
+        "phone": "+15163759492",
+        "status": "Won",
+        "titleInputs": [
+          "5163759492",
+          "5163759492",
+          "on",
+          "on",
+          "vbarbere55@gmail.com",
+          "+15163759492",
+          "Ginny Ruffolo Barbere - Grooming - Meta Lead",
+          "150.00",
+          "meta ads"
+        ],
+        "value": "150.00"
+      },
+      "phoneMatches": true,
+      "needValue": true,
+      "needStatus": true,
+      "statusSet": {
+        "text": "Won",
+        "x": 623,
+        "y": 600
+      },
+      "saved": true
+    },
+    {
+      "queueIndex": 33,
+      "ghlName": "Dafne Arévalo - - Resort(Meta)",
+      "phone": "3476530072",
+      "listValue": "$234.28",
+      "moegoName": "Dafne Arevalo",
+      "moegoTotal": "$338.02",
+      "moegoTotalNumber": 338.02,
+      "action": "no_change_modal",
+      "rows": [
+        {
+          "last10": "3476530072",
+          "name": "Dafne Arévalo - - Resort(Meta)",
+          "phoneDigits": "1347653007213476530072",
+          "phoneText": "+13476530072 +13476530072",
+          "rowIndex": 0,
+          "text": "Dafne Arévalo - - Resort(Meta) +13476530072 +13476530072 $338.02",
+          "valueText": "$338.02"
+        }
+      ],
+      "opened": {
+        "name": "Dafne Arévalo - - Resort(Meta)",
+        "phoneText": "+13476530072 +13476530072",
+        "rowIndex": 0,
+        "valueText": "$338.02",
+        "x": 369,
+        "y": 310
+      },
+      "before": {
+        "phone": "+13476530072",
+        "status": "Won",
+        "titleInputs": [
+          "3476530072",
+          "3476530072",
+          "on",
+          "on",
+          "dafne.beasley@gmail.com",
+          "+13476530072",
+          "Dafne Arévalo -  - Resort(Meta)",
+          "338.02",
+          "Meta Ads"
+        ],
+        "value": "338.02"
+      },
+      "phoneMatches": true
+    },
+    {
+      "queueIndex": 34,
+      "ghlName": "Nicole M. Grant - Resort(Meta)",
+      "phone": "9176966063",
+      "listValue": "$53.18",
+      "moegoName": "Nicole Grant",
+      "moegoTotal": "$110.85",
+      "moegoTotalNumber": 110.85,
+      "action": "updated",
+      "rows": [
+        {
+          "last10": "9176966063",
+          "name": "Nicole M. Grant - Resort(Meta)",
+          "phoneDigits": "1917696606319176966063",
+          "phoneText": "+19176966063 +19176966063",
+          "rowIndex": 0,
+          "text": "Nicole M. Grant - Resort(Meta) +19176966063 +19176966063 $53.18",
+          "valueText": "$53.18"
+        }
+      ],
+      "opened": {
+        "name": "Nicole M. Grant - Resort(Meta)",
+        "phoneText": "+19176966063 +19176966063",
+        "rowIndex": 0,
+        "valueText": "$53.18",
+        "x": 369,
+        "y": 310
+      },
+      "before": {
+        "phone": "+19176966063",
+        "status": "Won",
+        "titleInputs": [
+          "9176966063",
+          "9176966063",
+          "on",
+          "on",
+          "nmgrant24@outlook.com",
+          "+19176966063",
+          "Nicole M. Grant - Resort(Meta)",
+          "53.18",
+          "Meta Ads"
+        ],
+        "value": "53.18"
+      },
+      "after": {
+        "phone": "+19176966063",
+        "status": "Won",
+        "titleInputs": [
+          "9176966063",
+          "9176966063",
+          "on",
+          "on",
+          "nmgrant24@outlook.com",
+          "+19176966063",
+          "Nicole M. Grant - Resort(Meta)",
+          "110.85",
+          "Meta Ads"
+        ],
+        "value": "110.85"
+      },
+      "phoneMatches": true,
+      "needValue": true,
+      "needStatus": false,
+      "statusSet": null,
+      "saved": true
+    },
+    {
+      "queueIndex": 35,
+      "ghlName": "Cinthya Lino",
+      "phone": "5166952824",
+      "listValue": "$150",
+      "moegoName": "Cinthya Lino",
+      "moegoTotal": "$105.0",
+      "moegoTotalNumber": 105,
+      "action": "updated",
+      "rows": [
+        {
+          "last10": "5166952824",
+          "name": "Cinthya Lino",
+          "phoneDigits": "1516695282415166952824",
+          "phoneText": "+15166952824 +15166952824",
+          "rowIndex": 0,
+          "text": "Cinthya Lino +15166952824 +15166952824 $150",
+          "valueText": "$150"
+        }
+      ],
+      "opened": {
+        "name": "Cinthya Lino",
+        "phoneText": "+15166952824 +15166952824",
+        "rowIndex": 0,
+        "valueText": "$150",
+        "x": 369,
+        "y": 310
+      },
+      "before": {
+        "phone": "+15166952824",
+        "status": "Won",
+        "titleInputs": [
+          "5166952824",
+          "5166952824",
+          "on",
+          "on",
+          "cinthyalino@aol.com",
+          "+15166952824",
+          "Cinthya Lino",
+          "150",
+          "Meta Ads"
+        ],
+        "value": "150"
+      },
+      "after": {
+        "phone": "+15166952824",
+        "status": "Won",
+        "titleInputs": [
+          "5166952824",
+          "5166952824",
+          "on",
+          "on",
+          "cinthyalino@aol.com",
+          "+15166952824",
+          "Cinthya Lino",
+          "105.00",
+          "Meta Ads"
+        ],
+        "value": "105.00"
+      },
+      "phoneMatches": true,
+      "needValue": true,
+      "needStatus": false,
+      "statusSet": null,
+      "saved": true
+    },
+    {
+      "queueIndex": 36,
+      "ghlName": "Sonia Virani - Grooming - Meta Lead",
+      "phone": "9174708467",
+      "listValue": "$256.77",
+      "moegoName": "Sajjad Merchant",
+      "moegoTotal": "$255.0",
+      "moegoTotalNumber": 255,
+      "action": "updated",
+      "rows": [
+        {
+          "last10": "9174708467",
+          "name": "Sonia Virani - Grooming - Meta Lead",
+          "phoneDigits": "1917470846719174708467",
+          "phoneText": "+19174708467 +19174708467",
+          "rowIndex": 0,
+          "text": "Sonia Virani - Grooming - Meta Lead +19174708467 +19174708467 $256.77",
+          "valueText": "$256.77"
+        }
+      ],
+      "opened": {
+        "name": "Sonia Virani - Grooming - Meta Lead",
+        "phoneText": "+19174708467 +19174708467",
+        "rowIndex": 0,
+        "valueText": "$256.77",
+        "x": 369,
+        "y": 310
+      },
+      "before": {
+        "phone": "+19174708467",
+        "status": "Won",
+        "titleInputs": [
+          "9174708467",
+          "9174708467",
+          "on",
+          "on",
+          "sagarvirani21@gmail.com",
+          "+19174708467",
+          "Sonia Virani - Grooming - Meta Lead",
+          "256.77",
+          "Meta Ads"
+        ],
+        "value": "256.77"
+      },
+      "after": {
+        "phone": "+19174708467",
+        "status": "Won",
+        "titleInputs": [
+          "9174708467",
+          "9174708467",
+          "on",
+          "on",
+          "sagarvirani21@gmail.com",
+          "+19174708467",
+          "Sonia Virani - Grooming - Meta Lead",
+          "255.00",
+          "Meta Ads"
+        ],
+        "value": "255.00"
+      },
+      "phoneMatches": true,
+      "needValue": true,
+      "needStatus": false,
+      "statusSet": null,
+      "saved": true
+    },
+    {
+      "queueIndex": 37,
+      "ghlName": "Tayvarg - Training(Meta)",
+      "phone": "5162443710",
+      "listValue": "$0",
+      "moegoName": "Taylor Vargas",
+      "moegoTotal": "$465.0",
+      "moegoTotalNumber": 465,
+      "action": "updated",
+      "rows": [
+        {
+          "last10": "5162443710",
+          "name": "Tayvarg - Training(Meta)",
+          "phoneDigits": "1516244371015162443710",
+          "phoneText": "+15162443710 +15162443710",
+          "rowIndex": 0,
+          "text": "Tayvarg - Training(Meta) +15162443710 +15162443710 $0",
+          "valueText": "$0"
+        }
+      ],
+      "opened": {
+        "name": "Tayvarg - Training(Meta)",
+        "phoneText": "+15162443710 +15162443710",
+        "rowIndex": 0,
+        "valueText": "$0",
+        "x": 369,
+        "y": 310
+      },
+      "before": {
+        "phone": "+15162443710",
+        "status": "Lost",
+        "titleInputs": [
+          "5162443710",
+          "5162443710",
+          "on",
+          "on",
+          "tayvargas28@gmail.com",
+          "+15162443710",
+          "Tayvarg - Training(Meta)",
+          "0",
+          "Meta Ads"
+        ],
+        "value": "0"
+      },
+      "after": {
+        "phone": "+15162443710",
+        "status": "Won",
+        "titleInputs": [
+          "5162443710",
+          "5162443710",
+          "on",
+          "on",
+          "tayvargas28@gmail.com",
+          "+15162443710",
+          "Tayvarg - Training(Meta)",
+          "465.00",
+          "Meta Ads"
+        ],
+        "value": "465.00"
+      },
+      "phoneMatches": true,
+      "needValue": true,
+      "needStatus": true,
+      "statusSet": {
+        "text": "Won",
+        "x": 623,
+        "y": 600
+      },
+      "saved": true
+    },
+    {
+      "queueIndex": 38,
+      "ghlName": "⠀⠀⠀⠀⠀⠀Paola Corazza - Training(Meta)",
+      "phone": "9172002647",
+      "listValue": "$0",
+      "moegoName": "Giovanna Jimenez",
+      "moegoTotal": "$22.18",
+      "moegoTotalNumber": 22.18,
+      "action": "updated",
+      "rows": [
+        {
+          "last10": "9172002647",
+          "name": "⠀⠀⠀⠀⠀⠀Paola Corazza - Training(Meta)",
+          "phoneDigits": "1917200264719172002647",
+          "phoneText": "+19172002647 +19172002647",
+          "rowIndex": 0,
+          "text": "⠀⠀⠀⠀⠀⠀Paola Corazza - Training(Meta) +19172002647 +19172002647 $0",
+          "valueText": "$0"
+        }
+      ],
+      "opened": {
+        "name": "⠀⠀⠀⠀⠀⠀Paola Corazza - Training(Meta)",
+        "phoneText": "+19172002647 +19172002647",
+        "rowIndex": 0,
+        "valueText": "$0",
+        "x": 369,
+        "y": 310
+      },
+      "before": {
+        "phone": "+19172002647",
+        "status": "Lost",
+        "titleInputs": [
+          "9172002647",
+          "9172002647",
+          "on",
+          "on",
+          "geo1237@hotmail.com",
+          "+19172002647",
+          "⠀⠀⠀⠀⠀⠀Paola Corazza - Training(Meta)",
+          "0",
+          "Meta Ads"
+        ],
+        "value": "0"
+      },
+      "after": {
+        "phone": "+19172002647",
+        "status": "Won",
+        "titleInputs": [
+          "9172002647",
+          "9172002647",
+          "on",
+          "on",
+          "geo1237@hotmail.com",
+          "+19172002647",
+          "⠀⠀⠀⠀⠀⠀Paola Corazza - Training(Meta)",
+          "22.18",
+          "Meta Ads"
+        ],
+        "value": "22.18"
+      },
+      "phoneMatches": true,
+      "needValue": true,
+      "needStatus": true,
+      "statusSet": {
+        "text": "Won",
+        "x": 623,
+        "y": 600
+      },
+      "saved": true
+    },
+    {
+      "queueIndex": 39,
+      "ghlName": "Julianne Sabino - Website lead",
+      "phone": "5162869469",
+      "listValue": "$0",
+      "moegoName": "Julianne Sabino",
+      "moegoTotal": "$4436.11",
+      "moegoTotalNumber": 4436.11,
+      "action": "updated",
+      "rows": [
+        {
+          "last10": "5162869469",
+          "name": "Julianne Sabino - Website lead",
+          "phoneDigits": "1516286946915162869469",
+          "phoneText": "+15162869469 +15162869469",
+          "rowIndex": 0,
+          "text": "Julianne Sabino - Website lead +15162869469 +15162869469 $0",
+          "valueText": "$0"
+        }
+      ],
+      "opened": {
+        "name": "Julianne Sabino - Website lead",
+        "phoneText": "+15162869469 +15162869469",
+        "rowIndex": 0,
+        "valueText": "$0",
+        "x": 369,
+        "y": 310
+      },
+      "before": {
+        "phone": "+15162869469",
+        "status": "Won",
+        "titleInputs": [
+          "5162869469",
+          "5162869469",
+          "on",
+          "on",
+          "jsabino09@hotmail.com",
+          "+15162869469",
+          "Julianne Sabino - Website lead",
+          "0",
+          "Website Getting Started Form"
+        ],
+        "value": "0"
+      },
+      "after": {
+        "phone": "+15162869469",
+        "status": "Won",
+        "titleInputs": [
+          "5162869469",
+          "5162869469",
+          "on",
+          "on",
+          "jsabino09@hotmail.com",
+          "+15162869469",
+          "Julianne Sabino - Website lead",
+          "4436.11",
+          "Website Getting Started Form"
+        ],
+        "value": "4436.11"
+      },
+      "phoneMatches": true,
+      "needValue": true,
+      "needStatus": false,
+      "statusSet": null,
+      "saved": true
+    },
+    {
+      "queueIndex": 40,
+      "ghlName": "Michelle Li - Website lead",
+      "phone": "5166738986",
+      "listValue": "$0",
+      "moegoName": "Michelle Li",
+      "moegoTotal": "$150.0",
+      "moegoTotalNumber": 150,
+      "action": "updated",
+      "rows": [
+        {
+          "last10": "5166738986",
+          "name": "Michelle Li - Website lead",
+          "phoneDigits": "1516673898615166738986",
+          "phoneText": "+15166738986 +15166738986",
+          "rowIndex": 0,
+          "text": "Michelle Li - Website lead +15166738986 +15166738986 $0",
+          "valueText": "$0"
+        }
+      ],
+      "opened": {
+        "name": "Michelle Li - Website lead",
+        "phoneText": "+15166738986 +15166738986",
+        "rowIndex": 0,
+        "valueText": "$0",
+        "x": 369,
+        "y": 310
+      },
+      "before": {
+        "phone": "+15166738986",
+        "status": "Won",
+        "titleInputs": [
+          "5166738986",
+          "5166738986",
+          "on",
+          "on",
+          "michelleli70707@gmail.com",
+          "+15166738986",
+          "Michelle  Li - Website lead",
+          "0",
+          "Website Getting Started Form"
+        ],
+        "value": "0"
+      },
+      "after": {
+        "phone": "+15166738986",
+        "status": "Won",
+        "titleInputs": [
+          "5166738986",
+          "5166738986",
+          "on",
+          "on",
+          "michelleli70707@gmail.com",
+          "+15166738986",
+          "Michelle  Li - Website lead",
+          "150.00",
+          "Website Getting Started Form"
+        ],
+        "value": "150.00"
+      },
+      "phoneMatches": true,
+      "needValue": true,
+      "needStatus": false,
+      "statusSet": null,
+      "saved": true
+    },
+    {
+      "queueIndex": 41,
+      "ghlName": "Kayla Mistretta - Website lead",
+      "phone": "6313565719",
+      "listValue": "$0",
+      "moegoName": "Kayla Mistretta",
+      "moegoTotal": "$171.12",
+      "moegoTotalNumber": 171.12,
+      "action": "updated",
+      "rows": [
+        {
+          "last10": "6313565719",
+          "name": "Kayla Mistretta - Website lead",
+          "phoneDigits": "1631356571916313565719",
+          "phoneText": "+16313565719 +16313565719",
+          "rowIndex": 0,
+          "text": "Kayla Mistretta - Website lead +16313565719 +16313565719 $0",
+          "valueText": "$0"
+        }
+      ],
+      "opened": {
+        "name": "Kayla Mistretta - Website lead",
+        "phoneText": "+16313565719 +16313565719",
+        "rowIndex": 0,
+        "valueText": "$0",
+        "x": 369,
+        "y": 310
+      },
+      "before": {
+        "phone": "+16313565719",
+        "status": "Lost",
+        "titleInputs": [
+          "6313565719",
+          "6313565719",
+          "on",
+          "on",
+          "kaylam.mistretta@gmail.com",
+          "+16313565719",
+          "Kayla Mistretta - Website lead",
+          "0",
+          "Website Getting Started Form"
+        ],
+        "value": "0"
+      },
+      "after": {
+        "phone": "+16313565719",
+        "status": "Won",
+        "titleInputs": [
+          "6313565719",
+          "6313565719",
+          "on",
+          "on",
+          "kaylam.mistretta@gmail.com",
+          "+16313565719",
+          "Kayla Mistretta - Website lead",
+          "171.12",
+          "Website Getting Started Form"
+        ],
+        "value": "171.12"
+      },
+      "phoneMatches": true,
+      "needValue": true,
+      "needStatus": true,
+      "statusSet": {
+        "text": "Won",
+        "x": 623,
+        "y": 600
+      },
+      "saved": true
+    },
+    {
+      "queueIndex": 42,
+      "ghlName": "Tania Considine - Boarding(Meta)",
+      "phone": "6463023114",
+      "listValue": "$0",
+      "moegoName": "Justin Vetrano",
+      "moegoTotal": "$7303.84",
+      "moegoTotalNumber": 7303.84,
+      "action": "updated",
+      "rows": [
+        {
+          "last10": "6463023114",
+          "name": "Tania Considine - Boarding(Meta)",
+          "phoneDigits": "1646302311416463023114",
+          "phoneText": "+16463023114 +16463023114",
+          "rowIndex": 0,
+          "text": "Tania Considine - Boarding(Meta) +16463023114 +16463023114 $0",
+          "valueText": "$0"
+        }
+      ],
+      "opened": {
+        "name": "Tania Considine - Boarding(Meta)",
+        "phoneText": "+16463023114 +16463023114",
+        "rowIndex": 0,
+        "valueText": "$0",
+        "x": 369,
+        "y": 310
+      },
+      "before": {
+        "phone": "+16463023114",
+        "status": "Lost",
+        "titleInputs": [
+          "6463023114",
+          "6463023114",
+          "on",
+          "on",
+          "tandj2134@aol.com",
+          "+16463023114",
+          "Tania Considine - Boarding(Meta)",
+          "0",
+          "Meta Ads"
+        ],
+        "value": "0"
+      },
+      "after": {
+        "phone": "+16463023114",
+        "status": "Won",
+        "titleInputs": [
+          "6463023114",
+          "6463023114",
+          "on",
+          "on",
+          "tandj2134@aol.com",
+          "+16463023114",
+          "Tania Considine - Boarding(Meta)",
+          "7303.84",
+          "Meta Ads"
+        ],
+        "value": "7303.84"
+      },
+      "phoneMatches": true,
+      "needValue": true,
+      "needStatus": true,
+      "statusSet": {
+        "text": "Won",
+        "x": 623,
+        "y": 600
+      },
+      "saved": true
+    },
+    {
+      "queueIndex": 43,
+      "ghlName": "Eve G - Grooming(Meta)",
+      "phone": "5169966931",
+      "listValue": "$0",
+      "moegoName": "Evdoxia Gounelas",
+      "moegoTotal": "$864.27",
+      "moegoTotalNumber": 864.27,
+      "action": "updated",
+      "rows": [
+        {
+          "last10": "5169966931",
+          "name": "Eve G - Grooming(Meta)",
+          "phoneDigits": "1516996693115169966931",
+          "phoneText": "+15169966931 +15169966931",
+          "rowIndex": 0,
+          "text": "Eve G - Grooming(Meta) +15169966931 +15169966931 $0",
+          "valueText": "$0"
+        }
+      ],
+      "opened": {
+        "name": "Eve G - Grooming(Meta)",
+        "phoneText": "+15169966931 +15169966931",
+        "rowIndex": 0,
+        "valueText": "$0",
+        "x": 369,
+        "y": 310
+      },
+      "before": {
+        "phone": "+15169966931",
+        "status": "Open",
+        "titleInputs": [
+          "5169966931",
+          "5169966931",
+          "on",
+          "on",
+          "egounelas@gmail.com",
+          "+15169966931",
+          "Eve G - Grooming(Meta)",
+          "0",
+          "Meta Ads"
+        ],
+        "value": "0"
+      },
+      "after": {
+        "phone": "+15169966931",
+        "status": "Won",
+        "titleInputs": [
+          "5169966931",
+          "5169966931",
+          "on",
+          "on",
+          "egounelas@gmail.com",
+          "+15169966931",
+          "Eve G - Grooming(Meta)",
+          "864.27",
+          "Meta Ads"
+        ],
+        "value": "864.27"
+      },
+      "phoneMatches": true,
+      "needValue": true,
+      "needStatus": true,
+      "statusSet": {
+        "text": "Won",
+        "x": 623,
+        "y": 600
+      },
+      "saved": true
+    },
+    {
+      "queueIndex": 44,
+      "ghlName": "Denise Rigney Frary - Boarding(Meta)",
+      "phone": "5168160702",
+      "listValue": "$0",
+      "moegoName": "Denise Frairy",
+      "moegoTotal": "$2710.0",
+      "moegoTotalNumber": 2710,
+      "action": "updated",
+      "rows": [
+        {
+          "last10": "5168160702",
+          "name": "Denise Rigney Frary - Boarding(Meta)",
+          "phoneDigits": "1516816070215168160702",
+          "phoneText": "+15168160702 +15168160702",
+          "rowIndex": 0,
+          "text": "Denise Rigney Frary - Boarding(Meta) +15168160702 +15168160702 $0",
+          "valueText": "$0"
+        }
+      ],
+      "opened": {
+        "name": "Denise Rigney Frary - Boarding(Meta)",
+        "phoneText": "+15168160702 +15168160702",
+        "rowIndex": 0,
+        "valueText": "$0",
+        "x": 369,
+        "y": 310
+      },
+      "before": {
+        "phone": "+15168160702",
+        "status": "Open",
+        "titleInputs": [
+          "5168160702",
+          "5168160702",
+          "on",
+          "on",
+          "dfrary@aol.com",
+          "+15168160702",
+          "Denise Rigney Frary - Boarding(Meta)",
+          "0",
+          "Meta Ads"
+        ],
+        "value": "0"
+      },
+      "after": {
+        "phone": "+15168160702",
+        "status": "Won",
+        "titleInputs": [
+          "5168160702",
+          "5168160702",
+          "on",
+          "on",
+          "dfrary@aol.com",
+          "+15168160702",
+          "Denise Rigney Frary - Boarding(Meta)",
+          "2710.00",
+          "Meta Ads"
+        ],
+        "value": "2710.00"
+      },
+      "phoneMatches": true,
+      "needValue": true,
+      "needStatus": true,
+      "statusSet": {
+        "text": "Won",
+        "x": 623,
+        "y": 600
+      },
+      "saved": true
+    },
+    {
+      "queueIndex": 45,
+      "ghlName": "Dorothy Matinale",
+      "phone": "3478691298",
+      "listValue": "$0",
+      "moegoName": "Dorothy Matinale",
+      "moegoTotal": "$30.68",
+      "moegoTotalNumber": 30.68,
+      "action": "updated",
+      "rows": [
+        {
+          "last10": "3478691298",
+          "name": "Dorothy Matinale",
+          "phoneDigits": "1347869129813478691298",
+          "phoneText": "+13478691298 +13478691298",
+          "rowIndex": 0,
+          "text": "Dorothy Matinale +13478691298 +13478691298 $0",
+          "valueText": "$0"
+        }
+      ],
+      "opened": {
+        "name": "Dorothy Matinale",
+        "phoneText": "+13478691298 +13478691298",
+        "rowIndex": 0,
+        "valueText": "$0",
+        "x": 369,
+        "y": 310
+      },
+      "before": {
+        "phone": "+13478691298",
+        "status": "Won",
+        "titleInputs": [
+          "3478691298",
+          "3478691298",
+          "on",
+          "on",
+          "dmatinale@gmail.com",
+          "+13478691298",
+          "Dorothy Matinale",
+          "0",
+          "Website"
+        ],
+        "value": "0"
+      },
+      "after": {
+        "phone": "+13478691298",
+        "status": "Won",
+        "titleInputs": [
+          "3478691298",
+          "3478691298",
+          "on",
+          "on",
+          "dmatinale@gmail.com",
+          "+13478691298",
+          "Dorothy Matinale",
+          "30.68",
+          "Website"
+        ],
+        "value": "30.68"
+      },
+      "phoneMatches": true,
+      "needValue": true,
+      "needStatus": false,
+      "statusSet": null,
+      "saved": true
+    },
+    {
+      "queueIndex": 46,
+      "ghlName": "Amy Karofsky",
+      "phone": "5169096867",
+      "listValue": "$0",
+      "moegoName": "Amy Karofsky",
+      "moegoTotal": "$1526.58",
+      "moegoTotalNumber": 1526.58,
+      "action": "updated",
+      "rows": [
+        {
+          "last10": "5169096867",
+          "name": "Amy Karofsky",
+          "phoneDigits": "1516909686715169096867",
+          "phoneText": "+15169096867 +15169096867",
+          "rowIndex": 0,
+          "text": "Amy Karofsky +15169096867 +15169096867 $0",
+          "valueText": "$0"
+        }
+      ],
+      "opened": {
+        "name": "Amy Karofsky",
+        "phoneText": "+15169096867 +15169096867",
+        "rowIndex": 0,
+        "valueText": "$0",
+        "x": 369,
+        "y": 310
+      },
+      "before": {
+        "phone": "+15169096867",
+        "status": "Won",
+        "titleInputs": [
+          "5169096867",
+          "5169096867",
+          "on",
+          "on",
+          "amyk6@mac.com",
+          "+15169096867",
+          "Amy Karofsky",
+          "0",
+          "Website"
+        ],
+        "value": "0"
+      },
+      "after": {
+        "phone": "+15169096867",
+        "status": "Won",
+        "titleInputs": [
+          "5169096867",
+          "5169096867",
+          "on",
+          "on",
+          "amyk6@mac.com",
+          "+15169096867",
+          "Amy Karofsky",
+          "1526.58",
+          "Website"
+        ],
+        "value": "1526.58"
+      },
+      "phoneMatches": true,
+      "needValue": true,
+      "needStatus": false,
+      "statusSet": null,
+      "saved": true
+    },
+    {
+      "queueIndex": 47,
+      "ghlName": "Gabby McLean - Website lead",
+      "phone": "5165199980",
+      "listValue": "$0",
+      "moegoName": "Gabby McLean",
+      "moegoTotal": "$1526.86",
+      "moegoTotalNumber": 1526.86,
+      "action": "updated",
+      "rows": [
+        {
+          "last10": "5165199980",
+          "name": "Gabby McLean - Website lead",
+          "phoneDigits": "1516519998015165199980",
+          "phoneText": "+15165199980 +15165199980",
+          "rowIndex": 0,
+          "text": "Gabby McLean - Website lead +15165199980 +15165199980 $0",
+          "valueText": "$0"
+        }
+      ],
+      "opened": {
+        "name": "Gabby McLean - Website lead",
+        "phoneText": "+15165199980 +15165199980",
+        "rowIndex": 0,
+        "valueText": "$0",
+        "x": 369,
+        "y": 310
+      },
+      "before": {
+        "phone": "+15165199980",
+        "status": "Won",
+        "titleInputs": [
+          "5165199980",
+          "5165199980",
+          "on",
+          "on",
+          "gabriela.mclean@gmail.com",
+          "+15165199980",
+          "Gabby McLean - Website lead",
+          "0",
+          "Website Getting Started Form"
+        ],
+        "value": "0"
+      },
+      "after": {
+        "phone": "+15165199980",
+        "status": "Won",
+        "titleInputs": [
+          "5165199980",
+          "5165199980",
+          "on",
+          "on",
+          "gabriela.mclean@gmail.com",
+          "+15165199980",
+          "Gabby McLean - Website lead",
+          "1526.86",
+          "Website Getting Started Form"
+        ],
+        "value": "1526.86"
+      },
+      "phoneMatches": true,
+      "needValue": true,
+      "needStatus": false,
+      "statusSet": null,
+      "saved": true
+    },
+    {
+      "queueIndex": 48,
+      "ghlName": "Ron Waitzman - - Resort(Meta)",
+      "phone": "3472101734",
+      "listValue": "$0",
+      "moegoName": "Ron Waitzman",
+      "moegoTotal": "$222.88",
+      "moegoTotalNumber": 222.88,
+      "action": "updated",
+      "rows": [
+        {
+          "last10": "3472101734",
+          "name": "Ron Waitzman - - Resort(Meta)",
+          "phoneDigits": "1347210173413472101734",
+          "phoneText": "+13472101734 +13472101734",
+          "rowIndex": 0,
+          "text": "Ron Waitzman - - Resort(Meta) +13472101734 +13472101734 $0",
+          "valueText": "$0"
+        }
+      ],
+      "opened": {
+        "name": "Ron Waitzman - - Resort(Meta)",
+        "phoneText": "+13472101734 +13472101734",
+        "rowIndex": 0,
+        "valueText": "$0",
+        "x": 369,
+        "y": 310
+      },
+      "before": {
+        "phone": "+13472101734",
+        "status": "Won",
+        "titleInputs": [
+          "3472101734",
+          "3472101734",
+          "on",
+          "on",
+          "datadog6252@aol.com",
+          "+13472101734",
+          "Ron Waitzman -  - Resort(Meta)",
+          "0",
+          "Meta Ads"
+        ],
+        "value": "0"
+      },
+      "after": {
+        "phone": "+13472101734",
+        "status": "Won",
+        "titleInputs": [
+          "3472101734",
+          "3472101734",
+          "on",
+          "on",
+          "datadog6252@aol.com",
+          "+13472101734",
+          "Ron Waitzman -  - Resort(Meta)",
+          "222.88",
+          "Meta Ads"
+        ],
+        "value": "222.88"
+      },
+      "phoneMatches": true,
+      "needValue": true,
+      "needStatus": false,
+      "statusSet": null,
+      "saved": true
+    },
+    {
+      "queueIndex": 49,
+      "ghlName": "Frank Radice - Website lead",
+      "phone": "5168416769",
+      "listValue": "$0",
+      "moegoName": "Frank Radice",
+      "moegoTotal": "$188.89",
+      "moegoTotalNumber": 188.89,
+      "action": "updated",
+      "rows": [
+        {
+          "last10": "5168416769",
+          "name": "Frank Radice - Website lead",
+          "phoneDigits": "1516841676915168416769",
+          "phoneText": "+15168416769 +15168416769",
+          "rowIndex": 0,
+          "text": "Frank Radice - Website lead +15168416769 +15168416769 $0",
+          "valueText": "$0"
+        }
+      ],
+      "opened": {
+        "name": "Frank Radice - Website lead",
+        "phoneText": "+15168416769 +15168416769",
+        "rowIndex": 0,
+        "valueText": "$0",
+        "x": 369,
+        "y": 310
+      },
+      "before": {
+        "phone": "+15168416769",
+        "status": "Open",
+        "titleInputs": [
+          "5168416769",
+          "5168416769",
+          "on",
+          "on",
+          "franknewyorkpile@gmail.com",
+          "+15168416769",
+          "Frank Radice - Website lead",
+          "0",
+          "Website Getting Started Form"
+        ],
+        "value": "0"
+      },
+      "after": {
+        "phone": "+15168416769",
+        "status": "Won",
+        "titleInputs": [
+          "5168416769",
+          "5168416769",
+          "on",
+          "on",
+          "franknewyorkpile@gmail.com",
+          "+15168416769",
+          "Frank Radice - Website lead",
+          "188.89",
+          "Website Getting Started Form"
+        ],
+        "value": "188.89"
+      },
+      "phoneMatches": true,
+      "needValue": true,
+      "needStatus": true,
+      "statusSet": {
+        "text": "Won",
+        "x": 623,
+        "y": 600
+      },
+      "saved": true
+    },
+    {
+      "queueIndex": 50,
+      "ghlName": "Althea Shalto - Website lead",
+      "phone": "5166333220",
+      "listValue": "$0",
+      "moegoName": "Althea Shalto",
+      "moegoTotal": "$163.7",
+      "moegoTotalNumber": 163.7,
+      "action": "updated",
+      "rows": [
+        {
+          "last10": "5166333220",
+          "name": "Althea Shalto - Website lead",
+          "phoneDigits": "1516633322015166333220",
+          "phoneText": "+15166333220 +15166333220",
+          "rowIndex": 0,
+          "text": "Althea Shalto - Website lead +15166333220 +15166333220 $0",
+          "valueText": "$0"
+        }
+      ],
+      "opened": {
+        "name": "Althea Shalto - Website lead",
+        "phoneText": "+15166333220 +15166333220",
+        "rowIndex": 0,
+        "valueText": "$0",
+        "x": 369,
+        "y": 310
+      },
+      "before": {
+        "phone": "+15166333220",
+        "status": "Lost",
+        "titleInputs": [
+          "5166333220",
+          "5166333220",
+          "on",
+          "on",
+          "shaltonurse@gmail.com",
+          "+15166333220",
+          "Althea Shalto - Website lead",
+          "0",
+          "Website Getting Started Form"
+        ],
+        "value": "0"
+      },
+      "after": {
+        "phone": "+15166333220",
+        "status": "Won",
+        "titleInputs": [
+          "5166333220",
+          "5166333220",
+          "on",
+          "on",
+          "shaltonurse@gmail.com",
+          "+15166333220",
+          "Althea Shalto - Website lead",
+          "163.70",
+          "Website Getting Started Form"
+        ],
+        "value": "163.70"
+      },
+      "phoneMatches": true,
+      "needValue": true,
+      "needStatus": true,
+      "statusSet": {
+        "text": "Won",
+        "x": 623,
+        "y": 600
+      },
+      "saved": true
+    },
+    {
+      "queueIndex": 51,
+      "ghlName": "Maureen Salloum - Website lead",
+      "phone": "3475120096",
+      "listValue": "$0",
+      "moegoName": "Maureen Salloum",
+      "moegoTotal": "$53.18",
+      "moegoTotalNumber": 53.18,
+      "action": "updated",
+      "rows": [
+        {
+          "last10": "3475120096",
+          "name": "Maureen Salloum - Website lead",
+          "phoneDigits": "1347512009613475120096",
+          "phoneText": "+13475120096 +13475120096",
+          "rowIndex": 0,
+          "text": "Maureen Salloum - Website lead +13475120096 +13475120096 $0",
+          "valueText": "$0"
+        }
+      ],
+      "opened": {
+        "name": "Maureen Salloum - Website lead",
+        "phoneText": "+13475120096 +13475120096",
+        "rowIndex": 0,
+        "valueText": "$0",
+        "x": 369,
+        "y": 310
+      },
+      "before": {
+        "phone": "+13475120096",
+        "status": "Won",
+        "titleInputs": [
+          "3475120096",
+          "3475120096",
+          "on",
+          "on",
+          "mmmsssnnn@aol.com",
+          "+13475120096",
+          "Maureen Salloum - Website lead",
+          "0",
+          "Website Getting Started Form"
+        ],
+        "value": "0"
+      },
+      "after": {
+        "phone": "+13475120096",
+        "status": "Won",
+        "titleInputs": [
+          "3475120096",
+          "3475120096",
+          "on",
+          "on",
+          "mmmsssnnn@aol.com",
+          "+13475120096",
+          "Maureen Salloum - Website lead",
+          "53.18",
+          "Website Getting Started Form"
+        ],
+        "value": "53.18"
+      },
+      "phoneMatches": true,
+      "needValue": true,
+      "needStatus": false,
+      "statusSet": null,
+      "saved": true
+    },
+    {
+      "queueIndex": 52,
+      "ghlName": "Melissa O'Sullivan - Training(Meta)",
+      "phone": "5166509501",
+      "listValue": "$0",
+      "moegoName": "Melissa Osullivan",
+      "moegoTotal": "$901.85",
+      "moegoTotalNumber": 901.85,
+      "action": "updated",
+      "rows": [
+        {
+          "last10": "5166509501",
+          "name": "Melissa O'Sullivan - Training(Meta)",
+          "phoneDigits": "1516650950115166509501",
+          "phoneText": "+15166509501 +15166509501",
+          "rowIndex": 0,
+          "text": "Melissa O'Sullivan - Training(Meta) +15166509501 +15166509501 $0",
+          "valueText": "$0"
+        }
+      ],
+      "opened": {
+        "name": "Melissa O'Sullivan - Training(Meta)",
+        "phoneText": "+15166509501 +15166509501",
+        "rowIndex": 0,
+        "valueText": "$0",
+        "x": 369,
+        "y": 310
+      },
+      "before": {
+        "phone": "+15166509501",
+        "status": "Lost",
+        "titleInputs": [
+          "5166509501",
+          "5166509501",
+          "on",
+          "on",
+          "jmosullivan7513@yahoo.com",
+          "+15166509501",
+          "Melissa O'Sullivan - Training(Meta)",
+          "0",
+          "Meta Ads"
+        ],
+        "value": "0"
+      },
+      "after": {
+        "phone": "+15166509501",
+        "status": "Won",
+        "titleInputs": [
+          "5166509501",
+          "5166509501",
+          "on",
+          "on",
+          "jmosullivan7513@yahoo.com",
+          "+15166509501",
+          "Melissa O'Sullivan - Training(Meta)",
+          "901.85",
+          "Meta Ads"
+        ],
+        "value": "901.85"
+      },
+      "phoneMatches": true,
+      "needValue": true,
+      "needStatus": true,
+      "statusSet": {
+        "text": "Won",
+        "x": 623,
+        "y": 600
+      },
+      "saved": true
+    },
+    {
+      "queueIndex": 53,
+      "ghlName": "Debra G Training",
+      "phone": "5167782902",
+      "listValue": "$0",
+      "moegoName": "Debora Gonzalez",
+      "moegoTotal": "$287.92",
+      "moegoTotalNumber": 287.92,
+      "action": "no_match_after_search",
+      "rows": []
+    },
+    {
+      "queueIndex": 54,
+      "ghlName": "Paul Peters - Website lead",
+      "phone": "5162208166",
+      "listValue": "$0",
+      "moegoName": "Paul Peters",
+      "moegoTotal": "$459.03",
+      "moegoTotalNumber": 459.03,
+      "action": "updated",
+      "rows": [
+        {
+          "last10": "5162208166",
+          "name": "Paul Peters - Website lead",
+          "phoneDigits": "1516220816615162208166",
+          "phoneText": "+15162208166 +15162208166",
+          "rowIndex": 0,
+          "text": "Paul Peters - Website lead +15162208166 +15162208166 $0",
+          "valueText": "$0"
+        }
+      ],
+      "opened": {
+        "name": "Paul Peters - Website lead",
+        "phoneText": "+15162208166 +15162208166",
+        "rowIndex": 0,
+        "valueText": "$0",
+        "x": 369,
+        "y": 310
+      },
+      "before": {
+        "phone": "+15162208166",
+        "status": "Won",
+        "titleInputs": [
+          "5162208166",
+          "5162208166",
+          "on",
+          "on",
+          "ppeters944@aol.com",
+          "+15162208166",
+          "Paul Peters - Website lead",
+          "0",
+          "Website Getting Started Form"
+        ],
+        "value": "0"
+      },
+      "after": {
+        "phone": "+15162208166",
+        "status": "Won",
+        "titleInputs": [
+          "5162208166",
+          "5162208166",
+          "on",
+          "on",
+          "ppeters944@aol.com",
+          "+15162208166",
+          "Paul Peters - Website lead",
+          "459.03",
+          "Website Getting Started Form"
+        ],
+        "value": "459.03"
+      },
+      "phoneMatches": true,
+      "needValue": true,
+      "needStatus": false,
+      "statusSet": null,
+      "saved": true
+    },
+    {
+      "queueIndex": 55,
+      "ghlName": "Winston Deane - Website lead",
+      "phone": "7188137761",
+      "listValue": "$0",
+      "moegoName": "winston deane",
+      "moegoTotal": "$621.43",
+      "moegoTotalNumber": 621.43,
+      "action": "updated",
+      "rows": [
+        {
+          "last10": "7188137761",
+          "name": "Winston Deane - Website lead",
+          "phoneDigits": "1718813776117188137761",
+          "phoneText": "+17188137761 +17188137761",
+          "rowIndex": 0,
+          "text": "Winston Deane - Website lead +17188137761 +17188137761 $0",
+          "valueText": "$0"
+        }
+      ],
+      "opened": {
+        "name": "Winston Deane - Website lead",
+        "phoneText": "+17188137761 +17188137761",
+        "rowIndex": 0,
+        "valueText": "$0",
+        "x": 369,
+        "y": 310
+      },
+      "before": {
+        "phone": "+17188137761",
+        "status": "Open",
+        "titleInputs": [
+          "7188137761",
+          "7188137761",
+          "on",
+          "on",
+          "winsdeane@yahoo.com",
+          "+17188137761",
+          "Winston Deane - Website lead",
+          "0",
+          "Website Getting Started Form"
+        ],
+        "value": "0"
+      },
+      "after": {
+        "phone": "+17188137761",
+        "status": "Won",
+        "titleInputs": [
+          "7188137761",
+          "7188137761",
+          "on",
+          "on",
+          "winsdeane@yahoo.com",
+          "+17188137761",
+          "Winston Deane - Website lead",
+          "621.43",
+          "Website Getting Started Form"
+        ],
+        "value": "621.43"
+      },
+      "phoneMatches": true,
+      "needValue": true,
+      "needStatus": true,
+      "statusSet": {
+        "text": "Won",
+        "x": 623,
+        "y": 600
+      },
+      "saved": true
+    },
+    {
+      "queueIndex": 56,
+      "ghlName": "Karen Geller Hittleman - Website lead",
+      "phone": "5164574797",
+      "listValue": "$0",
+      "moegoName": "Karen Geller Hittleman",
+      "moegoTotal": "$165.0",
+      "moegoTotalNumber": 165,
+      "action": "updated",
+      "rows": [
+        {
+          "last10": "5164574797",
+          "name": "Karen Geller Hittleman - Website lead",
+          "phoneDigits": "1516457479715164574797",
+          "phoneText": "+15164574797 +15164574797",
+          "rowIndex": 0,
+          "text": "Karen Geller Hittleman - Website lead +15164574797 +15164574797 $0",
+          "valueText": "$0"
+        }
+      ],
+      "opened": {
+        "name": "Karen Geller Hittleman - Website lead",
+        "phoneText": "+15164574797 +15164574797",
+        "rowIndex": 0,
+        "valueText": "$0",
+        "x": 369,
+        "y": 310
+      },
+      "before": {
+        "phone": "+15164574797",
+        "status": "Open",
+        "titleInputs": [
+          "5164574797",
+          "5164574797",
+          "on",
+          "on",
+          "kghlb2013@gmail.com",
+          "+15164574797",
+          "Karen Geller Hittleman  - Website lead",
+          "0",
+          "Website Getting Started Form"
+        ],
+        "value": "0"
+      },
+      "after": {
+        "phone": "+15164574797",
+        "status": "Won",
+        "titleInputs": [
+          "5164574797",
+          "5164574797",
+          "on",
+          "on",
+          "kghlb2013@gmail.com",
+          "+15164574797",
+          "Karen Geller Hittleman  - Website lead",
+          "165.00",
+          "Website Getting Started Form"
+        ],
+        "value": "165.00"
+      },
+      "phoneMatches": true,
+      "needValue": true,
+      "needStatus": true,
+      "statusSet": {
+        "text": "Won",
+        "x": 623,
+        "y": 600
+      },
+      "saved": true
+    },
+    {
+      "queueIndex": 57,
+      "ghlName": "Samantha Kampf - Website lead",
+      "phone": "5165787923",
+      "listValue": "$0",
+      "moegoName": "Samantha Kampf",
+      "moegoTotal": "$244.0",
+      "moegoTotalNumber": 244,
+      "action": "updated",
+      "rows": [
+        {
+          "last10": "5165787923",
+          "name": "Samantha Kampf - Website lead",
+          "phoneDigits": "1516578792315165787923",
+          "phoneText": "+15165787923 +15165787923",
+          "rowIndex": 0,
+          "text": "Samantha Kampf - Website lead +15165787923 +15165787923 $0",
+          "valueText": "$0"
+        }
+      ],
+      "opened": {
+        "name": "Samantha Kampf - Website lead",
+        "phoneText": "+15165787923 +15165787923",
+        "rowIndex": 0,
+        "valueText": "$0",
+        "x": 369,
+        "y": 310
+      },
+      "before": {
+        "phone": "+15165787923",
+        "status": "Open",
+        "titleInputs": [
+          "5165787923",
+          "5165787923",
+          "on",
+          "on",
+          "samaayy@yahoo.com",
+          "+15165787923",
+          "Samantha Kampf - Website lead",
+          "0",
+          "Website Getting Started Form"
+        ],
+        "value": "0"
+      },
+      "after": {
+        "phone": "+15165787923",
+        "status": "Won",
+        "titleInputs": [
+          "5165787923",
+          "5165787923",
+          "on",
+          "on",
+          "samaayy@yahoo.com",
+          "+15165787923",
+          "Samantha Kampf - Website lead",
+          "244.00",
+          "Website Getting Started Form"
+        ],
+        "value": "244.00"
+      },
+      "phoneMatches": true,
+      "needValue": true,
+      "needStatus": true,
+      "statusSet": {
+        "text": "Won",
+        "x": 623,
+        "y": 600
+      },
+      "saved": true
+    },
+    {
+      "queueIndex": 58,
+      "ghlName": "Aya Asuncion - Training(Meta)",
+      "phone": "9173316855",
+      "listValue": "$0",
+      "moegoName": "Aya Asuncion",
+      "moegoTotal": "$962.0",
+      "moegoTotalNumber": 962,
+      "action": "updated",
+      "rows": [
+        {
+          "last10": "9173316855",
+          "name": "Aya Asuncion - Training(Meta)",
+          "phoneDigits": "1917331685519173316855",
+          "phoneText": "+19173316855 +19173316855",
+          "rowIndex": 0,
+          "text": "Aya Asuncion - Training(Meta) +19173316855 +19173316855 $0",
+          "valueText": "$0"
+        }
+      ],
+      "opened": {
+        "name": "Aya Asuncion - Training(Meta)",
+        "phoneText": "+19173316855 +19173316855",
+        "rowIndex": 0,
+        "valueText": "$0",
+        "x": 369,
+        "y": 310
+      },
+      "before": {
+        "phone": "+19173316855",
+        "status": "Lost",
+        "titleInputs": [
+          "9173316855",
+          "9173316855",
+          "on",
+          "on",
+          "xtian_aya@yahoo.com",
+          "+19173316855",
+          "Aya Asuncion - Training(Meta)",
+          "0",
+          "Meta Ads"
+        ],
+        "value": "0"
+      },
+      "after": {
+        "phone": "+19173316855",
+        "status": "Won",
+        "titleInputs": [
+          "9173316855",
+          "9173316855",
+          "on",
+          "on",
+          "xtian_aya@yahoo.com",
+          "+19173316855",
+          "Aya Asuncion - Training(Meta)",
+          "962.00",
+          "Meta Ads"
+        ],
+        "value": "962.00"
+      },
+      "phoneMatches": true,
+      "needValue": true,
+      "needStatus": true,
+      "statusSet": {
+        "text": "Won",
+        "x": 623,
+        "y": 600
+      },
+      "saved": true
+    },
+    {
+      "queueIndex": 59,
+      "ghlName": "Bonnie Katz - - Resort(Meta)",
+      "phone": "5166599201",
+      "listValue": "$169.03",
+      "moegoName": "Bonnie Katz",
+      "moegoTotal": "$0.0",
+      "moegoTotalNumber": 0,
+      "action": "updated",
+      "rows": [
+        {
+          "last10": "5166599201",
+          "name": "Bonnie Katz - - Resort(Meta)",
+          "phoneDigits": "1516659920115166599201",
+          "phoneText": "+15166599201 +15166599201",
+          "rowIndex": 0,
+          "text": "Bonnie Katz - - Resort(Meta) +15166599201 +15166599201 $169.03",
+          "valueText": "$169.03"
+        }
+      ],
+      "opened": {
+        "name": "Bonnie Katz - - Resort(Meta)",
+        "phoneText": "+15166599201 +15166599201",
+        "rowIndex": 0,
+        "valueText": "$169.03",
+        "x": 369,
+        "y": 310
+      },
+      "before": {
+        "phone": "+15166599201",
+        "status": "Won",
+        "titleInputs": [
+          "5166599201",
+          "5166599201",
+          "on",
+          "on",
+          "bonniebkatz@gmail.com",
+          "+15166599201",
+          "Bonnie Katz -  - Resort(Meta)",
+          "169.03",
+          "Meta Ads"
+        ],
+        "value": "169.03"
+      },
+      "after": {
+        "phone": "+15166599201",
+        "status": "Won",
+        "titleInputs": [
+          "5166599201",
+          "5166599201",
+          "on",
+          "on",
+          "bonniebkatz@gmail.com",
+          "+15166599201",
+          "Bonnie Katz -  - Resort(Meta)",
+          "0.00",
+          "Meta Ads"
+        ],
+        "value": "0.00"
+      },
+      "phoneMatches": true,
+      "needValue": true,
+      "needStatus": false,
+      "statusSet": null,
+      "saved": true
+    },
+    {
+      "queueIndex": 60,
+      "ghlName": "Ed Perez - - Resort(Meta)",
+      "phone": "9175616208",
+      "listValue": "$288.55",
+      "moegoName": "Edward Perez",
+      "moegoTotal": "$314.74",
+      "moegoTotalNumber": 314.74,
+      "action": "updated",
+      "rows": [
+        {
+          "last10": "9175616208",
+          "name": "Ed Perez - - Resort(Meta)",
+          "phoneDigits": "1917561620819175616208",
+          "phoneText": "+19175616208 +19175616208",
+          "rowIndex": 0,
+          "text": "Ed Perez - - Resort(Meta) +19175616208 +19175616208 $288.55",
+          "valueText": "$288.55"
+        }
+      ],
+      "opened": {
+        "name": "Ed Perez - - Resort(Meta)",
+        "phoneText": "+19175616208 +19175616208",
+        "rowIndex": 0,
+        "valueText": "$288.55",
+        "x": 369,
+        "y": 310
+      },
+      "before": {
+        "phone": "+19175616208",
+        "status": "Won",
+        "titleInputs": [
+          "9175616208",
+          "9175616208",
+          "on",
+          "on",
+          "sgtrock21743@gmail.com",
+          "+19175616208",
+          "Ed Perez -  - Resort(Meta)",
+          "288.55",
+          "Meta Ads"
+        ],
+        "value": "288.55"
+      },
+      "after": {
+        "phone": "+19175616208",
+        "status": "Won",
+        "titleInputs": [
+          "9175616208",
+          "9175616208",
+          "on",
+          "on",
+          "sgtrock21743@gmail.com",
+          "+19175616208",
+          "Ed Perez -  - Resort(Meta)",
+          "314.74",
+          "Meta Ads"
+        ],
+        "value": "314.74"
+      },
+      "phoneMatches": true,
+      "needValue": true,
+      "needStatus": false,
+      "statusSet": null,
+      "saved": true
+    },
+    {
+      "queueIndex": 61,
+      "ghlName": "Kathleen OConnor - 11040 - Website Lead",
+      "phone": "5164749345",
+      "listValue": "$441.5",
+      "moegoName": "Kathleen OConnor",
+      "moegoTotal": "$694.83",
+      "moegoTotalNumber": 694.83,
+      "action": "updated",
+      "rows": [
+        {
+          "last10": "5164749345",
+          "name": "Kathleen OConnor - 11040 - Website Lead",
+          "phoneDigits": "1516474934515164749345",
+          "phoneText": "+15164749345 +15164749345",
+          "rowIndex": 0,
+          "text": "Kathleen OConnor - 11040 - Website Lead +15164749345 +15164749345 $441.5",
+          "valueText": "$441.5"
+        }
+      ],
+      "opened": {
+        "name": "Kathleen OConnor - 11040 - Website Lead",
+        "phoneText": "+15164749345 +15164749345",
+        "rowIndex": 0,
+        "valueText": "$441.5",
+        "x": 369,
+        "y": 310
+      },
+      "before": {
+        "phone": "+15164749345",
+        "status": "Won",
+        "titleInputs": [
+          "5164749345",
+          "5164749345",
+          "on",
+          "on",
+          "jkmsoc@aol.com",
+          "+15164749345",
+          "Kathleen OConnor - 11040 - Website Lead",
+          "441.5",
+          "Website"
+        ],
+        "value": "441.5"
+      },
+      "after": {
+        "phone": "+15164749345",
+        "status": "Won",
+        "titleInputs": [
+          "5164749345",
+          "5164749345",
+          "on",
+          "on",
+          "jkmsoc@aol.com",
+          "+15164749345",
+          "Kathleen OConnor - 11040 - Website Lead",
+          "694.83",
+          "Website"
+        ],
+        "value": "694.83"
+      },
+      "phoneMatches": true,
+      "needValue": true,
+      "needStatus": false,
+      "statusSet": null,
+      "saved": true
+    },
+    {
+      "queueIndex": 62,
+      "ghlName": "Diana Backer - Website lead",
+      "phone": "5164555491",
+      "listValue": "$0",
+      "moegoName": "Diana Backer",
+      "moegoTotal": "$225.18",
+      "moegoTotalNumber": 225.18,
+      "action": "updated",
+      "rows": [
+        {
+          "last10": "5164555491",
+          "name": "Diana Backer - Website lead",
+          "phoneDigits": "1516455549115164555491",
+          "phoneText": "+15164555491 +15164555491",
+          "rowIndex": 0,
+          "text": "Diana Backer - Website lead +15164555491 +15164555491 $0",
+          "valueText": "$0"
+        }
+      ],
+      "opened": {
+        "name": "Diana Backer - Website lead",
+        "phoneText": "+15164555491 +15164555491",
+        "rowIndex": 0,
+        "valueText": "$0",
+        "x": 369,
+        "y": 310
+      },
+      "before": {
+        "phone": "+15164555491",
+        "status": "Open",
+        "titleInputs": [
+          "5164555491",
+          "5164555491",
+          "on",
+          "on",
+          "drbpea21@yahoo.com",
+          "+15164555491",
+          "Diana Backer - Website lead",
+          "0",
+          "Website Getting Started Form"
+        ],
+        "value": "0"
+      },
+      "after": {
+        "phone": "+15164555491",
+        "status": "Won",
+        "titleInputs": [
+          "5164555491",
+          "5164555491",
+          "on",
+          "on",
+          "drbpea21@yahoo.com",
+          "+15164555491",
+          "Diana Backer - Website lead",
+          "225.18",
+          "Website Getting Started Form"
+        ],
+        "value": "225.18"
+      },
+      "phoneMatches": true,
+      "needValue": true,
+      "needStatus": true,
+      "statusSet": {
+        "text": "Won",
+        "x": 623,
+        "y": 600
+      },
+      "saved": true
+    },
+    {
+      "queueIndex": 63,
+      "ghlName": "Nicole Rodriguez - Website lead",
+      "phone": "5167100686",
+      "listValue": "$3725.02",
+      "moegoName": "Manuel Franco",
+      "moegoTotal": "$4377.68",
+      "moegoTotalNumber": 4377.68,
+      "action": "updated",
+      "rows": [
+        {
+          "last10": "5167100686",
+          "name": "Nicole Rodriguez - Website lead",
+          "phoneDigits": "1516710068615167100686",
+          "phoneText": "+15167100686 +15167100686",
+          "rowIndex": 0,
+          "text": "Nicole Rodriguez - Website lead +15167100686 +15167100686 $3725.02",
+          "valueText": "$3725.02"
+        }
+      ],
+      "opened": {
+        "name": "Nicole Rodriguez - Website lead",
+        "phoneText": "+15167100686 +15167100686",
+        "rowIndex": 0,
+        "valueText": "$3725.02",
+        "x": 369,
+        "y": 310
+      },
+      "before": {
+        "phone": "+15167100686",
+        "status": "Lost",
+        "titleInputs": [
+          "5167100686",
+          "5167100686",
+          "on",
+          "on",
+          "rodzcarrasco@gmail.com",
+          "+15167100686",
+          "Nicole Rodriguez - Website lead",
+          "3725.02",
+          "Website Getting Started Form"
+        ],
+        "value": "3725.02"
+      },
+      "after": {
+        "phone": "+15167100686",
+        "status": "Won",
+        "titleInputs": [
+          "5167100686",
+          "5167100686",
+          "on",
+          "on",
+          "rodzcarrasco@gmail.com",
+          "+15167100686",
+          "Nicole Rodriguez - Website lead",
+          "4377.68",
+          "Website Getting Started Form"
+        ],
+        "value": "4377.68"
+      },
+      "phoneMatches": true,
+      "needValue": true,
+      "needStatus": true,
+      "statusSet": {
+        "text": "Won",
+        "x": 623,
+        "y": 600
+      },
+      "saved": true
+    },
+    {
+      "queueIndex": 64,
+      "ghlName": "Breanne P - Training(Meta)",
+      "phone": "5162327583",
+      "listValue": "$0",
+      "moegoName": "Breanne Pinto",
+      "moegoTotal": "$741.56",
+      "moegoTotalNumber": 741.56,
+      "action": "updated",
+      "rows": [
+        {
+          "last10": "5162327583",
+          "name": "Breanne P - Training(Meta)",
+          "phoneDigits": "1516232758315162327583",
+          "phoneText": "+15162327583 +15162327583",
+          "rowIndex": 0,
+          "text": "Breanne P - Training(Meta) +15162327583 +15162327583 $0",
+          "valueText": "$0"
+        }
+      ],
+      "opened": {
+        "name": "Breanne P - Training(Meta)",
+        "phoneText": "+15162327583 +15162327583",
+        "rowIndex": 0,
+        "valueText": "$0",
+        "x": 369,
+        "y": 310
+      },
+      "before": {
+        "phone": "+15162327583",
+        "status": "Lost",
+        "titleInputs": [
+          "5162327583",
+          "5162327583",
+          "on",
+          "on",
+          "breanne.pinto@gmail.com",
+          "+15162327583",
+          "Breanne P - Training(Meta)",
+          "0",
+          "Meta Ads"
+        ],
+        "value": "0"
+      },
+      "after": {
+        "phone": "+15162327583",
+        "status": "Won",
+        "titleInputs": [
+          "5162327583",
+          "5162327583",
+          "on",
+          "on",
+          "breanne.pinto@gmail.com",
+          "+15162327583",
+          "Breanne P - Training(Meta)",
+          "741.56",
+          "Meta Ads"
+        ],
+        "value": "741.56"
+      },
+      "phoneMatches": true,
+      "needValue": true,
+      "needStatus": true,
+      "statusSet": {
+        "text": "Won",
+        "x": 623,
+        "y": 600
+      },
+      "saved": true
+    },
+    {
+      "queueIndex": 65,
+      "ghlName": "Irina Dyner - Grooming - Meta Lead",
+      "phone": "9176738235",
+      "listValue": "$0",
+      "moegoName": "Irina Dyner",
+      "moegoTotal": "$150.0",
+      "moegoTotalNumber": 150,
+      "action": "updated",
+      "rows": [
+        {
+          "last10": "9176738235",
+          "name": "Irina Dyner - Grooming - Meta Lead",
+          "phoneDigits": "1917673823519176738235",
+          "phoneText": "+19176738235 +19176738235",
+          "rowIndex": 0,
+          "text": "Irina Dyner - Grooming - Meta Lead +19176738235 +19176738235 $0",
+          "valueText": "$0"
+        }
+      ],
+      "opened": {
+        "name": "Irina Dyner - Grooming - Meta Lead",
+        "phoneText": "+19176738235 +19176738235",
+        "rowIndex": 0,
+        "valueText": "$0",
+        "x": 369,
+        "y": 310
+      },
+      "before": {
+        "phone": "+19176738235",
+        "status": "Open",
+        "titleInputs": [
+          "9176738235",
+          "9176738235",
+          "on",
+          "on",
+          "irinadynet@gmail.com",
+          "+19176738235",
+          "Irina Dyner - Grooming - Meta Lead",
+          "0"
+        ],
+        "value": "0"
+      },
+      "after": {
+        "phone": "+19176738235",
+        "status": "Won",
+        "titleInputs": [
+          "9176738235",
+          "9176738235",
+          "on",
+          "on",
+          "irinadynet@gmail.com",
+          "+19176738235",
+          "Irina Dyner - Grooming - Meta Lead",
+          "150.00"
+        ],
+        "value": "150.00"
+      },
+      "phoneMatches": true,
+      "needValue": true,
+      "needStatus": true,
+      "statusSet": {
+        "text": "Won",
+        "x": 623,
+        "y": 600
+      },
+      "saved": true
+    },
+    {
+      "queueIndex": 66,
+      "ghlName": "Nalinie Pooran - Training(Meta)",
+      "phone": "6467340266",
+      "listValue": "$0",
+      "moegoName": "Leo Pooran",
+      "moegoTotal": "$487.84",
+      "moegoTotalNumber": 487.84,
+      "action": "updated",
+      "rows": [
+        {
+          "last10": "6467340266",
+          "name": "Nalinie Pooran - Training(Meta)",
+          "phoneDigits": "1646734026616467340266",
+          "phoneText": "+16467340266 +16467340266",
+          "rowIndex": 0,
+          "text": "Nalinie Pooran - Training(Meta) +16467340266 +16467340266 $0",
+          "valueText": "$0"
+        }
+      ],
+      "opened": {
+        "name": "Nalinie Pooran - Training(Meta)",
+        "phoneText": "+16467340266 +16467340266",
+        "rowIndex": 0,
+        "valueText": "$0",
+        "x": 369,
+        "y": 310
+      },
+      "before": {
+        "phone": "+16467340266",
+        "status": "Won",
+        "titleInputs": [
+          "6467340266",
+          "6467340266",
+          "on",
+          "on",
+          "naliniepo@gmail.com",
+          "+16467340266",
+          "Nalinie Pooran - Training(Meta)",
+          "0",
+          "Meta Ads"
+        ],
+        "value": "0"
+      },
+      "after": {
+        "phone": "+16467340266",
+        "status": "Won",
+        "titleInputs": [
+          "6467340266",
+          "6467340266",
+          "on",
+          "on",
+          "naliniepo@gmail.com",
+          "+16467340266",
+          "Nalinie Pooran - Training(Meta)",
+          "487.84",
+          "Meta Ads"
+        ],
+        "value": "487.84"
+      },
+      "phoneMatches": true,
+      "needValue": true,
+      "needStatus": false,
+      "statusSet": null,
+      "saved": true
+    },
+    {
+      "queueIndex": 67,
+      "ghlName": "Christopher Gebauer - Website lead",
+      "phone": "3474997934",
+      "listValue": "$0",
+      "moegoName": "chris gebauer",
+      "moegoTotal": "$3299.26",
+      "moegoTotalNumber": 3299.26,
+      "action": "updated",
+      "rows": [
+        {
+          "last10": "3474997934",
+          "name": "Christopher Gebauer - Website lead",
+          "phoneDigits": "1347499793413474997934",
+          "phoneText": "+13474997934 +13474997934",
+          "rowIndex": 0,
+          "text": "Christopher Gebauer - Website lead +13474997934 +13474997934 $0",
+          "valueText": "$0"
+        }
+      ],
+      "opened": {
+        "name": "Christopher Gebauer - Website lead",
+        "phoneText": "+13474997934 +13474997934",
+        "rowIndex": 0,
+        "valueText": "$0",
+        "x": 369,
+        "y": 310
+      },
+      "before": {
+        "phone": "+13474997934",
+        "status": "Won",
+        "titleInputs": [
+          "3474997934",
+          "3474997934",
+          "on",
+          "on",
+          "cgebauer@mmcintl.com",
+          "+13474997934",
+          "Christopher Gebauer - Website lead",
+          "0",
+          "Website Getting Started Form"
+        ],
+        "value": "0"
+      },
+      "after": {
+        "phone": "+13474997934",
+        "status": "Won",
+        "titleInputs": [
+          "3474997934",
+          "3474997934",
+          "on",
+          "on",
+          "cgebauer@mmcintl.com",
+          "+13474997934",
+          "Christopher Gebauer - Website lead",
+          "3299.26",
+          "Website Getting Started Form"
+        ],
+        "value": "3299.26"
+      },
+      "phoneMatches": true,
+      "needValue": true,
+      "needStatus": false,
+      "statusSet": null,
+      "saved": true
+    },
+    {
+      "queueIndex": 68,
+      "ghlName": "Helen Jackson - Boarding(Meta)",
+      "phone": "3476157255",
+      "listValue": "$0",
+      "moegoName": "Helen Jackson",
+      "moegoTotal": "$389.04",
+      "moegoTotalNumber": 389.04,
+      "action": "updated",
+      "rows": [
+        {
+          "last10": "3476157255",
+          "name": "Helen Jackson - Boarding(Meta)",
+          "phoneDigits": "1347615725513476157255",
+          "phoneText": "+13476157255 +13476157255",
+          "rowIndex": 0,
+          "text": "Helen Jackson - Boarding(Meta) +13476157255 +13476157255 $0",
+          "valueText": "$0"
+        }
+      ],
+      "opened": {
+        "name": "Helen Jackson - Boarding(Meta)",
+        "phoneText": "+13476157255 +13476157255",
+        "rowIndex": 0,
+        "valueText": "$0",
+        "x": 369,
+        "y": 310
+      },
+      "before": {
+        "phone": "+13476157255",
+        "status": "Open",
+        "titleInputs": [
+          "3476157255",
+          "3476157255",
+          "on",
+          "on",
+          "hjackson421@aol.com",
+          "+13476157255",
+          "Helen Jackson - Boarding(Meta)",
+          "0",
+          "Meta Ads"
+        ],
+        "value": "0"
+      },
+      "after": {
+        "phone": "+13476157255",
+        "status": "Won",
+        "titleInputs": [
+          "3476157255",
+          "3476157255",
+          "on",
+          "on",
+          "hjackson421@aol.com",
+          "+13476157255",
+          "Helen Jackson - Boarding(Meta)",
+          "389.04",
+          "Meta Ads"
+        ],
+        "value": "389.04"
+      },
+      "phoneMatches": true,
+      "needValue": true,
+      "needStatus": true,
+      "statusSet": {
+        "text": "Won",
+        "x": 623,
+        "y": 600
+      },
+      "saved": true
+    },
+    {
+      "queueIndex": 69,
+      "ghlName": "Andrea Sunara - Website lead",
+      "phone": "6468533266",
+      "listValue": "$57.67",
+      "moegoName": "Andrea Sunara",
+      "moegoTotal": "$115.34",
+      "moegoTotalNumber": 115.34,
+      "action": "updated",
+      "rows": [
+        {
+          "last10": "6468533266",
+          "name": "Andrea Sunara - Website lead",
+          "phoneDigits": "1646853326616468533266",
+          "phoneText": "+16468533266 +16468533266",
+          "rowIndex": 0,
+          "text": "Andrea Sunara - Website lead +16468533266 +16468533266 $57.67",
+          "valueText": "$57.67"
+        }
+      ],
+      "opened": {
+        "name": "Andrea Sunara - Website lead",
+        "phoneText": "+16468533266 +16468533266",
+        "rowIndex": 0,
+        "valueText": "$57.67",
+        "x": 369,
+        "y": 310
+      },
+      "before": {
+        "phone": "+16468533266",
+        "status": "Won",
+        "titleInputs": [
+          "6468533266",
+          "6468533266",
+          "on",
+          "on",
+          "asunara@gmail.com",
+          "+16468533266",
+          "Andrea Sunara - Website lead",
+          "57.67",
+          "Website Getting Started Form"
+        ],
+        "value": "57.67"
+      },
+      "after": {
+        "phone": "+16468533266",
+        "status": "Won",
+        "titleInputs": [
+          "6468533266",
+          "6468533266",
+          "on",
+          "on",
+          "asunara@gmail.com",
+          "+16468533266",
+          "Andrea Sunara - Website lead",
+          "115.34",
+          "Website Getting Started Form"
+        ],
+        "value": "115.34"
+      },
+      "phoneMatches": true,
+      "needValue": true,
+      "needStatus": false,
+      "statusSet": null,
+      "saved": true
+    },
+    {
+      "queueIndex": 70,
+      "ghlName": "Adrienne Lowry - Website lead",
+      "phone": "3475287288",
+      "listValue": "$718.57",
+      "moegoName": "Adrienne Lowry",
+      "moegoTotal": "$1013.76",
+      "moegoTotalNumber": 1013.76,
+      "action": "updated",
+      "rows": [
+        {
+          "last10": "3475287288",
+          "name": "Adrienne Lowry - Website lead",
+          "phoneDigits": "1347528728813475287288",
+          "phoneText": "+13475287288 +13475287288",
+          "rowIndex": 0,
+          "text": "Adrienne Lowry - Website lead +13475287288 +13475287288 $718.57",
+          "valueText": "$718.57"
+        }
+      ],
+      "opened": {
+        "name": "Adrienne Lowry - Website lead",
+        "phoneText": "+13475287288 +13475287288",
+        "rowIndex": 0,
+        "valueText": "$718.57",
+        "x": 369,
+        "y": 310
+      },
+      "before": {
+        "phone": "+13475287288",
+        "status": "Won",
+        "titleInputs": [
+          "3475287288",
+          "3475287288",
+          "on",
+          "on",
+          "asl11003@outlook.com",
+          "+13475287288",
+          "Adrienne Lowry - Website lead",
+          "718.57",
+          "Website Getting Started Form"
+        ],
+        "value": "718.57"
+      },
+      "after": {
+        "phone": "+13475287288",
+        "status": "Won",
+        "titleInputs": [
+          "3475287288",
+          "3475287288",
+          "on",
+          "on",
+          "asl11003@outlook.com",
+          "+13475287288",
+          "Adrienne Lowry - Website lead",
+          "1013.76",
+          "Website Getting Started Form"
+        ],
+        "value": "1013.76"
+      },
+      "phoneMatches": true,
+      "needValue": true,
+      "needStatus": false,
+      "statusSet": null,
+      "saved": true
+    },
+    {
+      "queueIndex": 71,
+      "ghlName": "Majority Baptist - Boarding(Meta)",
+      "phone": "9299285685",
+      "listValue": "$517.91",
+      "moegoName": "Darryl Frazier",
+      "moegoTotal": "$1676.79",
+      "moegoTotalNumber": 1676.79,
+      "action": "updated",
+      "rows": [
+        {
+          "last10": "9299285685",
+          "name": "Majority Baptist - Boarding(Meta)",
+          "phoneDigits": "1929928568519299285685",
+          "phoneText": "+19299285685 +19299285685",
+          "rowIndex": 0,
+          "text": "Majority Baptist - Boarding(Meta) +19299285685 +19299285685 $517.91",
+          "valueText": "$517.91"
+        }
+      ],
+      "opened": {
+        "name": "Majority Baptist - Boarding(Meta)",
+        "phoneText": "+19299285685 +19299285685",
+        "rowIndex": 0,
+        "valueText": "$517.91",
+        "x": 369,
+        "y": 310
+      },
+      "before": {
+        "phone": "+19299285685",
+        "status": "Won",
+        "titleInputs": [
+          "9299285685",
+          "9299285685",
+          "on",
+          "on",
+          "majoritybaptist115@gmail.com",
+          "+19299285685",
+          "Majority Baptist - Boarding(Meta)",
+          "517.91",
+          "Meta Ads"
+        ],
+        "value": "517.91"
+      },
+      "after": {
+        "phone": "+19299285685",
+        "status": "Won",
+        "titleInputs": [
+          "9299285685",
+          "9299285685",
+          "on",
+          "on",
+          "majoritybaptist115@gmail.com",
+          "+19299285685",
+          "Majority Baptist - Boarding(Meta)",
+          "1676.79",
+          "Meta Ads"
+        ],
+        "value": "1676.79"
+      },
+      "phoneMatches": true,
+      "needValue": true,
+      "needStatus": false,
+      "statusSet": null,
+      "saved": true
+    },
+    {
+      "queueIndex": 72,
+      "ghlName": "Esther Lapidus - 11598 - Website Lead",
+      "phone": "5167272445",
+      "listValue": "$627.1",
+      "moegoName": "Esther Lapidus",
+      "moegoTotal": "$814.0",
+      "moegoTotalNumber": 814,
+      "action": "updated",
+      "rows": [
+        {
+          "last10": "5167272445",
+          "name": "Esther Lapidus - 11598 - Website Lead",
+          "phoneDigits": "1516727244515167272445",
+          "phoneText": "+15167272445 +15167272445",
+          "rowIndex": 0,
+          "text": "Esther Lapidus - 11598 - Website Lead +15167272445 +15167272445 $627.1",
+          "valueText": "$627.1"
+        }
+      ],
+      "opened": {
+        "name": "Esther Lapidus - 11598 - Website Lead",
+        "phoneText": "+15167272445 +15167272445",
+        "rowIndex": 0,
+        "valueText": "$627.1",
+        "x": 369,
+        "y": 310
+      },
+      "before": {
+        "phone": "+15167272445",
+        "status": "Won",
+        "titleInputs": [
+          "5167272445",
+          "5167272445",
+          "on",
+          "on",
+          "estherweisbord@gmail.com",
+          "+15167272445",
+          "Esther Lapidus - 11598 - Website Lead",
+          "627.1",
+          "Website"
+        ],
+        "value": "627.1"
+      },
+      "after": {
+        "phone": "+15167272445",
+        "status": "Won",
+        "titleInputs": [
+          "5167272445",
+          "5167272445",
+          "on",
+          "on",
+          "estherweisbord@gmail.com",
+          "+15167272445",
+          "Esther Lapidus - 11598 - Website Lead",
+          "814.00",
+          "Website"
+        ],
+        "value": "814.00"
+      },
+      "phoneMatches": true,
+      "needValue": true,
+      "needStatus": false,
+      "statusSet": null,
+      "saved": true
+    },
+    {
+      "queueIndex": 73,
+      "ghlName": "Ida - Andrea grooming client/ boarding lead",
+      "phone": "5163181154",
+      "listValue": "$7960.17",
+      "moegoName": "Ida Marciano",
+      "moegoTotal": "$7751.81",
+      "moegoTotalNumber": 7751.81,
+      "action": "updated",
+      "rows": [
+        {
+          "last10": "5163181154",
+          "name": "Ida - Andrea grooming client/ boarding lead",
+          "phoneDigits": "1516318115415163181154",
+          "phoneText": "+15163181154 +15163181154",
+          "rowIndex": 0,
+          "text": "Ida - Andrea grooming client/ boarding lead +15163181154 +15163181154 $7960.17",
+          "valueText": "$7960.17"
+        }
+      ],
+      "opened": {
+        "name": "Ida - Andrea grooming client/ boarding lead",
+        "phoneText": "+15163181154 +15163181154",
+        "rowIndex": 0,
+        "valueText": "$7960.17",
+        "x": 369,
+        "y": 310
+      },
+      "before": {
+        "phone": "+15163181154",
+        "status": "Won",
+        "titleInputs": [
+          "5163181154",
+          "5163181154",
+          "on",
+          "on",
+          "angel33156@aol.com",
+          "+15163181154",
+          "Ida - Andrea grooming client/ boarding lead",
+          "7960.17",
+          "Meta Ads"
+        ],
+        "value": "7960.17"
+      },
+      "after": {
+        "phone": "+15163181154",
+        "status": "Won",
+        "titleInputs": [
+          "5163181154",
+          "5163181154",
+          "on",
+          "on",
+          "angel33156@aol.com",
+          "+15163181154",
+          "Ida - Andrea grooming client/ boarding lead",
+          "7751.81",
+          "Meta Ads"
+        ],
+        "value": "7751.81"
+      },
+      "phoneMatches": true,
+      "needValue": true,
+      "needStatus": false,
+      "statusSet": null,
+      "saved": true
+    },
+    {
+      "queueIndex": 74,
+      "ghlName": "KP - Meta Lead",
+      "phone": "6462579759",
+      "listValue": "$499.43",
+      "moegoName": "Krystallee Perez",
+      "moegoTotal": "$614.77",
+      "moegoTotalNumber": 614.77,
+      "action": "updated",
+      "rows": [
+        {
+          "last10": "6462579759",
+          "name": "KP - Meta Lead",
+          "phoneDigits": "1646257975916462579759",
+          "phoneText": "+16462579759 +16462579759",
+          "rowIndex": 0,
+          "text": "KP - Meta Lead +16462579759 +16462579759 $499.43",
+          "valueText": "$499.43"
+        }
+      ],
+      "opened": {
+        "name": "KP - Meta Lead",
+        "phoneText": "+16462579759 +16462579759",
+        "rowIndex": 0,
+        "valueText": "$499.43",
+        "x": 369,
+        "y": 310
+      },
+      "before": {
+        "phone": "+16462579759",
+        "status": "Won",
+        "titleInputs": [
+          "6462579759",
+          "6462579759",
+          "on",
+          "on",
+          "kaponte25@aol.com",
+          "+16462579759",
+          "KP - Meta Lead",
+          "499.43",
+          "Meta Ads"
+        ],
+        "value": "499.43"
+      },
+      "after": {
+        "phone": "+16462579759",
+        "status": "Won",
+        "titleInputs": [
+          "6462579759",
+          "6462579759",
+          "on",
+          "on",
+          "kaponte25@aol.com",
+          "+16462579759",
+          "KP - Meta Lead",
+          "614.77",
+          "Meta Ads"
+        ],
+        "value": "614.77"
+      },
+      "phoneMatches": true,
+      "needValue": true,
+      "needStatus": false,
+      "statusSet": null,
+      "saved": true
+    },
+    {
+      "queueIndex": 75,
+      "ghlName": "Lauren Blaney - Website lead",
+      "phone": "5165677903",
+      "listValue": "$26.19",
+      "moegoName": "Lauren Blaney",
+      "moegoTotal": "$1312.21",
+      "moegoTotalNumber": 1312.21,
+      "action": "updated",
+      "rows": [
+        {
+          "last10": "5165677903",
+          "name": "Lauren Blaney - Website lead",
+          "phoneDigits": "1516567790315165677903",
+          "phoneText": "+15165677903 +15165677903",
+          "rowIndex": 0,
+          "text": "Lauren Blaney - Website lead +15165677903 +15165677903 $26.19",
+          "valueText": "$26.19"
+        }
+      ],
+      "opened": {
+        "name": "Lauren Blaney - Website lead",
+        "phoneText": "+15165677903 +15165677903",
+        "rowIndex": 0,
+        "valueText": "$26.19",
+        "x": 369,
+        "y": 310
+      },
+      "before": {
+        "phone": "+15165677903",
+        "status": "Won",
+        "titleInputs": [
+          "5165677903",
+          "5165677903",
+          "on",
+          "on",
+          "laurendonofrio@yahoo.com",
+          "+15165677903",
+          "Lauren Blaney - Website lead",
+          "26.19",
+          "Website Getting Started Form"
+        ],
+        "value": "26.19"
+      },
+      "after": {
+        "phone": "+15165677903",
+        "status": "Won",
+        "titleInputs": [
+          "5165677903",
+          "5165677903",
+          "on",
+          "on",
+          "laurendonofrio@yahoo.com",
+          "+15165677903",
+          "Lauren Blaney - Website lead",
+          "1312.21",
+          "Website Getting Started Form"
+        ],
+        "value": "1312.21"
+      },
+      "phoneMatches": true,
+      "needValue": true,
+      "needStatus": false,
+      "statusSet": null,
+      "saved": true
+    },
+    {
+      "queueIndex": 76,
+      "ghlName": "Marisa Matura - Website lead",
+      "phone": "5167549746",
+      "listValue": "$4410.87",
+      "moegoName": "Marisa Matura",
+      "moegoTotal": "$5600.29",
+      "moegoTotalNumber": 5600.29,
+      "action": "updated",
+      "rows": [
+        {
+          "last10": "5167549746",
+          "name": "Marisa Matura - Website lead",
+          "phoneDigits": "1516754974615167549746",
+          "phoneText": "+15167549746 +15167549746",
+          "rowIndex": 0,
+          "text": "Marisa Matura - Website lead +15167549746 +15167549746 $4410.87",
+          "valueText": "$4410.87"
+        }
+      ],
+      "opened": {
+        "name": "Marisa Matura - Website lead",
+        "phoneText": "+15167549746 +15167549746",
+        "rowIndex": 0,
+        "valueText": "$4410.87",
+        "x": 369,
+        "y": 310
+      },
+      "before": {
+        "phone": "+15167549746",
+        "status": "Won",
+        "titleInputs": [
+          "5167549746",
+          "5167549746",
+          "on",
+          "on",
+          "mavrankovic@yahoo.com",
+          "+15167549746",
+          "Marisa Matura - Website lead",
+          "4410.87",
+          "Website Getting Started Form"
+        ],
+        "value": "4410.87"
+      },
+      "after": {
+        "phone": "+15167549746",
+        "status": "Won",
+        "titleInputs": [
+          "5167549746",
+          "5167549746",
+          "on",
+          "on",
+          "mavrankovic@yahoo.com",
+          "+15167549746",
+          "Marisa Matura - Website lead",
+          "5600.29",
+          "Website Getting Started Form"
+        ],
+        "value": "5600.29"
+      },
+      "phoneMatches": true,
+      "needValue": true,
+      "needStatus": false,
+      "statusSet": null,
+      "saved": true
+    },
+    {
+      "queueIndex": 77,
+      "ghlName": "Alison Brotschol - Boarding(Meta)",
+      "phone": "5164269948",
+      "listValue": "$0",
+      "moegoName": "Alison Brotschol",
+      "moegoTotal": "$193.26",
+      "moegoTotalNumber": 193.26,
+      "action": "updated",
+      "rows": [
+        {
+          "last10": "5164269948",
+          "name": "Alison Brotschol - Boarding(Meta)",
+          "phoneDigits": "1516426994815164269948",
+          "phoneText": "+15164269948 +15164269948",
+          "rowIndex": 0,
+          "text": "Alison Brotschol - Boarding(Meta) +15164269948 +15164269948 $0",
+          "valueText": "$0"
+        }
+      ],
+      "opened": {
+        "name": "Alison Brotschol - Boarding(Meta)",
+        "phoneText": "+15164269948 +15164269948",
+        "rowIndex": 0,
+        "valueText": "$0",
+        "x": 369,
+        "y": 310
+      },
+      "before": {
+        "phone": "+15164269948",
+        "status": "Won",
+        "titleInputs": [
+          "5164269948",
+          "5164269948",
+          "on",
+          "on",
+          "alisonbrotschol@yahoo.com",
+          "+15164269948",
+          "Alison Brotschol - Boarding(Meta)",
+          "0",
+          "Meta Ads"
+        ],
+        "value": "0"
+      },
+      "after": {
+        "phone": "+15164269948",
+        "status": "Won",
+        "titleInputs": [
+          "5164269948",
+          "5164269948",
+          "on",
+          "on",
+          "alisonbrotschol@yahoo.com",
+          "+15164269948",
+          "Alison Brotschol - Boarding(Meta)",
+          "193.26",
+          "Meta Ads"
+        ],
+        "value": "193.26"
+      },
+      "phoneMatches": true,
+      "needValue": true,
+      "needStatus": false,
+      "statusSet": null,
+      "saved": true
+    },
+    {
+      "queueIndex": 78,
+      "ghlName": "Alexandra Ksepka - Website lead",
+      "phone": "3474761126",
+      "listValue": "$0",
+      "moegoName": "Alexandra Delacruz",
+      "moegoTotal": "$90.29",
+      "moegoTotalNumber": 90.29,
+      "action": "updated",
+      "rows": [
+        {
+          "last10": "3474761126",
+          "name": "Alexandra Ksepka - Website lead",
+          "phoneDigits": "1347476112613474761126",
+          "phoneText": "+13474761126 +13474761126",
+          "rowIndex": 0,
+          "text": "Alexandra Ksepka - Website lead +13474761126 +13474761126 $0",
+          "valueText": "$0"
+        }
+      ],
+      "opened": {
+        "name": "Alexandra Ksepka - Website lead",
+        "phoneText": "+13474761126 +13474761126",
+        "rowIndex": 0,
+        "valueText": "$0",
+        "x": 369,
+        "y": 310
+      },
+      "before": {
+        "phone": "+13474761126",
+        "status": "Won",
+        "titleInputs": [
+          "3474761126",
+          "3474761126",
+          "on",
+          "on",
+          "fierce_wind@msn.com",
+          "+13474761126",
+          "Alexandra Ksepka - Website lead",
+          "0",
+          "Website Getting Started Form"
+        ],
+        "value": "0"
+      },
+      "after": {
+        "phone": "+13474761126",
+        "status": "Won",
+        "titleInputs": [
+          "3474761126",
+          "3474761126",
+          "on",
+          "on",
+          "fierce_wind@msn.com",
+          "+13474761126",
+          "Alexandra Ksepka - Website lead",
+          "90.29",
+          "Website Getting Started Form"
+        ],
+        "value": "90.29"
+      },
+      "phoneMatches": true,
+      "needValue": true,
+      "needStatus": false,
+      "statusSet": null,
+      "saved": true
+    },
+    {
+      "queueIndex": 79,
+      "ghlName": "Shay Alyssa - Training(Meta)",
+      "phone": "3478057157",
+      "listValue": "$0",
+      "moegoName": "Shaina Lall",
+      "moegoTotal": "$2905.33",
+      "moegoTotalNumber": 2905.33,
+      "action": "updated",
+      "rows": [
+        {
+          "last10": "3478057157",
+          "name": "Shay Alyssa - Training(Meta)",
+          "phoneDigits": "1347805715713478057157",
+          "phoneText": "+13478057157 +13478057157",
+          "rowIndex": 0,
+          "text": "Shay Alyssa - Training(Meta) +13478057157 +13478057157 $0",
+          "valueText": "$0"
+        }
+      ],
+      "opened": {
+        "name": "Shay Alyssa - Training(Meta)",
+        "phoneText": "+13478057157 +13478057157",
+        "rowIndex": 0,
+        "valueText": "$0",
+        "x": 369,
+        "y": 310
+      },
+      "before": {
+        "phone": "+13478057157",
+        "status": "Won",
+        "titleInputs": [
+          "3478057157",
+          "3478057157",
+          "on",
+          "on",
+          "slall46@gmail.com",
+          "+13478057157",
+          "Shay Alyssa - Training(Meta)",
+          "0",
+          "Meta Ads"
+        ],
+        "value": "0"
+      },
+      "after": {
+        "phone": "+13478057157",
+        "status": "Won",
+        "titleInputs": [
+          "3478057157",
+          "3478057157",
+          "on",
+          "on",
+          "slall46@gmail.com",
+          "+13478057157",
+          "Shay Alyssa - Training(Meta)",
+          "2905.33",
+          "Meta Ads"
+        ],
+        "value": "2905.33"
+      },
+      "phoneMatches": true,
+      "needValue": true,
+      "needStatus": false,
+      "statusSet": null,
+      "saved": true
+    },
+    {
+      "queueIndex": 80,
+      "ghlName": "Nayyirah Abdullah",
+      "phone": "6462992288",
+      "listValue": "$2393.83",
+      "moegoName": "Nayyirah Abdullah",
+      "moegoTotal": "$3849.3",
+      "moegoTotalNumber": 3849.3,
+      "action": "no_match_after_search",
+      "rows": []
+    },
+    {
+      "queueIndex": 81,
+      "ghlName": "Timothy Riffle",
+      "phone": "7184315257",
+      "listValue": "$2057.77",
+      "moegoName": "Timothy Riffle",
+      "moegoTotal": "$3093.28",
+      "moegoTotalNumber": 3093.28,
+      "action": "no_match_after_search",
+      "rows": []
+    },
+    {
+      "queueIndex": 82,
+      "ghlName": "Migdalia Reid",
+      "phone": "5168403925",
+      "listValue": "$1728.66",
+      "moegoName": "Migdalia Reid",
+      "moegoTotal": "$2091.29",
+      "moegoTotalNumber": 2091.29,
+      "action": "no_match_after_search",
+      "rows": []
+    },
+    {
+      "queueIndex": 83,
+      "ghlName": "Rose Benjamin",
+      "phone": "9178286190",
+      "listValue": "$1342.38",
+      "moegoName": "Rose Benjamin",
+      "moegoTotal": "$1457.72",
+      "moegoTotalNumber": 1457.72,
+      "action": "no_match_after_search",
+      "rows": []
+    },
+    {
+      "queueIndex": 84,
+      "ghlName": "Iryna Sam",
+      "phone": "6313982451",
+      "listValue": "$150",
+      "moegoName": "Iryna Sam",
+      "moegoTotal": "$348.89",
+      "moegoTotalNumber": 348.89,
+      "action": "no_match_after_search",
+      "rows": []
+    },
+    {
+      "queueIndex": 85,
+      "ghlName": "Laurie Ann - - Resort(Meta)",
+      "phone": "6469121698",
+      "listValue": "$0",
+      "moegoName": "Laurie Barish",
+      "moegoTotal": "$135.0",
+      "moegoTotalNumber": 135,
+      "action": "no_match_after_search",
+      "rows": []
+    }
+  ],
+  "summaryInputs": {
+    "totalGhlRows": 2087,
+    "noSource": 704,
+    "sourceConflict": 10,
+    "noChangeFromList": 1287,
+    "updateCandidates": 86
+  },
+  "summary": {
+    "updated": 78,
+    "no_change_modal": 1,
+    "no_match_after_search": 7
+  }
+}
