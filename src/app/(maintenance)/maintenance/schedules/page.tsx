@@ -9,6 +9,7 @@ import { CompanyFilterTabs, resolveCompanyParam } from "@/components/ui/CompanyF
 import { formatRecurrenceInterval } from "@/lib/maintenance";
 import { Company } from "@prisma/client";
 import Link from "next/link";
+import { MaintenanceSubnav } from "@/components/maintenance/MaintenanceSubnav";
 
 function defaultCompany(userCompany: Company | null | undefined): Company {
   return userCompany === "RESORT" ? "RESORT" : "GROOMING";
@@ -60,6 +61,8 @@ export default async function SchedulesPage({
           </Link>
         )}
       </div>
+
+      <MaintenanceSubnav active="schedules" company={active} />
 
       <div className="mb-4">
         <CompanyFilterTabs basePath="/maintenance/schedules" active={active} hideAll />

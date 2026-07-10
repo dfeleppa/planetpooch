@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { CompanyFilterTabs, resolveCompanyParam } from "@/components/ui/CompanyFilterTabs";
 import { Company } from "@prisma/client";
 import Link from "next/link";
+import { MaintenanceSubnav } from "@/components/maintenance/MaintenanceSubnav";
 
 function defaultCompany(userCompany: Company | null | undefined): Company {
   return userCompany === "RESORT" ? "RESORT" : "GROOMING";
@@ -68,15 +69,9 @@ export default async function MaintenanceDashboardPage({
           <h1 className="text-2xl font-bold text-gray-900">Maintenance</h1>
           <p className="text-gray-500 mt-1">Facility maintenance schedules and inventory</p>
         </div>
-        <div className="flex flex-wrap gap-3">
-          <Link href={`/maintenance/schedules${qs}`} className="text-sm text-blue-600 hover:text-blue-700 font-medium">
-            View Schedules
-          </Link>
-          <Link href={`/maintenance/inventory${qs}`} className="text-sm text-blue-600 hover:text-blue-700 font-medium">
-            View Inventory
-          </Link>
-        </div>
       </div>
+
+      <MaintenanceSubnav active="dashboard" company={active} />
 
       <div className="mb-6">
         <CompanyFilterTabs basePath="/maintenance" active={active} hideAll />

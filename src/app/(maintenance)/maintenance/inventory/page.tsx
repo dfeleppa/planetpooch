@@ -9,6 +9,7 @@ import { CompanyFilterTabs, resolveCompanyParam } from "@/components/ui/CompanyF
 import { InventoryTable } from "./InventoryTable";
 import { Company } from "@prisma/client";
 import Link from "next/link";
+import { MaintenanceSubnav } from "@/components/maintenance/MaintenanceSubnav";
 
 function defaultCompany(userCompany: Company | null | undefined): Company {
   return userCompany === "RESORT" ? "RESORT" : "GROOMING";
@@ -47,6 +48,8 @@ export default async function InventoryPage({
           </Link>
         )}
       </div>
+
+      <MaintenanceSubnav active="inventory" company={active} />
 
       <div className="mb-4">
         <CompanyFilterTabs basePath="/maintenance/inventory" active={active} hideAll />
