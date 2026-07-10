@@ -53,10 +53,10 @@ enum ChecklistPeriod {
 // ============================================================
 
 enum OnboardingTaskType {
-  ESIGN_REQUEST       // Employee signs doc via Google eSignature (admin triggers)
-  EMPLOYEE_CONFIRM    // Employee self-reports done (e.g., "Bring ID to meeting")
-  ADMIN_FILE_UPLOAD   // Admin uploads a file to employee's Drive folder
-  ADMIN_TASK          // Admin-only self-reported checkbox
+  ESIGN_REQUEST // Employee signs doc via Google eSignature (admin triggers)
+  EMPLOYEE_CONFIRM // Employee self-reports done (e.g., "Bring ID to meeting")
+  ADMIN_FILE_UPLOAD // Admin uploads a file to employee's Drive folder
+  ADMIN_TASK // Admin-only self-reported checkbox
 }
 
 enum EsignRequestStatus {
@@ -106,6 +106,19 @@ enum Platform {
   MULTI
 }
 
+enum AdAssetType {
+  META_AD
+  GOOGLE_SEARCH_AD
+}
+
+enum AdAssetStatus {
+  DRAFT
+  READY
+  LIVE
+  WINNER
+  RETIRED
+}
+
 enum ScriptStatus {
   DRAFT
   APPROVED
@@ -125,10 +138,10 @@ enum HookStatus {
 /// Scripts. Andromeda-era flow: 1 idea → 6–10 angles → human selects 3–6
 /// → 1 full script per selected angle.
 enum AngleStatus {
-  DRAFT      // freshly generated, awaiting review
-  SELECTED   // human picked it for script generation
-  GENERATED  // a Script exists for this angle
-  DISCARDED  // human rejected it
+  DRAFT // freshly generated, awaiting review
+  SELECTED // human picked it for script generation
+  GENERATED // a Script exists for this angle
+  DISCARDED // human rejected it
 }
 
 /// Closed vocabulary for the angle generator's emotional pull. Two angles
@@ -161,7 +174,7 @@ model User {
   department         String?
   phone              String?
   managerId          String?
-  driveFolderId      String?   // Google Drive folder for this employee's signed docs
+  driveFolderId      String? // Google Drive folder for this employee's signed docs
   ssCardNotNeeded    Boolean   @default(false)
 
   // Termination — null = active employee. When set, blocks login and excludes
@@ -174,11 +187,11 @@ model User {
   // Null until the user has logged in for the first time.
   lastLoginAt DateTime?
 
-  createdAt          DateTime  @default(now())
-  updatedAt          DateTime  @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-  manager  User?  @relation("UserManager", fields: [managerId], references: [id])
-  reports  User[] @relation("UserManager")
+  manager User?  @relation("UserManager", fields: [managerId], references: [id])
+  reports User[] @relation("UserManager")
 
   terminatedBy        User?  @relation("UserTerminator", fields: [terminatedById], references: [id], onDelete: SetNull)
   employeesTerminated User[] @relation("UserTerminator")
@@ -189,10 +202,10 @@ model User {
 
   // Maintenance relations
   checklistCompletions        DailyChecklistCompletion[] @relation("ChecklistCompleter")
-  maintenanceSchedulesCreated MaintenanceSchedule[] @relation("MaintenanceCreator")
-  maintenanceTasksAssigned    MaintenanceTask[]     @relation("MaintenanceAssignee")
-  maintenanceTasksCompleted   MaintenanceTask[]     @relation("MaintenanceCompleter")
-  inventoryAdjustments        InventoryAdjustment[] @relation("InventoryAdjuster")
+  maintenanceSchedulesCreated MaintenanceSchedule[]      @relation("MaintenanceCreator")
+  maintenanceTasksAssigned    MaintenanceTask[]          @relation("MaintenanceAssignee")
+  maintenanceTasksCompleted   MaintenanceTask[]          @relation("MaintenanceCompleter")
+  inventoryAdjustments        InventoryAdjustment[]      @relation("InventoryAdjuster")
 
   // Onboarding relations
   onboardingTemplatesCreated OnboardingTemplate[] @relation("TemplateCreator")
@@ -206,10 +219,10 @@ model User {
   availability EmployeeAvailability[]
 
   // Document uploads
-  employeeDocuments      EmployeeDocument[]      @relation("DocumentSubject")
-  documentsUploaded      EmployeeDocument[]      @relation("DocumentUploader")
-  documentIssuesSubject  EmployeeDocumentIssue[] @relation("DocumentIssueSubject")
-  documentIssuesFlagged  EmployeeDocumentIssue[] @relation("DocumentIssueFlagged")
+  employeeDocuments     EmployeeDocument[]      @relation("DocumentSubject")
+  documentsUploaded     EmployeeDocument[]      @relation("DocumentUploader")
+  documentIssuesSubject EmployeeDocumentIssue[] @relation("DocumentIssueSubject")
+  documentIssuesFlagged EmployeeDocumentIssue[] @relation("DocumentIssueFlagged")
 
   // Org chart relation
   orgPosition OrgPosition? @relation("UserPosition")
@@ -219,10 +232,11 @@ model User {
   moduleAssignments ModuleUserAssignment[]
 
   // Marketing relations
-  voiceProfilesCreated BrandVoiceProfile[] @relation("VoiceProfileCreator")
-  marketingIdeasCreated MarketingIdea[]    @relation("MarketingIdeaCreator")
-  scriptsCreated        Script[]           @relation("ScriptCreator")
-  anglesCreated         Angle[]            @relation("AngleCreator")
+  voiceProfilesCreated  BrandVoiceProfile[] @relation("VoiceProfileCreator")
+  marketingIdeasCreated MarketingIdea[]     @relation("MarketingIdeaCreator")
+  scriptsCreated        Script[]            @relation("ScriptCreator")
+  anglesCreated         Angle[]             @relation("AngleCreator")
+  adAssetsCreated       AdAsset[]           @relation("AdAssetCreator")
 
   @@index([terminatedAt])
 }
@@ -246,18 +260,18 @@ model OrgPosition {
 }
 
 model Module {
-  id          String   @id @default(cuid())
-  title       String
-  description String   @default("")
-  order       Int
-  icon        String?
-  notesEnabled Boolean @default(true)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id           String   @id @default(cuid())
+  title        String
+  description  String   @default("")
+  order        Int
+  icon         String?
+  notesEnabled Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
 
-  subsections     Subsection[]
-  prerequisites   ModulePrerequisite[]      @relation("DependentModule")
-  dependents      ModulePrerequisite[]      @relation("PrerequisiteModule")
+  subsections         Subsection[]
+  prerequisites       ModulePrerequisite[]       @relation("DependentModule")
+  dependents          ModulePrerequisite[]       @relation("PrerequisiteModule")
   jobTitleAssignments ModuleJobTitleAssignment[]
   userAssignments     ModuleUserAssignment[]
 }
@@ -440,7 +454,7 @@ model MaintenanceSchedule {
   createdAt          DateTime           @default(now())
   updatedAt          DateTime           @updatedAt
 
-  createdBy    User?                           @relation("MaintenanceCreator", fields: [createdById], references: [id], onDelete: SetNull)
+  createdBy    User?                             @relation("MaintenanceCreator", fields: [createdById], references: [id], onDelete: SetNull)
   tasks        MaintenanceTask[]
   requirements MaintenanceInventoryRequirement[]
 
@@ -504,7 +518,7 @@ model InventoryItem {
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
 
-  category     InventoryCategory           @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+  category     InventoryCategory                 @relation(fields: [categoryId], references: [id], onDelete: Restrict)
   requirements MaintenanceInventoryRequirement[]
   usages       InventoryUsage[]
   adjustments  InventoryAdjustment[]
@@ -576,18 +590,18 @@ model OnboardingTemplate {
 }
 
 model OnboardingTemplateTask {
-  id          String             @id @default(cuid())
-  templateId  String
-  type        OnboardingTaskType
-  title       String
-  description String             @default("")
-  required    Boolean            @default(true)
-  order       Int
+  id               String             @id @default(cuid())
+  templateId       String
+  type             OnboardingTaskType
+  title            String
+  description      String             @default("")
+  required         Boolean            @default(true)
+  order            Int
   // Type-specific fields (nullable because only some types use each)
-  handbookFileName String?        // For ESIGN_REQUEST — label shown in admin UI
-  externalUrl      String?        // For ADMIN_TASK — optional link (e.g., ADP)
-  createdAt   DateTime           @default(now())
-  updatedAt   DateTime           @updatedAt
+  handbookFileName String? // For ESIGN_REQUEST — label shown in admin UI
+  externalUrl      String? // For ADMIN_TASK — optional link (e.g., ADP)
+  createdAt        DateTime           @default(now())
+  updatedAt        DateTime           @updatedAt
 
   template OnboardingTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
 
@@ -603,9 +617,9 @@ model OnboardingTemplateTask {
 /// ID; per-employee requests copy the file into the employee's Drive folder.
 model SignableDocument {
   id          String   @id @default(cuid())
-  name        String   // e.g. "Employee Handbook"
+  name        String // e.g. "Employee Handbook"
   description String   @default("")
-  driveFileId String   // Source file in the shared drive
+  driveFileId String // Source file in the shared drive
   isActive    Boolean  @default(true)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
@@ -622,11 +636,11 @@ model SignableDocument {
 /// can render a "View signed copy" link.
 model EsignRequest {
   id                 String             @id @default(cuid())
-  userId             String             // The employee who needs to sign
+  userId             String // The employee who needs to sign
   signableDocumentId String
-  requestedById      String?            // Admin who initiated the request
-  verifiedById       String?            // Admin who manually verified the signature
-  signedFileDriveId  String?            // Copy in the employee's Drive folder
+  requestedById      String? // Admin who initiated the request
+  verifiedById       String? // Admin who manually verified the signature
+  signedFileDriveId  String? // Copy in the employee's Drive folder
   status             EsignRequestStatus @default(SENT)
   sentAt             DateTime           @default(now())
   signedAt           DateTime?
@@ -651,11 +665,11 @@ model EmployeeDocument {
   id           String                   @id @default(cuid())
   userId       String
   category     EmployeeDocumentCategory
-  customName   String?                  // Required when category=OTHER, null otherwise
-  fileName     String                   // Original filename from upload
-  driveFileId  String                   // Underlying file in Drive (employee's folder)
+  customName   String? // Required when category=OTHER, null otherwise
+  fileName     String // Original filename from upload
+  driveFileId  String // Underlying file in Drive (employee's folder)
   mimeType     String
-  fileSize     Int                      // bytes
+  fileSize     Int // bytes
   uploadedById String?
   uploadedAt   DateTime                 @default(now())
   createdAt    DateTime                 @default(now())
@@ -707,16 +721,16 @@ model BrandVoiceProfile {
   // Business context — defines what the business is and offers, not how it
   // sounds. Rendered into the system prompt above the tone block so every
   // generation grounds in the same foundation.
-  targetAudience       String @default("")
-  problemSolved        String @default("")
-  offer                String @default("")
-  offerMechanism       String @default("")
-  pricing              String @default("")
-  beforeAfterState     String @default("")
-  primaryObjections    String @default("")
-  acquisitionChannels  String @default("")
-  growthConstraint     String @default("")
-  uniqueMechanism      String @default("")
+  targetAudience      String @default("")
+  problemSolved       String @default("")
+  offer               String @default("")
+  offerMechanism      String @default("")
+  pricing             String @default("")
+  beforeAfterState    String @default("")
+  primaryObjections   String @default("")
+  acquisitionChannels String @default("")
+  growthConstraint    String @default("")
+  uniqueMechanism     String @default("")
 
   // Andromeda-era fields. The angle generator must stay inside `tonalRange`
   // and avoid `forbiddenTerritory`; the script generator pulls "real results"
@@ -729,8 +743,8 @@ model BrandVoiceProfile {
   proofBank                Json                @default("[]")
   visualIdentityGuardrails String              @default("")
 
-  createdById     String?
-  createdAt       DateTime @default(now())
+  createdById String?
+  createdAt   DateTime @default(now())
 
   createdBy User? @relation("VoiceProfileCreator", fields: [createdById], references: [id], onDelete: SetNull)
 
@@ -746,6 +760,10 @@ model MarketingIdea {
   insight     String      @default("")
   audience    String      @default("")
   serviceLine ServiceLine
+  objective   String      @default("LEADS")
+  channels    String[]    @default([])
+  offer       String      @default("")
+  proof       String      @default("")
   status      IdeaStatus  @default(DRAFT)
   tags        String[]    @default([])
   notes       String      @default("")
@@ -753,13 +771,39 @@ model MarketingIdea {
   createdAt   DateTime    @default(now())
   updatedAt   DateTime    @updatedAt
 
-  createdBy User? @relation("MarketingIdeaCreator", fields: [createdById], references: [id], onDelete: SetNull)
+  createdBy User?     @relation("MarketingIdeaCreator", fields: [createdById], references: [id], onDelete: SetNull)
   scripts   Script[]
   angles    Angle[]
+  adAssets  AdAsset[]
 
   @@index([status])
   @@index([serviceLine])
   @@index([createdAt])
+}
+
+/// A copy-ready package generated from a marketing brief. The JSON shape is
+/// intentionally channel-specific: Meta packages contain primary text,
+/// headlines, hooks, scripts, and shot lists; Google Search packages contain
+/// RSA headlines/descriptions, keyword themes, callouts, and sitelinks.
+model AdAsset {
+  id                  String        @id @default(cuid())
+  ideaId              String
+  name                String
+  type                AdAssetType
+  status              AdAssetStatus @default(DRAFT)
+  content             Json
+  model               String?
+  voiceProfileVersion Int?
+  createdById         String?
+  createdAt           DateTime      @default(now())
+  updatedAt           DateTime      @updatedAt
+
+  idea      MarketingIdea @relation(fields: [ideaId], references: [id], onDelete: Cascade)
+  createdBy User?         @relation("AdAssetCreator", fields: [createdById], references: [id], onDelete: SetNull)
+
+  @@index([ideaId])
+  @@index([type])
+  @@index([status])
 }
 
 /// One distinct creative angle for an idea. The angle generator emits
@@ -768,7 +812,7 @@ model MarketingIdea {
 /// emotional_register OR an audience_pocket — that's the diversity rule
 /// the generator enforces in its system prompt.
 model Angle {
-  id                  String      @id @default(cuid())
+  id                  String            @id @default(cuid())
   ideaId              String
   name                String
   emotionalRegister   EmotionalRegister
@@ -776,17 +820,17 @@ model Angle {
   coreMessage         String
   visualTreatment     String
   differentiator      String
-  status              AngleStatus @default(DRAFT)
+  status              AngleStatus       @default(DRAFT)
   voiceProfileVersion Int?
   /// Anthropic model id that produced this angle. Null for hand-written.
   model               String?
   /// True once the human edits any field — used later for eval ("how often
   /// does the model produce angles the strategist accepts unchanged?").
-  wasEdited           Boolean     @default(false)
-  notes               String      @default("")
+  wasEdited           Boolean           @default(false)
+  notes               String            @default("")
   createdById         String?
-  createdAt           DateTime    @default(now())
-  updatedAt           DateTime    @updatedAt
+  createdAt           DateTime          @default(now())
+  updatedAt           DateTime          @updatedAt
 
   idea      MarketingIdea @relation(fields: [ideaId], references: [id], onDelete: Cascade)
   scripts   Script[]
@@ -837,12 +881,12 @@ model Script {
   createdAt           DateTime     @default(now())
   updatedAt           DateTime     @updatedAt
 
-  idea          MarketingIdea          @relation(fields: [ideaId], references: [id], onDelete: Cascade)
-  angle         Angle?                 @relation(fields: [angleId], references: [id], onDelete: SetNull)
-  createdBy     User?                  @relation("ScriptCreator", fields: [createdById], references: [id], onDelete: SetNull)
-  hooks         Hook[]
-  insights      MetaAdInsight[]
-  adOverrides   MetaAdScriptOverride[]
+  idea        MarketingIdea          @relation(fields: [ideaId], references: [id], onDelete: Cascade)
+  angle       Angle?                 @relation(fields: [angleId], references: [id], onDelete: SetNull)
+  createdBy   User?                  @relation("ScriptCreator", fields: [createdById], references: [id], onDelete: SetNull)
+  hooks       Hook[]
+  insights    MetaAdInsight[]
+  adOverrides MetaAdScriptOverride[]
 
   @@index([ideaId])
   @@index([angleId])
@@ -941,24 +985,24 @@ model MetaAdScriptOverride {
 /// stored as integer cents to avoid float drift. Computed KPIs (CAC, LTV,
 /// ROAS) are derived at read time from the raw inputs.
 model FinanceMetric {
-  id             String   @id @default(cuid())
-  business       String   // "mobile-grooming-manual" | "pet-resort-manual"
-  periodStart    DateTime @db.Date
-  periodEnd      DateTime @db.Date
+  id          String   @id @default(cuid())
+  business    String // "mobile-grooming-manual" | "pet-resort-manual"
+  periodStart DateTime @db.Date
+  periodEnd   DateTime @db.Date
 
-  totalRevenue     Int? // cents
-  totalProfit      Int? // cents
-  ytdRevenue       Int? // cents, stored snapshot for this selected week
-  ytdNetProfit     Int? // cents, stored snapshot for this selected week
+  totalRevenue       Int? // cents
+  totalProfit        Int? // cents
+  ytdRevenue         Int? // cents, stored snapshot for this selected week
+  ytdNetProfit       Int? // cents, stored snapshot for this selected week
   nonPayrollExpenses Int? // cents
   payrollExpenses    Int? // cents
-  totalCustomers   Int?
-  totalAdSpend     Int? // cents
-  totalConversions Int?
-  metaAdSpend      Int? // cents
-  metaRevenue      Int? // cents
-  googleAdSpend    Int? // cents
-  googleRevenue    Int? // cents
+  totalCustomers     Int?
+  totalAdSpend       Int? // cents
+  totalConversions   Int?
+  metaAdSpend        Int? // cents
+  metaRevenue        Int? // cents
+  googleAdSpend      Int? // cents
+  googleRevenue      Int? // cents
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -1048,8 +1092,8 @@ model FinancePayrollWeek {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  rows                  FinancePayrollEmployeeHours[]
-  mobileGroomingEntries FinanceMobileGroomingPayrollEntry[]
+  rows                         FinancePayrollEmployeeHours[]
+  mobileGroomingEntries        FinanceMobileGroomingPayrollEntry[]
   mobileGroomingWeeklyOverride FinanceMobileGroomingWeeklyOverride?
 
   @@unique([business, weekStart])
@@ -1183,17 +1227,17 @@ model KpiStandingValue {
 // are the upstream string identifiers (unique within MoeGo).
 
 model MoegoCustomer {
-  id              String   @id @default(cuid())
-  moegoId         String   @unique
-  name            String?
-  email           String?
+  id                  String    @id @default(cuid())
+  moegoId             String    @unique
+  name                String?
+  email               String?
   /// E.164 if MoeGo returns it that way; otherwise raw. Used to join
   /// promoted leads back to customers (no FK in MoeGo's data model).
-  mainPhoneNumber String?
+  mainPhoneNumber     String?
   /// Best-effort lead source. Tried in order: customer.referralSource
   /// (typed), customer.source (string), customFields.field_lead_source_detail,
   /// then phone-matched MoegoLead.referralSource.
-  leadSource      String?
+  leadSource          String?
   /// MoeGo's preferred location for this customer — surfaces a per-
   /// location dimension for revenue/LTV breakdowns when the user
   /// operates multiple businesses.
@@ -1206,12 +1250,12 @@ model MoegoCustomer {
   /// MoeGo customer tags (VIP, allergies, etc.). Stored as a string
   /// array to keep the existing segmentation queryable without a
   /// separate join table.
-  tags            String[]
+  tags                String[]
   /// `createdTime` from MoeGo. We use this as "acquired on" for CAC math —
   /// new customers in a window are those whose createdTime falls in it.
-  createdTime     DateTime
-  lastUpdatedTime DateTime?
-  syncedAt        DateTime @default(now())
+  createdTime         DateTime
+  lastUpdatedTime     DateTime?
+  syncedAt            DateTime  @default(now())
 
   @@index([createdTime])
   @@index([leadSource])
@@ -1221,41 +1265,41 @@ model MoegoCustomer {
 }
 
 model MoegoOrder {
-  id                  String   @id @default(cuid())
-  moegoId             String   @unique
+  id              String    @id @default(cuid())
+  moegoId         String    @unique
   /// The customer's MoeGo id. Nullable because MoeGo allows walk-in orders
   /// without a linked customer; those still count in revenue but not LTV.
   /// No FK constraint: order slices can arrive before their customer is
   /// synced (or reference a customer outside the backfill window). We
   /// resolve the join in application code via metrics aggregations.
-  customerMoegoId     String?
+  customerMoegoId String?
   /// Which MoeGo business (location) this order belongs to. Required
   /// for per-location revenue breakdowns.
-  businessId          String?
-  status              String?
+  businessId      String?
+  status          String?
   /// Pre-tax subtotal in cents.
-  subTotalCents       Int      @default(0)
+  subTotalCents   Int       @default(0)
   /// Final invoice total in cents.
-  totalCents          Int      @default(0)
+  totalCents      Int       @default(0)
   /// What the customer actually paid; the LTV summand.
-  paidCents           Int      @default(0)
-  refundedCents       Int      @default(0)
+  paidCents       Int       @default(0)
+  refundedCents   Int       @default(0)
   /// Sales tax in cents.
-  taxCents            Int      @default(0)
+  taxCents        Int       @default(0)
   /// Discounts applied (positive number; subtract from subTotal to get
   /// the discounted line total).
-  discountCents       Int      @default(0)
+  discountCents   Int       @default(0)
   /// Tips/gratuity in cents.
-  tipsCents           Int      @default(0)
+  tipsCents       Int       @default(0)
   /// MoeGo's order `createdTime` — when the invoice was opened.
-  createdTime         DateTime
+  createdTime     DateTime
   /// When the sale was actually recorded (money in). Different from
   /// createdTime when the order sits open for a while before payment.
-  salesDatetime       DateTime?
+  salesDatetime   DateTime?
   /// When the order was marked complete.
-  completedTime       DateTime?
-  lastUpdatedTime     DateTime?
-  syncedAt            DateTime @default(now())
+  completedTime   DateTime?
+  lastUpdatedTime DateTime?
+  syncedAt        DateTime  @default(now())
 
   @@index([customerMoegoId])
   @@index([createdTime])
@@ -1263,8 +1307,8 @@ model MoegoOrder {
 }
 
 model MoegoLead {
-  id              String   @id @default(cuid())
-  moegoId         String   @unique
+  id              String    @id @default(cuid())
+  moegoId         String    @unique
   name            String?
   mainPhoneNumber String?
   /// MoeGo's `referralSource` field — the canonical lead source label
@@ -1274,7 +1318,7 @@ model MoegoLead {
   actionStatusId  String?
   createdTime     DateTime
   lastUpdatedTime DateTime?
-  syncedAt        DateTime @default(now())
+  syncedAt        DateTime  @default(now())
 
   @@index([mainPhoneNumber])
   @@index([referralSource])
@@ -1285,7 +1329,7 @@ model MoegoLead {
 model GhlOpportunityService {
   id            String   @id @default(cuid())
   opportunityId String   @unique
-  service       String   // "mobile" | "resort"
+  service       String // "mobile" | "resort"
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
@@ -1327,8 +1371,8 @@ model EmployeeAvailability {
   id        String    @id @default(cuid())
   userId    String
   dayOfWeek DayOfWeek
-  startTime String    // "HH:MM" 24-hour, 30-min increments
-  endTime   String    // "HH:MM" 24-hour, 30-min increments
+  startTime String // "HH:MM" 24-hour, 30-min increments
+  endTime   String // "HH:MM" 24-hour, 30-min increments
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
 

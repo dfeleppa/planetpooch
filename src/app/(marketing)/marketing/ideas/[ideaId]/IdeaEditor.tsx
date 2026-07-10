@@ -26,6 +26,15 @@ const STATUSES: IdeaStatus[] = [
   "SHIPPED",
   "ARCHIVED",
 ];
+type MarketingObjective = "LEADS" | "BOOKINGS" | "SALES" | "AWARENESS";
+type MarketingChannel = "META" | "GOOGLE_SEARCH";
+
+const OBJECTIVE_LABELS: Record<MarketingObjective, string> = {
+  LEADS: "Generate leads",
+  BOOKINGS: "Drive bookings",
+  SALES: "Drive sales",
+  AWARENESS: "Build awareness",
+};
 
 type IdeaProp = {
   id: string;
@@ -33,6 +42,10 @@ type IdeaProp = {
   insight: string;
   audience: string;
   serviceLine: ServiceLine;
+  objective: string;
+  channels: string[];
+  offer: string;
+  proof: string;
   status: IdeaStatus;
   tags: string[];
   notes: string;
@@ -47,6 +60,10 @@ export function IdeaEditor({ idea }: { idea: IdeaProp }) {
   const [insight, setInsight] = useState(idea.insight);
   const [audience, setAudience] = useState(idea.audience);
   const [serviceLine, setServiceLine] = useState<ServiceLine>(idea.serviceLine);
+  const [objective, setObjective] = useState<MarketingObjective>(idea.objective as MarketingObjective);
+  const [channels, setChannels] = useState<MarketingChannel[]>(idea.channels as MarketingChannel[]);
+  const [offer, setOffer] = useState(idea.offer);
+  const [proof, setProof] = useState(idea.proof);
   const [status, setStatus] = useState<IdeaStatus>(idea.status);
   const [tagsText, setTagsText] = useState(idea.tags.join(", "));
   const [notes, setNotes] = useState(idea.notes);
@@ -74,6 +91,10 @@ export function IdeaEditor({ idea }: { idea: IdeaProp }) {
           insight,
           audience,
           serviceLine,
+          objective,
+          channels,
+          offer,
+          proof,
           status,
           tags,
           notes,
@@ -95,7 +116,7 @@ export function IdeaEditor({ idea }: { idea: IdeaProp }) {
   async function handleDelete() {
     if (
       !confirm(
-        "Delete this idea? Scripts and copy attached to it will need to be archived separately."
+        "Delete this content brief and every generated asset attached to it?"
       )
     ) {
       return;
@@ -110,7 +131,7 @@ export function IdeaEditor({ idea }: { idea: IdeaProp }) {
         const data = await res.json().catch(() => ({}));
         throw new Error(data.error || "Failed to delete");
       }
-      router.push("/marketing/ideas");
+      router.push("/marketing/create");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Something went wrong");
       setDeleting(false);
@@ -122,7 +143,7 @@ export function IdeaEditor({ idea }: { idea: IdeaProp }) {
       <div className="flex items-start justify-between gap-3 mb-2">
         <div className="min-w-0">
           <h1 className="text-2xl font-bold text-gray-900 truncate">
-            {idea.title || "Untitled idea"}
+            {idea.title || "Untitled brief"}
           </h1>
           <p className="text-xs text-gray-500 mt-1">
             Created by {idea.createdByName ?? "—"} ·{" "}
@@ -142,7 +163,7 @@ export function IdeaEditor({ idea }: { idea: IdeaProp }) {
       <Card>
         <CardHeader>
           <h2 className="text-base font-semibold text-gray-900">
-            Idea details
+            Content brief
           </h2>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -155,12 +176,10 @@ export function IdeaEditor({ idea }: { idea: IdeaProp }) {
 
           <div className="flex flex-col gap-1">
             <label className="text-sm font-medium text-gray-700">
-              Insight
+              Customer insight
             </label>
             <p className="text-xs text-gray-500">
-              The underlying truth about the buyer or service — a truth, not
-              a pitch. This is the most important field; the angle generator
-              fans this single truth out into 6–10 distinct angles.
+              The customer truth this campaign should exploit—not the pitch itself.
             </p>
             <textarea
               rows={6}
@@ -171,7 +190,7 @@ export function IdeaEditor({ idea }: { idea: IdeaProp }) {
             />
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
             <div className="flex flex-col gap-1">
               <label className="text-sm font-medium text-gray-700">
                 Service line
@@ -187,6 +206,19 @@ export function IdeaEditor({ idea }: { idea: IdeaProp }) {
                   <option key={line} value={line}>
                     {SERVICE_LINE_LABELS[line]}
                   </option>
+                ))}
+              </select>
+            </div>
+
+            <div className="flex flex-col gap-1">
+              <label className="text-sm font-medium text-gray-700">Objective</label>
+              <select
+                value={objective}
+                onChange={(e) => setObjective(e.target.value as MarketingObjective)}
+                className="rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                {(Object.keys(OBJECTIVE_LABELS) as MarketingObjective[]).map((value) => (
+                  <option key={value} value={value}>{OBJECTIVE_LABELS[value]}</option>
                 ))}
               </select>
             </div>
@@ -209,12 +241,55 @@ export function IdeaEditor({ idea }: { idea: IdeaProp }) {
             </div>
 
             <Input
-              label="Audience signal"
+              label="Audience"
               value={audience}
               onChange={(e) => setAudience(e.target.value)}
               placeholder="Loose: people who might care"
             />
           </div>
+
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <div className="flex flex-col gap-1">
+              <label className="text-sm font-medium text-gray-700">Offer</label>
+              <textarea
+                rows={4}
+                value={offer}
+                onChange={(e) => setOffer(e.target.value)}
+                placeholder="What the customer gets, relevant pricing or promotion, and the desired next step."
+                className="rounded-lg border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+              />
+            </div>
+            <div className="flex flex-col gap-1">
+              <label className="text-sm font-medium text-gray-700">Proof and differentiators</label>
+              <textarea
+                rows={4}
+                value={proof}
+                onChange={(e) => setProof(e.target.value)}
+                placeholder="Verified facts, testimonials, service details, or reasons to believe."
+                className="rounded-lg border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+              />
+            </div>
+          </div>
+
+          <fieldset>
+            <legend className="text-sm font-medium text-gray-700">Channels</legend>
+            <div className="mt-2 flex flex-wrap gap-2">
+              {([ ["META", "Meta"], ["GOOGLE_SEARCH", "Google Search"] ] as const).map(([value, label]) => {
+                const active = channels.includes(value);
+                return (
+                  <label key={value} className={`cursor-pointer rounded-full border px-3 py-1.5 text-sm ${active ? "border-blue-600 bg-blue-50 text-blue-800" : "border-gray-300 bg-white text-gray-600"}`}>
+                    <input
+                      type="checkbox"
+                      className="sr-only"
+                      checked={active}
+                      onChange={() => setChannels((current) => current.includes(value) ? (current.length > 1 ? current.filter((channel) => channel !== value) : current) : [...current, value])}
+                    />
+                    {label}
+                  </label>
+                );
+              })}
+            </div>
+          </fieldset>
 
           <Input
             label="Tags"
@@ -248,7 +323,7 @@ export function IdeaEditor({ idea }: { idea: IdeaProp }) {
               onClick={handleDelete}
               disabled={deleting}
             >
-              {deleting ? "Deleting…" : "Delete idea"}
+              {deleting ? "Deleting…" : "Delete brief"}
             </Button>
           </div>
         </CardContent>

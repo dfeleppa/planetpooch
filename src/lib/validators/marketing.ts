@@ -87,11 +87,27 @@ export const IdeaStatusSchema = z.enum([
   "ARCHIVED",
 ]);
 
+export const MarketingObjectiveSchema = z.enum([
+  "LEADS",
+  "BOOKINGS",
+  "SALES",
+  "AWARENESS",
+]);
+
+export const MarketingChannelSchema = z.enum([
+  "META",
+  "GOOGLE_SEARCH",
+]);
+
 export const CreateMarketingIdeaSchema = z.object({
   title: z.string().trim().min(1, "Title is required").max(200),
   insight: z.string().trim().max(5000).default(""),
   audience: z.string().trim().max(500).default(""),
   serviceLine: ServiceLineSchema,
+  objective: MarketingObjectiveSchema.default("LEADS"),
+  channels: z.array(MarketingChannelSchema).min(1).max(2).default(["META"]),
+  offer: z.string().trim().max(3000).default(""),
+  proof: z.string().trim().max(5000).default(""),
   tags: z.array(z.string().trim().min(1).max(50)).max(20).default([]),
   notes: z.string().trim().max(2000).default(""),
 });
@@ -101,6 +117,10 @@ export const UpdateMarketingIdeaSchema = z.object({
   insight: z.string().trim().max(5000).optional(),
   audience: z.string().trim().max(500).optional(),
   serviceLine: ServiceLineSchema.optional(),
+  objective: MarketingObjectiveSchema.optional(),
+  channels: z.array(MarketingChannelSchema).min(1).max(2).optional(),
+  offer: z.string().trim().max(3000).optional(),
+  proof: z.string().trim().max(5000).optional(),
   status: IdeaStatusSchema.optional(),
   tags: z.array(z.string().trim().min(1).max(50)).max(20).optional(),
   notes: z.string().trim().max(2000).optional(),
@@ -144,6 +164,25 @@ export const ScriptModelSchema = z.enum([
 ]);
 
 export type ScriptModel = z.infer<typeof ScriptModelSchema>;
+
+export const AdAssetTypeSchema = z.enum(["META_AD", "GOOGLE_SEARCH_AD"]);
+export const AdAssetStatusSchema = z.enum([
+  "DRAFT",
+  "READY",
+  "LIVE",
+  "WINNER",
+  "RETIRED",
+]);
+
+export const GenerateAdAssetSchema = z.object({
+  type: AdAssetTypeSchema,
+  model: ScriptModelSchema.default("claude-haiku-4-5"),
+});
+
+export const UpdateAdAssetSchema = z.object({
+  name: z.string().trim().min(1).max(200).optional(),
+  status: AdAssetStatusSchema.optional(),
+});
 
 // ── Andromeda-era request payloads ──────────────────────────────────────────
 

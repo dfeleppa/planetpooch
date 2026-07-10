@@ -67,7 +67,7 @@ export function ScriptPerformanceCard({
             and include it in the ad name in Ads Manager (auto-link on next
             sync), or link an ad manually from the{" "}
             <a
-              href="/marketing/performance"
+              href="/marketing/evaluate?view=creatives"
               className="text-blue-600 hover:underline"
             >
               Performance

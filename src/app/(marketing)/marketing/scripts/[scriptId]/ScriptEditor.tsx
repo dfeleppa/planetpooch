@@ -206,7 +206,7 @@ export function ScriptEditor({ script }: { script: ScriptProp }) {
         const data = await res.json().catch(() => ({}));
         throw new Error(data.error || "Failed to delete");
       }
-      router.push(`/marketing/ideas/${script.ideaId}`);
+      router.push(`/marketing/create/${script.ideaId}`);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Something went wrong");
       setDeleting(false);
@@ -301,7 +301,7 @@ export function ScriptEditor({ script }: { script: ScriptProp }) {
                 · pocket: {script.angle.audiencePocket}
               </span>
               <Link
-                href={`/marketing/ideas/${script.ideaId}`}
+                href={`/marketing/create/${script.ideaId}`}
                 className="text-xs text-blue-600 hover:text-blue-700 ml-auto"
               >
                 View other angles →

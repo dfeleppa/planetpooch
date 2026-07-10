@@ -35,12 +35,12 @@ export default async function ScriptDetailPage({
   return (
     <div className="w-full space-y-4">
       <div className="text-sm text-gray-500 space-x-2">
-        <Link href="/marketing/ideas" className="hover:text-gray-700">
-          Ideas
+        <Link href="/marketing/create" className="hover:text-gray-700">
+          Create Ads
         </Link>
         <span>/</span>
         <Link
-          href={`/marketing/ideas/${script.idea.id}`}
+          href={`/marketing/create/${script.idea.id}`}
           className="hover:text-gray-700"
         >
           {script.idea.title}

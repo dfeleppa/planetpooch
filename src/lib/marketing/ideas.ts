@@ -10,9 +10,9 @@ export const SERVICE_LINE_LABELS: Record<ServiceLine, string> = {
 
 export const IDEA_STATUS_LABELS: Record<IdeaStatus, string> = {
   DRAFT: "Draft",
-  IN_PRODUCTION: "In production",
-  SHIPPED: "Shipped",
-  ARCHIVED: "Archived",
+  IN_PRODUCTION: "Ready",
+  SHIPPED: "Live",
+  ARCHIVED: "Retired",
 };
 
 export const IDEA_STATUS_VARIANT: Record<
