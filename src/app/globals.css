@@ -957,13 +957,17 @@ body {
 
   .pp-scheduling-table {
     table-layout: fixed;
-    font-size: 7pt;
+    font-size: 8.5pt;
   }
 
   .pp-scheduling-table th,
   .pp-scheduling-table td {
-    padding: 0.1rem 0.16rem !important;
-    line-height: 1.15;
+    padding: 0.22rem 0.28rem !important;
+    line-height: 1.25;
+  }
+
+  .pp-scheduling-table tr {
+    height: 24px;
   }
 
   .pp-scheduling-table th:first-child,
@@ -971,7 +975,7 @@ body {
     width: 16%;
   }
 
-  .pp-scheduling-table tr {
+  .pp-scheduling-table tbody tr {
     break-inside: avoid;
     page-break-inside: avoid;
   }
