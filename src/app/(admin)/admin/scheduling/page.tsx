@@ -14,12 +14,6 @@ import {
   TableRow,
 } from "@/components/ui/Table";
 
-const COMPANY_LABELS: Record<Company, string> = {
-  GROOMING: "Planet Pooch Grooming",
-  RESORT: "Planet Pooch Resort",
-  CORPORATE: "Planet Pooch Corporate",
-};
-
 function formatAvailability(startTime: string, endTime: string): string {
   return `${formatTimeLabel(startTime)} – ${formatTimeLabel(endTime)}`;
 }
@@ -38,15 +32,15 @@ export default async function SchedulingPage() {
   );
 
   const employees = await prisma.user.findMany({
-    where: { ...companyFilter, terminatedAt: null },
+    where: {
+      terminatedAt: null,
+      AND: [{ company: "RESORT" }, companyFilter],
+    },
     orderBy: [{ firstName: "asc" }, { lastName: "asc" }],
     select: {
       id: true,
       firstName: true,
       lastName: true,
-      company: true,
-      jobTitle: true,
-      role: true,
       availability: {
         select: { dayOfWeek: true, startTime: true, endTime: true },
       },
@@ -58,7 +52,7 @@ export default async function SchedulingPage() {
       <div className="mb-6">
         <h1 className="text-2xl font-bold text-gray-900">Scheduling</h1>
         <p className="mt-1 text-gray-500">
-          Review weekly availability for active employees in one place.
+          Review weekly availability for active Planet Pooch Resort employees.
         </p>
       </div>
 
@@ -78,8 +72,6 @@ export default async function SchedulingPage() {
             <TableHead>
               <TableRow>
                 <TableHeader className="sticky left-0 bg-gray-50">Employee</TableHeader>
-                <TableHeader>Company</TableHeader>
-                <TableHeader>Role</TableHeader>
                 {DAYS_OF_WEEK.map((day) => (
                   <TableHeader key={day.value}>{day.label}</TableHeader>
                 ))}
@@ -100,12 +92,6 @@ export default async function SchedulingPage() {
                         {employee.firstName} {employee.lastName}
                       </Link>
                     </TableCell>
-                    <TableCell className="whitespace-nowrap">
-                      {COMPANY_LABELS[employee.company]}
-                    </TableCell>
-                    <TableCell className="whitespace-nowrap">
-                      {employee.jobTitle || employee.role}
-                    </TableCell>
                     {DAYS_OF_WEEK.map((day) => {
                       const entry = availabilityByDay.get(day.value);
                       return (
@@ -124,7 +110,7 @@ export default async function SchedulingPage() {
               })}
               {employees.length === 0 && (
                 <TableRow>
-                  <TableCell colSpan={10} className="py-10 text-center text-gray-500">
+                  <TableCell colSpan={8} className="py-10 text-center text-gray-500">
                     No active employees found.
                   </TableCell>
                 </TableRow>

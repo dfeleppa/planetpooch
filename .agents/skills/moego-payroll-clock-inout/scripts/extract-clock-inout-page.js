@@ -61,7 +61,11 @@
       if (cells.length < 4) continue;
 
       const [name, date, time, totalHours] = cells;
-      if (!name || !/^\d{2}\/\d{2}\/\d{4}$/.test(date) || !totalHours) continue;
+      if (!name || !/^\d{2}\/\d{2}\/\d{4}$/.test(date)) continue;
+      if (!totalHours) {
+        parseWarnings.push(`Incomplete clock-in/out shift for ${name} on ${date}: ${time || "missing time"}`);
+        continue;
+      }
 
       const totalSeconds = parseDurationToSeconds(totalHours);
       if (totalSeconds == null) {
@@ -150,9 +154,16 @@
       decimalHours: Math.round((grandTotalSeconds / 3600) * 100) / 100,
     },
     payrollUpload: weekStart && weekEnd ? {
+      business: "pet-resort",
       weekStart,
       weekEnd,
       source: "moego-clock-inout",
+      generatedAt: new Date().toISOString(),
+      dateRange,
+      pageSizeText,
+      rowCount: rows.length,
+      sourceRows: rows,
+      warnings,
       notes: `Imported from MoeGo clock-in/out for ${dateRange[0]} - ${dateRange[1]}`,
       rows: totals.map((entry) => ({
         employeeName: entry.name,

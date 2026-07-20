@@ -89,12 +89,15 @@ function unauthorized() {
   return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 }
 
-async function canAccessPayroll(req?: NextRequest, allowCron = false) {
-  if (allowCron && req?.headers.get("authorization") === `Bearer ${process.env.CRON_SECRET}` && process.env.CRON_SECRET) {
-    return true;
-  }
+async function canAccessPayroll() {
   const session = await getSession();
   return !!session?.user && isSuperAdmin((session.user as { role?: string }).role);
+}
+
+function sourceGeneratedAt(value: unknown): Date | null {
+  if (typeof value !== "string") return null;
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? null : date;
 }
 
 function parseDateParam(value: unknown): Date | null {
@@ -715,8 +718,8 @@ export async function GET(req: NextRequest) {
   });
 }
 
-export async function savePayroll(req: NextRequest, options?: { allowCron?: boolean }) {
-  if (!(await canAccessPayroll(req, options?.allowCron))) return unauthorized();
+async function savePayroll(req: NextRequest) {
+  if (!(await canAccessPayroll())) return unauthorized();
 
   const body = await req.json();
   const payload = (body?.payrollUpload ?? body) as Record<string, unknown>;
@@ -726,12 +729,12 @@ export async function savePayroll(req: NextRequest, options?: { allowCron?: bool
     return NextResponse.json({ error: weekDates.error }, { status: 400 });
   }
 
-  const isAutomatedMoegoImport =
-    options?.allowCron === true && payload.source === "moego-clock-inout" && business === "pet-resort";
-  const automationReview = isAutomatedMoegoImport
+  const isMoegoImport = payload.source === "moego-clock-inout" && business === "pet-resort";
+  const automationReview = isMoegoImport
     ? validateMoegoClockInOutUpload(payload, weekDates.weekStart.toISOString().slice(0, 10), weekDates.weekEnd.toISOString().slice(0, 10))
     : null;
-  if (automationReview?.status === "needs_review") {
+  const reviewAcknowledged = payload.reviewAcknowledged === true;
+  if (automationReview?.status === "needs_review" && !reviewAcknowledged) {
     const existing = await prisma.financePayrollWeek.findUnique({
       where: { business_weekStart: { business, weekStart: weekDates.weekStart } },
       select: { id: true, rows: { select: { id: true } } },
@@ -743,7 +746,7 @@ export async function savePayroll(req: NextRequest, options?: { allowCron?: bool
         automationStatus: "needs_review",
         reviewReasons: automationReview.reasons,
         sourceRowCount: automationReview.sourceRowCount,
-        sourceGeneratedAt: typeof payload.generatedAt === "string" ? new Date(payload.generatedAt) : null,
+        sourceGeneratedAt: sourceGeneratedAt(payload.generatedAt),
       },
       create: {
         business,
@@ -752,7 +755,7 @@ export async function savePayroll(req: NextRequest, options?: { allowCron?: bool
         automationStatus: "needs_review",
         reviewReasons: automationReview.reasons,
         sourceRowCount: automationReview.sourceRowCount,
-        sourceGeneratedAt: typeof payload.generatedAt === "string" ? new Date(payload.generatedAt) : null,
+        sourceGeneratedAt: sourceGeneratedAt(payload.generatedAt),
       },
       include: { rows: true, mobileGroomingEntries: true },
     });
@@ -792,23 +795,30 @@ export async function savePayroll(req: NextRequest, options?: { allowCron?: bool
       where: { business_weekStart: { business, weekStart: weekDates.weekStart } },
       update: {
         weekEnd: weekDates.weekEnd,
-        ...(isAutomatedMoegoImport
+        ...(isMoegoImport
           ? {
-              automationStatus: "imported",
-              reviewReasons: [],
+              automationStatus: reviewAcknowledged ? "reviewed" : "imported",
+              reviewReasons: reviewAcknowledged ? automationReview?.reasons ?? [] : [],
               sourceRowCount: automationReview?.sourceRowCount ?? null,
-              sourceGeneratedAt: typeof payload.generatedAt === "string" ? new Date(payload.generatedAt) : null,
+              sourceGeneratedAt: sourceGeneratedAt(payload.generatedAt),
             }
-          : { automationStatus: "manual", reviewReasons: [] }),
+          : {
+              automationStatus: "manual",
+              reviewReasons: [],
+              sourceRowCount: null,
+              sourceGeneratedAt: null,
+            }),
       },
       create: {
         business,
         weekStart: weekDates.weekStart,
         weekEnd: weekDates.weekEnd,
-        automationStatus: isAutomatedMoegoImport ? "imported" : "manual",
-        reviewReasons: [],
+        automationStatus: isMoegoImport
+          ? reviewAcknowledged ? "reviewed" : "imported"
+          : "manual",
+        reviewReasons: reviewAcknowledged ? automationReview?.reasons ?? [] : [],
         sourceRowCount: automationReview?.sourceRowCount ?? null,
-        sourceGeneratedAt: typeof payload.generatedAt === "string" ? new Date(payload.generatedAt) : null,
+        sourceGeneratedAt: sourceGeneratedAt(payload.generatedAt),
       },
     });
 

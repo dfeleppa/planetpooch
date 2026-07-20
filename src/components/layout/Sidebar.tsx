@@ -292,6 +292,18 @@ export function Sidebar() {
             </div>
           )}
           <div className={cn("flex flex-col gap-px", isAdminNav && !isCollapsed && "-mt-2")}>
+            {nav.map((item) => {
+              const active = isActive(item.href);
+              return (
+                <Link key={item.href} href={item.href} title={isCollapsed ? item.label : undefined} className={navItemClass(active)}>
+                  {activeRail(active)}
+                  <span className={cn("text-[14px] w-4 text-center flex-shrink-0", active ? "text-pp-accent" : "text-pp-ink-3")}>
+                    {item.icon}
+                  </span>
+                  {!isCollapsed && <span className="truncate">{item.label}</span>}
+                </Link>
+              );
+            })}
             {isAdminNav && (
               <Link
                 href={schedulingNavItem.href}
@@ -305,18 +317,6 @@ export function Sidebar() {
                 {!isCollapsed && <span className="truncate">{schedulingNavItem.label}</span>}
               </Link>
             )}
-            {nav.map((item) => {
-              const active = isActive(item.href);
-              return (
-                <Link key={item.href} href={item.href} title={isCollapsed ? item.label : undefined} className={navItemClass(active)}>
-                  {activeRail(active)}
-                  <span className={cn("text-[14px] w-4 text-center flex-shrink-0", active ? "text-pp-accent" : "text-pp-ink-3")}>
-                    {item.icon}
-                  </span>
-                  {!isCollapsed && <span className="truncate">{item.label}</span>}
-                </Link>
-              );
-            })}
           </div>
 
           {/* Marketing section — visible to MARKETING role and SUPER_ADMIN */}

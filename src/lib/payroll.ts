@@ -109,7 +109,7 @@ export function decimalPayrollHours(totalSeconds: number): number {
   return Math.round((totalSeconds / 3600) * 100) / 100;
 }
 
-export type PayrollAutomationStatus = "manual" | "imported" | "needs_review";
+export type PayrollAutomationStatus = "manual" | "imported" | "reviewed" | "needs_review";
 
 export type MoegoClockInOutUpload = {
   business?: unknown;
@@ -117,6 +117,7 @@ export type MoegoClockInOutUpload = {
   weekEnd?: unknown;
   dateRange?: unknown;
   rows?: unknown;
+  sourceRows?: unknown;
   totals?: unknown;
   rowCount?: unknown;
   pageSizeText?: unknown;
@@ -164,11 +165,16 @@ export function validateMoegoClockInOutUpload(
     ? upload.warnings.map(String).filter(Boolean)
     : [];
   reasons.push(...warnings);
-  if (upload.pageSizeText && !/^100\s*\/\s*page$/i.test(String(upload.pageSizeText))) {
+  if (!upload.pageSizeText) {
+    reasons.push("Could not verify the page-size control is 100/page.");
+  } else if (!/^100\s*\/\s*page$/i.test(String(upload.pageSizeText))) {
     reasons.push(`Page size is ${String(upload.pageSizeText)}, not 100/page.`);
   }
 
-  const rows = Array.isArray(upload.rows) ? upload.rows : [];
+  const rows = Array.isArray(upload.sourceRows) ? upload.sourceRows : [];
+  if (!Array.isArray(upload.sourceRows)) {
+    reasons.push("Source shift details are missing; verify incomplete shifts in MoeGo.");
+  }
   const sourceRowCount = Number.isFinite(Number(upload.rowCount))
     ? Number(upload.rowCount)
     : rows.length;
@@ -184,7 +190,7 @@ export function validateMoegoClockInOutUpload(
     if (!date || date < expectedWeekStart || date > expectedWeekEnd) {
       reasons.push(`A clock-in/out row has a date outside ${expectedWeekStart} through ${expectedWeekEnd}.`);
     }
-    if (!time || /^(?:-|n\/a|na|incomplete|missing|—)$/.test(time)) {
+    if (!time || time === "-" || /(?:n\/a|\bna\b|incomplete|missing|—)/.test(time)) {
       reasons.push(`Incomplete clock-in/out shift for ${name || "an employee"}.`);
     }
   }

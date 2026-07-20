@@ -35,6 +35,8 @@ import {
 import { cn } from "@/lib/utils";
 
 const MS_PER_DAY = 86_400_000;
+const MOEGO_CLOCK_INOUT_URL =
+  "https://go.moego.pet/setting/staff/clockInout?%7Ec=9219&%7Eb=119538";
 
 type SavedWeekSummary = {
   id: string;
@@ -77,7 +79,7 @@ type SavedPayrollWeek = {
   weekEnd: string;
   rows: SavedPayrollRow[];
   mobileGroomingEntries: SavedMobileGroomingEntry[];
-  automationStatus?: "manual" | "imported" | "needs_review";
+  automationStatus?: "manual" | "imported" | "reviewed" | "needs_review";
   reviewReasons?: string[];
 };
 
@@ -186,6 +188,16 @@ type ImportRow = {
   totalHours?: unknown;
   decimalHours?: unknown;
   hours?: unknown;
+};
+
+type PendingMoegoImport = {
+  source: "moego-clock-inout";
+  generatedAt?: string;
+  dateRange?: unknown[];
+  pageSizeText?: string;
+  rowCount?: number;
+  sourceRows?: unknown[];
+  warnings: string[];
 };
 
 function makeLocalId() {
@@ -382,12 +394,51 @@ function extractImportPayload(text: string) {
         ).map((option) => option.value)
       : [];
   const inferredBusiness = matchingBusinesses.length === 1 ? matchingBusinesses[0] : null;
+  const warningValues = Array.isArray(payload.warnings)
+    ? payload.warnings
+    : Array.isArray(parsed?.warnings)
+      ? parsed.warnings
+      : [];
+  const warnings = warningValues.map(String).filter(Boolean);
+  const source = payload.source === "moego-clock-inout" ? "moego-clock-inout" : null;
+  const sourceRows = Array.isArray(payload.sourceRows)
+    ? payload.sourceRows
+    : Array.isArray(parsed?.rows)
+      ? parsed.rows
+      : undefined;
+  const pageSizeText =
+    typeof payload.pageSizeText === "string"
+      ? payload.pageSizeText
+      : typeof parsed?.pageSizeText === "string"
+        ? parsed.pageSizeText
+        : undefined;
+  if (source && !sourceRows) {
+    warnings.push("Source shift details are missing; verify incomplete shifts in MoeGo.");
+  }
+  if (source && !pageSizeText) {
+    warnings.push("Could not verify the page-size control is 100/page.");
+  }
 
   return {
     rows: importRowsToEditable(rows),
     business: explicitBusiness ?? inferredBusiness,
     weekStart,
     weekEnd,
+    moegoImport: source
+      ? {
+          source,
+          generatedAt: typeof payload.generatedAt === "string" ? payload.generatedAt : undefined,
+          dateRange: Array.isArray(payload.dateRange)
+            ? payload.dateRange
+            : Array.isArray(parsed?.dateRange)
+              ? parsed.dateRange
+              : undefined,
+          pageSizeText,
+          rowCount: asNumber(payload.rowCount ?? parsed?.rowCount) ?? undefined,
+          sourceRows,
+          warnings,
+        } satisfies PendingMoegoImport
+      : null,
   };
 }
 
@@ -515,10 +566,16 @@ export function PayrollDashboard({
   const [mobileStopsOpen, setMobileStopsOpen] = useState(true);
   const [pullingMoego, setPullingMoego] = useState(false);
   const [importText, setImportText] = useState("");
+  const [showMoegoImport, setShowMoegoImport] = useState(false);
+  const [pendingMoegoImport, setPendingMoegoImport] = useState<PendingMoegoImport | null>(null);
+  const [reviewAcknowledged, setReviewAcknowledged] = useState(false);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const unresolvedImportWarnings = Boolean(
+    pendingMoegoImport?.warnings.length && !reviewAcknowledged
+  );
 
   const weekEnd = addDaysParam(weekStart, 6);
   const isMobileGrooming = business === "mobile-grooming";
@@ -704,6 +761,8 @@ export function PayrollDashboard({
     setBusiness(selectedBusiness);
     setLoading(true);
     setError(null);
+    setPendingMoegoImport(null);
+    setReviewAcknowledged(false);
     try {
       const params = new URLSearchParams({ business: selectedBusiness });
       if (selectedWeekStart) params.set("weekStart", selectedWeekStart);
@@ -932,13 +991,47 @@ export function PayrollDashboard({
     setMessage(null);
     try {
       const imported = extractImportPayload(text);
+      if (!imported.weekStart || !imported.weekEnd) {
+        throw new Error("The import must include a Sunday-Saturday weekStart and weekEnd.");
+      }
+      if (imported.business !== "pet-resort") {
+        throw new Error("This MoeGo import must be for a Pet Resort Sunday-Saturday week.");
+      }
       if (imported.business) setBusiness(imported.business);
       if (imported.weekStart) setWeekStart(imported.weekStart);
       setRows(imported.rows);
       setMobileEntries([]);
-      setMessage(`Loaded ${imported.rows.length} employee rows.`);
+      setPendingMoegoImport(imported.moegoImport);
+      setReviewAcknowledged(false);
+      setShowMoegoImport(true);
+      setMessage(
+        imported.moegoImport?.warnings.length
+          ? `Loaded ${imported.rows.length} employee rows with ${imported.moegoImport.warnings.length} item(s) requiring review.`
+          : `Loaded ${imported.rows.length} employee rows for review.`
+      );
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not import payroll data.");
+    }
+  }
+
+  function openMoegoClockInOut() {
+    window.open(MOEGO_CLOCK_INOUT_URL, "_blank", "noopener,noreferrer");
+    setShowMoegoImport(true);
+  }
+
+  async function pasteImportFromClipboard() {
+    setError(null);
+    try {
+      const text = await navigator.clipboard.readText();
+      if (!text.trim()) throw new Error("The clipboard is empty.");
+      setImportText(text);
+      applyImportText(text);
+    } catch (err) {
+      setError(
+        err instanceof Error
+          ? `Could not read payroll JSON from the clipboard: ${err.message}`
+          : "Could not read payroll JSON from the clipboard."
+      );
     }
   }
 
@@ -1038,6 +1131,9 @@ export function PayrollDashboard({
       if (invalid) {
         throw new Error(`Total hours must be a number for ${invalid.employeeName}.`);
       }
+      if (unresolvedImportWarnings) {
+        throw new Error("Review and acknowledge the MoeGo warnings before saving payroll.");
+      }
 
       const response = await fetch("/api/finance/payroll", {
         method: "PUT",
@@ -1047,6 +1143,12 @@ export function PayrollDashboard({
           weekEnd,
           business,
           rows: cleanRows,
+          ...(pendingMoegoImport
+            ? {
+                ...pendingMoegoImport,
+                reviewAcknowledged,
+              }
+            : {}),
         }),
       });
       const data = (await response.json()) as { week?: SavedPayrollWeek; error?: string };
@@ -1057,6 +1159,10 @@ export function PayrollDashboard({
       setReviewReasons(data.week.reviewReasons ?? []);
       setBusiness(data.week.business);
       setRows(savedRowsToEditable(data.week.rows));
+      setPendingMoegoImport(null);
+      setReviewAcknowledged(false);
+      setImportText("");
+      setShowMoegoImport(false);
       setSavedWeeks((current) => {
         const summary = {
           id: data.week!.id,
@@ -1193,12 +1299,19 @@ export function PayrollDashboard({
         </div>
       )}
 
-      <div>
-        <h2 className="text-xl font-semibold text-gray-900">Payroll</h2>
-        <p className="mt-1 text-gray-500">
-          {isMobileGrooming ? "Weekly mobile grooming appointments" : "Weekly staff hours"}{" "}
-          ({payPeriod.rangeLabel})
-        </p>
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <h2 className="text-xl font-semibold text-gray-900">Payroll</h2>
+          <p className="mt-1 text-gray-500">
+            {isMobileGrooming ? "Weekly mobile grooming appointments" : "Weekly staff hours"}{" "}
+            ({payPeriod.rangeLabel})
+          </p>
+        </div>
+        {!isMobileGrooming ? (
+          <Button type="button" onClick={() => setShowMoegoImport((open) => !open)}>
+            {showMoegoImport ? "Hide MoeGo import" : "Import from MoeGo"}
+          </Button>
+        ) : null}
       </div>
 
       {!isMobileGrooming && automationStatus === "needs_review" ? (
@@ -1241,11 +1354,17 @@ export function PayrollDashboard({
                   setWeekStart(event.target.value);
                   setRows([]);
                   setMobileEntries([]);
+                  setPendingMoegoImport(null);
+                  setReviewAcknowledged(false);
                 }}
                 disabled={loading || saving}
               />
               <Input label="Week end" type="date" value={weekEnd} readOnly />
-              <Button type="button" onClick={savePayroll} disabled={loading || saving}>
+              <Button
+                type="button"
+                onClick={savePayroll}
+                disabled={loading || saving || unresolvedImportWarnings}
+              >
                 {saving ? "Saving..." : "Save payroll"}
               </Button>
             </div>
@@ -1600,9 +1719,22 @@ export function PayrollDashboard({
         </Card>
       )}
 
-      {!isMobileGrooming && (
+      {!isMobileGrooming && showMoegoImport && (
         <Card>
-          <CardContent className="space-y-3">
+          <CardContent className="space-y-4">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+              <div>
+                <h2 className="font-semibold text-gray-900">Import Pet Resort hours from MoeGo</h2>
+                <p className="mt-1 max-w-2xl text-sm text-gray-600">
+                  Open the Clock in/out record, select the Sunday-Saturday week and 100/page,
+                  then paste or upload the extractor JSON here. Nothing is saved until you review
+                  the employee totals and click Save payroll.
+                </p>
+              </div>
+              <Button type="button" variant="secondary" onClick={openMoegoClockInOut}>
+                Open MoeGo clock-in/out
+              </Button>
+            </div>
             <div className="flex flex-col gap-3 lg:flex-row lg:items-end">
               <div className="flex-1">
                 <label
@@ -1626,7 +1758,15 @@ export function PayrollDashboard({
                   onClick={() => applyImportText(importText)}
                   disabled={saving || !importText.trim()}
                 >
-                  Load paste
+                  Review JSON
+                </Button>
+                <Button
+                  type="button"
+                  variant="secondary"
+                  onClick={() => void pasteImportFromClipboard()}
+                  disabled={saving}
+                >
+                  Paste from clipboard
                 </Button>
                 <label className="inline-flex cursor-pointer items-center justify-center rounded-lg bg-gray-200 px-4 py-2 text-sm font-medium text-gray-900 transition-colors hover:bg-gray-300">
                   Upload file
@@ -1640,6 +1780,43 @@ export function PayrollDashboard({
                 </label>
               </div>
             </div>
+            {pendingMoegoImport ? (
+              <div
+                className={cn(
+                  "rounded-lg border p-4",
+                  pendingMoegoImport.warnings.length
+                    ? "border-amber-300 bg-amber-50"
+                    : "border-emerald-200 bg-emerald-50"
+                )}
+              >
+                <p className="font-medium text-gray-900">
+                  {pendingMoegoImport.warnings.length
+                    ? "Admin review required before saving"
+                    : "MoeGo data is ready for final review"}
+                </p>
+                <p className="mt-1 text-sm text-gray-700">
+                  {rows.length} employees · {pendingMoegoImport.rowCount ?? "Unknown"} completed shifts · {formatWeekRange(weekStart, weekEnd)}
+                </p>
+                {pendingMoegoImport.warnings.length ? (
+                  <>
+                    <ul className="mt-3 list-disc space-y-1 pl-5 text-sm text-amber-950">
+                      {pendingMoegoImport.warnings.map((warning) => (
+                        <li key={warning}>{warning}</li>
+                      ))}
+                    </ul>
+                    <label className="mt-3 flex items-start gap-2 text-sm font-medium text-amber-950">
+                      <input
+                        type="checkbox"
+                        checked={reviewAcknowledged}
+                        onChange={(event) => setReviewAcknowledged(event.target.checked)}
+                        className="mt-0.5 h-4 w-4 rounded border-amber-400"
+                      />
+                      I reviewed the incomplete shifts and corrected the employee totals below.
+                    </label>
+                  </>
+                ) : null}
+              </div>
+            ) : null}
           </CardContent>
         </Card>
       )}

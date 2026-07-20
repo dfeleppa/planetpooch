@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { lastCompletedPayrollWeekStart } from "@/lib/payroll";
 import { prisma } from "@/lib/prisma";
-import { savePayroll } from "@/app/api/finance/payroll/route";
 
 export const maxDuration = 120;
 
@@ -15,10 +14,9 @@ function authError(req: NextRequest): NextResponse | null {
 }
 
 /**
- * Weekly handoff for the logged-in MoeGo browser extractor. GET is deliberately
- * read-only: it identifies the completed week and never fabricates payroll.
- * POST accepts the extractor's existing payrollUpload shape and uses the same
- * payroll persistence path as the admin UI.
+ * Monday safety monitor. The browser-only MoeGo pull happens from the payroll
+ * page; this route reports a failed cron when the completed week is missing or
+ * still needs review.
  */
 export async function GET(req: NextRequest) {
   const denied = authError(req);
@@ -30,19 +28,16 @@ export async function GET(req: NextRequest) {
   });
   const weekEnd = new Date(weekStart);
   weekEnd.setUTCDate(weekEnd.getUTCDate() + 6);
+  const status = week?.automationStatus ?? "missing";
+  const needsAttention = !week || status === "needs_review";
   return NextResponse.json({
-    ok: true,
+    ok: !needsAttention,
     business: "pet-resort",
     weekStart: weekStart.toISOString().slice(0, 10),
     weekEnd: weekEnd.toISOString().slice(0, 10),
-    status: week?.automationStatus ?? "awaiting_source",
+    status,
     reviewReasons: week?.reviewReasons ?? [],
     sourceRowCount: week?.sourceRowCount ?? null,
-  });
-}
-
-export async function POST(req: NextRequest) {
-  const denied = authError(req);
-  if (denied) return denied;
-  return savePayroll(req, { allowCron: true });
+    payrollUrl: "/finance/payroll",
+  }, { status: needsAttention ? 409 : 200 });
 }
