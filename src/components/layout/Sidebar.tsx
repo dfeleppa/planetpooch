@@ -52,6 +52,12 @@ const financeNav: NavItem[] = [
   { href: "/finance/payroll", label: "Payroll", icon: "◷" },
 ];
 
+const schedulingNavItem: NavItem = {
+  href: "/admin/scheduling",
+  label: "Scheduling",
+  icon: "•",
+};
+
 const adminDashboardPaths = [
   "/admin",
   "/admin/employees",
@@ -286,6 +292,19 @@ export function Sidebar() {
             </div>
           )}
           <div className={cn("flex flex-col gap-px", isAdminNav && !isCollapsed && "-mt-2")}>
+            {isAdminNav && (
+              <Link
+                href={schedulingNavItem.href}
+                title={isCollapsed ? schedulingNavItem.label : undefined}
+                className={navItemClass(isActive(schedulingNavItem.href))}
+              >
+                {activeRail(isActive(schedulingNavItem.href))}
+                <span className={cn("text-[14px] w-4 text-center flex-shrink-0", isActive(schedulingNavItem.href) ? "text-pp-accent" : "text-pp-ink-3")}>
+                  {schedulingNavItem.icon}
+                </span>
+                {!isCollapsed && <span className="truncate">{schedulingNavItem.label}</span>}
+              </Link>
+            )}
             {nav.map((item) => {
               const active = isActive(item.href);
               return (

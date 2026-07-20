@@ -1,10 +1,11 @@
 import Link from "next/link";
 import { cn } from "@/lib/utils";
 
-type AdminPeopleView = "employees" | "module-progress" | "org-chart" | "audit-log";
+type AdminPeopleView = "employees" | "scheduling" | "module-progress" | "org-chart" | "audit-log";
 
 const adminPeopleNav: { href: string; label: string; view: AdminPeopleView }[] = [
   { href: "/admin/employees", label: "Employees", view: "employees" },
+  { href: "/admin/scheduling", label: "Scheduling", view: "scheduling" },
   { href: "/admin/module-progress", label: "Module Progress", view: "module-progress" },
   { href: "/admin/org-chart", label: "Org Chart", view: "org-chart" },
   { href: "/admin/audit-log", label: "Audit Log", view: "audit-log" },
