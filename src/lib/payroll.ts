@@ -109,6 +109,93 @@ export function decimalPayrollHours(totalSeconds: number): number {
   return Math.round((totalSeconds / 3600) * 100) / 100;
 }
 
+export type PayrollAutomationStatus = "manual" | "imported" | "needs_review";
+
+export type MoegoClockInOutUpload = {
+  business?: unknown;
+  weekStart?: unknown;
+  weekEnd?: unknown;
+  dateRange?: unknown;
+  rows?: unknown;
+  totals?: unknown;
+  rowCount?: unknown;
+  pageSizeText?: unknown;
+  warnings?: unknown;
+  generatedAt?: unknown;
+};
+
+function isoDate(value: unknown): string | null {
+  if (typeof value !== "string") return null;
+  const match = value.trim().match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (!match) return null;
+  const date = new Date(`${value}T00:00:00.000Z`);
+  return Number.isNaN(date.getTime()) || date.toISOString().slice(0, 10) !== value
+    ? null
+    : value;
+}
+
+function usDate(value: unknown): string | null {
+  if (typeof value !== "string") return null;
+  const match = value.trim().match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+  if (!match) return null;
+  const date = new Date(Date.UTC(Number(match[3]), Number(match[1]) - 1, Number(match[2])));
+  return date.getUTCFullYear() === Number(match[3]) &&
+    date.getUTCMonth() === Number(match[1]) - 1 &&
+    date.getUTCDate() === Number(match[2])
+    ? date.toISOString().slice(0, 10)
+    : null;
+}
+
+/** Validate browser-extracted MoeGo data before it enters the payroll table. */
+export function validateMoegoClockInOutUpload(
+  upload: MoegoClockInOutUpload,
+  expectedWeekStart: string,
+  expectedWeekEnd: string
+): { status: PayrollAutomationStatus; reasons: string[]; sourceRowCount: number } {
+  const reasons: string[] = [];
+  const range = Array.isArray(upload.dateRange) ? upload.dateRange : [];
+  const start = isoDate(upload.weekStart) ?? usDate(range[0]);
+  const end = isoDate(upload.weekEnd) ?? usDate(range[1]);
+  if (start !== expectedWeekStart || end !== expectedWeekEnd) {
+    reasons.push(`Expected ${expectedWeekStart} through ${expectedWeekEnd}, received ${start ?? "no start"} through ${end ?? "no end"}.`);
+  }
+
+  const warnings = Array.isArray(upload.warnings)
+    ? upload.warnings.map(String).filter(Boolean)
+    : [];
+  reasons.push(...warnings);
+  if (upload.pageSizeText && !/^100\s*\/\s*page$/i.test(String(upload.pageSizeText))) {
+    reasons.push(`Page size is ${String(upload.pageSizeText)}, not 100/page.`);
+  }
+
+  const rows = Array.isArray(upload.rows) ? upload.rows : [];
+  const sourceRowCount = Number.isFinite(Number(upload.rowCount))
+    ? Number(upload.rowCount)
+    : rows.length;
+  if (sourceRowCount !== rows.length) reasons.push("The extracted row count does not match the visible rows.");
+  if (rows.length === 0) reasons.push("No clock-in/out rows were extracted.");
+
+  for (const raw of rows) {
+    const row = raw as Record<string, unknown>;
+    const name = normalizeEmployeeName(String(row.name ?? row.employeeName ?? ""));
+    const date = usDate(row.date) ?? isoDate(row.date);
+    const time = String(row.time ?? "").trim().toLowerCase();
+    if (!name) reasons.push("A clock-in/out row is missing an employee name.");
+    if (!date || date < expectedWeekStart || date > expectedWeekEnd) {
+      reasons.push(`A clock-in/out row has a date outside ${expectedWeekStart} through ${expectedWeekEnd}.`);
+    }
+    if (!time || /^(?:-|n\/a|na|incomplete|missing|—)$/.test(time)) {
+      reasons.push(`Incomplete clock-in/out shift for ${name || "an employee"}.`);
+    }
+  }
+
+  return {
+    status: reasons.length > 0 ? "needs_review" : "imported",
+    reasons: Array.from(new Set(reasons)),
+    sourceRowCount,
+  };
+}
+
 export function parsePayrollDurationToSeconds(value: unknown): number | null {
   if (typeof value === "number" && Number.isFinite(value)) {
     return Math.max(0, Math.round(value));

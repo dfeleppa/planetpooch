@@ -77,6 +77,8 @@ type SavedPayrollWeek = {
   weekEnd: string;
   rows: SavedPayrollRow[];
   mobileGroomingEntries: SavedMobileGroomingEntry[];
+  automationStatus?: "manual" | "imported" | "needs_review";
+  reviewReasons?: string[];
 };
 
 type AnnualMobileGroomingTotals = {
@@ -495,6 +497,8 @@ export function PayrollDashboard({
   const [savedWeeks, setSavedWeeks] = useState<SavedWeekSummary[]>([]);
   const [business, setBusiness] = useState<PayrollBusinessValue>(initialBusiness);
   const [weekStart, setWeekStart] = useState(() => lastCompletedWeekStart(initialBusiness));
+  const [automationStatus, setAutomationStatus] = useState<SavedPayrollWeek["automationStatus"]>("manual");
+  const [reviewReasons, setReviewReasons] = useState<string[]>([]);
   const [rows, setRows] = useState<EditableRow[]>([]);
   const [mobileEntries, setMobileEntries] = useState<EditableMobileGroomingEntry[]>([]);
   const [annualMobileTotals, setAnnualMobileTotals] =
@@ -718,11 +722,15 @@ export function PayrollDashboard({
       setBusiness(data.week?.business ?? data.business ?? selectedBusiness);
       if (data.week) {
         setWeekStart(data.week.weekStart);
+        setAutomationStatus(data.week.automationStatus ?? "manual");
+        setReviewReasons(data.week.reviewReasons ?? []);
         setRows(savedRowsToEditable(data.week.rows));
         setMobileEntries(savedMobileEntriesToEditable(data.week.mobileGroomingEntries));
       } else {
         const nextWeekStart = selectedWeekStart ?? lastCompletedWeekStart(selectedBusiness);
         setWeekStart(nextWeekStart);
+        setAutomationStatus("manual");
+        setReviewReasons([]);
         setRows([]);
         setMobileEntries([]);
       }
@@ -984,6 +992,8 @@ export function PayrollDashboard({
         if (!response.ok || !data.week) throw new Error(data.error || "Could not save payroll.");
 
         setWeekStart(data.week.weekStart);
+        setAutomationStatus(data.week.automationStatus ?? "manual");
+        setReviewReasons(data.week.reviewReasons ?? []);
         setBusiness(data.week.business);
         setRows(savedRowsToEditable(data.week.rows));
         setMobileEntries(savedMobileEntriesToEditable(data.week.mobileGroomingEntries));
@@ -1043,6 +1053,8 @@ export function PayrollDashboard({
       if (!response.ok || !data.week) throw new Error(data.error || "Could not save payroll.");
 
       setWeekStart(data.week.weekStart);
+      setAutomationStatus(data.week.automationStatus ?? "manual");
+      setReviewReasons(data.week.reviewReasons ?? []);
       setBusiness(data.week.business);
       setRows(savedRowsToEditable(data.week.rows));
       setSavedWeeks((current) => {
@@ -1188,6 +1200,20 @@ export function PayrollDashboard({
           ({payPeriod.rangeLabel})
         </p>
       </div>
+
+      {!isMobileGrooming && automationStatus === "needs_review" ? (
+        <Card className="border-amber-300 bg-amber-50">
+          <CardContent className="space-y-2 py-4">
+            <p className="font-semibold text-amber-950">MoeGo import needs admin review</p>
+            <p className="text-sm text-amber-900">
+              Existing hours were preserved. Correct the rows if needed, then use Save payroll as the fallback approval.
+            </p>
+            <ul className="list-disc pl-5 text-sm text-amber-900">
+              {reviewReasons.map((reason) => <li key={reason}>{reason}</li>)}
+            </ul>
+          </CardContent>
+        </Card>
+      ) : null}
 
       {!isMobileGrooming && (
         <Card>

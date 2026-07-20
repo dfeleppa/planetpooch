@@ -13,6 +13,7 @@ import {
   normalizeEmployeeName,
   payrollPayPeriodForBusiness,
   parsePayrollDurationToSeconds,
+  validateMoegoClockInOutUpload,
   type PayrollBusinessValue,
   type PayrollCategoryValue,
 } from "@/lib/payroll";
@@ -88,7 +89,10 @@ function unauthorized() {
   return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 }
 
-async function canAccessPayroll() {
+async function canAccessPayroll(req?: NextRequest, allowCron = false) {
+  if (allowCron && req?.headers.get("authorization") === `Bearer ${process.env.CRON_SECRET}` && process.env.CRON_SECRET) {
+    return true;
+  }
   const session = await getSession();
   return !!session?.user && isSuperAdmin((session.user as { role?: string }).role);
 }
@@ -369,6 +373,10 @@ function serializeWeek(
       discountCents: number;
       rowOrder: number;
     }>;
+    automationStatus?: string;
+    reviewReasons?: unknown;
+    sourceRowCount?: number | null;
+    sourceGeneratedAt?: Date | null;
   } | null
 ) {
   if (!week) return null;
@@ -426,6 +434,10 @@ function serializeWeek(
     weekEnd: week.weekEnd.toISOString().slice(0, 10),
     createdAt: week.createdAt.toISOString(),
     updatedAt: week.updatedAt.toISOString(),
+    automationStatus: week.automationStatus ?? "manual",
+    reviewReasons: week.reviewReasons ?? [],
+    sourceRowCount: week.sourceRowCount ?? null,
+    sourceGeneratedAt: week.sourceGeneratedAt?.toISOString() ?? null,
     rows,
     mobileGroomingEntries,
     categoryTotals,
@@ -703,8 +715,8 @@ export async function GET(req: NextRequest) {
   });
 }
 
-async function savePayroll(req: NextRequest) {
-  if (!(await canAccessPayroll())) return unauthorized();
+export async function savePayroll(req: NextRequest, options?: { allowCron?: boolean }) {
+  if (!(await canAccessPayroll(req, options?.allowCron))) return unauthorized();
 
   const body = await req.json();
   const payload = (body?.payrollUpload ?? body) as Record<string, unknown>;
@@ -712,6 +724,45 @@ async function savePayroll(req: NextRequest) {
   const weekDates = parseWeekDates(payload, business);
   if ("error" in weekDates) {
     return NextResponse.json({ error: weekDates.error }, { status: 400 });
+  }
+
+  const isAutomatedMoegoImport =
+    options?.allowCron === true && payload.source === "moego-clock-inout" && business === "pet-resort";
+  const automationReview = isAutomatedMoegoImport
+    ? validateMoegoClockInOutUpload(payload, weekDates.weekStart.toISOString().slice(0, 10), weekDates.weekEnd.toISOString().slice(0, 10))
+    : null;
+  if (automationReview?.status === "needs_review") {
+    const existing = await prisma.financePayrollWeek.findUnique({
+      where: { business_weekStart: { business, weekStart: weekDates.weekStart } },
+      select: { id: true, rows: { select: { id: true } } },
+    });
+    const week = await prisma.financePayrollWeek.upsert({
+      where: { business_weekStart: { business, weekStart: weekDates.weekStart } },
+      update: {
+        weekEnd: weekDates.weekEnd,
+        automationStatus: "needs_review",
+        reviewReasons: automationReview.reasons,
+        sourceRowCount: automationReview.sourceRowCount,
+        sourceGeneratedAt: typeof payload.generatedAt === "string" ? new Date(payload.generatedAt) : null,
+      },
+      create: {
+        business,
+        weekStart: weekDates.weekStart,
+        weekEnd: weekDates.weekEnd,
+        automationStatus: "needs_review",
+        reviewReasons: automationReview.reasons,
+        sourceRowCount: automationReview.sourceRowCount,
+        sourceGeneratedAt: typeof payload.generatedAt === "string" ? new Date(payload.generatedAt) : null,
+      },
+      include: { rows: true, mobileGroomingEntries: true },
+    });
+    return NextResponse.json({
+      ok: false,
+      status: "needs_review",
+      preservedExistingRows: Boolean(existing?.rows.length),
+      reviewReasons: automationReview.reasons,
+      week: serializeWeek(week),
+    }, { status: 409 });
   }
 
   const rawRows =
@@ -741,11 +792,23 @@ async function savePayroll(req: NextRequest) {
       where: { business_weekStart: { business, weekStart: weekDates.weekStart } },
       update: {
         weekEnd: weekDates.weekEnd,
+        ...(isAutomatedMoegoImport
+          ? {
+              automationStatus: "imported",
+              reviewReasons: [],
+              sourceRowCount: automationReview?.sourceRowCount ?? null,
+              sourceGeneratedAt: typeof payload.generatedAt === "string" ? new Date(payload.generatedAt) : null,
+            }
+          : { automationStatus: "manual", reviewReasons: [] }),
       },
       create: {
         business,
         weekStart: weekDates.weekStart,
         weekEnd: weekDates.weekEnd,
+        automationStatus: isAutomatedMoegoImport ? "imported" : "manual",
+        reviewReasons: [],
+        sourceRowCount: automationReview?.sourceRowCount ?? null,
+        sourceGeneratedAt: typeof payload.generatedAt === "string" ? new Date(payload.generatedAt) : null,
       },
     });
 

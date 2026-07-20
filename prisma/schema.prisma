@@ -1091,6 +1091,10 @@ model FinancePayrollWeek {
   weekEnd   DateTime @db.Date
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+  automationStatus String @default("manual")
+  reviewReasons Json?
+  sourceRowCount Int?
+  sourceGeneratedAt DateTime?
 
   rows                         FinancePayrollEmployeeHours[]
   mobileGroomingEntries        FinanceMobileGroomingPayrollEntry[]
