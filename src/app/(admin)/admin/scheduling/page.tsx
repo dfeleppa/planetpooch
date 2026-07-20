@@ -4,6 +4,7 @@ import { DAYS_OF_WEEK, formatTimeLabel } from "@/lib/availability";
 import { Company, Role } from "@prisma/client";
 import Link from "next/link";
 import { AdminPeopleNav } from "../AdminPeopleNav";
+import { SchedulingPrintButton } from "./SchedulingPrintButton";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import {
   Table,
@@ -48,19 +49,22 @@ export default async function SchedulingPage() {
   });
 
   return (
-    <div>
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold text-gray-900">Scheduling</h1>
-        <p className="mt-1 text-gray-500">
-          Review weekly availability for active Planet Pooch Resort employees.
-        </p>
+    <div className="pp-scheduling-page">
+      <div className="pp-scheduling-page-header mb-6 flex items-start justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900">Scheduling</h1>
+          <p className="mt-1 text-gray-500">
+            Review weekly availability for active Planet Pooch Resort employees.
+          </p>
+        </div>
+        <SchedulingPrintButton />
       </div>
 
-      <div className="mb-6">
+      <div className="pp-scheduling-nav mb-6">
         <AdminPeopleNav active="scheduling" />
       </div>
 
-      <Card>
+      <Card className="pp-scheduling-card">
         <CardHeader>
           <h2 className="font-semibold text-gray-900">Employee availability</h2>
           <p className="mt-1 text-sm text-gray-500">
@@ -68,7 +72,7 @@ export default async function SchedulingPage() {
           </p>
         </CardHeader>
         <CardContent className="p-0">
-          <Table>
+          <Table className="pp-scheduling-table">
             <TableHead>
               <TableRow>
                 <TableHeader className="sticky left-0 bg-gray-50">Employee</TableHeader>

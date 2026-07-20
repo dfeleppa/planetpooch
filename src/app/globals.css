@@ -907,11 +907,72 @@ body {
 }
 
 @media print {
+  @page {
+    size: landscape;
+    margin: 0.35in;
+  }
+
   aside,
   .md\:sticky {
     display: none !important;
   }
   main {
     padding: 0 !important;
+  }
+
+  .pp-scheduling-print-button,
+  .pp-scheduling-nav {
+    display: none !important;
+  }
+
+  .pp-scheduling-page-header {
+    margin-bottom: 0.15in !important;
+  }
+
+  .pp-scheduling-page-header h1 {
+    font-size: 18pt;
+  }
+
+  .pp-scheduling-page-header p {
+    font-size: 9pt;
+  }
+
+  .pp-scheduling-card {
+    border: 0 !important;
+    box-shadow: none !important;
+  }
+
+  .pp-scheduling-card > div:first-child {
+    border: 0 !important;
+    padding: 0 0 0.1in !important;
+  }
+
+  .pp-scheduling-card > div:first-child p {
+    display: none;
+  }
+
+  .pp-scheduling-card > div:last-child {
+    padding: 0 !important;
+  }
+
+  .pp-scheduling-table {
+    table-layout: fixed;
+    font-size: 7pt;
+  }
+
+  .pp-scheduling-table th,
+  .pp-scheduling-table td {
+    padding: 0.1rem 0.16rem !important;
+    line-height: 1.15;
+  }
+
+  .pp-scheduling-table th:first-child,
+  .pp-scheduling-table td:first-child {
+    width: 16%;
+  }
+
+  .pp-scheduling-table tr {
+    break-inside: avoid;
+    page-break-inside: avoid;
   }
 }
