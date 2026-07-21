@@ -5,6 +5,8 @@ import { useRouter } from "next/navigation";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { AvailabilityEditor, type AvailabilityEntry } from "@/components/AvailabilityEditor";
+import { DAYS_OF_WEEK } from "@/lib/availability";
 
 type Role = "SUPER_ADMIN" | "MANAGER" | "EMPLOYEE" | "MARKETING" | "ADMIN";
 type Company = "GROOMING" | "RESORT" | "CORPORATE";
@@ -26,11 +28,7 @@ interface Props {
   canAssignSuperAdmin: boolean;
   canEditRole: boolean;
   jobTitleOptions: Record<Company, string[]>;
-  availabilityRows?: {
-    day: string;
-    value: string;
-    isAvailable: boolean;
-  }[];
+  availabilityRows?: AvailabilityEntry[];
 }
 
 const COMPANY_LABELS: Record<Company, string> = {
@@ -71,6 +69,7 @@ export function EditEmployeeForm({
   const [hireDate, setHireDate] = useState(
     employee.hireDate ? employee.hireDate.slice(0, 10) : ""
   );
+  const [availability, setAvailability] = useState<AvailabilityEntry[]>(availabilityRows);
 
   const titleOptions = Array.from(
     new Set([...(jobTitleOptions[company] ?? []), ...DEFAULT_JOB_TITLES[company]])
@@ -86,6 +85,7 @@ export function EditEmployeeForm({
     setCompany(employee.company);
     setJobTitle(employee.jobTitle ?? "");
     setHireDate(employee.hireDate ? employee.hireDate.slice(0, 10) : "");
+    setAvailability(availabilityRows);
     setCustomTitle(false);
     setError("");
     setEditing(false);
@@ -108,6 +108,7 @@ export function EditEmployeeForm({
           company: canEditCompany ? company : undefined,
           jobTitle,
           hireDate: hireDate || null,
+          availability,
         }),
       });
       if (!res.ok) {
@@ -153,30 +154,27 @@ export function EditEmployeeForm({
               value={employee.hireDate ? employee.hireDate.slice(0, 10) : "—"}
             />
           </div>
-          {availabilityRows.length > 0 && (
-            <div className="border-t border-gray-100 pt-4 mt-1 xl:mt-0 xl:border-l xl:border-t-0 xl:pl-5 xl:pt-0">
+          <div className="border-t border-gray-100 pt-4 mt-1 xl:mt-0 xl:border-l xl:border-t-0 xl:pl-5 xl:pt-0">
               <div className="text-xs uppercase tracking-wide text-gray-500 mb-2">
                 Availability
               </div>
               <div className="grid grid-cols-1 gap-x-8 gap-y-2 sm:grid-cols-2 xl:grid-cols-1">
-                {availabilityRows.map((row) => (
-                  <div
-                    key={row.day}
-                    className="flex items-center justify-between gap-4"
-                  >
-                    <span className="text-gray-900">{row.day}</span>
-                    <span
-                      className={
-                        row.isAvailable ? "text-gray-600" : "text-gray-400"
-                      }
+                {DAYS_OF_WEEK.map((day) => {
+                  const row = availabilityRows.find((entry) => entry.dayOfWeek === day.value);
+                  return (
+                    <div
+                      key={day.value}
+                      className="flex items-center justify-between gap-4"
                     >
-                      {row.value}
-                    </span>
-                  </div>
-                ))}
+                      <span className="text-gray-900">{day.label}</span>
+                      <span className={row ? "text-gray-600" : "text-gray-400"}>
+                        {row ? formatAvailability(row.startTime, row.endTime) : "Unavailable"}
+                      </span>
+                    </div>
+                  );
+                })}
               </div>
             </div>
-          )}
         </CardContent>
       </Card>
     );
@@ -203,6 +201,8 @@ export function EditEmployeeForm({
               required
             />
           </div>
+
+          <AvailabilityEditor value={availability} onChange={setAvailability} disabled={saving} />
 
           <Input
             label="Email (optional)"
@@ -332,4 +332,14 @@ function Field({ label, value }: { label: string; value: string }) {
       <div className="text-gray-900 mt-0.5">{value}</div>
     </div>
   );
+}
+
+function formatAvailability(startTime: string, endTime: string): string {
+  const format = (time: string) => {
+    const [hour, minute] = time.split(":").map(Number);
+    const period = hour < 12 ? "AM" : "PM";
+    const displayHour = hour === 0 ? 12 : hour > 12 ? hour - 12 : hour;
+    return `${displayHour}:${String(minute).padStart(2, "0")} ${period}`;
+  };
+  return `${format(startTime)} – ${format(endTime)}`;
 }

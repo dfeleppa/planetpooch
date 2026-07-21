@@ -14,7 +14,6 @@ import { RevealTempPasswordButton } from "../RevealTempPasswordButton";
 import { EmployeeDocumentsCard } from "@/components/EmployeeDocumentsCard";
 import { DangerZoneCard } from "./DangerZoneCard";
 import { EmployeeModuleAssignments } from "./EmployeeModuleAssignments";
-import { DAYS_OF_WEEK, formatTimeLabel } from "@/lib/availability";
 import { getFileWebLink, isDriveEnabled, isStubId } from "@/lib/drive";
 import { formatDate } from "@/lib/utils";
 import { HANDBOOK_SIGNABLE_NAME } from "@/lib/employee-documents";
@@ -236,17 +235,11 @@ export default async function EmployeeDetailPage({ params }: { params: Promise<{
     ])
   ) as Record<Company, string[]>;
 
-  const availabilityByDay = new Map(availability.map((a) => [a.dayOfWeek, a]));
-  const availabilityRows = DAYS_OF_WEEK.map((day) => {
-    const entry = availabilityByDay.get(day.value);
-    return {
-      day: day.label,
-      value: entry
-        ? `${formatTimeLabel(entry.startTime)} – ${formatTimeLabel(entry.endTime)}`
-        : "Unavailable",
-      isAvailable: !!entry,
-    };
-  });
+  const availabilityRows = availability.map((entry) => ({
+    dayOfWeek: entry.dayOfWeek,
+    startTime: entry.startTime,
+    endTime: entry.endTime,
+  }));
   const latestTrackedActivityAt = latestDate(
     employee.lastLoginAt,
     recentAudit[0]?.timestamp,

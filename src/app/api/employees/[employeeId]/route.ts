@@ -2,8 +2,9 @@ import { NextRequest, NextResponse } from "next/server";
 import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { getSession, getCompanyFilter, hasEmployeeManagementAccess, isSuperAdmin } from "@/lib/auth-helpers";
-import { Company, Role } from "@prisma/client";
+import { Company, DayOfWeek, Role } from "@prisma/client";
 import { getVisibleModuleIdsForUser } from "@/lib/module-visibility";
+import { isValidDayOfWeek, isValidTimeSlot } from "@/lib/availability";
 
 export async function GET(req: NextRequest, { params }: { params: Promise<{ employeeId: string }> }) {
   const session = await getSession();
@@ -120,7 +121,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ empl
 /**
  * PATCH — update employee fields. Admin-side edit.
  * Body may include: name, email, phone, jobTitle, department, hireDate,
- * company, role. Company-scope enforced for MANAGERs. Only SUPER_ADMIN
+ * availability, company, role. Company-scope enforced for MANAGERs. Only SUPER_ADMIN
  * can assign SUPER_ADMIN role; MANAGER can assign EMPLOYEE or MANAGER
  * (within their own company only).
  */
@@ -170,6 +171,42 @@ export async function PATCH(
   try {
     const body = await req.json();
     const data: Record<string, unknown> = {};
+
+    let availabilityRows: {
+      dayOfWeek: DayOfWeek;
+      startTime: string;
+      endTime: string;
+    }[] | undefined;
+    if ("availability" in body) {
+      if (!Array.isArray(body.availability)) {
+        return NextResponse.json({ error: "availability must be an array" }, { status: 400 });
+      }
+      const seenDays = new Set<DayOfWeek>();
+      availabilityRows = [];
+      for (const entry of body.availability) {
+        if (!entry || typeof entry !== "object") {
+          return NextResponse.json({ error: "Invalid availability entry" }, { status: 400 });
+        }
+        const { dayOfWeek, startTime, endTime } = entry as Record<string, unknown>;
+        if (!isValidDayOfWeek(dayOfWeek) || !isValidTimeSlot(startTime) || !isValidTimeSlot(endTime)) {
+          return NextResponse.json(
+            { error: "Availability days and times must be valid 30-minute slots" },
+            { status: 400 },
+          );
+        }
+        if (endTime <= startTime) {
+          return NextResponse.json(
+            { error: `End time must be after start time for ${dayOfWeek}` },
+            { status: 400 },
+          );
+        }
+        if (seenDays.has(dayOfWeek)) {
+          return NextResponse.json({ error: `Duplicate day in availability: ${dayOfWeek}` }, { status: 400 });
+        }
+        seenDays.add(dayOfWeek);
+        availabilityRows.push({ dayOfWeek, startTime, endTime });
+      }
+    }
 
     // First/last name updates: either may be sent independently. Whenever one
     // changes, recompose `name` server-side using the existing values for the
@@ -260,22 +297,33 @@ export async function PATCH(
       }
     }
 
-    const updated = await prisma.user.update({
-      where: { id: employeeId },
-      data,
-      select: {
-        id: true,
-        name: true,
-        firstName: true,
-        lastName: true,
-        email: true,
-        role: true,
-        company: true,
-        jobTitle: true,
-        department: true,
-        phone: true,
-        hireDate: true,
-      },
+    const updated = await prisma.$transaction(async (tx) => {
+      const next = await tx.user.update({
+        where: { id: employeeId },
+        data,
+        select: {
+          id: true,
+          name: true,
+          firstName: true,
+          lastName: true,
+          email: true,
+          role: true,
+          company: true,
+          jobTitle: true,
+          department: true,
+          phone: true,
+          hireDate: true,
+        },
+      });
+      if (availabilityRows !== undefined) {
+        await tx.employeeAvailability.deleteMany({ where: { userId: employeeId } });
+        if (availabilityRows.length > 0) {
+          await tx.employeeAvailability.createMany({
+            data: availabilityRows.map((row) => ({ userId: employeeId, ...row })),
+          });
+        }
+      }
+      return next;
     });
 
     return NextResponse.json(updated);
