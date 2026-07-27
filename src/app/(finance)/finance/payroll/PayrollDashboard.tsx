@@ -1331,7 +1331,14 @@ export function PayrollDashboard({
       {!isMobileGrooming && (
         <Card>
           <CardContent className="space-y-4">
-            <div className="grid gap-3 lg:grid-cols-[minmax(220px,1fr)_180px_180px_auto] lg:items-end">
+            <div
+              className={cn(
+                "grid gap-3 lg:items-end",
+                pendingMoegoImport
+                  ? "lg:grid-cols-[minmax(220px,1fr)_180px_180px]"
+                  : "lg:grid-cols-[minmax(220px,1fr)_180px_180px_auto]"
+              )}
+            >
               <Select
                 id="payroll-week"
                 label="Week"
@@ -1360,13 +1367,15 @@ export function PayrollDashboard({
                 disabled={loading || saving}
               />
               <Input label="Week end" type="date" value={weekEnd} readOnly />
-              <Button
-                type="button"
-                onClick={savePayroll}
-                disabled={loading || saving || unresolvedImportWarnings}
-              >
-                {saving ? "Saving..." : "Save payroll"}
-              </Button>
+              {!pendingMoegoImport ? (
+                <Button
+                  type="button"
+                  onClick={savePayroll}
+                  disabled={loading || saving || unresolvedImportWarnings}
+                >
+                  {saving ? "Saving..." : "Save payroll"}
+                </Button>
+              ) : null}
             </div>
           </CardContent>
         </Card>
@@ -1815,6 +1824,20 @@ export function PayrollDashboard({
                     </label>
                   </>
                 ) : null}
+                <div className="mt-4 flex flex-col gap-3 border-t border-current/15 pt-4 sm:flex-row sm:items-center sm:justify-between">
+                  <p className="text-sm text-gray-700">
+                    {unresolvedImportWarnings
+                      ? "Acknowledge the review above to enable saving."
+                      : "Employee totals are reviewed and ready to save."}
+                  </p>
+                  <Button
+                    type="button"
+                    onClick={savePayroll}
+                    disabled={loading || saving || unresolvedImportWarnings}
+                  >
+                    {saving ? "Saving..." : "Save payroll"}
+                  </Button>
+                </div>
               </div>
             ) : null}
           </CardContent>
