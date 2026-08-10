@@ -132,13 +132,12 @@ export const KPI_SEGMENTS: KpiSegmentDef[] = [
     key: "MOBILE_GROOMING",
     label: "Mobile Grooming",
     metrics: [
-      { key: "routes_completed", label: "Routes completed", section: "ACTUALS", format: "number" },
       { key: "dogs_serviced", label: "Dogs serviced", section: "ACTUALS", format: "number" },
       { key: "clients_serviced", label: "Clients serviced", section: "ACTUALS", format: "number" },
       { key: "new_clients_serviced", label: "New clients serviced", section: "ACTUALS", format: "number" },
       { key: "avg_rebook_rate", label: "Average rebook rate", section: "ACTUALS", format: "percent" },
       { key: "total_revenue", label: "Total revenue (net of fees & taxes)", section: "ACTUALS", format: "currency" },
-
+      { key: "routes_completed", label: "Routes completed", section: "ACTUALS", format: "number" },
     ],
   },
   {

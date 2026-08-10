@@ -114,6 +114,13 @@ const SELECT_CLS =
 const SECTION_ORDER: KpiSection[] = ["ACTUALS", "FORECAST"];
 
 const ALL_TAB = "ALL";
+const MOEGO_IMPORT_ENDPOINTS: Record<KpiSegment, string> = {
+  MOBILE_GROOMING: "/api/finance/kpis/moego-mobile-grooming",
+  BOARDING: "/api/finance/kpis/moego-boarding",
+  TRAINING: "/api/finance/kpis/moego-training",
+  DAYCARE: "/api/finance/kpis/moego-daycare",
+  IN_HOUSE_GROOMING: "/api/finance/kpis/moego-in-house-grooming",
+};
 const DAYCARE_READ_ONLY_VALUE_KEY_SET = new Set<string>(
   DAYCARE_READ_ONLY_VALUE_KEYS
 );
@@ -255,34 +262,29 @@ export function KpiView({
     }
   }
 
+  async function requestMoegoImport(targetSegment: KpiSegment) {
+    const res = await fetch(MOEGO_IMPORT_ENDPOINTS[targetSegment], {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ weekStart: week }),
+    });
+    const json = (await res.json().catch(() => ({}))) as {
+      error?: string;
+      report?:
+        | MobileGroomingImportReport
+        | InHouseGroomingImportReport
+        | DaycareImportReport
+        | BoardingImportReport
+        | TrainingImportReport;
+    };
+    return { res, json };
+  }
+
   async function importMoegoActuals() {
     setImportingMoego(true);
     setImportMessage(null);
     try {
-      const endpoint =
-        segment === "IN_HOUSE_GROOMING"
-          ? "/api/finance/kpis/moego-in-house-grooming"
-          : segment === "DAYCARE"
-            ? "/api/finance/kpis/moego-daycare"
-            : segment === "BOARDING"
-              ? "/api/finance/kpis/moego-boarding"
-              : segment === "TRAINING"
-                ? "/api/finance/kpis/moego-training"
-              : "/api/finance/kpis/moego-mobile-grooming";
-      const res = await fetch(endpoint, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ weekStart: week }),
-      });
-      const json = (await res.json().catch(() => ({}))) as {
-        error?: string;
-        report?:
-          | MobileGroomingImportReport
-          | InHouseGroomingImportReport
-          | DaycareImportReport
-          | BoardingImportReport
-          | TrainingImportReport;
-      };
+      const { res, json } = await requestMoegoImport(segment);
       if (!res.ok || !json.report) {
         setImportMessage(json.error ?? "Failed to import MoeGo actuals");
         return;
@@ -331,6 +333,39 @@ export function KpiView({
           )
         );
       }
+      router.refresh();
+    } finally {
+      setImportingMoego(false);
+    }
+  }
+
+  async function importAllMoegoActuals() {
+    setImportingMoego(true);
+    setImportMessage(null);
+    const imported: string[] = [];
+    const failed: string[] = [];
+    try {
+      for (const segDef of KPI_SEGMENTS) {
+        try {
+          const { res, json } = await requestMoegoImport(segDef.key);
+          if (res.ok && json.report) {
+            imported.push(segDef.label);
+          } else {
+            failed.push(`${segDef.label}: ${json.error ?? "Import failed"}`);
+          }
+        } catch (error) {
+          failed.push(
+            `${segDef.label}: ${error instanceof Error ? error.message : "Import failed"}`
+          );
+        }
+      }
+
+      const importedAt = formatImportedAt();
+      const successMessage = imported.length
+        ? `Imported MoeGo actuals for ${imported.join(", ")}.`
+        : "No MoeGo actuals were imported.";
+      const failureMessage = failed.length ? ` Failed: ${failed.join("; ")}.` : "";
+      setImportMessage(withImportedAt(`${successMessage}${failureMessage}`, importedAt));
       router.refresh();
     } finally {
       setImportingMoego(false);
@@ -387,8 +422,8 @@ export function KpiView({
   }
 
   const allTabs = [
-    ...KPI_SEGMENTS.map((s) => ({ id: s.key, label: s.label })),
     { id: ALL_TAB, label: "All" },
+    ...KPI_SEGMENTS.map((s) => ({ id: s.key, label: s.label })),
   ];
 
   return (
@@ -405,6 +440,13 @@ export function KpiView({
           <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between mb-6">
             <WeekPicker week={week} onChange={(w) => navigate(ALL_TAB, w)} />
             <div className="flex gap-2 print:hidden">
+              <Button
+                variant="secondary"
+                onClick={importAllMoegoActuals}
+                disabled={importingMoego}
+              >
+                {importingMoego ? "Importing…" : "Import all"}
+              </Button>
               <Button variant="secondary" onClick={exportCsv}>
                 Export CSV
               </Button>
@@ -413,6 +455,12 @@ export function KpiView({
               </Button>
             </div>
           </div>
+
+          {importMessage && (
+            <div className="-mt-3 mb-6 rounded-lg border border-blue-100 bg-blue-50 px-3 py-2 text-sm text-blue-900">
+              {importMessage}
+            </div>
+          )}
 
           <div className="flex flex-col gap-8 print:gap-4">
             {KPI_SEGMENTS.map((segDef) => {
@@ -453,10 +501,10 @@ export function KpiView({
                                     <TableCell className="text-gray-400">{idx + 1}</TableCell>
                                     <TableCell className="font-medium">{metric.label}</TableCell>
                                     <TableCell className="text-right tabular-nums">
-                                      {formatKpiValue(cell?.value ?? null, metric.format)}
+                                      {formatKpiTableValue(cell?.value ?? null, metric.format)}
                                     </TableCell>
                                     <TableCell className="text-right tabular-nums">
-                                      {formatKpiValue(cell?.previousValue ?? null, metric.format)}
+                                      {formatKpiTableValue(cell?.previousValue ?? null, metric.format)}
                                     </TableCell>
                                     <TableCell className="text-right tabular-nums">
                                       <KpiComparison
@@ -466,10 +514,10 @@ export function KpiView({
                                       />
                                     </TableCell>
                                     <TableCell className="text-right tabular-nums">
-                                      {formatKpiValue(cell?.average ?? null, metric.format)}
+                                      {formatKpiTableValue(cell?.average ?? null, metric.format)}
                                     </TableCell>
                                     <TableCell className="text-right tabular-nums">
-                                      {formatKpiValue(cell?.target ?? null, metric.format)}
+                                      {formatKpiTableValue(cell?.target ?? null, metric.format)}
                                     </TableCell>
                                   </TableRow>
                                 );
@@ -599,11 +647,11 @@ export function KpiView({
                                     onChange={(v) => updateDraft(metric.key, "value", v)}
                                   />
                                 ) : (
-                                  formatKpiValue(value, metric.format)
+                                  formatKpiTableValue(value, metric.format)
                                 )}
                               </TableCell>
                               <TableCell className="text-right tabular-nums">
-                                {formatKpiValue(previousValue, metric.format)}
+                                {formatKpiTableValue(previousValue, metric.format)}
                               </TableCell>
                               <TableCell className="text-right tabular-nums">
                                 <KpiComparison
@@ -629,7 +677,7 @@ export function KpiView({
                                         onChange={(v) => updateDraft(metric.key, field, v)}
                                       />
                                     ) : (
-                                      formatKpiValue(scaled, metric.format)
+                                      formatKpiTableValue(scaled, metric.format)
                                     )}
                                   </TableCell>
                                 );
@@ -843,6 +891,13 @@ function formatSignedKpiValue(delta: number, format: KpiFormat): string {
   return `${delta > 0 ? "+" : "-"}${formatKpiValue(Math.abs(delta), format)}`;
 }
 
+function formatKpiTableValue(
+  value: number | null | undefined,
+  format: KpiFormat
+): string {
+  return value === null || value === undefined ? "N/A" : formatKpiValue(value, format);
+}
+
 function formatComparisonForCsv(
   value: number | null,
   previousValue: number | null,
@@ -863,7 +918,7 @@ function KpiComparison({
   format: KpiFormat;
 }) {
   const parts = comparisonParts(value, previousValue, format);
-  if (!parts) return <span className="text-gray-400">—</span>;
+  if (!parts) return <span className="text-gray-400">N/A</span>;
 
   const tone =
     parts.delta > 0
