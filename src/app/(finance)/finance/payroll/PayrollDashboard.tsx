@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { ChangeEvent, useCallback, useEffect, useMemo, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -33,6 +32,7 @@ import {
   type PayrollCategoryValue,
 } from "@/lib/payroll";
 import { cn } from "@/lib/utils";
+import { PayrollSubnav } from "./PayrollSubnav";
 
 const MS_PER_DAY = 86_400_000;
 const MOEGO_CLOCK_INOUT_URL =
@@ -159,11 +159,6 @@ export type PayrollEmployeeOption = {
 };
 
 const EMPTY_EMPLOYEE_OPTIONS: PayrollEmployeeOption[] = [];
-
-const PAYROLL_BUSINESS_HREFS: Record<PayrollBusinessValue, string> = {
-  "pet-resort": "/finance/payroll",
-  "mobile-grooming": "/finance/payroll/mobile-grooming",
-};
 
 type MobileSummaryView = "annual" | "weekly";
 type MobilePayrollView = "summary" | "employee";
@@ -1257,24 +1252,7 @@ export function PayrollDashboard({
 
   return (
     <div className={cn("space-y-5", loading && "opacity-70")}>
-      <div>
-        <p className="mb-1 text-sm font-medium text-gray-700">Business</p>
-        <nav className="pp-tabs" aria-label="Payroll business">
-          {PAYROLL_BUSINESSES.map((option) => {
-            const active = business === option.value;
-            return (
-              <Link
-                key={option.value}
-                href={PAYROLL_BUSINESS_HREFS[option.value]}
-                className={cn("pp-tab", active && "is-on")}
-                aria-current={active ? "page" : undefined}
-              >
-                {option.label}
-              </Link>
-            );
-          })}
-        </nav>
-      </div>
+      <PayrollSubnav active={business} />
 
       {isMobileGrooming && (
         <div>
