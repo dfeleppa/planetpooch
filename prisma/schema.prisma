@@ -1161,6 +1161,21 @@ model FinanceMobileGroomingWeeklyOverride {
   @@index([payrollWeekId])
 }
 
+/// Paid-date tracking for an employee commission on an existing KPI week.
+/// Revenue totals remain sourced from KpiWeeklyValue for the selected segment.
+model FinanceEmployeeCommission {
+  id              String     @id @default(cuid())
+  employeeName    String
+  businessSegment KpiSegment @default(TRAINING)
+  weekStart       DateTime   @db.Date
+  paidDate        DateTime?  @db.Date
+  createdAt       DateTime   @default(now())
+  updatedAt       DateTime   @updatedAt
+
+  @@unique([employeeName, businessSegment, weekStart], map: "FinanceEmployeeCommission_employee_segment_week_key")
+  @@index([businessSegment, employeeName, weekStart], map: "FinanceEmployeeCommission_segment_employee_week_idx")
+}
+
 // Weekly KPI reports per business segment. One weekStart = one report; both
 // the "Last Week — Actuals" and "Next Week — Forecast" metrics live as distinct
 // metricKey rows under the same weekStart (the section is defined in
