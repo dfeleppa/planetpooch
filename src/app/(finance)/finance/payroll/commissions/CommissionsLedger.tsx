@@ -19,7 +19,7 @@ export interface CommissionRow {
 }
 
 interface CommissionTableConfig {
-  employeeName: "Rebecca" | "Gabriela";
+  employeeName: "Kim" | "Rebecca" | "Gabriela";
   businessSegment: CommissionBusinessSegment;
   segmentLabel: string;
   heading: string;
@@ -32,7 +32,7 @@ interface CommissionTableConfig {
 
 interface PaidDateEdit {
   row: CommissionRow;
-  employeeName: "Rebecca" | "Gabriela";
+  employeeName: "Kim" | "Rebecca" | "Gabriela";
   businessSegment: CommissionBusinessSegment;
   paidDate: string;
   confirmedEdit: boolean;
@@ -52,7 +52,7 @@ function formatDate(value: string): string {
   return dateFormatter.format(new Date(`${value}T00:00:00.000Z`));
 }
 
-function rebeccaCommission(totalCents: number): number {
+function fivePercentCommission(totalCents: number): number {
   return Math.round(totalCents * 0.05);
 }
 
@@ -61,20 +61,36 @@ function gabrielaCommission(totalCents: number): number {
 }
 
 export function CommissionsLedger({
+  kimRows,
   rebeccaRows,
   gabrielaRows,
 }: {
+  kimRows: CommissionRow[];
   rebeccaRows: CommissionRow[];
   gabrielaRows: CommissionRow[];
 }) {
   const router = useRouter();
   const [employee, setEmployee] = useState<(typeof EMPLOYEES)[number] | "">("");
+  const [selectedYear, setSelectedYear] = useState("");
   const [editing, setEditing] = useState<PaidDateEdit | null>(null);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
 
   const tableConfig: CommissionTableConfig | null =
-    employee === "Rebecca"
+    employee === "Kim"
+      ? {
+          employeeName: "Kim",
+          businessSegment: "BOARDING",
+          segmentLabel: "Boarding",
+          heading: "Kim’s weekly boarding commissions",
+          description:
+            "Packages and addons come directly from Boarding. Commission is 5% of the total.",
+          columnLabels: ["Packages", "Addons"],
+          commissionLabel: "Commission (5%)",
+          rows: kimRows,
+          calculateCommission: fivePercentCommission,
+        }
+      : employee === "Rebecca"
       ? {
           employeeName: "Rebecca",
           businessSegment: "TRAINING",
@@ -85,7 +101,7 @@ export function CommissionsLedger({
           columnLabels: ["Product sales", "Group revenue", "1:1 revenue"],
           commissionLabel: "Commission (5%)",
           rows: rebeccaRows,
-          calculateCommission: rebeccaCommission,
+          calculateCommission: fivePercentCommission,
         }
       : employee === "Gabriela"
         ? {
@@ -101,6 +117,19 @@ export function CommissionsLedger({
             calculateCommission: gabrielaCommission,
           }
         : null;
+
+  const availableYears = tableConfig
+    ? [...new Set(tableConfig.rows.map((row) => row.weekEnding.slice(0, 4)))].sort((a, b) =>
+        b.localeCompare(a)
+      )
+    : [];
+  const activeYear =
+    selectedYear && availableYears.includes(selectedYear)
+      ? selectedYear
+      : availableYears[0] ?? "";
+  const visibleRows = tableConfig
+    ? tableConfig.rows.filter((row) => row.weekEnding.startsWith(activeYear))
+    : [];
 
   const startPaidDateEdit = (config: CommissionTableConfig, row: CommissionRow) => {
     if (row.commissionEntryId) {
@@ -165,6 +194,7 @@ export function CommissionsLedger({
               value={employee}
               onChange={(event) => {
                 setEmployee(event.target.value as (typeof EMPLOYEES)[number] | "");
+                setSelectedYear("");
                 setEditing(null);
                 setError("");
               }}
@@ -183,19 +213,36 @@ export function CommissionsLedger({
         </CardContent>
       </Card>
 
-      {employee === "Kim" ? (
-        <Card>
-          <CardContent className="py-10 text-center text-sm text-gray-500">
-            Weekly commission tracking has not been set up for Kim.
-          </CardContent>
-        </Card>
-      ) : null}
-
       {tableConfig ? (
         <Card>
-          <div className="border-b border-gray-100 px-6 py-4">
-            <h3 className="font-semibold text-gray-900">{tableConfig.heading}</h3>
-            <p className="mt-1 text-sm text-gray-500">{tableConfig.description}</p>
+          <div className="flex flex-wrap items-end justify-between gap-4 border-b border-gray-100 px-6 py-4">
+            <div>
+              <h3 className="font-semibold text-gray-900">{tableConfig.heading}</h3>
+              <p className="mt-1 text-sm text-gray-500">{tableConfig.description}</p>
+            </div>
+            {availableYears.length > 0 ? (
+              <div>
+                <label htmlFor="commission-year" className="block text-xs font-medium text-gray-600">
+                  Year
+                </label>
+                <select
+                  id="commission-year"
+                  value={activeYear}
+                  onChange={(event) => {
+                    setSelectedYear(event.target.value);
+                    setEditing(null);
+                    setError("");
+                  }}
+                  className="mt-1 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 focus:border-transparent focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  {availableYears.map((year) => (
+                    <option key={year} value={year}>
+                      {year}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            ) : null}
           </div>
 
           {editing?.row.commissionEntryId ? (
@@ -227,7 +274,7 @@ export function CommissionsLedger({
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
-                {tableConfig.rows.map((row) => {
+                {visibleRows.map((row) => {
                   const totalCents = row.revenueCents.reduce((sum, value) => sum + value, 0);
                   const isEditing =
                     editing?.businessSegment === tableConfig.businessSegment &&
@@ -301,7 +348,7 @@ export function CommissionsLedger({
                   );
                 })}
 
-                {tableConfig.rows.length === 0 ? (
+                {visibleRows.length === 0 ? (
                   <tr>
                     <td
                       colSpan={tableConfig.columnLabels.length + 5}

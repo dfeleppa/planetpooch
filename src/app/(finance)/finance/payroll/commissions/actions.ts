@@ -8,6 +8,11 @@ import { prisma } from "@/lib/prisma";
 const COMMISSIONS_PATH = "/finance/payroll/commissions";
 
 const COMMISSION_CONFIG = {
+  Kim: {
+    segment: KpiSegment.BOARDING,
+    segmentLabel: "Boarding",
+    metrics: ["package_sales", "addon_sales"],
+  },
   Rebecca: {
     segment: KpiSegment.TRAINING,
     segmentLabel: "Training",
@@ -20,7 +25,7 @@ const COMMISSION_CONFIG = {
   },
 } as const;
 
-export type CommissionBusinessSegment = "TRAINING" | "IN_HOUSE_GROOMING";
+export type CommissionBusinessSegment = "BOARDING" | "TRAINING" | "IN_HOUSE_GROOMING";
 
 export interface SaveCommissionInput {
   id?: string;
@@ -50,11 +55,13 @@ export async function saveCommissionPaidDate(
   await requireSuperAdmin();
 
   const config =
-    input.employeeName === "Rebecca"
-      ? COMMISSION_CONFIG.Rebecca
-      : input.employeeName === "Gabriela"
-        ? COMMISSION_CONFIG.Gabriela
-        : null;
+    input.employeeName === "Kim"
+      ? COMMISSION_CONFIG.Kim
+      : input.employeeName === "Rebecca"
+        ? COMMISSION_CONFIG.Rebecca
+        : input.employeeName === "Gabriela"
+          ? COMMISSION_CONFIG.Gabriela
+          : null;
   if (!config || input.businessSegment !== config.segment) {
     return { ok: false, error: "The employee and business segment do not match." };
   }

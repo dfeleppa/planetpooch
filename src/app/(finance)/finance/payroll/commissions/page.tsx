@@ -6,6 +6,7 @@ import { CommissionsLedger, type CommissionRow } from "./CommissionsLedger";
 
 const REBECCA_METRICS = ["product_sales", "group_revenue", "one_on_one_revenue"] as const;
 const GABRIELA_METRICS = ["revenue", "upsells"] as const;
+const KIM_METRICS = ["package_sales", "addon_sales"] as const;
 
 interface WeeklyMetricValue {
   weekStart: Date;
@@ -55,7 +56,14 @@ function buildCommissionRows(
 export default async function CommissionsPage() {
   await requireSuperAdmin();
 
-  const [trainingValues, groomingValues, rebeccaPaidDates, gabrielaPaidDates] = await Promise.all([
+  const [
+    trainingValues,
+    groomingValues,
+    boardingValues,
+    rebeccaPaidDates,
+    gabrielaPaidDates,
+    kimPaidDates,
+  ] = await Promise.all([
     prisma.kpiWeeklyValue.findMany({
       where: {
         segment: KpiSegment.TRAINING,
@@ -70,6 +78,13 @@ export default async function CommissionsPage() {
       },
       orderBy: { weekStart: "desc" },
     }),
+    prisma.kpiWeeklyValue.findMany({
+      where: {
+        segment: KpiSegment.BOARDING,
+        metricKey: { in: [...KIM_METRICS] },
+      },
+      orderBy: { weekStart: "desc" },
+    }),
     prisma.financeEmployeeCommission.findMany({
       where: { employeeName: "Rebecca", businessSegment: KpiSegment.TRAINING },
     }),
@@ -78,6 +93,9 @@ export default async function CommissionsPage() {
         employeeName: "Gabriela",
         businessSegment: KpiSegment.IN_HOUSE_GROOMING,
       },
+    }),
+    prisma.financeEmployeeCommission.findMany({
+      where: { employeeName: "Kim", businessSegment: KpiSegment.BOARDING },
     }),
   ]);
 
@@ -91,6 +109,7 @@ export default async function CommissionsPage() {
       </div>
 
       <CommissionsLedger
+        kimRows={buildCommissionRows(boardingValues, KIM_METRICS, kimPaidDates)}
         rebeccaRows={buildCommissionRows(trainingValues, REBECCA_METRICS, rebeccaPaidDates)}
         gabrielaRows={buildCommissionRows(groomingValues, GABRIELA_METRICS, gabrielaPaidDates)}
       />
