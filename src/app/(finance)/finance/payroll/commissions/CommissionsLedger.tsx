@@ -57,7 +57,7 @@ function fivePercentCommission(totalCents: number): number {
 }
 
 function gabrielaCommission(totalCents: number): number {
-  return Math.max(0, Math.round((totalCents - 100_000) * 0.2));
+  return Math.max(0, Math.round((totalCents - 100_000) * 0.05));
 }
 
 export function CommissionsLedger({
@@ -110,9 +110,9 @@ export function CommissionsLedger({
             segmentLabel: "In-House Grooming",
             heading: "Gabriela’s weekly in-house grooming commissions",
             description:
-              "Revenue and upsells come directly from In-House Grooming. Commission is 20% of the amount above $1,000, with a $0 floor.",
+              "Revenue and upsells come directly from In-House Grooming. Commission is 5% of the amount above $1,000, with a $0 floor.",
             columnLabels: ["Revenue", "Upsells"],
-            commissionLabel: "Commission ((Total - $1,000) × 20%)",
+            commissionLabel: "Commission ((Total - $1,000) × 5%)",
             rows: gabrielaRows,
             calculateCommission: gabrielaCommission,
           }
