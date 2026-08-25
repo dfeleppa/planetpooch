@@ -148,8 +148,8 @@ export default async function KpisPage({
     }
 
     return (
-      <div>
-        <div className="mb-6">
+      <div className="pp-kpi-print-page">
+        <div className="pp-kpi-screen-heading mb-6">
           <h2 className="text-xl font-semibold text-gray-900">KPIs</h2>
           <p className="text-gray-500 mt-1">
             Weekly key performance indicators by business segment
@@ -195,8 +195,8 @@ export default async function KpisPage({
   data = withDerivedKpiCells(segment, data);
 
   return (
-    <div>
-      <div className="mb-6">
+    <div className="pp-kpi-print-page">
+      <div className="pp-kpi-screen-heading mb-6">
         <h2 className="text-xl font-semibold text-gray-900">KPIs</h2>
         <p className="text-gray-500 mt-1">
           Weekly key performance indicators by business segment

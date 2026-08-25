@@ -8,7 +8,7 @@ export default function FinanceLayout({ children }: { children: React.ReactNode 
       <div className="flex flex-col md:flex-row min-h-screen bg-pp-bg">
         <Sidebar />
         <main className="flex-1 min-w-0 p-4 md:p-8">
-          <div className="mb-6">
+          <div className="pp-finance-screen-header mb-6">
             <h1 className="text-2xl font-bold text-gray-900">Finance</h1>
             <p className="mt-1 text-gray-500">
               Financial reporting and operating data for Planet Pooch

@@ -421,6 +421,18 @@ export function KpiView({
     URL.revokeObjectURL(url);
   }
 
+  function printReport() {
+    const originalTitle = document.title;
+    const restoreTitle = () => {
+      document.title = originalTitle;
+      window.removeEventListener("afterprint", restoreTitle);
+    };
+
+    document.title = `Planet Pooch KPI Report - ${week}`;
+    window.addEventListener("afterprint", restoreTitle, { once: true });
+    window.print();
+  }
+
   const allTabs = [
     { id: ALL_TAB, label: "All" },
     ...KPI_SEGMENTS.map((s) => ({ id: s.key, label: s.label })),
@@ -432,12 +444,23 @@ export function KpiView({
         tabs={allTabs}
         activeTab={isAll ? ALL_TAB : segment}
         onChange={(id) => navigate(id, week)}
-        className="mb-6"
+        className="pp-kpi-screen-tabs mb-6"
       />
 
       {isAll ? (
         <>
-          <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between mb-6">
+          <header className="pp-kpi-print-header">
+            <div>
+              <div className="pp-kpi-print-eyebrow">Planet Pooch</div>
+              <h1>Weekly KPI Report</h1>
+            </div>
+            <div className="pp-kpi-print-period">
+              <strong>{formatWeekLabel(fromWeekParam(week))}</strong>
+              <span>{formatWeekRange(fromWeekParam(week))}</span>
+            </div>
+          </header>
+
+          <div className="pp-kpi-report-controls flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between mb-6">
             <WeekPicker week={week} onChange={(w) => navigate(ALL_TAB, w)} />
             <div className="flex gap-2 print:hidden">
               <Button
@@ -450,7 +473,7 @@ export function KpiView({
               <Button variant="secondary" onClick={exportCsv}>
                 Export CSV
               </Button>
-              <Button variant="secondary" onClick={() => window.print()}>
+              <Button variant="secondary" onClick={printReport}>
                 Print / PDF
               </Button>
             </div>
@@ -462,12 +485,12 @@ export function KpiView({
             </div>
           )}
 
-          <div className="flex flex-col gap-8 print:gap-4">
+          <div className="pp-kpi-report-segments flex flex-col gap-8 print:gap-4">
             {KPI_SEGMENTS.map((segDef) => {
               const segData = allSegmentsDataWithDerivedValues?.[segDef.key];
               if (!segData || segDef.metrics.length === 0) return null;
               return (
-                <section key={segDef.key}>
+                <section className="pp-kpi-report-segment" key={segDef.key}>
                   <h2 className="text-lg font-semibold text-gray-900 mb-3 print:text-base">
                     {segDef.label}
                   </h2>

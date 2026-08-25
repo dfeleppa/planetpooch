@@ -906,10 +906,19 @@ body {
   margin: 1.5em 0;
 }
 
+.pp-kpi-print-header {
+  display: none;
+}
+
 @media print {
   @page {
     size: landscape;
     margin: 0.35in;
+  }
+
+  @page pp-kpi-report {
+    size: letter portrait;
+    margin: 0.42in;
   }
 
   aside,
@@ -918,6 +927,138 @@ body {
   }
   main {
     padding: 0 !important;
+  }
+
+  .pp-kpi-print-page {
+    page: pp-kpi-report;
+    color: #111827;
+    font-size: 8pt;
+  }
+
+  .pp-finance-screen-header,
+  .pp-tabs,
+  .pp-kpi-screen-heading,
+  .pp-kpi-screen-tabs,
+  .pp-kpi-report-controls {
+    display: none !important;
+  }
+
+  .pp-kpi-print-header {
+    display: flex !important;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 0.3in;
+    margin-bottom: 0.22in;
+    padding-bottom: 0.12in;
+    border-bottom: 2px solid #315d64;
+  }
+
+  .pp-kpi-print-header h1 {
+    margin: 0.02in 0 0;
+    color: #111827;
+    font-size: 18pt;
+    line-height: 1.1;
+  }
+
+  .pp-kpi-print-eyebrow {
+    color: #315d64;
+    font-size: 8pt;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+  }
+
+  .pp-kpi-print-period {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    color: #4b5563;
+    font-size: 8pt;
+    line-height: 1.35;
+  }
+
+  .pp-kpi-print-period strong {
+    color: #111827;
+    font-size: 10pt;
+  }
+
+  .pp-kpi-report-segments {
+    display: block !important;
+  }
+
+  .pp-kpi-report-segment {
+    break-inside: avoid-page;
+    page-break-inside: avoid;
+    margin: 0 0 0.2in !important;
+  }
+
+  .pp-kpi-report-segment h2 {
+    margin: 0 0 0.06in !important;
+    color: #315d64 !important;
+    font-size: 11pt !important;
+    line-height: 1.2;
+  }
+
+  .pp-kpi-report-segment h3 {
+    margin: 0 0 0.04in !important;
+    color: #6b7280 !important;
+    font-size: 6.5pt !important;
+    letter-spacing: 0.1em !important;
+  }
+
+  .pp-kpi-report-segment > div {
+    gap: 0.08in !important;
+  }
+
+  .pp-kpi-report-segment .overflow-x-auto {
+    overflow: visible !important;
+    border-color: #d1d5db !important;
+    border-radius: 0 !important;
+  }
+
+  .pp-kpi-report-segment table {
+    width: 100% !important;
+    min-width: 0 !important;
+    table-layout: fixed;
+    font-size: 7.5pt;
+  }
+
+  .pp-kpi-report-segment th,
+  .pp-kpi-report-segment td {
+    padding: 0.045in 0.06in !important;
+    line-height: 1.15;
+    vertical-align: middle;
+  }
+
+  .pp-kpi-report-segment th {
+    color: #4b5563 !important;
+    font-size: 6.5pt !important;
+    letter-spacing: 0.05em !important;
+  }
+
+  .pp-kpi-report-segment th:first-child,
+  .pp-kpi-report-segment td:first-child {
+    width: 4%;
+  }
+
+  .pp-kpi-report-segment th:nth-child(2),
+  .pp-kpi-report-segment td:nth-child(2) {
+    width: 31%;
+  }
+
+  .pp-kpi-report-segment th:nth-child(n + 3),
+  .pp-kpi-report-segment td:nth-child(n + 3) {
+    width: 13%;
+    white-space: nowrap;
+  }
+
+  .pp-kpi-report-segment thead {
+    display: table-header-group;
+  }
+
+  .pp-kpi-report-segment tr {
+    break-inside: avoid;
+    page-break-inside: avoid;
   }
 
   .pp-scheduling-print-button,
