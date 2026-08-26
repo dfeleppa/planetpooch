@@ -56,15 +56,21 @@ function fivePercentCommission(totalCents: number): number {
   return Math.round(totalCents * 0.05);
 }
 
+function twentyPercentCommission(totalCents: number): number {
+  return Math.round(totalCents * 0.2);
+}
+
 function gabrielaCommission(totalCents: number): number {
   return Math.max(0, Math.round((totalCents - 100_000) * 0.05));
 }
 
 export function CommissionsLedger({
+  todayEastern,
   kimRows,
   rebeccaRows,
   gabrielaRows,
 }: {
+  todayEastern: string;
   kimRows: CommissionRow[];
   rebeccaRows: CommissionRow[];
   gabrielaRows: CommissionRow[];
@@ -84,11 +90,11 @@ export function CommissionsLedger({
           segmentLabel: "Boarding",
           heading: "Kim’s weekly boarding commissions",
           description:
-            "Packages and addons come directly from Boarding. Commission is 5% of the total.",
+            "Packages and addons come directly from Boarding. Commission is 20% of the total.",
           columnLabels: ["Packages", "Addons"],
-          commissionLabel: "Commission (5%)",
+          commissionLabel: "Commission (20%)",
           rows: kimRows,
-          calculateCommission: fivePercentCommission,
+          calculateCommission: twentyPercentCommission,
         }
       : employee === "Rebecca"
       ? {
@@ -130,6 +136,13 @@ export function CommissionsLedger({
   const visibleRows = tableConfig
     ? tableConfig.rows.filter((row) => row.weekEnding.startsWith(activeYear))
     : [];
+  const totalUnpaidCommissionCents = tableConfig
+    ? tableConfig.rows.reduce((sum, row) => {
+        if (row.paidDate || row.weekEnding >= todayEastern) return sum;
+        const totalCents = row.revenueCents.reduce((rowSum, value) => rowSum + value, 0);
+        return sum + tableConfig.calculateCommission(totalCents);
+      }, 0)
+    : 0;
 
   const startPaidDateEdit = (config: CommissionTableConfig, row: CommissionRow) => {
     if (row.commissionEntryId) {
@@ -220,29 +233,42 @@ export function CommissionsLedger({
               <h3 className="font-semibold text-gray-900">{tableConfig.heading}</h3>
               <p className="mt-1 text-sm text-gray-500">{tableConfig.description}</p>
             </div>
-            {availableYears.length > 0 ? (
-              <div>
-                <label htmlFor="commission-year" className="block text-xs font-medium text-gray-600">
-                  Year
-                </label>
-                <select
-                  id="commission-year"
-                  value={activeYear}
-                  onChange={(event) => {
-                    setSelectedYear(event.target.value);
-                    setEditing(null);
-                    setError("");
-                  }}
-                  className="mt-1 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 focus:border-transparent focus:outline-none focus:ring-2 focus:ring-blue-500"
-                >
-                  {availableYears.map((year) => (
-                    <option key={year} value={year}>
-                      {year}
-                    </option>
-                  ))}
-                </select>
+            <div className="flex flex-wrap items-end justify-end gap-4">
+              <div className="rounded-lg bg-blue-50 px-4 py-2 text-right">
+                <p className="text-xs font-medium uppercase tracking-wide text-blue-700">
+                  Total unpaid commissions
+                </p>
+                <p className="text-xl font-semibold text-blue-900">
+                  {moneyFormatter.format(totalUnpaidCommissionCents / 100)}
+                </p>
+                <p className="text-xs text-blue-700">
+                  Completed weeks only; the current week is excluded through Saturday.
+                </p>
               </div>
-            ) : null}
+              {availableYears.length > 0 ? (
+                <div>
+                  <label htmlFor="commission-year" className="block text-xs font-medium text-gray-600">
+                    Year
+                  </label>
+                  <select
+                    id="commission-year"
+                    value={activeYear}
+                    onChange={(event) => {
+                      setSelectedYear(event.target.value);
+                      setEditing(null);
+                      setError("");
+                    }}
+                    className="mt-1 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 focus:border-transparent focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  >
+                    {availableYears.map((year) => (
+                      <option key={year} value={year}>
+                        {year}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              ) : null}
+            </div>
           </div>
 
           {editing?.row.commissionEntryId ? (

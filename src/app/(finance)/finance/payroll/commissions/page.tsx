@@ -7,6 +7,22 @@ import { CommissionsLedger, type CommissionRow } from "./CommissionsLedger";
 const REBECCA_METRICS = ["product_sales", "group_revenue", "one_on_one_revenue"] as const;
 const GABRIELA_METRICS = ["revenue", "upsells"] as const;
 const KIM_METRICS = ["package_sales", "addon_sales"] as const;
+const easternDateFormatter = new Intl.DateTimeFormat("en-US", {
+  timeZone: "America/New_York",
+  year: "numeric",
+  month: "2-digit",
+  day: "2-digit",
+});
+
+function getEasternDateKey(date: Date): string {
+  const parts = easternDateFormatter.formatToParts(date);
+  const year = parts.find((part) => part.type === "year")?.value;
+  const month = parts.find((part) => part.type === "month")?.value;
+  const day = parts.find((part) => part.type === "day")?.value;
+
+  if (!year || !month || !day) throw new Error("Could not determine the current Eastern date.");
+  return `${year}-${month}-${day}`;
+}
 
 interface WeeklyMetricValue {
   weekStart: Date;
@@ -109,6 +125,7 @@ export default async function CommissionsPage() {
       </div>
 
       <CommissionsLedger
+        todayEastern={getEasternDateKey(new Date())}
         kimRows={buildCommissionRows(boardingValues, KIM_METRICS, kimPaidDates)}
         rebeccaRows={buildCommissionRows(trainingValues, REBECCA_METRICS, rebeccaPaidDates)}
         gabrielaRows={buildCommissionRows(groomingValues, GABRIELA_METRICS, gabrielaPaidDates)}
