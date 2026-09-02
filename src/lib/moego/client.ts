@@ -305,6 +305,8 @@ export type MoegoCustomerRow = {
   createdTime: string; // ISO 8601
   lastUpdatedTime?: string;
   customFields?: Record<string, unknown>;
+  status?: string;
+  deleted?: boolean;
 };
 
 export type MoegoOrderRow = {

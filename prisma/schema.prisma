@@ -1423,6 +1423,43 @@ model MoegoDaycarePackageCreditRow {
   @@index([customerId])
 }
 
+/// Stored on-demand snapshot of daycare-tagged clients whose last appointment
+/// was more than the configured inactivity window ago.
+model MoegoDaycareNotActiveReport {
+  id                       String   @id
+  generatedAt              DateTime
+  cutoffDate               DateTime
+  inactivityDays           Int      @default(30)
+  customersScanned         Int      @default(0)
+  daycareCustomersScanned  Int      @default(0)
+  customerCount            Int      @default(0)
+  createdAt                DateTime @default(now())
+  updatedAt                DateTime @updatedAt
+
+  rows MoegoDaycareNotActiveRow[]
+}
+
+model MoegoDaycareNotActiveRow {
+  id                       String   @id @default(cuid())
+  reportId                 String
+  customerId               String   @unique
+  customerName             String
+  email                    String?
+  phone                    String?
+  lastAppointmentDate      DateTime
+  nextAppointmentDate      DateTime?
+  daysSinceLastAppointment Int
+  preferredBusinessId      String?
+  tags                     String[] @default([])
+  createdAt                DateTime @default(now())
+  updatedAt                DateTime @updatedAt
+
+  report MoegoDaycareNotActiveReport @relation(fields: [reportId], references: [id], onDelete: Cascade)
+
+  @@index([reportId, lastAppointmentDate])
+  @@index([nextAppointmentDate])
+}
+
 /// One row per day-of-week the employee is available. Times are stored as
 /// "HH:MM" 24-hour strings on 30-minute boundaries (e.g. "09:00", "17:30").
 /// Days the employee is NOT available simply have no row — absence == off.
