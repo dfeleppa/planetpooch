@@ -93,6 +93,7 @@ export const config = {
     "/admin/:path*",
     "/search/:path*",
     "/maintenance/:path*",
+    "/operations/:path*",
     "/marketing/:path*",
     "/finance/:path*",
     "/change-password",

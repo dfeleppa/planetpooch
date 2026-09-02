@@ -154,6 +154,36 @@ export async function* listPages<TKey extends string, TRow>(
   }
 }
 
+/**
+ * Package endpoints use required top-level ID arrays and do not define a
+ * `filter` object. Keep their request shape separate from the other MoeGo
+ * list endpoints so protobuf JSON validation receives only known fields.
+ */
+async function* listTopLevelPages<TKey extends string, TRow>(
+  path: string,
+  rowKey: TKey,
+  extraTop: Record<string, unknown>
+): AsyncGenerator<TRow[]> {
+  const { companyId } = getMoegoConfig();
+  let pageToken = "1";
+  let pages = 0;
+
+  while (pages < 1000) {
+    const res = await moegoPost<PaginatedResponse<TKey, TRow>>(path, {
+      companyId,
+      ...extraTop,
+      pagination: { pageSize: PAGE_SIZE, pageToken },
+    });
+    const rows = res[rowKey] ?? [];
+    yield rows;
+    pages++;
+
+    if (!res.nextPageToken || rows.length === 0) break;
+    pageToken = res.nextPageToken;
+    await sleep(SLEEP_MS);
+  }
+}
+
 export type MoegoCompany = {
   id: string;
   name?: string;
@@ -384,6 +414,49 @@ export type MoegoLeadRow = {
   lastUpdatedTime?: string;
 };
 
+export type MoegoDate =
+  | string
+  | { year?: number; month?: number; day?: number }
+  | null
+  | undefined;
+
+export type MoegoPackageRow = {
+  id: string;
+  customerId?: string;
+  businessId?: string;
+  staffId?: string;
+  packageName?: string;
+  packageDesc?: string;
+  packagePrice?: MoegoMoney;
+  purchaseTime?: string;
+  startTime?: string;
+  endTime?: string;
+  createTime?: string;
+  lastUpdateTime?: string;
+  expirationDate?: MoegoDate;
+  status?: string;
+  used?: boolean;
+  applied?: boolean;
+  totalRemainingQuantity?: number;
+};
+
+export type MoegoPackageService = {
+  id?: string;
+  packageId?: string;
+  services?: {
+    serviceId?: string;
+    unitPrice?: MoegoMoney;
+    name?: string;
+  }[];
+  totalQuantity?: number;
+  remainingQuantity?: number;
+};
+
+export type MoegoPackageDetail = {
+  packageInfo?: MoegoPackageRow;
+  packageServices?: MoegoPackageService[];
+};
+
 /**
  * Coerce MoeGo's `ReferralSource` (string or labelled object) down to
  * a single display string. Returns null when nothing usable is set.
@@ -496,6 +569,26 @@ export function streamAppointments(
     "appointments",
     filters,
     { businessIds }
+  );
+}
+
+export function streamPackages(
+  customerIds: string[]
+): AsyncGenerator<MoegoPackageRow[]> {
+  return listTopLevelPages<"packages", MoegoPackageRow>(
+    "/packages:list",
+    "packages",
+    { customerIds }
+  );
+}
+
+export function streamPackageDetails(
+  packageIds: string[]
+): AsyncGenerator<MoegoPackageDetail[]> {
+  return listTopLevelPages<"packageDetails", MoegoPackageDetail>(
+    "/packages/details:list",
+    "packageDetails",
+    { packageIds }
   );
 }
 

@@ -1383,6 +1383,46 @@ model MoegoUpcomingBoardingNight {
   @@index([businessId, weekEnding])
 }
 
+/// Stored on-demand snapshot of daycare package credits nearing expiration.
+/// The report changes only when an authenticated user explicitly refreshes it.
+model MoegoDaycarePackageCreditReport {
+  id                       String   @id
+  generatedAt              DateTime
+  customersScanned         Int      @default(0)
+  packagesScanned          Int      @default(0)
+  matchingPackagesScanned  Int      @default(0)
+  packageCount             Int      @default(0)
+  totalRemainingCredits    Int      @default(0)
+  createdAt                DateTime @default(now())
+  updatedAt                DateTime @updatedAt
+
+  rows MoegoDaycarePackageCreditRow[]
+}
+
+model MoegoDaycarePackageCreditRow {
+  id                  String   @id @default(cuid())
+  reportId            String
+  packageId           String   @unique
+  customerId          String
+  customerName        String
+  email               String?
+  phone               String?
+  packageName         String
+  remainingCredits    Int
+  expirationDate      DateTime @db.Date
+  purchaseTime        DateTime?
+  expirationWindowDays Int
+  daysUntilExpiration Int
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  report MoegoDaycarePackageCreditReport @relation(fields: [reportId], references: [id], onDelete: Cascade)
+
+  @@index([reportId, expirationDate])
+  @@index([packageName, expirationDate])
+  @@index([customerId])
+}
+
 /// One row per day-of-week the employee is available. Times are stored as
 /// "HH:MM" 24-hour strings on 30-minute boundaries (e.g. "09:00", "17:30").
 /// Days the employee is NOT available simply have no row — absence == off.
