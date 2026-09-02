@@ -9,6 +9,10 @@ type TableCellProps = React.TdHTMLAttributes<HTMLTableCellElement> & {
   children?: React.ReactNode;
 };
 
+type TableHeaderProps = React.ThHTMLAttributes<HTMLTableCellElement> & {
+  children?: React.ReactNode;
+};
+
 export function Table({ children, className }: TableProps) {
   return (
     <div className="overflow-x-auto rounded-lg border border-gray-200">
@@ -31,7 +35,7 @@ export function TableRow({ children, className }: TableProps) {
   return <tr className={cn("hover:bg-gray-50 transition-colors", className)}>{children}</tr>;
 }
 
-export function TableHeader({ children, className }: TableProps) {
+export function TableHeader({ children, className, ...props }: TableHeaderProps) {
   return (
     <th
       scope="col"
@@ -39,6 +43,7 @@ export function TableHeader({ children, className }: TableProps) {
         "px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider",
         className
       )}
+      {...props}
     >
       {children}
     </th>

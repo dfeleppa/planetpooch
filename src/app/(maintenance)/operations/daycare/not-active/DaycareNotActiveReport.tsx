@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/EmptyState";
@@ -9,10 +9,27 @@ import {
   TableBody,
   TableCell,
   TableHead,
-  TableHeader,
   TableRow,
 } from "@/components/ui/Table";
-import type { DaycareNotActiveReport as DaycareNotActiveReportData } from "@/lib/moego/daycare-not-active-types";
+import { SortableTableHeader } from "@/components/ui/SortableTableHeader";
+import type {
+  DaycareNotActiveReport as DaycareNotActiveReportData,
+  DaycareNotActiveReportRow,
+} from "@/lib/moego/daycare-not-active-types";
+import {
+  compareSortValues,
+  compareTableText,
+  type SortDirection,
+} from "@/lib/table-sort";
+
+type InactiveSortKey = "customer" | "lastVisit" | "days" | "contact";
+
+const INACTIVE_SORT_DEFAULTS: Record<InactiveSortKey, SortDirection> = {
+  customer: "asc",
+  lastVisit: "desc",
+  days: "asc",
+  contact: "asc",
+};
 
 export function DaycareNotActiveReport({
   initialReport,
@@ -22,6 +39,31 @@ export function DaycareNotActiveReport({
   const [report, setReport] = useState(initialReport);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [sortKey, setSortKey] = useState<InactiveSortKey>("lastVisit");
+  const [sortDirection, setSortDirection] = useState<SortDirection>("desc");
+
+  const sortedRows = useMemo(() => {
+    if (!report) return [];
+    return [...report.rows].sort((left, right) => {
+      const comparison = compareInactiveRows(
+        left,
+        right,
+        sortKey,
+        sortDirection
+      );
+      if (comparison !== 0) return comparison;
+      return compareTableText(left.customerName, right.customerName);
+    });
+  }, [report, sortDirection, sortKey]);
+
+  function toggleSort(nextSortKey: InactiveSortKey) {
+    if (nextSortKey === sortKey) {
+      setSortDirection((current) => (current === "asc" ? "desc" : "asc"));
+      return;
+    }
+    setSortKey(nextSortKey);
+    setSortDirection(INACTIVE_SORT_DEFAULTS[nextSortKey]);
+  }
 
   async function refreshReport() {
     setRefreshing(true);
@@ -69,7 +111,7 @@ export function DaycareNotActiveReport({
               </p>
               {report ? (
                 <p className="mt-1 text-xs text-gray-400">
-                  Scanned {report.customersScanned} clients and found {report.daycareCustomersScanned} with completed daycare visits.
+                  Scanned {report.customersScanned} clients and found {report.daycareCustomersScanned} with completed daycare visits in the last 120 days.
                 </p>
               ) : null}
             </div>
@@ -91,7 +133,7 @@ export function DaycareNotActiveReport({
             <EmptyState
               icon="◷"
               title="No inactive daycare report yet"
-              description="Pull the report to find clients whose latest completed daycare visit was more than 30 days ago and who have no current or upcoming daycare appointment."
+              description="Pull the report to find clients whose latest completed daycare visit was 31–120 days ago and who have no current or upcoming daycare appointment."
               action={
                 <Button onClick={refreshReport} disabled={refreshing}>
                   {refreshing ? "Pulling report…" : "Pull report"}
@@ -104,10 +146,35 @@ export function DaycareNotActiveReport({
         <Table>
           <TableHead>
             <tr>
-              <TableHeader>Customer</TableHeader>
-              <TableHeader>Last daycare visit</TableHeader>
-              <TableHeader className="text-right">Days since visit</TableHeader>
-              <TableHeader>Contact</TableHeader>
+              <SortableTableHeader
+                label="Customer"
+                sortKey="customer"
+                activeSortKey={sortKey}
+                direction={sortDirection}
+                onSort={toggleSort}
+              />
+              <SortableTableHeader
+                label="Last daycare visit"
+                sortKey="lastVisit"
+                activeSortKey={sortKey}
+                direction={sortDirection}
+                onSort={toggleSort}
+              />
+              <SortableTableHeader
+                label="Days since visit"
+                sortKey="days"
+                activeSortKey={sortKey}
+                direction={sortDirection}
+                onSort={toggleSort}
+                align="right"
+              />
+              <SortableTableHeader
+                label="Contact"
+                sortKey="contact"
+                activeSortKey={sortKey}
+                direction={sortDirection}
+                onSort={toggleSort}
+              />
             </tr>
           </TableHead>
           <TableBody>
@@ -118,7 +185,7 @@ export function DaycareNotActiveReport({
                 </TableCell>
               </TableRow>
             ) : (
-              report.rows.map((row) => (
+              sortedRows.map((row) => (
                 <TableRow key={row.customerId}>
                   <TableCell className="font-medium">{row.customerName}</TableCell>
                   <TableCell>
@@ -142,6 +209,36 @@ export function DaycareNotActiveReport({
       )}
     </div>
   );
+}
+
+function compareInactiveRows(
+  left: DaycareNotActiveReportRow,
+  right: DaycareNotActiveReportRow,
+  sortKey: InactiveSortKey,
+  direction: SortDirection
+): number {
+  switch (sortKey) {
+    case "customer":
+      return compareSortValues(left.customerName, right.customerName, direction);
+    case "lastVisit":
+      return compareSortValues(
+        left.lastAppointmentDate,
+        right.lastAppointmentDate,
+        direction
+      );
+    case "days":
+      return compareSortValues(
+        left.daysSinceLastAppointment,
+        right.daysSinceLastAppointment,
+        direction
+      );
+    case "contact":
+      return compareSortValues(
+        left.email ?? left.phone,
+        right.email ?? right.phone,
+        direction
+      );
+  }
 }
 
 function formatDate(value: string): string {

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/EmptyState";
@@ -9,13 +9,29 @@ import {
   TableBody,
   TableCell,
   TableHead,
-  TableHeader,
   TableRow,
 } from "@/components/ui/Table";
+import { SortableTableHeader } from "@/components/ui/SortableTableHeader";
 import {
   DAYCARE_PACKAGE_RULES,
   type DaycarePackageCreditReport,
+  type DaycarePackageCreditReportRow,
 } from "@/lib/moego/daycare-package-credit-types";
+import {
+  compareSortValues,
+  compareTableText,
+  type SortDirection,
+} from "@/lib/table-sort";
+
+type PackageSortKey = "customer" | "package" | "credits" | "expires" | "contact";
+
+const PACKAGE_SORT_DEFAULTS: Record<PackageSortKey, SortDirection> = {
+  customer: "asc",
+  package: "asc",
+  credits: "desc",
+  expires: "asc",
+  contact: "asc",
+};
 
 export function DaycarePackageCreditsReport({
   initialReport,
@@ -25,6 +41,33 @@ export function DaycarePackageCreditsReport({
   const [report, setReport] = useState(initialReport);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [sortKey, setSortKey] = useState<PackageSortKey>("expires");
+  const [sortDirection, setSortDirection] = useState<SortDirection>("asc");
+
+  const sortedRows = useMemo(() => {
+    if (!report) return [];
+    return [...report.rows].sort((left, right) => {
+      const comparison = comparePackageRows(
+        left,
+        right,
+        sortKey,
+        sortDirection
+      );
+      if (comparison !== 0) {
+        return comparison;
+      }
+      return compareTableText(left.customerName, right.customerName);
+    });
+  }, [report, sortDirection, sortKey]);
+
+  function toggleSort(nextSortKey: PackageSortKey) {
+    if (nextSortKey === sortKey) {
+      setSortDirection((current) => (current === "asc" ? "desc" : "asc"));
+      return;
+    }
+    setSortKey(nextSortKey);
+    setSortDirection(PACKAGE_SORT_DEFAULTS[nextSortKey]);
+  }
 
   async function refreshReport() {
     setRefreshing(true);
@@ -138,11 +181,42 @@ export function DaycarePackageCreditsReport({
         <Table>
           <TableHead>
             <tr>
-              <TableHeader>Customer</TableHeader>
-              <TableHeader>Package</TableHeader>
-              <TableHeader className="text-right">Credits left</TableHeader>
-              <TableHeader>Expires</TableHeader>
-              <TableHeader>Contact</TableHeader>
+              <SortableTableHeader
+                label="Customer"
+                sortKey="customer"
+                activeSortKey={sortKey}
+                direction={sortDirection}
+                onSort={toggleSort}
+              />
+              <SortableTableHeader
+                label="Package"
+                sortKey="package"
+                activeSortKey={sortKey}
+                direction={sortDirection}
+                onSort={toggleSort}
+              />
+              <SortableTableHeader
+                label="Credits left"
+                sortKey="credits"
+                activeSortKey={sortKey}
+                direction={sortDirection}
+                onSort={toggleSort}
+                align="right"
+              />
+              <SortableTableHeader
+                label="Expires"
+                sortKey="expires"
+                activeSortKey={sortKey}
+                direction={sortDirection}
+                onSort={toggleSort}
+              />
+              <SortableTableHeader
+                label="Contact"
+                sortKey="contact"
+                activeSortKey={sortKey}
+                direction={sortDirection}
+                onSort={toggleSort}
+              />
             </tr>
           </TableHead>
           <TableBody>
@@ -153,7 +227,7 @@ export function DaycarePackageCreditsReport({
                 </TableCell>
               </TableRow>
             ) : (
-              report.rows.map((row) => (
+              sortedRows.map((row) => (
                 <TableRow key={row.packageId}>
                   <TableCell className="font-medium">{row.customerName}</TableCell>
                   <TableCell>
@@ -184,6 +258,38 @@ export function DaycarePackageCreditsReport({
       )}
     </div>
   );
+}
+
+function comparePackageRows(
+  left: DaycarePackageCreditReportRow,
+  right: DaycarePackageCreditReportRow,
+  sortKey: PackageSortKey,
+  direction: SortDirection
+): number {
+  switch (sortKey) {
+    case "customer":
+      return compareSortValues(left.customerName, right.customerName, direction);
+    case "package":
+      return compareSortValues(left.packageName, right.packageName, direction);
+    case "credits":
+      return compareSortValues(
+        left.remainingCredits,
+        right.remainingCredits,
+        direction
+      );
+    case "expires":
+      return compareSortValues(
+        left.expirationDate,
+        right.expirationDate,
+        direction
+      );
+    case "contact":
+      return compareSortValues(
+        left.email ?? left.phone,
+        right.email ?? right.phone,
+        direction
+      );
+  }
 }
 
 function formatDate(value: string): string {

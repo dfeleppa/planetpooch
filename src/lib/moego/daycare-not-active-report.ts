@@ -11,6 +11,7 @@ import {
 import { PET_RESORT_BUSINESS_ID } from "@/lib/moego/daycare-weekly-report";
 import {
   DAYCARE_INACTIVITY_DAYS,
+  DAYCARE_INACTIVITY_MAX_DAYS,
   type DaycareNotActiveReport,
   type DaycareNotActiveReportRow,
 } from "@/lib/moego/daycare-not-active-types";
@@ -145,9 +146,20 @@ async function loadDaycareAttendance(now: Date): Promise<{
 }> {
   const lastCompletedByCustomerId = new Map<string, Date>();
   const activeOrUpcomingCustomerIds = new Set<string>();
+  const scanStart = new Date(
+    now.getTime() - DAYCARE_INACTIVITY_MAX_DAYS * DAY_MS
+  );
+  const scanEnd = new Date(now);
+  scanEnd.setUTCFullYear(scanEnd.getUTCFullYear() + 2);
 
   for await (const appointments of streamAppointments(
-    { serviceTypes: ["DAYCARE"] },
+    {
+      startTime: {
+        startTime: scanStart.toISOString(),
+        endTime: scanEnd.toISOString(),
+      },
+      serviceTypes: ["DAYCARE"],
+    },
     [PET_RESORT_BUSINESS_ID]
   )) {
     for (const appointment of appointments) {
@@ -227,6 +239,15 @@ async function buildDaycareNotActiveReport(
         left.lastAppointmentDate ?? ""
       ) || left.customerName.localeCompare(right.customerName)
   );
+
+  console.info("[daycare:not-active] report built", {
+    inactivityDays: DAYCARE_INACTIVITY_DAYS,
+    maxDaysSinceLastVisit: DAYCARE_INACTIVITY_MAX_DAYS,
+    customersScanned: customerData.customersScanned,
+    completedDaycareCustomers: attendance.lastCompletedByCustomerId.size,
+    activeOrUpcomingCustomers: attendance.activeOrUpcomingCustomerIds.size,
+    resultCount: rows.length,
+  });
 
   return {
     generatedAt: now.toISOString(),

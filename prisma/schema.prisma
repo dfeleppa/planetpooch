@@ -1425,7 +1425,7 @@ model MoegoDaycarePackageCreditRow {
 }
 
 /// Stored on-demand snapshot of clients whose latest completed daycare visit
-/// is outside the inactivity window and who have no upcoming daycare visit.
+/// falls within the outreach window and who have no upcoming daycare visit.
 model MoegoDaycareNotActiveReport {
   id                       String   @id
   generatedAt              DateTime

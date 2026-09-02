@@ -1,4 +1,5 @@
 export const DAYCARE_INACTIVITY_DAYS = 30;
+export const DAYCARE_INACTIVITY_MAX_DAYS = 120;
 
 export type DaycareNotActiveReportRow = {
   customerId: string;
