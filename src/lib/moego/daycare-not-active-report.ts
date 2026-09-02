@@ -3,10 +3,12 @@ import "server-only";
 import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import {
-  readTags,
+  streamAppointments,
   streamCustomers,
+  type MoegoAppointmentRow,
   type MoegoCustomerRow,
 } from "@/lib/moego/client";
+import { PET_RESORT_BUSINESS_ID } from "@/lib/moego/daycare-weekly-report";
 import {
   DAYCARE_INACTIVITY_DAYS,
   type DaycareNotActiveReport,
@@ -30,14 +32,24 @@ function customerName(customer: MoegoCustomerRow): string {
   );
 }
 
-function isDaycareCustomer(customer: MoegoCustomerRow): boolean {
-  return readTags(customer.tags).some(
-    (tag) => tag.trim().toLowerCase() === "daycare"
+function isDeletedCustomer(customer: MoegoCustomerRow): boolean {
+  return customer.deleted === true || customer.status === "STATUS_DELETED";
+}
+
+function appointmentEnd(appointment: MoegoAppointmentRow): Date | null {
+  return (
+    parseDate(appointment.checkOutTime) ??
+    parseDate(appointment.duration?.endTime) ??
+    parseDate(appointment.duration?.startTime)
   );
 }
 
-function isDeletedCustomer(customer: MoegoCustomerRow): boolean {
-  return customer.deleted === true || customer.status === "STATUS_DELETED";
+function appointmentStart(appointment: MoegoAppointmentRow): Date | null {
+  return (
+    parseDate(appointment.duration?.startTime) ??
+    parseDate(appointment.checkInTime) ??
+    appointmentEnd(appointment)
+  );
 }
 
 function isMissingSnapshotTable(error: unknown): boolean {
@@ -94,7 +106,10 @@ export async function getStoredDaycareNotActiveReport(): Promise<DaycareNotActiv
       where: { id: REPORT_ID },
       include: {
         rows: {
-          orderBy: { customerName: "asc" },
+          orderBy: [
+            { lastAppointmentDate: { sort: "desc", nulls: "last" } },
+            { customerName: "asc" },
+          ],
         },
       },
     });
@@ -105,52 +120,120 @@ export async function getStoredDaycareNotActiveReport(): Promise<DaycareNotActiv
   }
 }
 
-async function buildDaycareNotActiveReport(
-  now = new Date()
-): Promise<DaycareNotActiveReport> {
-  const cutoffDate = new Date(now.getTime() - DAYCARE_INACTIVITY_DAYS * DAY_MS);
-  const rows: DaycareNotActiveReportRow[] = [];
+async function loadCustomers(): Promise<{
+  customersById: Map<string, MoegoCustomerRow>;
+  customersScanned: number;
+}> {
+  const customersById = new Map<string, MoegoCustomerRow>();
   let customersScanned = 0;
-  let daycareCustomersScanned = 0;
 
   for await (const customers of streamCustomers({})) {
     customersScanned += customers.length;
     for (const customer of customers) {
-      if (!customer.id || isDeletedCustomer(customer) || !isDaycareCustomer(customer)) {
-        continue;
+      if (customer.id && !isDeletedCustomer(customer)) {
+        customersById.set(customer.id, customer);
       }
-      daycareCustomersScanned++;
-
-      const lastAppointmentDate = parseDate(customer.lastAppointmentDate);
-      const daysSinceLastAppointment = lastAppointmentDate
-        ? Math.max(
-            0,
-            Math.floor((now.getTime() - lastAppointmentDate.getTime()) / DAY_MS)
-          )
-        : null;
-
-      rows.push({
-        customerId: customer.id,
-        customerName: customerName(customer),
-        email: customer.email?.trim() || null,
-        phone: (customer.mainPhoneNumber ?? customer.phone)?.trim() || null,
-        lastAppointmentDate: lastAppointmentDate?.toISOString() ?? null,
-        nextAppointmentDate: parseDate(customer.nextAppointmentDate)?.toISOString() ?? null,
-        daysSinceLastAppointment,
-        preferredBusinessId: customer.preferredBusinessId ?? null,
-        tags: readTags(customer.tags),
-      });
     }
   }
 
-  rows.sort((left, right) => left.customerName.localeCompare(right.customerName));
+  return { customersById, customersScanned };
+}
+
+async function loadDaycareAttendance(now: Date): Promise<{
+  lastCompletedByCustomerId: Map<string, Date>;
+  activeOrUpcomingCustomerIds: Set<string>;
+}> {
+  const lastCompletedByCustomerId = new Map<string, Date>();
+  const activeOrUpcomingCustomerIds = new Set<string>();
+
+  for await (const appointments of streamAppointments(
+    { serviceTypes: ["DAYCARE"] },
+    [PET_RESORT_BUSINESS_ID]
+  )) {
+    for (const appointment of appointments) {
+      if (
+        !appointment.customerId ||
+        appointment.isDeleted ||
+        appointment.noShow
+      ) {
+        continue;
+      }
+
+      if (appointment.status === "FINISHED") {
+        const completedAt = appointmentEnd(appointment);
+        if (!completedAt || completedAt > now) continue;
+
+        const previous = lastCompletedByCustomerId.get(appointment.customerId);
+        if (!previous || completedAt > previous) {
+          lastCompletedByCustomerId.set(appointment.customerId, completedAt);
+        }
+        continue;
+      }
+
+      if (appointment.status === "CANCELED") continue;
+      const startsAt = appointmentStart(appointment);
+      const endsAt = appointmentEnd(appointment);
+      if ((startsAt && startsAt >= now) || (endsAt && endsAt >= now)) {
+        activeOrUpcomingCustomerIds.add(appointment.customerId);
+      }
+    }
+  }
+
+  return { lastCompletedByCustomerId, activeOrUpcomingCustomerIds };
+}
+
+async function buildDaycareNotActiveReport(
+  now = new Date()
+): Promise<DaycareNotActiveReport> {
+  const cutoffDate = new Date(now.getTime() - DAYCARE_INACTIVITY_DAYS * DAY_MS);
+  const [customerData, attendance] = await Promise.all([
+    loadCustomers(),
+    loadDaycareAttendance(now),
+  ]);
+  const rows: DaycareNotActiveReportRow[] = [];
+
+  for (const [
+    customerId,
+    lastAppointmentDate,
+  ] of attendance.lastCompletedByCustomerId) {
+    if (
+      lastAppointmentDate >= cutoffDate ||
+      attendance.activeOrUpcomingCustomerIds.has(customerId)
+    ) {
+      continue;
+    }
+
+    const customer = customerData.customersById.get(customerId);
+    if (!customer) continue;
+
+    rows.push({
+      customerId,
+      customerName: customerName(customer),
+      email: customer.email?.trim() || null,
+      phone: (customer.mainPhoneNumber ?? customer.phone)?.trim() || null,
+      lastAppointmentDate: lastAppointmentDate.toISOString(),
+      nextAppointmentDate: null,
+      daysSinceLastAppointment: Math.floor(
+        (now.getTime() - lastAppointmentDate.getTime()) / DAY_MS
+      ),
+      preferredBusinessId: PET_RESORT_BUSINESS_ID,
+      tags: [],
+    });
+  }
+
+  rows.sort(
+    (left, right) =>
+      (right.lastAppointmentDate ?? "").localeCompare(
+        left.lastAppointmentDate ?? ""
+      ) || left.customerName.localeCompare(right.customerName)
+  );
 
   return {
     generatedAt: now.toISOString(),
     cutoffDate: cutoffDate.toISOString(),
     inactivityDays: DAYCARE_INACTIVITY_DAYS,
-    customersScanned,
-    daycareCustomersScanned,
+    customersScanned: customerData.customersScanned,
+    daycareCustomersScanned: attendance.lastCompletedByCustomerId.size,
     customerCount: rows.length,
     rows,
   };
@@ -197,9 +280,7 @@ export async function refreshDaycareNotActiveReport(): Promise<DaycareNotActiveR
           lastAppointmentDate: row.lastAppointmentDate
             ? new Date(row.lastAppointmentDate)
             : null,
-          nextAppointmentDate: row.nextAppointmentDate
-            ? new Date(row.nextAppointmentDate)
-            : null,
+          nextAppointmentDate: null,
           daysSinceLastAppointment: row.daysSinceLastAppointment,
           preferredBusinessId: row.preferredBusinessId,
           tags: row.tags,

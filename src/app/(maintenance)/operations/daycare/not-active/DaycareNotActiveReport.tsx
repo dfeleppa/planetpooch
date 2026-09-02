@@ -59,7 +59,7 @@ export function DaycareNotActiveReport({
             <div>
               <p className="text-sm font-semibold text-gray-900">
                 {report
-                  ? `${report.customerCount} daycare-tagged clients`
+                  ? `${report.customerCount} inactive daycare clients`
                   : "No stored report yet"}
               </p>
               <p className="mt-1 text-xs text-gray-500">
@@ -69,7 +69,7 @@ export function DaycareNotActiveReport({
               </p>
               {report ? (
                 <p className="mt-1 text-xs text-gray-400">
-                  Scanned {report.customersScanned} clients, including {report.daycareCustomersScanned} with the daycare tag.
+                  Scanned {report.customersScanned} clients and found {report.daycareCustomersScanned} with completed daycare visits.
                 </p>
               ) : null}
             </div>
@@ -90,8 +90,8 @@ export function DaycareNotActiveReport({
           <CardContent>
             <EmptyState
               icon="◷"
-              title="No daycare client report yet"
-              description="Pull the report to list every non-deleted MoeGo client with the daycare tag."
+              title="No inactive daycare report yet"
+              description="Pull the report to find clients whose latest completed daycare visit was more than 30 days ago and who have no current or upcoming daycare appointment."
               action={
                 <Button onClick={refreshReport} disabled={refreshing}>
                   {refreshing ? "Pulling report…" : "Pull report"}
@@ -105,17 +105,16 @@ export function DaycareNotActiveReport({
           <TableHead>
             <tr>
               <TableHeader>Customer</TableHeader>
-              <TableHeader>Last appointment</TableHeader>
-              <TableHeader className="text-right">Days since last</TableHeader>
-              <TableHeader>Next appointment</TableHeader>
+              <TableHeader>Last daycare visit</TableHeader>
+              <TableHeader className="text-right">Days since visit</TableHeader>
               <TableHeader>Contact</TableHeader>
             </tr>
           </TableHead>
           <TableBody>
             {report.rows.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={5} className="py-10 text-center text-gray-500">
-                  No non-deleted clients have the daycare tag.
+                <TableCell colSpan={4} className="py-10 text-center text-gray-500">
+                  No clients currently match the inactive daycare rule.
                 </TableCell>
               </TableRow>
             ) : (
@@ -125,15 +124,10 @@ export function DaycareNotActiveReport({
                   <TableCell>
                     {row.lastAppointmentDate
                       ? formatDate(row.lastAppointmentDate)
-                      : <span className="text-gray-400">Never</span>}
+                      : <span className="text-gray-400">—</span>}
                   </TableCell>
                   <TableCell className="text-right font-semibold tabular-nums">
                     {row.daysSinceLastAppointment ?? <span className="text-gray-400">—</span>}
-                  </TableCell>
-                  <TableCell>
-                    {row.nextAppointmentDate
-                      ? formatDate(row.nextAppointmentDate)
-                      : <span className="text-gray-400">—</span>}
                   </TableCell>
                   <TableCell>
                     {row.email ? <div className="text-sm">{row.email}</div> : null}
