@@ -216,16 +216,16 @@ async function buildDaycarePackageCreditReport(
       (dateFromKey(expirationDate).getTime() - todayTime) / DAY_MS
     );
     const isIncluded =
-      kind === "expired"
+      credits > 0 &&
+      (kind === "expired"
         ? isWithinExpiredDaycarePackageWindow(
             packageRow.packageName,
             daysUntilExpiration
           )
-        : credits > 0 &&
-          isWithinDaycarePackageExpirationWindow(
+        : isWithinDaycarePackageExpirationWindow(
             packageRow.packageName,
             daysUntilExpiration
-          );
+          ));
     if (!isIncluded) {
       continue;
     }
