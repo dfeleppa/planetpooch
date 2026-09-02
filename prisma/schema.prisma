@@ -1402,7 +1402,7 @@ model MoegoDaycarePackageCreditReport {
 model MoegoDaycarePackageCreditRow {
   id                  String   @id @default(cuid())
   reportId            String
-  packageId           String   @unique
+  packageId           String
   customerId          String
   customerName        String
   email               String?
@@ -1418,6 +1418,7 @@ model MoegoDaycarePackageCreditRow {
 
   report MoegoDaycarePackageCreditReport @relation(fields: [reportId], references: [id], onDelete: Cascade)
 
+  @@unique([reportId, packageId])
   @@index([reportId, expirationDate])
   @@index([packageName, expirationDate])
   @@index([customerId])

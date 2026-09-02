@@ -4,6 +4,8 @@ export const DAYCARE_PACKAGE_RULES = [
   { packageName: "Full Day Daycare 20 pack", expirationWindowDays: 14 },
 ] as const;
 
+export const EXPIRED_DAYCARE_PACKAGE_WINDOW_DAYS = 30;
+
 export function getDaycarePackageRule(packageName: string | null | undefined) {
   const normalized = (packageName ?? "").trim().toLowerCase().replace(/\s+/g, " ");
   return DAYCARE_PACKAGE_RULES.find(
@@ -20,6 +22,17 @@ export function isWithinDaycarePackageExpirationWindow(
     rule &&
       daysUntilExpiration >= 0 &&
       daysUntilExpiration <= rule.expirationWindowDays
+  );
+}
+
+export function isWithinExpiredDaycarePackageWindow(
+  packageName: string | null | undefined,
+  daysUntilExpiration: number
+): boolean {
+  return Boolean(
+    getDaycarePackageRule(packageName) &&
+      daysUntilExpiration < 0 &&
+      daysUntilExpiration >= -EXPIRED_DAYCARE_PACKAGE_WINDOW_DAYS
   );
 }
 

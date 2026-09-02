@@ -12,16 +12,21 @@ import {
   type MoegoPackageRow,
 } from "@/lib/moego/client";
 import {
+  EXPIRED_DAYCARE_PACKAGE_WINDOW_DAYS,
   getDaycarePackageRule,
   isWithinDaycarePackageExpirationWindow,
+  isWithinExpiredDaycarePackageWindow,
   type DaycarePackageCreditReport,
   type DaycarePackageCreditReportRow,
 } from "@/lib/moego/daycare-package-credit-types";
 
-const REPORT_ID = "daycare-package-credits";
+const UPCOMING_REPORT_ID = "daycare-package-credits";
+const EXPIRED_REPORT_ID = "daycare-expired-packages";
 const BUSINESS_TIME_ZONE = "America/New_York";
 const DAY_MS = 24 * 60 * 60 * 1000;
 const PACKAGE_DETAIL_BATCH_SIZE = 500;
+
+type DaycarePackageReportKind = "upcoming" | "expired";
 
 function dateKeyInBusinessTimeZone(value: Date): string {
   const parts = new Intl.DateTimeFormat("en-US", {
@@ -117,14 +122,17 @@ function serializeStoredReport(report: {
   };
 }
 
-export async function getStoredDaycarePackageCreditReport(): Promise<DaycarePackageCreditReport | null> {
+async function getStoredDaycarePackageReport(
+  reportId: string,
+  expirationOrder: "asc" | "desc"
+): Promise<DaycarePackageCreditReport | null> {
   try {
     const report = await prisma.moegoDaycarePackageCreditReport.findUnique({
-      where: { id: REPORT_ID },
+      where: { id: reportId },
       include: {
         rows: {
           orderBy: [
-            { expirationDate: "asc" },
+            { expirationDate: expirationOrder },
             { packageName: "asc" },
             { customerName: "asc" },
           ],
@@ -138,7 +146,16 @@ export async function getStoredDaycarePackageCreditReport(): Promise<DaycarePack
   }
 }
 
+export async function getStoredDaycarePackageCreditReport(): Promise<DaycarePackageCreditReport | null> {
+  return getStoredDaycarePackageReport(UPCOMING_REPORT_ID, "asc");
+}
+
+export async function getStoredExpiredDaycarePackageReport(): Promise<DaycarePackageCreditReport | null> {
+  return getStoredDaycarePackageReport(EXPIRED_REPORT_ID, "desc");
+}
+
 async function buildDaycarePackageCreditReport(
+  kind: DaycarePackageReportKind,
   now = new Date()
 ): Promise<DaycarePackageCreditReport> {
   const customersById = new Map<string, MoegoCustomerRow>();
@@ -192,14 +209,24 @@ async function buildDaycarePackageCreditReport(
     // MoeGo's list endpoint currently reports zero at the package level even
     // when credits remain. The details endpoint is the source of truth.
     const credits = remainingCredits(detailsByPackageId.get(packageRow.id));
-    if (credits <= 0) continue;
 
     const expirationDate = moegoDateKey(packageRow.expirationDate);
     if (!expirationDate || expirationDate === "9999-01-01") continue;
     const daysUntilExpiration = Math.round(
       (dateFromKey(expirationDate).getTime() - todayTime) / DAY_MS
     );
-    if (!isWithinDaycarePackageExpirationWindow(packageRow.packageName, daysUntilExpiration)) {
+    const isIncluded =
+      kind === "expired"
+        ? isWithinExpiredDaycarePackageWindow(
+            packageRow.packageName,
+            daysUntilExpiration
+          )
+        : credits > 0 &&
+          isWithinDaycarePackageExpirationWindow(
+            packageRow.packageName,
+            daysUntilExpiration
+          );
+    if (!isIncluded) {
       continue;
     }
 
@@ -216,17 +243,22 @@ async function buildDaycarePackageCreditReport(
       remainingCredits: credits,
       expirationDate,
       purchaseTime: packageRow.purchaseTime ?? null,
-      expirationWindowDays: rule.expirationWindowDays,
+      expirationWindowDays:
+        kind === "expired"
+          ? EXPIRED_DAYCARE_PACKAGE_WINDOW_DAYS
+          : rule.expirationWindowDays,
       daysUntilExpiration,
     });
   }
 
-  rows.sort(
-    (left, right) =>
-      left.expirationDate.localeCompare(right.expirationDate) ||
+  rows.sort((left, right) => {
+    const dateOrder = left.expirationDate.localeCompare(right.expirationDate);
+    return (
+      (kind === "expired" ? -dateOrder : dateOrder) ||
       left.packageName.localeCompare(right.packageName) ||
       left.customerName.localeCompare(right.customerName)
-  );
+    );
+  });
 
   return {
     generatedAt: now.toISOString(),
@@ -239,15 +271,18 @@ async function buildDaycarePackageCreditReport(
   };
 }
 
-export async function refreshDaycarePackageCreditReport(): Promise<DaycarePackageCreditReport> {
-  const report = await buildDaycarePackageCreditReport();
+async function refreshDaycarePackageReport(
+  reportId: string,
+  kind: DaycarePackageReportKind
+): Promise<DaycarePackageCreditReport> {
+  const report = await buildDaycarePackageCreditReport(kind);
   const generatedAt = new Date(report.generatedAt);
 
   const operations: Prisma.PrismaPromise<unknown>[] = [
     prisma.moegoDaycarePackageCreditReport.upsert({
-      where: { id: REPORT_ID },
+      where: { id: reportId },
       create: {
-        id: REPORT_ID,
+        id: reportId,
         generatedAt,
         customersScanned: report.customersScanned,
         packagesScanned: report.packagesScanned,
@@ -264,14 +299,14 @@ export async function refreshDaycarePackageCreditReport(): Promise<DaycarePackag
         totalRemainingCredits: report.totalRemainingCredits,
       },
     }),
-    prisma.moegoDaycarePackageCreditRow.deleteMany({ where: { reportId: REPORT_ID } }),
+    prisma.moegoDaycarePackageCreditRow.deleteMany({ where: { reportId } }),
   ];
 
   if (report.rows.length > 0) {
     operations.push(
       prisma.moegoDaycarePackageCreditRow.createMany({
         data: report.rows.map((row) => ({
-          reportId: REPORT_ID,
+          reportId,
           packageId: row.packageId,
           customerId: row.customerId,
           customerName: row.customerName,
@@ -289,5 +324,18 @@ export async function refreshDaycarePackageCreditReport(): Promise<DaycarePackag
   }
 
   await prisma.$transaction(operations);
-  return (await getStoredDaycarePackageCreditReport()) ?? report;
+  return (
+    (await getStoredDaycarePackageReport(
+      reportId,
+      kind === "expired" ? "desc" : "asc"
+    )) ?? report
+  );
+}
+
+export async function refreshDaycarePackageCreditReport(): Promise<DaycarePackageCreditReport> {
+  return refreshDaycarePackageReport(UPCOMING_REPORT_ID, "upcoming");
+}
+
+export async function refreshExpiredDaycarePackageReport(): Promise<DaycarePackageCreditReport> {
+  return refreshDaycarePackageReport(EXPIRED_REPORT_ID, "expired");
 }
