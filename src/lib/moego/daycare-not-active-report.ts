@@ -60,9 +60,9 @@ function serializeStoredReport(report: {
     customerName: string;
     email: string | null;
     phone: string | null;
-    lastAppointmentDate: Date;
+    lastAppointmentDate: Date | null;
     nextAppointmentDate: Date | null;
-    daysSinceLastAppointment: number;
+    daysSinceLastAppointment: number | null;
     preferredBusinessId: string | null;
     tags: string[];
   }[];
@@ -79,7 +79,7 @@ function serializeStoredReport(report: {
       customerName: row.customerName,
       email: row.email,
       phone: row.phone,
-      lastAppointmentDate: row.lastAppointmentDate.toISOString(),
+      lastAppointmentDate: row.lastAppointmentDate?.toISOString() ?? null,
       nextAppointmentDate: row.nextAppointmentDate?.toISOString() ?? null,
       daysSinceLastAppointment: row.daysSinceLastAppointment,
       preferredBusinessId: row.preferredBusinessId,
@@ -94,10 +94,7 @@ export async function getStoredDaycareNotActiveReport(): Promise<DaycareNotActiv
       where: { id: REPORT_ID },
       include: {
         rows: {
-          orderBy: [
-            { lastAppointmentDate: "asc" },
-            { customerName: "asc" },
-          ],
+          orderBy: { customerName: "asc" },
         },
       },
     });
@@ -125,19 +122,19 @@ async function buildDaycareNotActiveReport(
       daycareCustomersScanned++;
 
       const lastAppointmentDate = parseDate(customer.lastAppointmentDate);
-      if (!lastAppointmentDate || lastAppointmentDate >= cutoffDate) continue;
-
-      const daysSinceLastAppointment = Math.floor(
-        (now.getTime() - lastAppointmentDate.getTime()) / DAY_MS
-      );
-      if (daysSinceLastAppointment <= DAYCARE_INACTIVITY_DAYS) continue;
+      const daysSinceLastAppointment = lastAppointmentDate
+        ? Math.max(
+            0,
+            Math.floor((now.getTime() - lastAppointmentDate.getTime()) / DAY_MS)
+          )
+        : null;
 
       rows.push({
         customerId: customer.id,
         customerName: customerName(customer),
         email: customer.email?.trim() || null,
         phone: (customer.mainPhoneNumber ?? customer.phone)?.trim() || null,
-        lastAppointmentDate: lastAppointmentDate.toISOString(),
+        lastAppointmentDate: lastAppointmentDate?.toISOString() ?? null,
         nextAppointmentDate: parseDate(customer.nextAppointmentDate)?.toISOString() ?? null,
         daysSinceLastAppointment,
         preferredBusinessId: customer.preferredBusinessId ?? null,
@@ -146,11 +143,7 @@ async function buildDaycareNotActiveReport(
     }
   }
 
-  rows.sort(
-    (left, right) =>
-      left.lastAppointmentDate.localeCompare(right.lastAppointmentDate) ||
-      left.customerName.localeCompare(right.customerName)
-  );
+  rows.sort((left, right) => left.customerName.localeCompare(right.customerName));
 
   return {
     generatedAt: now.toISOString(),
@@ -201,7 +194,9 @@ export async function refreshDaycareNotActiveReport(): Promise<DaycareNotActiveR
           customerName: row.customerName,
           email: row.email,
           phone: row.phone,
-          lastAppointmentDate: new Date(row.lastAppointmentDate),
+          lastAppointmentDate: row.lastAppointmentDate
+            ? new Date(row.lastAppointmentDate)
+            : null,
           nextAppointmentDate: row.nextAppointmentDate
             ? new Date(row.nextAppointmentDate)
             : null,

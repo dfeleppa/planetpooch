@@ -1424,8 +1424,8 @@ model MoegoDaycarePackageCreditRow {
   @@index([customerId])
 }
 
-/// Stored on-demand snapshot of daycare-tagged clients whose last appointment
-/// was more than the configured inactivity window ago.
+/// Stored on-demand snapshot of daycare-tagged clients. Appointment dates are
+/// retained for reference and can be used by future inactivity filters.
 model MoegoDaycareNotActiveReport {
   id                       String   @id
   generatedAt              DateTime
@@ -1447,9 +1447,9 @@ model MoegoDaycareNotActiveRow {
   customerName             String
   email                    String?
   phone                    String?
-  lastAppointmentDate      DateTime
+  lastAppointmentDate      DateTime?
   nextAppointmentDate      DateTime?
-  daysSinceLastAppointment Int
+  daysSinceLastAppointment Int?
   preferredBusinessId      String?
   tags                     String[] @default([])
   createdAt                DateTime @default(now())

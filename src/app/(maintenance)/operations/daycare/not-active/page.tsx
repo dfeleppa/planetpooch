@@ -9,7 +9,7 @@ export default async function DaycareNotActivePage() {
       <div>
         <h2 className="text-lg font-semibold text-gray-900">Not Active</h2>
         <p className="mt-1 text-sm text-gray-500">
-          Clients tagged daycare whose last appointment was more than 30 days ago.
+          All non-deleted MoeGo clients tagged daycare. Appointment activity is shown for reference only.
         </p>
       </div>
       <DaycareNotActiveReport initialReport={report} />

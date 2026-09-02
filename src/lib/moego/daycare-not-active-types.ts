@@ -5,9 +5,9 @@ export type DaycareNotActiveReportRow = {
   customerName: string;
   email: string | null;
   phone: string | null;
-  lastAppointmentDate: string;
+  lastAppointmentDate: string | null;
   nextAppointmentDate: string | null;
-  daysSinceLastAppointment: number;
+  daysSinceLastAppointment: number | null;
   preferredBusinessId: string | null;
   tags: string[];
 };

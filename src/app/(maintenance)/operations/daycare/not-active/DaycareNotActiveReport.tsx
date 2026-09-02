@@ -59,12 +59,12 @@ export function DaycareNotActiveReport({
             <div>
               <p className="text-sm font-semibold text-gray-900">
                 {report
-                  ? `${report.customerCount} not-active daycare clients`
+                  ? `${report.customerCount} daycare-tagged clients`
                   : "No stored report yet"}
               </p>
               <p className="mt-1 text-xs text-gray-500">
                 {report
-                  ? `Last updated ${formatDateTime(report.generatedAt)} · Last visit before ${formatDate(report.cutoffDate)}`
+                  ? `Last updated ${formatDateTime(report.generatedAt)}`
                   : "Pull the report once to create the stored snapshot."}
               </p>
               {report ? (
@@ -90,8 +90,8 @@ export function DaycareNotActiveReport({
           <CardContent>
             <EmptyState
               icon="◷"
-              title="No not-active report yet"
-              description="Pull the report to find daycare-tagged clients whose last appointment was more than 30 days ago."
+              title="No daycare client report yet"
+              description="Pull the report to list every non-deleted MoeGo client with the daycare tag."
               action={
                 <Button onClick={refreshReport} disabled={refreshing}>
                   {refreshing ? "Pulling report…" : "Pull report"}
@@ -106,7 +106,7 @@ export function DaycareNotActiveReport({
             <tr>
               <TableHeader>Customer</TableHeader>
               <TableHeader>Last appointment</TableHeader>
-              <TableHeader className="text-right">Days inactive</TableHeader>
+              <TableHeader className="text-right">Days since last</TableHeader>
               <TableHeader>Next appointment</TableHeader>
               <TableHeader>Contact</TableHeader>
             </tr>
@@ -115,16 +115,20 @@ export function DaycareNotActiveReport({
             {report.rows.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={5} className="py-10 text-center text-gray-500">
-                  No daycare clients currently match the not-active rule.
+                  No non-deleted clients have the daycare tag.
                 </TableCell>
               </TableRow>
             ) : (
               report.rows.map((row) => (
                 <TableRow key={row.customerId}>
                   <TableCell className="font-medium">{row.customerName}</TableCell>
-                  <TableCell>{formatDate(row.lastAppointmentDate)}</TableCell>
+                  <TableCell>
+                    {row.lastAppointmentDate
+                      ? formatDate(row.lastAppointmentDate)
+                      : <span className="text-gray-400">Never</span>}
+                  </TableCell>
                   <TableCell className="text-right font-semibold tabular-nums">
-                    {row.daysSinceLastAppointment}
+                    {row.daysSinceLastAppointment ?? <span className="text-gray-400">—</span>}
                   </TableCell>
                   <TableCell>
                     {row.nextAppointmentDate
