@@ -111,7 +111,7 @@ export function DaycareNotActiveReport({
               </p>
               {report ? (
                 <p className="mt-1 text-xs text-gray-400">
-                  Scanned {report.customersScanned} clients and found {report.daycareCustomersScanned} with completed daycare visits in the last 120 days.
+                  Scanned {report.customersScanned} clients and found {report.daycareCustomersScanned} with completed daycare visits in the last 52 days.
                 </p>
               ) : null}
             </div>
@@ -133,7 +133,7 @@ export function DaycareNotActiveReport({
             <EmptyState
               icon="◷"
               title="No inactive daycare report yet"
-              description="Pull the report to find clients whose latest completed daycare visit was 31–120 days ago and who have no current or upcoming daycare appointment."
+              description="Pull the report to find clients whose latest completed daycare visit was 31–52 days ago and who have no current or upcoming daycare appointment."
               action={
                 <Button onClick={refreshReport} disabled={refreshing}>
                   {refreshing ? "Pulling report…" : "Pull report"}
