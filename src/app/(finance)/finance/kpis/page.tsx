@@ -3,19 +3,20 @@ import { prisma } from "@/lib/prisma";
 import { KpiSegment } from "@prisma/client";
 import {
   DAYCARE_STAFF_HOURS_METRIC_KEY,
-  DEFAULT_SEGMENT,
   KPI_SEGMENTS,
   calculateBoardingDerivedMetricValues,
   calculateDaycareDerivedMetricValues,
   getSegmentDef,
-  isValidSegment,
 } from "@/lib/kpis";
 import { addWeeks, currentWeekStart, fromWeekParam, isValidWeekParam, toWeekParam } from "@/lib/week";
 import { resolveStandingAmount, type StandingRow } from "@/lib/kpi-standing";
 import { getResortStaffHoursByWeek } from "@/lib/payroll-kpis";
 import { KpiView, type KpiCell, type WeeklyHeadlineSummary } from "./KpiView";
 
-const ALL_TAB = "ALL";
+const PET_RESORT_TAB = "PET_RESORT";
+const PET_RESORT_SEGMENTS = KPI_SEGMENTS.filter(
+  (segmentDef) => segmentDef.key !== "MOBILE_GROOMING"
+);
 
 function shortDate(date: Date): string {
   return date.toLocaleDateString("en-US", {
@@ -51,10 +52,6 @@ async function getWeeklyHeadlineSummary(weekStart: Date): Promise<WeeklyHeadline
         ? (resortPayrollCents / resortNetSalesCents) * 100
         : null,
   };
-}
-
-function isAllTab(value: string | undefined): boolean {
-  return value === ALL_TAB;
 }
 
 function withDerivedKpiCells(
@@ -118,16 +115,17 @@ export default async function KpisPage({
   await requireSuperAdmin();
   const params = await searchParams;
 
-  const showAll = isAllTab(params.segment);
-  const segment: KpiSegment =
-    !showAll && params.segment && isValidSegment(params.segment) ? params.segment : DEFAULT_SEGMENT;
+  const showPetResort = params.segment !== "MOBILE_GROOMING";
+  const segment: KpiSegment = "MOBILE_GROOMING";
 
   let weekStart: Date;
   if (isValidWeekParam(params.week)) {
     weekStart = fromWeekParam(params.week);
   } else {
     const latest = await prisma.kpiWeeklyValue.findFirst({
-      where: showAll ? {} : { segment },
+      where: showPetResort
+        ? { segment: { in: PET_RESORT_SEGMENTS.map((segmentDef) => segmentDef.key) } }
+        : { segment },
       orderBy: { weekStart: "desc" },
       select: { weekStart: true },
     });
@@ -139,11 +137,11 @@ export default async function KpisPage({
   const previousWeek = toWeekParam(previousWeekStart);
   const headlineSummaryPromise = getWeeklyHeadlineSummary(weekStart);
   const staffHoursByWeekPromise =
-    showAll || segment === "DAYCARE"
+    showPetResort
       ? getResortStaffHoursByWeek([weekStart, previousWeekStart])
       : Promise.resolve(new Map<string, number>());
 
-  if (showAll) {
+  if (showPetResort) {
     const [
       valueRows,
       previousValueRows,
@@ -152,15 +150,24 @@ export default async function KpisPage({
       headlineSummary,
     ] = await Promise.all([
       prisma.kpiWeeklyValue.findMany({
-        where: { weekStart },
+        where: {
+          segment: { in: PET_RESORT_SEGMENTS.map((segmentDef) => segmentDef.key) },
+          weekStart,
+        },
         select: { segment: true, metricKey: true, value: true },
       }),
       prisma.kpiWeeklyValue.findMany({
-        where: { weekStart: previousWeekStart },
+        where: {
+          segment: { in: PET_RESORT_SEGMENTS.map((segmentDef) => segmentDef.key) },
+          weekStart: previousWeekStart,
+        },
         select: { segment: true, metricKey: true, value: true },
       }),
       prisma.kpiStandingValue.findMany({
-        where: { effectiveWeekStart: { lte: weekStart } },
+        where: {
+          segment: { in: PET_RESORT_SEGMENTS.map((segmentDef) => segmentDef.key) },
+          effectiveWeekStart: { lte: weekStart },
+        },
         select: { segment: true, metricKey: true, field: true, amount: true, effectiveWeekStart: true },
       }),
       staffHoursByWeekPromise,
@@ -168,7 +175,7 @@ export default async function KpisPage({
     ]);
 
     const allData: Record<string, Record<string, KpiCell>> = {};
-    for (const segDef of KPI_SEGMENTS) {
+    for (const segDef of PET_RESORT_SEGMENTS) {
       const segValues = valueRows.filter((r) => r.segment === segDef.key);
       const previousSegValues = previousValueRows.filter((r) => r.segment === segDef.key);
       const segStanding = standingRows.filter((r) => r.segment === segDef.key) as StandingRow[];
@@ -196,7 +203,7 @@ export default async function KpisPage({
         <div className="pp-kpi-screen-heading mb-6">
           <h2 className="text-xl font-semibold text-gray-900">KPIs</h2>
           <p className="text-gray-500 mt-1">
-            Weekly key performance indicators by business segment
+            Weekly key performance indicators for Pet Resort and Mobile Grooming
           </p>
         </div>
 
@@ -204,7 +211,7 @@ export default async function KpisPage({
           segment={segment}
           week={week}
           data={{}}
-          activeTab={ALL_TAB}
+          activeTab={PET_RESORT_TAB}
           allSegmentsData={allData}
           headlineSummary={headlineSummary}
         />
@@ -257,7 +264,7 @@ export default async function KpisPage({
       <div className="pp-kpi-screen-heading mb-6">
         <h2 className="text-xl font-semibold text-gray-900">KPIs</h2>
         <p className="text-gray-500 mt-1">
-          Weekly key performance indicators by business segment
+          Weekly key performance indicators for Pet Resort and Mobile Grooming
         </p>
       </div>
 

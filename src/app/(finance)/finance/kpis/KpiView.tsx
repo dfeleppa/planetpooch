@@ -120,7 +120,10 @@ const SELECT_CLS =
 
 const SECTION_ORDER: KpiSection[] = ["ACTUALS", "FORECAST"];
 
-const ALL_TAB = "ALL";
+const PET_RESORT_TAB = "PET_RESORT";
+const PET_RESORT_SEGMENTS = KPI_SEGMENTS.filter(
+  (segmentDef) => segmentDef.key !== "MOBILE_GROOMING"
+);
 const MOEGO_IMPORT_ENDPOINTS: Record<KpiSegment, string> = {
   MOBILE_GROOMING: "/api/finance/kpis/moego-mobile-grooming",
   BOARDING: "/api/finance/kpis/moego-boarding",
@@ -158,9 +161,11 @@ function HeadlineMetric({ label, value }: { label: string; value: string }) {
 function WeeklyHeadline({
   week,
   summary,
+  business,
 }: {
   week: string;
   summary: WeeklyHeadlineSummary;
+  business: "PET_RESORT" | "MOBILE_GROOMING";
 }) {
   return (
     <section className="mb-6" aria-labelledby="weekly-headline-heading">
@@ -170,27 +175,32 @@ function WeeklyHeadline({
         </h2>
         <p className="text-xs text-gray-500">{formatWeekRange(fromWeekParam(week))}</p>
       </div>
-      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-        <HeadlineMetric
-          label="Pet Resort net sales"
-          value={formatHeadlineCurrency(summary.resortNetSalesCents)}
-        />
-        <HeadlineMetric
-          label="Mobile Grooming net sales"
-          value={formatHeadlineCurrency(summary.mobileNetSalesCents)}
-        />
-        <HeadlineMetric
-          label="Pet Resort payroll"
-          value={formatHeadlineCurrency(summary.resortPayrollCents)}
-        />
-        <HeadlineMetric
-          label="Payroll % of Resort net sales"
-          value={
-            summary.resortPayrollPercent === null
-              ? "—"
-              : `${summary.resortPayrollPercent.toFixed(2)}%`
-          }
-        />
+      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+        {business === "PET_RESORT" ? (
+          <>
+            <HeadlineMetric
+              label="Pet Resort net sales"
+              value={formatHeadlineCurrency(summary.resortNetSalesCents)}
+            />
+            <HeadlineMetric
+              label="Pet Resort payroll"
+              value={formatHeadlineCurrency(summary.resortPayrollCents)}
+            />
+            <HeadlineMetric
+              label="Payroll % of Resort net sales"
+              value={
+                summary.resortPayrollPercent === null
+                  ? "—"
+                  : `${summary.resortPayrollPercent.toFixed(2)}%`
+              }
+            />
+          </>
+        ) : (
+          <HeadlineMetric
+            label="Mobile Grooming net sales"
+            value={formatHeadlineCurrency(summary.mobileNetSalesCents)}
+          />
+        )}
       </div>
     </section>
   );
@@ -248,7 +258,7 @@ export function KpiView({
   const router = useRouter();
   const pathname = usePathname();
   const segmentDef = getSegmentDef(segment);
-  const isAll = activeTab === ALL_TAB;
+  const isPetResort = activeTab === PET_RESORT_TAB;
   const dataWithDerivedValues = useMemo(
     () => withDerivedKpiCells(segment, data),
     [segment, data]
@@ -273,7 +283,7 @@ export function KpiView({
   useEffect(() => {
     setMode(null);
     setImportMessage(null);
-  }, [segment, week, isAll]);
+  }, [segment, week, isPetResort]);
 
   function navigate(nextSegment: string, nextWeek: string) {
     router.push(`${pathname}?segment=${nextSegment}&week=${nextWeek}`);
@@ -409,13 +419,13 @@ export function KpiView({
     }
   }
 
-  async function importAllMoegoActuals() {
+  async function importPetResortMoegoActuals() {
     setImportingMoego(true);
     setImportMessage(null);
     const imported: string[] = [];
     const failed: string[] = [];
     try {
-      for (const segDef of KPI_SEGMENTS) {
+      for (const segDef of PET_RESORT_SEGMENTS) {
         try {
           const { res, json } = await requestMoegoImport(segDef.key);
           if (res.ok && json.report) {
@@ -456,7 +466,7 @@ export function KpiView({
     const rows: string[][] = [
       ["Segment", "Section", "KPI", "Value", "Last Week", "WoW", "Average", "Target"],
     ];
-    for (const segDef of KPI_SEGMENTS) {
+    for (const segDef of PET_RESORT_SEGMENTS) {
       const segData = allSegmentsDataWithDerivedValues[segDef.key];
       if (!segData) continue;
       for (const section of SECTION_ORDER) {
@@ -486,7 +496,7 @@ export function KpiView({
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `kpis-all-${week}.csv`;
+    a.download = `kpis-pet-resort-${week}.csv`;
     a.click();
     URL.revokeObjectURL(url);
   }
@@ -498,31 +508,33 @@ export function KpiView({
       window.removeEventListener("afterprint", restoreTitle);
     };
 
-    document.title = `Planet Pooch KPI Report - ${week}`;
+    document.title = `Planet Pooch ${
+      isPetResort ? "Pet Resort" : "Mobile Grooming"
+    } KPI Report - ${week}`;
     window.addEventListener("afterprint", restoreTitle, { once: true });
     window.print();
   }
 
-  const allTabs = [
-    { id: ALL_TAB, label: "All" },
-    ...KPI_SEGMENTS.map((s) => ({ id: s.key, label: s.label })),
+  const tabs = [
+    { id: PET_RESORT_TAB, label: "Pet Resort" },
+    { id: "MOBILE_GROOMING", label: "Mobile Grooming" },
   ];
 
   return (
     <div>
       <Tabs
-        tabs={allTabs}
-        activeTab={isAll ? ALL_TAB : segment}
+        tabs={tabs}
+        activeTab={isPetResort ? PET_RESORT_TAB : "MOBILE_GROOMING"}
         onChange={(id) => navigate(id, week)}
         className="pp-kpi-screen-tabs mb-6"
       />
 
-      {isAll ? (
+      {isPetResort ? (
         <>
           <header className="pp-kpi-print-header">
             <div>
               <div className="pp-kpi-print-eyebrow">Planet Pooch</div>
-              <h1>Weekly KPI Report</h1>
+              <h1>Pet Resort Weekly KPI Report</h1>
             </div>
             <div className="pp-kpi-print-period">
               <strong>{formatWeekLabel(fromWeekParam(week))}</strong>
@@ -531,14 +543,14 @@ export function KpiView({
           </header>
 
           <div className="pp-kpi-report-controls flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between mb-6">
-            <WeekPicker week={week} onChange={(w) => navigate(ALL_TAB, w)} />
+            <WeekPicker week={week} onChange={(w) => navigate(PET_RESORT_TAB, w)} />
             <div className="flex gap-2 print:hidden">
               <Button
                 variant="secondary"
-                onClick={importAllMoegoActuals}
+                onClick={importPetResortMoegoActuals}
                 disabled={importingMoego}
               >
-                {importingMoego ? "Importing…" : "Import all"}
+                {importingMoego ? "Importing…" : "Import Pet Resort"}
               </Button>
               <Button variant="secondary" onClick={exportCsv}>
                 Export CSV
@@ -555,10 +567,10 @@ export function KpiView({
             </div>
           )}
 
-          <WeeklyHeadline week={week} summary={headlineSummary} />
+          <WeeklyHeadline week={week} summary={headlineSummary} business="PET_RESORT" />
 
           <div className="pp-kpi-report-segments flex flex-col gap-8 print:gap-4">
-            {KPI_SEGMENTS.map((segDef) => {
+            {PET_RESORT_SEGMENTS.map((segDef) => {
               const segData = allSegmentsDataWithDerivedValues?.[segDef.key];
               if (!segData || segDef.metrics.length === 0) return null;
               return (
@@ -681,7 +693,7 @@ export function KpiView({
             </div>
           )}
 
-          <WeeklyHeadline week={week} summary={headlineSummary} />
+          <WeeklyHeadline week={week} summary={headlineSummary} business="MOBILE_GROOMING" />
 
           {!hasMetrics ? (
             <Card>
