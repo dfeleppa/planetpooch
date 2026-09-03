@@ -13,9 +13,45 @@ import {
 import { addWeeks, currentWeekStart, fromWeekParam, isValidWeekParam, toWeekParam } from "@/lib/week";
 import { resolveStandingAmount, type StandingRow } from "@/lib/kpi-standing";
 import { getResortStaffHoursByWeek } from "@/lib/payroll-kpis";
-import { KpiView, type KpiCell } from "./KpiView";
+import { KpiView, type KpiCell, type WeeklyHeadlineSummary } from "./KpiView";
 
 const ALL_TAB = "ALL";
+
+function shortDate(date: Date): string {
+  return date.toLocaleDateString("en-US", {
+    timeZone: "UTC",
+    month: "2-digit",
+    day: "2-digit",
+    year: "numeric",
+  });
+}
+
+async function getWeeklyHeadlineSummary(weekStart: Date): Promise<WeeklyHeadlineSummary> {
+  const weekEnd = new Date(weekStart);
+  weekEnd.setUTCDate(weekEnd.getUTCDate() + 6);
+  const payPeriod = `${shortDate(weekStart)} to ${shortDate(weekEnd)}`;
+  const [headline, payrollRuns] = await Promise.all([
+    prisma.financeWeeklyKpiHeadline.findUnique({ where: { weekStart } }),
+    prisma.financePetResortPayrollRun.findMany({
+      where: { payPeriod },
+      select: { amount: true },
+    }),
+  ]);
+  const resortPayrollCents = payrollRuns.length
+    ? Math.round(payrollRuns.reduce((sum, run) => sum + Number(run.amount), 0) * 100)
+    : null;
+  const resortNetSalesCents = headline?.resortNetSalesCents ?? null;
+
+  return {
+    mobileNetSalesCents: headline?.mobileNetSalesCents ?? null,
+    resortNetSalesCents,
+    resortPayrollCents,
+    resortPayrollPercent:
+      resortPayrollCents !== null && resortNetSalesCents
+        ? (resortPayrollCents / resortNetSalesCents) * 100
+        : null,
+  };
+}
 
 function isAllTab(value: string | undefined): boolean {
   return value === ALL_TAB;
@@ -101,13 +137,20 @@ export default async function KpisPage({
   const week = toWeekParam(weekStart);
   const previousWeekStart = addWeeks(weekStart, -1);
   const previousWeek = toWeekParam(previousWeekStart);
+  const headlineSummaryPromise = getWeeklyHeadlineSummary(weekStart);
   const staffHoursByWeekPromise =
     showAll || segment === "DAYCARE"
       ? getResortStaffHoursByWeek([weekStart, previousWeekStart])
       : Promise.resolve(new Map<string, number>());
 
   if (showAll) {
-    const [valueRows, previousValueRows, standingRows, staffHoursByWeek] = await Promise.all([
+    const [
+      valueRows,
+      previousValueRows,
+      standingRows,
+      staffHoursByWeek,
+      headlineSummary,
+    ] = await Promise.all([
       prisma.kpiWeeklyValue.findMany({
         where: { weekStart },
         select: { segment: true, metricKey: true, value: true },
@@ -121,6 +164,7 @@ export default async function KpisPage({
         select: { segment: true, metricKey: true, field: true, amount: true, effectiveWeekStart: true },
       }),
       staffHoursByWeekPromise,
+      headlineSummaryPromise,
     ]);
 
     const allData: Record<string, Record<string, KpiCell>> = {};
@@ -156,12 +200,25 @@ export default async function KpisPage({
           </p>
         </div>
 
-        <KpiView segment={segment} week={week} data={{}} activeTab={ALL_TAB} allSegmentsData={allData} />
+        <KpiView
+          segment={segment}
+          week={week}
+          data={{}}
+          activeTab={ALL_TAB}
+          allSegmentsData={allData}
+          headlineSummary={headlineSummary}
+        />
       </div>
     );
   }
 
-  const [valueRows, previousValueRows, standingRows, staffHoursByWeek] = await Promise.all([
+  const [
+    valueRows,
+    previousValueRows,
+    standingRows,
+    staffHoursByWeek,
+    headlineSummary,
+  ] = await Promise.all([
     prisma.kpiWeeklyValue.findMany({
       where: { segment, weekStart },
       select: { metricKey: true, value: true },
@@ -175,6 +232,7 @@ export default async function KpisPage({
       select: { metricKey: true, field: true, amount: true, effectiveWeekStart: true },
     }),
     staffHoursByWeekPromise,
+    headlineSummaryPromise,
   ]);
 
   const valueByKey = new Map(valueRows.map((r) => [r.metricKey, r.value]));
@@ -203,7 +261,13 @@ export default async function KpisPage({
         </p>
       </div>
 
-      <KpiView segment={segment} week={week} data={data} activeTab={segment} />
+      <KpiView
+        segment={segment}
+        week={week}
+        data={data}
+        activeTab={segment}
+        headlineSummary={headlineSummary}
+      />
     </div>
   );
 }

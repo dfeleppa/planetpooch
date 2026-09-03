@@ -1098,6 +1098,16 @@ model FinancePetResortPayrollRun {
   @@index([payRunAt])
 }
 
+/// Browser-verified headline totals shown at the top of each weekly KPI report.
+model FinanceWeeklyKpiHeadline {
+  id                  String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  weekStart           DateTime @unique @db.Date
+  resortNetSalesCents Int
+  mobileNetSalesCents Int
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @default(now()) @updatedAt
+}
+
 /// Weekly payroll hours imported from MoeGo clock-in/out or entered manually.
 /// Pet resort weeks run Sunday-Saturday; mobile grooming weeks run Saturday-Friday.
 model FinancePayrollWeek {

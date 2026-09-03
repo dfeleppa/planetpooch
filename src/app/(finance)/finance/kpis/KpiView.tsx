@@ -39,6 +39,13 @@ export type KpiCell = {
   target: number | null;
 };
 
+export type WeeklyHeadlineSummary = {
+  mobileNetSalesCents: number | null;
+  resortNetSalesCents: number | null;
+  resortPayrollCents: number | null;
+  resortPayrollPercent: number | null;
+};
+
 type MobileGroomingImportReport = {
   finishedAppointments: number;
   uniqueClients: number;
@@ -128,6 +135,67 @@ const BOARDING_READ_ONLY_VALUE_KEY_SET = new Set<string>(
   BOARDING_READ_ONLY_VALUE_KEYS
 );
 
+const headlineCurrencyFormatter = new Intl.NumberFormat("en-US", {
+  style: "currency",
+  currency: "USD",
+});
+
+function formatHeadlineCurrency(cents: number | null): string {
+  return cents === null ? "—" : headlineCurrencyFormatter.format(cents / 100);
+}
+
+function HeadlineMetric({ label, value }: { label: string; value: string }) {
+  return (
+    <Card>
+      <CardContent className="space-y-1 py-4">
+        <p className="text-xs font-medium uppercase tracking-wide text-gray-500">{label}</p>
+        <p className="text-xl font-semibold tabular-nums text-gray-900">{value}</p>
+      </CardContent>
+    </Card>
+  );
+}
+
+function WeeklyHeadline({
+  week,
+  summary,
+}: {
+  week: string;
+  summary: WeeklyHeadlineSummary;
+}) {
+  return (
+    <section className="mb-6" aria-labelledby="weekly-headline-heading">
+      <div className="mb-2 flex flex-col gap-1 sm:flex-row sm:items-baseline sm:justify-between">
+        <h2 id="weekly-headline-heading" className="text-sm font-semibold text-gray-900">
+          Weekly headline
+        </h2>
+        <p className="text-xs text-gray-500">{formatWeekRange(fromWeekParam(week))}</p>
+      </div>
+      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+        <HeadlineMetric
+          label="Pet Resort net sales"
+          value={formatHeadlineCurrency(summary.resortNetSalesCents)}
+        />
+        <HeadlineMetric
+          label="Mobile Grooming net sales"
+          value={formatHeadlineCurrency(summary.mobileNetSalesCents)}
+        />
+        <HeadlineMetric
+          label="Pet Resort payroll"
+          value={formatHeadlineCurrency(summary.resortPayrollCents)}
+        />
+        <HeadlineMetric
+          label="Payroll % of Resort net sales"
+          value={
+            summary.resortPayrollPercent === null
+              ? "—"
+              : `${summary.resortPayrollPercent.toFixed(2)}%`
+          }
+        />
+      </div>
+    </section>
+  );
+}
+
 function withDerivedKpiCells(
   segment: KpiSegment,
   cells: Record<string, KpiCell>
@@ -168,12 +236,14 @@ export function KpiView({
   data,
   activeTab,
   allSegmentsData,
+  headlineSummary,
 }: {
   segment: KpiSegment;
   week: string;
   data: Record<string, KpiCell>;
   activeTab?: string;
   allSegmentsData?: Record<string, Record<string, KpiCell>>;
+  headlineSummary: WeeklyHeadlineSummary;
 }) {
   const router = useRouter();
   const pathname = usePathname();
@@ -485,6 +555,8 @@ export function KpiView({
             </div>
           )}
 
+          <WeeklyHeadline week={week} summary={headlineSummary} />
+
           <div className="pp-kpi-report-segments flex flex-col gap-8 print:gap-4">
             {KPI_SEGMENTS.map((segDef) => {
               const segData = allSegmentsDataWithDerivedValues?.[segDef.key];
@@ -608,6 +680,8 @@ export function KpiView({
               {importMessage}
             </div>
           )}
+
+          <WeeklyHeadline week={week} summary={headlineSummary} />
 
           {!hasMetrics ? (
             <Card>
