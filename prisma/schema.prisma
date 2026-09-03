@@ -1082,6 +1082,22 @@ enum PayrollCategory {
   RESORT
 }
 
+/// Pet Resort payroll runs uploaded directly to Supabase.
+model FinancePetResortPayrollRun {
+  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  payrollType String
+  checkDate   DateTime @db.Date
+  amount      Decimal  @db.Decimal(12, 2)
+  payPeriod   String
+  schedule    String
+  payRunAt    DateTime @db.Timestamptz(6)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @default(now()) @updatedAt
+
+  @@index([checkDate])
+  @@index([payRunAt])
+}
+
 /// Weekly payroll hours imported from MoeGo clock-in/out or entered manually.
 /// Pet resort weeks run Sunday-Saturday; mobile grooming weeks run Saturday-Friday.
 model FinancePayrollWeek {
