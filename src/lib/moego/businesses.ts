@@ -1,10 +1,13 @@
 import { prisma } from "@/lib/prisma";
 
+export const MOBILE_GROOMING_BUSINESS_ID = "bizVdfk";
+export const PET_RESORT_BUSINESS_ID = "biz3pcO";
+
 // MoeGo has no business-name field in the synced projection, so we label the
 // known businessIds here. Anything not listed falls back to its raw id.
 export const MOEGO_BUSINESS_LABELS: Record<string, string> = {
-  bizVdfk: "Planet Pooch",
-  biz3pcO: "Planet Pooch Pet Resort",
+  [MOBILE_GROOMING_BUSINESS_ID]: "Planet Pooch",
+  [PET_RESORT_BUSINESS_ID]: "Planet Pooch Pet Resort",
 };
 
 export type MoegoBusinessOption = { id: string; label: string };

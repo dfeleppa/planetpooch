@@ -1,50 +1,46 @@
 ---
 name: weekly-kpi-report
-description: Build Planet Pooch Sunday-Saturday KPI reports and source the headline weekly net-sales totals for both business segments from MoeGo's browser-visible Sales Summary report. Use when Daniel asks to create, refresh, verify, or reconcile a weekly KPI report.
+description: Build Planet Pooch Sunday-Saturday KPI reports using the established net-sales source for each business. Use when Daniel asks to create, refresh, verify, or reconcile a weekly KPI report.
 ---
 
 # Weekly KPI Report
 
-## Headline revenue
+## Pet Resort net sales
 
-Pull the two headline revenue numbers through the logged-in MoeGo browser session. Do not calculate these headline totals from the MoeGo OpenAPI order feed.
+Use the app's synced MoeGo order data for **Planet Pooch Pet Resort** (`biz3pcO`). The KPI page calculates net sales automatically for the selected Sunday-Saturday week as:
 
-Use `https://go.moego.pet/report/insights/reports?diagramId=reports_sales_summary&active=1&%7Ec=9219&%7Eb=119538` and verify that the page is the **Sales summary report** and says **Based on sale date**.
+- `subtotal - discount` for each order;
+- only `COMPLETED` and `PROCESSING` orders; and
+- sale time within the week, falling back to completion time and then creation time.
 
-For the report's Sunday-Saturday week:
+Do not manually enter or upsert the Pet Resort headline value into `FinanceWeeklyKpiHeadline`. Refresh the MoeGo sync if the underlying order data is stale, then reload the KPI page.
 
-1. Set the date range to the requested Sunday through Saturday, inclusive.
-2. Select **Planet Pooch** in the Business filter and record the **Total net sales** value from the Total row.
-3. Select **Planet Pooch Pet Resort** and record the corresponding **Total net sales** value.
-4. Re-check the selected business and visible date inputs before accepting each total. If daily rows are visible, sum their net-sales values and require the sum to equal the Total row to the cent.
+## Mobile Grooming net sales
 
-Label the values exactly:
+Continue to source **Planet Pooch** Mobile Grooming from MoeGo's browser-visible **Sales summary report**, **Based on sale date**, using the requested Sunday-Saturday range and the Planet Pooch business filter. Record the Total row's **Total net sales** and upsert it into `FinanceWeeklyKpiHeadline.mobileNetSalesCents` for that Sunday `weekStart`.
 
-- Planet Pooch net sales
-- Planet Pooch Pet Resort net sales
-
-Place both values together at the top of the weekly KPI report, before segment-specific KPI sections. State the inclusive date range beside the heading so the reporting boundary is unambiguous.
-
-After verifying both totals, upsert them into the Planet Pooch Supabase project in
-`FinanceWeeklyKpiHeadline`, keyed by the Sunday `weekStart`. Store money as integer cents in:
-
-- `mobileNetSalesCents` for Planet Pooch
-- `resortNetSalesCents` for Planet Pooch Pet Resort
-
-The KPI page reads this record for the two headline revenue cards. It matches Pet Resort payroll
-rows whose `payPeriod` is the same Sunday-Saturday range, sums all matching payroll runs, and shows
-payroll divided by Resort net sales as a percentage. If there is no matching payroll run, leave the
-payroll amount and percentage unresolved rather than substituting another pay period.
+The KPI page matches Pet Resort payroll rows whose `payPeriod` is the same Sunday-Saturday range, sums all matching payroll runs, and shows payroll divided by the automatically calculated Resort net sales. If there is no matching payroll run, leave the payroll amount and percentage unresolved rather than substituting another pay period.
 
 ## Reconciliation rules
 
-- Treat MoeGo's browser-visible **Total net sales** as authoritative for these two headline values. Net sales is distinct from Total collected, Total expected, and Total gross sales.
 - Keep each business separate; never use **All businesses** for a segment headline.
-- Do not substitute a client-list Total paid view or a payment report.
+- Net sales is distinct from Total collected, Total expected, and Total gross sales.
+- Do not substitute a client-list Total paid view or a payment report for Mobile Grooming.
 - Do not expose client names, phone numbers, invoice details, or other row-level information in the KPI report.
-- If the report has not finished refreshing after a filter change, wait for the loading state to clear and verify the selected business again.
-- If the browser session is logged out or the Sales Summary report cannot be verified, leave the headline values unresolved and report the blocker. Do not silently fall back to the API-derived estimate.
+- If the browser session is logged out or the Sales Summary report cannot be verified, leave Mobile Grooming unresolved and report the blocker.
 
 ## Remaining KPIs
 
-Continue using the existing KPI sources and segment rules for all non-headline metrics. This skill changes the source of the two top-level business net-sales totals only; it does not redefine revenue inside narrower service KPIs such as daycare, boarding, training, or grooming.
+Continue using the existing KPI sources and segment rules for all non-headline metrics. The headline calculations do not redefine revenue inside narrower service KPIs such as daycare, boarding, training, or grooming.
+
+## Slack delivery
+
+After the report has been refreshed and verified, post a concise summary to the designated weekly KPI Slack channel. Include:
+
+- the inclusive Sunday-Saturday date range;
+- Planet Pooch net sales;
+- Planet Pooch Pet Resort net sales;
+- Pet Resort payroll and payroll as a percentage of Resort net sales; and
+- a link to the completed All-segments KPI report for that week.
+
+Do not include client-level or employee-level details. Verify that Slack shows the message as sent before treating the workflow as complete. If no Slack connection, logged-in session, or destination channel is available, leave delivery unresolved and report that blocker rather than claiming the report was posted.

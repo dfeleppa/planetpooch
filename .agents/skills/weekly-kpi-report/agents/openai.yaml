@@ -1,4 +1,4 @@
 interface:
   display_name: "Weekly KPI Report"
-  short_description: "Build weekly KPIs with verified MoeGo revenue"
+  short_description: "Build weekly KPIs with established sales sources"
   default_prompt: "Use $weekly-kpi-report to build this week's Planet Pooch KPI report."

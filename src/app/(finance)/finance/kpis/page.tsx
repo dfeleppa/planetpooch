@@ -10,6 +10,8 @@ import {
 } from "@/lib/kpis";
 import { addWeeks, currentWeekStart, fromWeekParam, isValidWeekParam, toWeekParam } from "@/lib/week";
 import { resolveStandingAmount, type StandingRow } from "@/lib/kpi-standing";
+import { PET_RESORT_BUSINESS_ID } from "@/lib/moego/businesses";
+import { REVENUE_ORDER_STATUSES } from "@/lib/moego/metrics";
 import { getResortStaffHoursByWeek } from "@/lib/payroll-kpis";
 import { KpiView, type KpiCell, type WeeklyHeadlineSummary } from "./KpiView";
 
@@ -30,18 +32,28 @@ function shortDate(date: Date): string {
 async function getWeeklyHeadlineSummary(weekStart: Date): Promise<WeeklyHeadlineSummary> {
   const weekEnd = new Date(weekStart);
   weekEnd.setUTCDate(weekEnd.getUTCDate() + 6);
+  const weekEndExclusive = new Date(weekStart);
+  weekEndExclusive.setUTCDate(weekEndExclusive.getUTCDate() + 7);
   const payPeriod = `${shortDate(weekStart)} to ${shortDate(weekEnd)}`;
-  const [headline, payrollRuns] = await Promise.all([
+  const [headline, payrollRuns, resortNetSalesRows] = await Promise.all([
     prisma.financeWeeklyKpiHeadline.findUnique({ where: { weekStart } }),
     prisma.financePetResortPayrollRun.findMany({
       where: { payPeriod },
       select: { amount: true },
     }),
+    prisma.$queryRaw<{ netSalesCents: bigint }[]>`
+      SELECT COALESCE(SUM("subTotalCents" - "discountCents"), 0)::bigint AS "netSalesCents"
+      FROM "MoegoOrder"
+      WHERE "businessId" = ${PET_RESORT_BUSINESS_ID}
+        AND "status" = ANY(${[...REVENUE_ORDER_STATUSES]})
+        AND COALESCE("salesDatetime", "completedTime", "createdTime") >= ${weekStart}
+        AND COALESCE("salesDatetime", "completedTime", "createdTime") < ${weekEndExclusive}
+    `,
   ]);
   const resortPayrollCents = payrollRuns.length
     ? Math.round(payrollRuns.reduce((sum, run) => sum + Number(run.amount), 0) * 100)
     : null;
-  const resortNetSalesCents = headline?.resortNetSalesCents ?? null;
+  const resortNetSalesCents = Number(resortNetSalesRows[0]?.netSalesCents ?? 0);
 
   return {
     mobileNetSalesCents: headline?.mobileNetSalesCents ?? null,
