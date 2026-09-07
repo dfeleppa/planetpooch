@@ -20,25 +20,16 @@ const PET_RESORT_SEGMENTS = KPI_SEGMENTS.filter(
   (segmentDef) => segmentDef.key !== "MOBILE_GROOMING"
 );
 
-function shortDate(date: Date): string {
-  return date.toLocaleDateString("en-US", {
-    timeZone: "UTC",
-    month: "2-digit",
-    day: "2-digit",
-    year: "numeric",
-  });
-}
-
 async function getWeeklyHeadlineSummary(weekStart: Date): Promise<WeeklyHeadlineSummary> {
-  const weekEnd = new Date(weekStart);
-  weekEnd.setUTCDate(weekEnd.getUTCDate() + 6);
   const weekEndExclusive = new Date(weekStart);
   weekEndExclusive.setUTCDate(weekEndExclusive.getUTCDate() + 7);
-  const payPeriod = `${shortDate(weekStart)} to ${shortDate(weekEnd)}`;
+  // Resort payroll is paid on the Friday after its Sunday-Saturday pay period.
+  const payrollCheckDate = new Date(weekStart);
+  payrollCheckDate.setUTCDate(payrollCheckDate.getUTCDate() + 12);
   const [headline, payrollRuns, resortNetSalesRows] = await Promise.all([
     prisma.financeWeeklyKpiHeadline.findUnique({ where: { weekStart } }),
     prisma.financePetResortPayrollRun.findMany({
-      where: { payPeriod },
+      where: { checkDate: payrollCheckDate },
       select: { amount: true },
     }),
     prisma.$queryRaw<{ netSalesCents: bigint }[]>`
