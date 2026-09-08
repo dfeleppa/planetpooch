@@ -1437,7 +1437,8 @@ export function PayrollDashboard({
               </div>
             </div>
             {mobileSummaryView === "annual" ? (
-              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4 2xl:grid-cols-8">
+              <>
+                <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4 2xl:grid-cols-8">
                 <AnnualMetric
                   label="Total Appointments"
                   value={String(annualMobileTotals?.stops ?? 0)}
@@ -1477,8 +1478,8 @@ export function PayrollDashboard({
                   label="Upgrades ($)"
                   value={formatMoney((annualMobileTotals?.upgradeCents ?? 0) / 100)}
                 />
-              </div>
-              {annualCashOpen ? (
+                </div>
+                {annualCashOpen ? (
                 <div
                   id="annual-cash-breakdown"
                   className="rounded-lg border border-gray-200 bg-white"
@@ -1527,7 +1528,8 @@ export function PayrollDashboard({
                     </p>
                   )}
                 </div>
-              ) : null}
+                ) : null}
+              </>
             ) : (
               <div className="space-y-3">
                 {mobileQuarterGroups.map((quarter) => {
