@@ -161,7 +161,7 @@ export type PayrollEmployeeOption = {
 const EMPTY_EMPLOYEE_OPTIONS: PayrollEmployeeOption[] = [];
 
 type MobileSummaryView = "annual" | "weekly";
-type MobilePayrollView = "summary" | "employee";
+type MobilePayrollView = "summary" | "employee" | "report";
 
 type WeeklyTotalsEdit = {
   weekStart: string;
@@ -473,6 +473,33 @@ function mobileEntryTotalPrice(entry: EditableMobileGroomingEntry): number {
   return moneyValue(entry.price) + moneyValue(entry.upgradeAmount) - moneyValue(entry.discount);
 }
 
+function mobileTotalsForEntries(entries: EditableMobileGroomingEntry[]) {
+  return entries.reduce(
+    (total, entry) => {
+      const totalPrice = mobileEntryTotalPrice(entry);
+      total.stops += 1;
+      total.dogs += mobileEntryDogCount(entry);
+      total.groomingPrice += mobileEntryGroomingPrice(entry);
+      total.pricing += totalPrice;
+      total.cash += entry.paymentType === "cash" ? totalPrice : 0;
+      total.creditCardTips += moneyValue(entry.creditCardTip);
+      total.groomerPay += mobileEntryGroomerPay(entry);
+      total.upgrades += moneyValue(entry.upgradeAmount);
+      return total;
+    },
+    {
+      stops: 0,
+      dogs: 0,
+      groomingPrice: 0,
+      pricing: 0,
+      cash: 0,
+      creditCardTips: 0,
+      groomerPay: 0,
+      upgrades: 0,
+    }
+  );
+}
+
 function formatMoney(value: number): string {
   return value.toLocaleString("en-US", {
     style: "currency",
@@ -559,6 +586,7 @@ export function PayrollDashboard({
   const [savingWeeklyTotals, setSavingWeeklyTotals] = useState(false);
   const [selectedMobileEmployee, setSelectedMobileEmployee] = useState("");
   const [mobileStopsOpen, setMobileStopsOpen] = useState(true);
+  const [weeklyCashOpen, setWeeklyCashOpen] = useState(false);
   const [pullingMoego, setPullingMoego] = useState(false);
   const [importText, setImportText] = useState("");
   const [showMoegoImport, setShowMoegoImport] = useState(false);
@@ -663,32 +691,40 @@ export function PayrollDashboard({
     );
   }, [mobileEntries, mobilePayrollView, mobileViewEmployeeKey]);
 
-  const selectedWeekMobileTotals = useMemo(() => {
-    return visibleMobileEntries.reduce(
-      (total, entry) => {
-        const totalPrice = mobileEntryTotalPrice(entry);
-        total.stops += 1;
-        total.dogs += mobileEntryDogCount(entry);
-        total.groomingPrice += mobileEntryGroomingPrice(entry);
-        total.pricing += totalPrice;
-        total.cash += entry.paymentType === "cash" ? totalPrice : 0;
-        total.creditCardTips += moneyValue(entry.creditCardTip);
-        total.groomerPay += mobileEntryGroomerPay(entry);
-        total.upgrades += moneyValue(entry.upgradeAmount);
-        return total;
-      },
-      {
-        stops: 0,
-        dogs: 0,
-        groomingPrice: 0,
-        pricing: 0,
-        cash: 0,
-        creditCardTips: 0,
-        groomerPay: 0,
-        upgrades: 0,
-      }
+  const selectedWeekMobileTotals = useMemo(
+    () => mobileTotalsForEntries(visibleMobileEntries),
+    [visibleMobileEntries]
+  );
+
+  const weeklyCashByDay = useMemo(
+    () =>
+      weekDays.map((day) => ({
+        ...day,
+        cash: visibleMobileEntries
+          .filter((entry) => entry.serviceDate === day.value && entry.paymentType === "cash")
+          .reduce((sum, entry) => sum + mobileEntryTotalPrice(entry), 0),
+      })),
+    [visibleMobileEntries, weekDays]
+  );
+
+  const mobileWeeklyReportGroups = useMemo(() => {
+    const byEmployee = new Map<string, EditableMobileGroomingEntry[]>();
+    for (const entry of mobileEntries) {
+      const employeeName = normalizeEmployeeName(entry.employeeName);
+      if (!employeeName) continue;
+      const current = byEmployee.get(employeeName) ?? [];
+      current.push(entry);
+      byEmployee.set(employeeName, current);
+    }
+
+    return Array.from(byEmployee, ([employeeName, entries]) => ({
+      employeeName,
+      entries: [...entries].sort((a, b) => a.serviceDate.localeCompare(b.serviceDate)),
+      totals: mobileTotalsForEntries(entries),
+    })).sort((a, b) =>
+      a.employeeName.localeCompare(b.employeeName, undefined, { sensitivity: "base" })
     );
-  }, [visibleMobileEntries]);
+  }, [mobileEntries]);
 
   const annualYear = annualMobileTotals?.year ?? dateFromParam(weekStart).getUTCFullYear();
   const mobileQuarterGroups = useMemo(() => {
@@ -737,11 +773,13 @@ export function PayrollDashboard({
     });
   }, [annualYear, storedWeeklyMobileTotals]);
   const mobileAppointmentsTitle =
-    mobilePayrollView === "summary"
-      ? "All mobile grooming appointments"
-      : "Mobile grooming appointments";
+    mobilePayrollView === "report"
+      ? "Weekly mobile grooming report"
+      : mobilePayrollView === "summary"
+        ? "All mobile grooming appointments"
+        : "Mobile grooming appointments";
   const showMobileAppointmentMetrics =
-    mobilePayrollView === "summary" || Boolean(mobileViewEmployeeName);
+    mobilePayrollView !== "employee" || Boolean(mobileViewEmployeeName);
   const showMobileAppointmentDetails =
     mobilePayrollView === "employee" && Boolean(mobileViewEmployeeName);
   const idlePullMoegoLabel =
@@ -846,6 +884,21 @@ export function PayrollDashboard({
     if (isMobileGrooming) {
       void loadMobileSummary(weekStart, view === "employee" ? selectedMobileEmployee : "");
     }
+  }
+
+  function printMobileWeeklyReport() {
+    const originalTitle = document.title;
+    const restoreTitle = () => {
+      document.title = originalTitle;
+      window.removeEventListener("afterprint", restoreTitle);
+    };
+
+    document.title = `Planet Pooch Mobile Grooming Weekly Report - ${formatWeekRange(
+      weekStart,
+      weekEnd
+    )}`;
+    window.addEventListener("afterprint", restoreTitle, { once: true });
+    window.print();
   }
 
   function addMobileEmployee(employeeName: string) {
@@ -1251,16 +1304,27 @@ export function PayrollDashboard({
   }
 
   return (
-    <div className={cn("space-y-5", loading && "opacity-70")}>
+    <div
+      className={cn(
+        "space-y-5",
+        loading && "opacity-70",
+        mobilePayrollView === "report" && "pp-mobile-weekly-report-active"
+      )}
+    >
       <PayrollSubnav active={business} />
 
       {isMobileGrooming && (
         <div>
           <p className="mb-1 text-sm font-medium text-gray-700">View</p>
           <div className="pp-tabs" role="tablist" aria-label="Mobile grooming payroll view">
-            {(["summary", "employee"] as const).map((view) => {
+            {(["summary", "employee", "report"] as const).map((view) => {
               const active = mobilePayrollView === view;
-              const label = view === "summary" ? "All Staff" : "By Employee";
+              const label =
+                view === "summary"
+                  ? "All Staff"
+                  : view === "employee"
+                    ? "By Employee"
+                    : "Weekly Report";
               return (
                 <button
                   key={view}
@@ -1823,11 +1887,12 @@ export function PayrollDashboard({
         </Card>
       )}
 
-      <Card>
+      <Card className={cn(mobilePayrollView === "report" && "pp-mobile-weekly-report")}>
         <CardContent className="space-y-3">
           <div
             className={cn(
               "flex gap-3",
+              mobilePayrollView === "report" && "print:hidden",
               isMobileGrooming
                 ? "flex-col md:flex-row md:items-end md:justify-between"
                 : "items-center justify-between"
@@ -1840,7 +1905,9 @@ export function PayrollDashboard({
               <div
                 className={cn(
                   "grid w-full gap-3 md:items-end",
-                  showMobileAppointmentDetails
+                  mobilePayrollView === "report"
+                    ? "md:max-w-xl md:grid-cols-[minmax(220px,1fr)_auto]"
+                    : showMobileAppointmentDetails
                     ? "md:max-w-3xl md:grid-cols-[minmax(220px,1fr)_auto_auto_auto]"
                     : "md:max-w-2xl md:grid-cols-[minmax(220px,1fr)_auto_auto]"
                 )}
@@ -1861,39 +1928,53 @@ export function PayrollDashboard({
                     </option>
                   ))}
                 </Select>
-                <Button
-                  type="button"
-                  variant="secondary"
-                  onClick={pullMobileGroomingFromMoego}
-                  disabled={
-                    loading ||
-                    saving ||
-                    pullingMoego ||
-                    (mobilePayrollView === "employee" && !selectedMobileEmployee)
-                  }
-                >
-                  {pullMoegoLabel}
-                </Button>
-                <Button
-                  type="button"
-                  onClick={savePayroll}
-                  disabled={
-                    loading ||
-                    saving ||
-                    (mobilePayrollView === "employee" && !selectedMobileEmployee)
-                  }
-                >
-                  {saving ? "Saving..." : "Save payroll"}
-                </Button>
-                {showMobileAppointmentDetails ? (
+                {mobilePayrollView === "report" ? (
                   <Button
                     type="button"
                     variant="secondary"
-                    onClick={() => setMobileStopsOpen((current) => !current)}
+                    onClick={printMobileWeeklyReport}
+                    disabled={loading || mobileWeeklyReportGroups.length === 0}
+                    className="print:hidden"
                   >
-                    {mobileStopsOpen ? "Collapse" : "Expand"}
+                    Print / PDF
                   </Button>
-                ) : null}
+                ) : (
+                  <>
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      onClick={pullMobileGroomingFromMoego}
+                      disabled={
+                        loading ||
+                        saving ||
+                        pullingMoego ||
+                        (mobilePayrollView === "employee" && !selectedMobileEmployee)
+                      }
+                    >
+                      {pullMoegoLabel}
+                    </Button>
+                    <Button
+                      type="button"
+                      onClick={savePayroll}
+                      disabled={
+                        loading ||
+                        saving ||
+                        (mobilePayrollView === "employee" && !selectedMobileEmployee)
+                      }
+                    >
+                      {saving ? "Saving..." : "Save payroll"}
+                    </Button>
+                    {showMobileAppointmentDetails ? (
+                      <Button
+                        type="button"
+                        variant="secondary"
+                        onClick={() => setMobileStopsOpen((current) => !current)}
+                      >
+                        {mobileStopsOpen ? "Collapse" : "Expand"}
+                      </Button>
+                    ) : null}
+                  </>
+                )}
               </div>
             ) : (
               <Button
@@ -1908,40 +1989,76 @@ export function PayrollDashboard({
             )}
           </div>
 
-          {isMobileGrooming ? (
+          {isMobileGrooming ? mobilePayrollView === "report" ? (
+            <MobileGroomingWeeklyReport
+              groups={mobileWeeklyReportGroups}
+              totals={selectedWeekMobileTotals}
+              weekStart={weekStart}
+              weekEnd={weekEnd}
+            />
+          ) : (
             <>
               {showMobileAppointmentMetrics ? (
-                <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4 2xl:grid-cols-8">
-                  <WeeklyMetric
-                    label="Total Appointments"
-                    value={String(selectedWeekMobileTotals.stops)}
-                  />
-                  <WeeklyMetric label="Total Pets" value={String(selectedWeekMobileTotals.dogs)} />
-                  <WeeklyMetric
-                    label="Total Price"
-                    value={formatMoney(selectedWeekMobileTotals.pricing)}
-                  />
-                  <WeeklyMetric
-                    label="Grooming Price"
-                    value={formatMoney(selectedWeekMobileTotals.groomingPrice)}
-                  />
-                  <WeeklyMetric
-                    label="Cash Total"
-                    value={formatMoney(selectedWeekMobileTotals.cash)}
-                  />
-                  <WeeklyMetric
-                    label="CC Tips"
-                    value={formatMoney(selectedWeekMobileTotals.creditCardTips)}
-                  />
-                  <WeeklyMetric
-                    label="Groomer Pay"
-                    value={formatMoney(selectedWeekMobileTotals.groomerPay)}
-                  />
-                  <WeeklyMetric
-                    label="Upgrades ($)"
-                    value={formatMoney(selectedWeekMobileTotals.upgrades)}
-                  />
-                </div>
+                <>
+                  <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4 2xl:grid-cols-8">
+                    <WeeklyMetric
+                      label="Total Appointments"
+                      value={String(selectedWeekMobileTotals.stops)}
+                    />
+                    <WeeklyMetric label="Total Pets" value={String(selectedWeekMobileTotals.dogs)} />
+                    <WeeklyMetric
+                      label="Total Price"
+                      value={formatMoney(selectedWeekMobileTotals.pricing)}
+                    />
+                    <WeeklyMetric
+                      label="Grooming Price"
+                      value={formatMoney(selectedWeekMobileTotals.groomingPrice)}
+                    />
+                    <WeeklyMetric
+                      label="Cash Total"
+                      value={formatMoney(selectedWeekMobileTotals.cash)}
+                      expanded={showMobileAppointmentDetails ? weeklyCashOpen : undefined}
+                      controls={showMobileAppointmentDetails ? "weekly-cash-breakdown" : undefined}
+                      onToggle={
+                        showMobileAppointmentDetails
+                          ? () => setWeeklyCashOpen((open) => !open)
+                          : undefined
+                      }
+                    />
+                    <WeeklyMetric
+                      label="CC Tips"
+                      value={formatMoney(selectedWeekMobileTotals.creditCardTips)}
+                    />
+                    <WeeklyMetric
+                      label="Groomer Pay"
+                      value={formatMoney(selectedWeekMobileTotals.groomerPay)}
+                    />
+                    <WeeklyMetric
+                      label="Upgrades ($)"
+                      value={formatMoney(selectedWeekMobileTotals.upgrades)}
+                    />
+                  </div>
+                  {showMobileAppointmentDetails && weeklyCashOpen ? (
+                    <div
+                      id="weekly-cash-breakdown"
+                      className="rounded-lg border border-gray-200 bg-gray-50 px-3 py-2"
+                    >
+                      <div className="grid gap-x-6 gap-y-1 sm:grid-cols-2 lg:grid-cols-4">
+                        {weeklyCashByDay.map((day) => (
+                          <div
+                            key={day.value}
+                            className="flex items-center justify-between gap-3 py-1 text-sm"
+                          >
+                            <span className="text-gray-600">{day.label}</span>
+                            <span className="font-semibold tabular-nums text-gray-900">
+                              {formatMoney(day.cash)}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  ) : null}
+                </>
               ) : (
                 <p className="rounded-lg border border-dashed border-gray-200 px-4 py-6 text-center text-sm text-gray-500">
                   Select an employee to view mobile grooming appointments for this week.
@@ -2022,6 +2139,7 @@ export function PayrollDashboard({
                 </div>
               ) : null}
             </>
+          )
           ) : (
             <Table>
               <TableHead>
@@ -2265,14 +2383,200 @@ function AnnualMetric({ label, value }: { label: string; value: string }) {
   );
 }
 
-function WeeklyMetric({ label, value }: { label: string; value: string }) {
+function MobileGroomingWeeklyReport({
+  groups,
+  totals,
+  weekStart,
+  weekEnd,
+}: {
+  groups: Array<{
+    employeeName: string;
+    entries: EditableMobileGroomingEntry[];
+    totals: ReturnType<typeof mobileTotalsForEntries>;
+  }>;
+  totals: ReturnType<typeof mobileTotalsForEntries>;
+  weekStart: string;
+  weekEnd: string;
+}) {
   return (
-    <div className="rounded-lg border border-gray-200 px-3 py-2">
+    <div className="space-y-4 text-gray-900">
+      <header className="hidden border-b-2 border-[#315d64] pb-3 print:flex print:items-end print:justify-between">
+        <div>
+          <p className="text-xs font-bold uppercase tracking-[0.12em] text-[#315d64]">
+            Planet Pooch
+          </p>
+          <h1 className="mt-1 text-2xl font-bold">Mobile Grooming Weekly Report</h1>
+        </div>
+        <p className="text-sm font-semibold">{formatWeekRange(weekStart, weekEnd)}</p>
+      </header>
+
+      <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4 print:grid-cols-4">
+        <WeeklyMetric label="Total Revenue" value={formatMoney(totals.pricing)} />
+        <WeeklyMetric label="Appointments" value={String(totals.stops)} />
+        <WeeklyMetric label="Pets" value={String(totals.dogs)} />
+        <WeeklyMetric label="Grooming Price" value={formatMoney(totals.groomingPrice)} />
+        <WeeklyMetric label="Cash Total" value={formatMoney(totals.cash)} />
+        <WeeklyMetric label="CC Tips" value={formatMoney(totals.creditCardTips)} />
+        <WeeklyMetric label="Groomer Pay" value={formatMoney(totals.groomerPay)} />
+        <WeeklyMetric label="Upgrades ($)" value={formatMoney(totals.upgrades)} />
+      </div>
+
+      {groups.length === 0 ? (
+        <p className="rounded-lg border border-dashed border-gray-200 px-4 py-8 text-center text-sm text-gray-500">
+          No saved mobile grooming appointments for this week.
+        </p>
+      ) : (
+        <div className="space-y-5 print:space-y-3">
+          {groups.map((group) => {
+            const dates = Array.from(new Set(group.entries.map((entry) => entry.serviceDate))).sort();
+            return (
+              <section
+                key={group.employeeName}
+                className="overflow-hidden rounded-lg border border-gray-200 bg-white print:break-inside-auto"
+              >
+                <div className="border-b border-gray-200 bg-gray-50 px-4 py-3 print:px-2 print:py-2">
+                  <div className="flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
+                    <h3 className="text-base font-semibold">{group.employeeName}</h3>
+                    <p className="text-xs text-gray-600">
+                      {group.totals.stops} appointments · {group.totals.dogs} pets ·{" "}
+                      <span className="font-semibold text-gray-900">
+                        {formatMoney(group.totals.pricing)} revenue
+                      </span>{" "}
+                      · {formatMoney(group.totals.groomerPay)} groomer pay
+                    </p>
+                  </div>
+                </div>
+
+                {dates.map((date) => {
+                  const entries = group.entries.filter((entry) => entry.serviceDate === date);
+                  const dayTotals = mobileTotalsForEntries(entries);
+                  return (
+                    <div key={date} className="border-b border-gray-100 last:border-b-0">
+                      <div className="flex flex-wrap items-center justify-between gap-2 px-4 py-2 text-xs print:px-2">
+                        <h4 className="font-semibold">
+                          {dateFromParam(date).toLocaleDateString("en-US", {
+                            timeZone: "UTC",
+                            weekday: "long",
+                            month: "short",
+                            day: "numeric",
+                          })}
+                        </h4>
+                        <span className="text-gray-600">
+                          {entries.length} appointments · {formatMoney(dayTotals.pricing)} revenue ·{" "}
+                          {formatMoney(dayTotals.cash)} cash
+                        </span>
+                      </div>
+                      <div className="overflow-x-auto">
+                        <table className="min-w-full text-left text-xs">
+                          <thead className="bg-gray-50 text-[10px] uppercase tracking-[0.05em] text-gray-500">
+                            <tr>
+                              <th className="px-3 py-1.5">Payment</th>
+                              <th className="px-3 py-1.5 text-right">Pets</th>
+                              <th className="px-3 py-1.5 text-right">Grooming</th>
+                              <th className="px-3 py-1.5 text-right">Upgrades</th>
+                              <th className="px-3 py-1.5 text-right">CC Tip</th>
+                              <th className="px-3 py-1.5 text-right">Discount</th>
+                              <th className="px-3 py-1.5 text-right">Revenue</th>
+                              <th className="px-3 py-1.5 text-right">Groomer Pay</th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-gray-100">
+                            {entries.map((entry) => (
+                              <tr key={entry.localId}>
+                                <td className="px-3 py-1.5 capitalize">{entry.paymentType}</td>
+                                <td className="px-3 py-1.5 text-right tabular-nums">
+                                  {mobileEntryDogCount(entry)}
+                                </td>
+                                <td className="px-3 py-1.5 text-right tabular-nums">
+                                  {formatMoney(mobileEntryGroomingPrice(entry))}
+                                </td>
+                                <td className="px-3 py-1.5 text-right tabular-nums">
+                                  {formatMoney(moneyValue(entry.upgradeAmount))}
+                                </td>
+                                <td className="px-3 py-1.5 text-right tabular-nums">
+                                  {formatMoney(moneyValue(entry.creditCardTip))}
+                                </td>
+                                <td className="px-3 py-1.5 text-right tabular-nums">
+                                  {formatMoney(moneyValue(entry.discount))}
+                                </td>
+                                <td className="px-3 py-1.5 text-right font-semibold tabular-nums">
+                                  {formatMoney(mobileEntryTotalPrice(entry))}
+                                </td>
+                                <td className="px-3 py-1.5 text-right tabular-nums">
+                                  {formatMoney(mobileEntryGroomerPay(entry))}
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  );
+                })}
+              </section>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function WeeklyMetric({
+  label,
+  value,
+  expanded,
+  controls,
+  onToggle,
+}: {
+  label: string;
+  value: string;
+  expanded?: boolean;
+  controls?: string;
+  onToggle?: () => void;
+}) {
+  const content = (
+    <>
       <p className="text-xs font-medium uppercase tracking-[0.06em] text-gray-500">
         {label}
       </p>
-      <p className="mt-1 text-lg font-semibold text-gray-900">{value}</p>
-    </div>
+      <span className="mt-1 flex items-center justify-between gap-2">
+        <span className="text-lg font-semibold text-gray-900">{value}</span>
+        {onToggle ? (
+          <svg
+            aria-hidden="true"
+            viewBox="0 0 20 20"
+            fill="none"
+            className={cn(
+              "h-4 w-4 shrink-0 text-gray-500 transition-transform",
+              expanded && "rotate-180"
+            )}
+          >
+            <path
+              d="m5 7.5 5 5 5-5"
+              stroke="currentColor"
+              strokeWidth="1.75"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+          </svg>
+        ) : null}
+      </span>
+    </>
+  );
+
+  return onToggle ? (
+    <button
+      type="button"
+      aria-expanded={expanded}
+      aria-controls={controls}
+      onClick={onToggle}
+      className="rounded-lg border border-gray-200 px-3 py-2 text-left transition-colors hover:border-gray-300 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+    >
+      {content}
+    </button>
+  ) : (
+    <div className="rounded-lg border border-gray-200 px-3 py-2">{content}</div>
   );
 }
 

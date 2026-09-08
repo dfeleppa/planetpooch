@@ -986,6 +986,19 @@ body {
     display: block !important;
   }
 
+  .pp-mobile-weekly-report-active > :not(.pp-mobile-weekly-report) {
+    display: none !important;
+  }
+
+  .pp-mobile-weekly-report {
+    border: 0 !important;
+    box-shadow: none !important;
+  }
+
+  .pp-mobile-weekly-report > div {
+    padding: 0 !important;
+  }
+
   .pp-kpi-report-segment {
     break-inside: avoid-page;
     page-break-inside: avoid;
