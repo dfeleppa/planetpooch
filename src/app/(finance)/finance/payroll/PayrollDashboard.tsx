@@ -553,7 +553,7 @@ export function PayrollDashboard({
     WeeklyMobileGroomingTotals[]
   >([]);
   const [mobileSummaryView, setMobileSummaryView] = useState<MobileSummaryView>("annual");
-  const [mobilePayrollView, setMobilePayrollView] = useState<MobilePayrollView>("employee");
+  const [mobilePayrollView, setMobilePayrollView] = useState<MobilePayrollView>("summary");
   const [openMobileQuarters, setOpenMobileQuarters] = useState<Record<string, boolean>>({});
   const [weeklyTotalsEdit, setWeeklyTotalsEdit] = useState<WeeklyTotalsEdit | null>(null);
   const [savingWeeklyTotals, setSavingWeeklyTotals] = useState(false);
@@ -745,7 +745,7 @@ export function PayrollDashboard({
   const showMobileAppointmentDetails =
     mobilePayrollView === "employee" && Boolean(mobileViewEmployeeName);
   const idlePullMoegoLabel =
-    mobilePayrollView === "summary" ? "Pull all from MoeGo" : "Pull from MoeGo";
+    mobilePayrollView === "summary" ? "Pull Entire Staff from MoeGo" : "Pull from MoeGo";
   const pullMoegoLabel = pullingMoego ? "Pulling..." : idlePullMoegoLabel;
 
   const loadWeek = useCallback(async (
@@ -1260,16 +1260,17 @@ export function PayrollDashboard({
           <div className="pp-tabs" role="tablist" aria-label="Mobile grooming payroll view">
             {(["summary", "employee"] as const).map((view) => {
               const active = mobilePayrollView === view;
+              const label = view === "summary" ? "All Staff" : "By Employee";
               return (
                 <button
                   key={view}
                   type="button"
                   role="tab"
                   aria-selected={active}
-                  className={cn("pp-tab capitalize", active && "is-on")}
+                  className={cn("pp-tab", active && "is-on")}
                   onClick={() => selectMobilePayrollView(view)}
                 >
-                  {view}
+                  {label}
                 </button>
               );
             })}
@@ -1965,6 +1966,12 @@ export function PayrollDashboard({
                       (sum, entry) => sum + moneyValue(entry.creditCardTip),
                       0
                     );
+                    const dayCash = dayEntries.reduce(
+                      (sum, entry) =>
+                        sum +
+                        (entry.paymentType === "cash" ? mobileEntryTotalPrice(entry) : 0),
+                      0
+                    );
                     return (
                       <div key={day.value} className="rounded-lg border border-gray-200 bg-white">
                         <div className="flex flex-col gap-3 border-b border-gray-100 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
@@ -1972,7 +1979,8 @@ export function PayrollDashboard({
                             <h3 className="text-sm font-semibold text-gray-900">{day.label}</h3>
                             <p className="text-xs text-gray-500">
                               {dayEntries.length} appointments · {formatMoney(dayTotal)} total ·{" "}
-                              {formatMoney(dayPay)} groomer pay · {formatMoney(dayTips)} cc tips
+                              {formatMoney(dayCash)} cash · {formatMoney(dayPay)} groomer pay ·{" "}
+                              {formatMoney(dayTips)} cc tips
                             </p>
                           </div>
                           <Button
