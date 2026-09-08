@@ -74,6 +74,8 @@ type AnnualMobileGroomingTotals = {
   dogs: number;
   pricingCents: number;
   cashCents: number;
+  cashByDay?: Array<{ date: string; cashCents: number }>;
+  cashAdjustmentCents?: number;
   creditCardTipCents: number;
   groomerPayCents: number;
   upgradeCents: number;
@@ -475,6 +477,8 @@ function emptyAnnualMobileGroomingTotals(year: number): AnnualMobileGroomingTota
     dogs: 0,
     pricingCents: 0,
     cashCents: 0,
+    cashByDay: [],
+    cashAdjustmentCents: 0,
     creditCardTipCents: 0,
     groomerPayCents: 0,
     upgradeCents: 0,
@@ -524,6 +528,7 @@ async function loadAnnualMobileGroomingTotals(
       totals.dogs += override.dogs;
       totals.pricingCents += override.pricingCents;
       totals.cashCents += override.cashCents;
+      totals.cashAdjustmentCents = (totals.cashAdjustmentCents ?? 0) + override.cashCents;
       totals.creditCardTipCents += override.creditCardTipCents;
       totals.groomerPayCents += mobileWeeklyGroomerPayCents(override);
       totals.upgradeCents += override.upgradeCents;
@@ -542,6 +547,7 @@ async function loadAnnualMobileGroomingTotals(
       },
     },
     select: {
+      serviceDate: true,
       paymentType: true,
       dogs: true,
       priceCents: true,
@@ -558,6 +564,7 @@ async function loadAnnualMobileGroomingTotals(
     },
   });
 
+  const cashByDay = new Map<string, number>();
   for (const entry of entries) {
     if (!employeeName && entry.payrollWeek.mobileGroomingWeeklyOverride) continue;
     const totalPriceCents = entry.priceCents + entry.upgradeCents - entry.discountCents;
@@ -565,11 +572,17 @@ async function loadAnnualMobileGroomingTotals(
     totals.stops += 1;
     totals.dogs += entry.dogs;
     totals.pricingCents += totalPriceCents;
-    totals.cashCents += entry.paymentType === "cash" ? totalPriceCents : 0;
+    if (entry.paymentType === "cash") {
+      totals.cashCents += totalPriceCents;
+      const date = entry.serviceDate.toISOString().slice(0, 10);
+      cashByDay.set(date, (cashByDay.get(date) ?? 0) + totalPriceCents);
+    }
     totals.creditCardTipCents += entry.creditCardTipCents;
     totals.groomerPayCents += groomerPayCents;
     totals.upgradeCents += entry.upgradeCents;
   }
+  totals.cashByDay = Array.from(cashByDay, ([date, cashCents]) => ({ date, cashCents }))
+    .sort((a, b) => b.date.localeCompare(a.date));
 
   return totals;
 }

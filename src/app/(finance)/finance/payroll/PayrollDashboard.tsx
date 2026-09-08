@@ -89,6 +89,8 @@ type AnnualMobileGroomingTotals = {
   dogs: number;
   pricingCents: number;
   cashCents: number;
+  cashByDay?: Array<{ date: string; cashCents: number }>;
+  cashAdjustmentCents?: number;
   creditCardTipCents: number;
   groomerPayCents: number;
   upgradeCents: number;
@@ -553,6 +555,7 @@ export function PayrollDashboard({
     WeeklyMobileGroomingTotals[]
   >([]);
   const [mobileSummaryView, setMobileSummaryView] = useState<MobileSummaryView>("annual");
+  const [annualCashOpen, setAnnualCashOpen] = useState(false);
   const [mobilePayrollView, setMobilePayrollView] = useState<MobilePayrollView>("summary");
   const [openMobileQuarters, setOpenMobileQuarters] = useState<Record<string, boolean>>({});
   const [weeklyTotalsEdit, setWeeklyTotalsEdit] = useState<WeeklyTotalsEdit | null>(null);
@@ -1458,6 +1461,9 @@ export function PayrollDashboard({
                 <AnnualMetric
                   label="Cash Total"
                   value={formatMoney((annualMobileTotals?.cashCents ?? 0) / 100)}
+                  expanded={annualCashOpen}
+                  controls="annual-cash-breakdown"
+                  onToggle={() => setAnnualCashOpen((open) => !open)}
                 />
                 <AnnualMetric
                   label="CC Tips"
@@ -1472,6 +1478,56 @@ export function PayrollDashboard({
                   value={formatMoney((annualMobileTotals?.upgradeCents ?? 0) / 100)}
                 />
               </div>
+              {annualCashOpen ? (
+                <div
+                  id="annual-cash-breakdown"
+                  className="rounded-lg border border-gray-200 bg-white"
+                >
+                  <div className="border-b border-gray-100 px-4 py-3">
+                    <h4 className="text-sm font-semibold text-gray-900">
+                      Daily cash breakdown for {annualYear}
+                    </h4>
+                    <p className="mt-0.5 text-xs text-gray-500">
+                      Cash appointments after upgrades and discounts
+                    </p>
+                  </div>
+                  {(annualMobileTotals?.cashByDay?.length ?? 0) > 0 ||
+                  (annualMobileTotals?.cashAdjustmentCents ?? 0) > 0 ? (
+                    <div className="max-h-80 divide-y divide-gray-100 overflow-y-auto">
+                      {annualMobileTotals?.cashByDay?.map((day) => (
+                        <div
+                          key={day.date}
+                          className="flex items-center justify-between gap-4 px-4 py-2 text-sm"
+                        >
+                          <span className="text-gray-700">
+                            {dateFromParam(day.date).toLocaleDateString("en-US", {
+                              timeZone: "UTC",
+                              weekday: "short",
+                              month: "short",
+                              day: "numeric",
+                            })}
+                          </span>
+                          <span className="font-semibold tabular-nums text-gray-900">
+                            {formatMoney(day.cashCents / 100)}
+                          </span>
+                        </div>
+                      ))}
+                      {(annualMobileTotals?.cashAdjustmentCents ?? 0) > 0 ? (
+                        <div className="flex items-center justify-between gap-4 bg-amber-50 px-4 py-2 text-sm">
+                          <span className="text-amber-900">Weekly adjustments without a date</span>
+                          <span className="font-semibold tabular-nums text-amber-950">
+                            {formatMoney((annualMobileTotals?.cashAdjustmentCents ?? 0) / 100)}
+                          </span>
+                        </div>
+                      ) : null}
+                    </div>
+                  ) : (
+                    <p className="px-4 py-6 text-center text-sm text-gray-500">
+                      No cash appointments for this year.
+                    </p>
+                  )}
+                </div>
+              ) : null}
             ) : (
               <div className="space-y-3">
                 {mobileQuarterGroups.map((quarter) => {
@@ -2254,14 +2310,61 @@ function CalculatedValue({ label, value }: { label: string; value: string }) {
   );
 }
 
-function AnnualMetric({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="rounded-lg border border-gray-200 bg-gray-50 px-4 py-3">
+function AnnualMetric({
+  label,
+  value,
+  expanded,
+  controls,
+  onToggle,
+}: {
+  label: string;
+  value: string;
+  expanded?: boolean;
+  controls?: string;
+  onToggle?: () => void;
+}) {
+  const content = (
+    <>
       <p className="text-xs font-medium uppercase tracking-[0.08em] text-gray-500">
         {label}
       </p>
-      <p className="mt-1 text-2xl font-bold text-gray-900">{value}</p>
-    </div>
+      <span className="mt-1 flex items-center justify-between gap-3">
+        <span className="text-2xl font-bold text-gray-900">{value}</span>
+        {onToggle ? (
+          <svg
+            aria-hidden="true"
+            viewBox="0 0 20 20"
+            fill="none"
+            className={cn(
+              "h-5 w-5 shrink-0 text-gray-500 transition-transform",
+              expanded && "rotate-180"
+            )}
+          >
+            <path
+              d="m5 7.5 5 5 5-5"
+              stroke="currentColor"
+              strokeWidth="1.75"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+          </svg>
+        ) : null}
+      </span>
+    </>
+  );
+
+  return onToggle ? (
+    <button
+      type="button"
+      aria-expanded={expanded}
+      aria-controls={controls}
+      onClick={onToggle}
+      className="rounded-lg border border-gray-200 bg-gray-50 px-4 py-3 text-left transition-colors hover:border-gray-300 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+    >
+      {content}
+    </button>
+  ) : (
+    <div className="rounded-lg border border-gray-200 bg-gray-50 px-4 py-3">{content}</div>
   );
 }
 
