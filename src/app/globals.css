@@ -921,6 +921,11 @@ body {
     margin: 0.42in;
   }
 
+  @page pp-mobile-weekly-report {
+    size: letter portrait;
+    margin: 0.42in;
+  }
+
   aside,
   .md\:sticky {
     display: none !important;
@@ -991,12 +996,25 @@ body {
   }
 
   .pp-mobile-weekly-report {
+    page: pp-mobile-weekly-report;
     border: 0 !important;
     box-shadow: none !important;
   }
 
   .pp-mobile-weekly-report > div {
     padding: 0 !important;
+  }
+
+  .pp-mobile-weekly-report-employee {
+    break-after: page;
+    page-break-after: always;
+    break-inside: auto;
+    page-break-inside: auto;
+  }
+
+  .pp-mobile-weekly-report-employee:last-child {
+    break-after: auto;
+    page-break-after: auto;
   }
 
   .pp-kpi-report-segment {

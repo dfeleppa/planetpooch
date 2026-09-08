@@ -2522,10 +2522,17 @@ function MobileGroomingWeeklyReport({
         <div className="space-y-5 print:space-y-3">
           {groups.map((group) => {
             const dates = Array.from(new Set(group.entries.map((entry) => entry.serviceDate))).sort();
+            const cashByDay = Array.from({ length: 7 }, (_, index) => {
+              const date = addDaysParam(weekStart, index);
+              const cash = group.entries
+                .filter((entry) => entry.serviceDate === date && entry.paymentType === "cash")
+                .reduce((sum, entry) => sum + mobileEntryTotalPrice(entry), 0);
+              return { date, cash };
+            });
             return (
               <section
                 key={group.employeeName}
-                className="overflow-hidden rounded-lg border border-gray-200 bg-white print:break-inside-auto"
+                className="pp-mobile-weekly-report-employee overflow-hidden rounded-lg border border-gray-200 bg-white"
               >
                 <div className="border-b border-gray-200 bg-gray-50 px-4 py-3 print:px-2 print:py-2">
                   <div className="flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
@@ -2537,6 +2544,32 @@ function MobileGroomingWeeklyReport({
                       </span>{" "}
                       · {formatMoney(group.totals.groomerPay)} groomer pay
                     </p>
+                  </div>
+                </div>
+
+                <div className="border-b border-gray-200 px-4 py-3 print:px-2 print:py-2">
+                  <h4 className="text-xs font-semibold uppercase tracking-[0.08em] text-gray-600">
+                    Cash Reconciliation
+                  </h4>
+                  <div className="mt-2 grid gap-2 sm:grid-cols-2 lg:grid-cols-4 print:grid-cols-4">
+                    {cashByDay.map((day) => (
+                      <div
+                        key={day.date}
+                        className="flex items-center justify-between gap-3 rounded-md bg-gray-50 px-3 py-2 text-xs"
+                      >
+                        <span className="text-gray-600">
+                          {dateFromParam(day.date).toLocaleDateString("en-US", {
+                            timeZone: "UTC",
+                            weekday: "short",
+                            month: "short",
+                            day: "numeric",
+                          })}
+                        </span>
+                        <span className="font-semibold tabular-nums text-gray-900">
+                          {formatMoney(day.cash)}
+                        </span>
+                      </div>
+                    ))}
                   </div>
                 </div>
 
