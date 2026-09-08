@@ -2139,7 +2139,6 @@ export function PayrollDashboard({
                 </div>
               ) : null}
             </>
-          )
           ) : (
             <Table>
               <TableHead>
