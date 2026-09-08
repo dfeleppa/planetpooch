@@ -231,6 +231,31 @@ function recentCompletedWeeks(business: PayrollBusinessValue, count = 26): strin
   );
 }
 
+function completedPayrollWeeksForYear(
+  year: number,
+  business: PayrollBusinessValue
+): Array<{ weekStart: string; weekEnd: string }> {
+  const firstDay = new Date(Date.UTC(year, 0, 1));
+  const daysUntilFriday = (5 - firstDay.getUTCDay() + 7) % 7;
+  const firstWeekEnd = new Date(firstDay.getTime() + daysUntilFriday * MS_PER_DAY);
+  const lastCompletedEnd = dateFromParam(addDaysParam(lastCompletedWeekStart(business), 6));
+  const weeks: Array<{ weekStart: string; weekEnd: string }> = [];
+
+  for (
+    let weekEnd = firstWeekEnd;
+    weekEnd.getUTCFullYear() === year && weekEnd <= lastCompletedEnd;
+    weekEnd = new Date(weekEnd.getTime() + 7 * MS_PER_DAY)
+  ) {
+    const weekEndParam = toDateParam(weekEnd);
+    weeks.push({
+      weekStart: addDaysParam(weekEndParam, -6),
+      weekEnd: weekEndParam,
+    });
+  }
+
+  return weeks.reverse();
+}
+
 function formatWeekRange(weekStart: string, weekEnd = addDaysParam(weekStart, 6)) {
   const start = dateFromParam(weekStart).toLocaleDateString("en-US", {
     timeZone: "UTC",
@@ -244,6 +269,15 @@ function formatWeekRange(weekStart: string, weekEnd = addDaysParam(weekStart, 6)
     year: "numeric",
   });
   return `${start} - ${end}`;
+}
+
+function formatWeekEnding(weekEnd: string) {
+  return `Week ending ${dateFromParam(weekEnd).toLocaleDateString("en-US", {
+    timeZone: "UTC",
+    month: "long",
+    day: "numeric",
+    year: "numeric",
+  })}`;
 }
 
 function usDateToIso(value: unknown): string | null {
@@ -581,6 +615,9 @@ export function PayrollDashboard({
   >([]);
   const [mobileSummaryView, setMobileSummaryView] = useState<MobileSummaryView>("annual");
   const [mobilePayrollView, setMobilePayrollView] = useState<MobilePayrollView>("summary");
+  const [reportYear, setReportYear] = useState(() =>
+    dateFromParam(addDaysParam(lastCompletedWeekStart("mobile-grooming"), 6)).getUTCFullYear()
+  );
   const [openMobileQuarters, setOpenMobileQuarters] = useState<Record<string, boolean>>({});
   const [weeklyTotalsEdit, setWeeklyTotalsEdit] = useState<WeeklyTotalsEdit | null>(null);
   const [savingWeeklyTotals, setSavingWeeklyTotals] = useState(false);
@@ -656,6 +693,24 @@ export function PayrollDashboard({
     }
     return Array.from(byStart.values()).sort((a, b) => b.weekStart.localeCompare(a.weekStart));
   }, [business, savedWeeks, weekEnd, weekStart]);
+
+  const reportYearOptions = useMemo(() => {
+    const years = new Set<number>([
+      dateFromParam(addDaysParam(lastCompletedWeekStart("mobile-grooming"), 6)).getUTCFullYear(),
+      dateFromParam(weekEnd).getUTCFullYear(),
+    ]);
+    for (const week of savedWeeks) {
+      if (week.business === "mobile-grooming") {
+        years.add(dateFromParam(week.weekEnd).getUTCFullYear());
+      }
+    }
+    return Array.from(years).sort((a, b) => b - a);
+  }, [savedWeeks, weekEnd]);
+
+  const reportWeekOptions = useMemo(
+    () => completedPayrollWeeksForYear(reportYear, "mobile-grooming"),
+    [reportYear]
+  );
 
   const totals = useMemo(() => {
     const categoryTotals = PAYROLL_CATEGORIES.map((category) => {
@@ -881,8 +936,19 @@ export function PayrollDashboard({
   function selectMobilePayrollView(view: MobilePayrollView) {
     setMobilePayrollView(view);
     setWeeklyTotalsEdit(null);
+    if (view === "report") {
+      setReportYear(dateFromParam(weekEnd).getUTCFullYear());
+    }
     if (isMobileGrooming) {
       void loadMobileSummary(weekStart, view === "employee" ? selectedMobileEmployee : "");
+    }
+  }
+
+  function selectReportYear(year: number) {
+    setReportYear(year);
+    const newestWeek = completedPayrollWeeksForYear(year, "mobile-grooming")[0];
+    if (newestWeek) {
+      void loadWeek(newestWeek.weekStart, "mobile-grooming");
     }
   }
 
@@ -1468,7 +1534,7 @@ export function PayrollDashboard({
         </div>
       )}
 
-      {isMobileGrooming && (
+      {isMobileGrooming && mobilePayrollView !== "report" && (
         <Card>
           <CardContent className="space-y-4">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
@@ -1906,40 +1972,68 @@ export function PayrollDashboard({
                 className={cn(
                   "grid w-full gap-3 md:items-end",
                   mobilePayrollView === "report"
-                    ? "md:max-w-xl md:grid-cols-[minmax(220px,1fr)_auto]"
+                    ? "md:max-w-3xl md:grid-cols-[140px_minmax(260px,1fr)_auto]"
                     : showMobileAppointmentDetails
                     ? "md:max-w-3xl md:grid-cols-[minmax(220px,1fr)_auto_auto_auto]"
                     : "md:max-w-2xl md:grid-cols-[minmax(220px,1fr)_auto_auto]"
                 )}
               >
-                <Select
-                  id="payroll-week"
-                  label="Week"
-                  value={weekStart}
-                  onChange={(event) =>
-                    void loadWeek(event.target.value, business, mobileViewEmployeeName)
-                  }
-                  disabled={loading || saving}
-                >
-                  {weekOptions.map((option) => (
-                    <option key={option.weekStart} value={option.weekStart}>
-                      {formatWeekRange(option.weekStart, option.weekEnd)}
-                      {mobilePayrollView === "summary" && option.stored ? ` (saved)` : ""}
-                    </option>
-                  ))}
-                </Select>
                 {mobilePayrollView === "report" ? (
-                  <Button
-                    type="button"
-                    variant="secondary"
-                    onClick={printMobileWeeklyReport}
-                    disabled={loading || mobileWeeklyReportGroups.length === 0}
-                    className="print:hidden"
-                  >
-                    Print / PDF
-                  </Button>
+                  <>
+                    <Select
+                      id="payroll-report-year"
+                      label="Year"
+                      value={String(reportYear)}
+                      onChange={(event) => selectReportYear(Number(event.target.value))}
+                      disabled={loading || saving}
+                    >
+                      {reportYearOptions.map((year) => (
+                        <option key={year} value={year}>
+                          {year}
+                        </option>
+                      ))}
+                    </Select>
+                    <Select
+                      id="payroll-report-week"
+                      label="Week ending"
+                      value={weekStart}
+                      onChange={(event) => void loadWeek(event.target.value, business)}
+                      disabled={loading || saving || reportWeekOptions.length === 0}
+                    >
+                      {reportWeekOptions.map((option) => (
+                        <option key={option.weekStart} value={option.weekStart}>
+                          {formatWeekEnding(option.weekEnd)}
+                        </option>
+                      ))}
+                    </Select>
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      onClick={printMobileWeeklyReport}
+                      disabled={loading || mobileWeeklyReportGroups.length === 0}
+                      className="print:hidden"
+                    >
+                      Print / PDF
+                    </Button>
+                  </>
                 ) : (
                   <>
+                    <Select
+                      id="payroll-week"
+                      label="Week"
+                      value={weekStart}
+                      onChange={(event) =>
+                        void loadWeek(event.target.value, business, mobileViewEmployeeName)
+                      }
+                      disabled={loading || saving}
+                    >
+                      {weekOptions.map((option) => (
+                        <option key={option.weekStart} value={option.weekStart}>
+                          {formatWeekRange(option.weekStart, option.weekEnd)}
+                          {mobilePayrollView === "summary" && option.stored ? ` (saved)` : ""}
+                        </option>
+                      ))}
+                    </Select>
                     <Button
                       type="button"
                       variant="secondary"
