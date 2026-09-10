@@ -341,6 +341,7 @@ export default async function KpisPage({
       previousValueRows,
       standingRows,
       quarterlyValueRows,
+      quarterlyPayrollRuns,
       staffHoursByWeek,
       headlineSummary,
       quarterlyHeadlineSummary,
@@ -375,6 +376,20 @@ export default async function KpisPage({
             select: { segment: true, weekStart: true, metricKey: true, value: true },
           })
         : Promise.resolve([]),
+      quarterWeekStarts.length
+        ? prisma.financePetResortPayrollRun.findMany({
+            where: {
+              checkDate: {
+                in: quarterWeekStarts.map((quarterWeekStart) => {
+                  const checkDate = new Date(quarterWeekStart);
+                  checkDate.setUTCDate(checkDate.getUTCDate() + 12);
+                  return checkDate;
+                }),
+              },
+            },
+            select: { checkDate: true, amount: true },
+          })
+        : Promise.resolve([]),
       staffHoursByWeekPromise,
       headlineSummaryPromise,
       quarterlyHeadlineSummaryPromise,
@@ -405,6 +420,14 @@ export default async function KpisPage({
     }
 
     const quarterlySegmentsData: Record<string, QuarterlyKpiWeek[]> = {};
+    const quarterlyPayrollByWeek: Record<string, number> = {};
+    for (const run of quarterlyPayrollRuns) {
+      const payrollWeekStart = new Date(run.checkDate);
+      payrollWeekStart.setUTCDate(payrollWeekStart.getUTCDate() - 12);
+      const payrollWeek = toWeekParam(payrollWeekStart);
+      quarterlyPayrollByWeek[payrollWeek] =
+        (quarterlyPayrollByWeek[payrollWeek] ?? 0) + Math.round(Number(run.amount) * 100);
+    }
     for (const segDef of PET_RESORT_SEGMENTS) {
       quarterlySegmentsData[segDef.key] = quarterWeekStarts.map((quarterWeekStart) => {
         const quarterWeek = toWeekParam(quarterWeekStart);
@@ -455,6 +478,7 @@ export default async function KpisPage({
           activeTab={activeTab}
           allSegmentsData={allData}
           quarterlySegmentsData={quarterlySegmentsData}
+          quarterlyPayrollByWeek={quarterlyPayrollByWeek}
           quarterlyHeadlineSummary={quarterlyHeadlineSummary ?? undefined}
           headlineSummary={headlineSummary}
         />

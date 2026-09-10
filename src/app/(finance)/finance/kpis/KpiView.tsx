@@ -490,6 +490,7 @@ export function KpiView({
   activeTab,
   allSegmentsData,
   quarterlySegmentsData,
+  quarterlyPayrollByWeek,
   quarterlyHeadlineSummary,
   headlineSummary,
 }: {
@@ -499,6 +500,7 @@ export function KpiView({
   activeTab?: string;
   allSegmentsData?: Record<string, Record<string, KpiCell>>;
   quarterlySegmentsData?: Record<string, QuarterlyKpiWeek[]>;
+  quarterlyPayrollByWeek?: Record<string, number>;
   quarterlyHeadlineSummary?: QuarterlyHeadlineSummary;
   headlineSummary: WeeklyHeadlineSummary;
 }) {
@@ -941,6 +943,12 @@ export function KpiView({
                     >
                       Dates
                     </TableHeader>
+                    <TableHeader
+                      rowSpan={2}
+                      className="min-w-20 whitespace-nowrap border-l border-gray-200 align-middle px-1 py-2 text-center text-[9px] font-bold text-gray-900"
+                    >
+                      Payroll
+                    </TableHeader>
                     {PET_RESORT_SEGMENTS.map((segDef) => {
                       const metrics = quarterMetricsForSegment(segDef, showSecondaryKpis);
                       return (
@@ -977,6 +985,13 @@ export function KpiView({
                         </TableCell>
                         <TableCell className="whitespace-nowrap border-l border-gray-200 align-middle px-1 py-2 text-center text-[9px] text-gray-500">
                           {formatCompactWeekRange(quarterWeek.week)}
+                        </TableCell>
+                        <TableCell className="whitespace-nowrap border-l border-gray-200 align-middle px-1 py-2 text-center text-[9px] font-bold tabular-nums text-gray-950">
+                          {quarterlyPayrollByWeek?.[quarterWeek.week] === undefined
+                            ? "—"
+                            : quarterCurrencyFormatter.format(
+                                quarterlyPayrollByWeek[quarterWeek.week] / 100
+                              )}
                         </TableCell>
                         {PET_RESORT_SEGMENTS.flatMap((segDef) => {
                           const segmentWeek = quarterlySegmentsData[segDef.key]?.[weekIndex];
