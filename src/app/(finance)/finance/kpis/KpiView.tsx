@@ -121,6 +121,7 @@ const SELECT_CLS =
 const SECTION_ORDER: KpiSection[] = ["ACTUALS", "FORECAST"];
 
 const PET_RESORT_TAB = "PET_RESORT";
+const PET_RESORT_COPY_TAB = "PET_RESORT_COPY";
 const PET_RESORT_SEGMENTS = KPI_SEGMENTS.filter(
   (segmentDef) => segmentDef.key !== "MOBILE_GROOMING"
 );
@@ -258,7 +259,10 @@ export function KpiView({
   const router = useRouter();
   const pathname = usePathname();
   const segmentDef = getSegmentDef(segment);
-  const isPetResort = activeTab === PET_RESORT_TAB;
+  const isPetResort =
+    activeTab === PET_RESORT_TAB || activeTab === PET_RESORT_COPY_TAB;
+  const petResortTab =
+    activeTab === PET_RESORT_COPY_TAB ? PET_RESORT_COPY_TAB : PET_RESORT_TAB;
   const dataWithDerivedValues = useMemo(
     () => withDerivedKpiCells(segment, data),
     [segment, data]
@@ -518,13 +522,14 @@ export function KpiView({
   const tabs = [
     { id: PET_RESORT_TAB, label: "Pet Resort" },
     { id: "MOBILE_GROOMING", label: "Mobile Grooming" },
+    { id: PET_RESORT_COPY_TAB, label: "Pet Resort Copy" },
   ];
 
   return (
     <div>
       <Tabs
         tabs={tabs}
-        activeTab={isPetResort ? PET_RESORT_TAB : "MOBILE_GROOMING"}
+        activeTab={isPetResort ? petResortTab : "MOBILE_GROOMING"}
         onChange={(id) => navigate(id, week)}
         className="pp-kpi-screen-tabs mb-6"
       />
@@ -543,7 +548,7 @@ export function KpiView({
           </header>
 
           <div className="pp-kpi-report-controls flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between mb-6">
-            <WeekPicker week={week} onChange={(w) => navigate(PET_RESORT_TAB, w)} />
+            <WeekPicker week={week} onChange={(w) => navigate(petResortTab, w)} />
             <div className="flex gap-2 print:hidden">
               <Button
                 variant="secondary"

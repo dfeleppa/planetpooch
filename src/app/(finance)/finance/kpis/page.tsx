@@ -16,6 +16,7 @@ import { getResortStaffHoursByWeek } from "@/lib/payroll-kpis";
 import { KpiView, type KpiCell, type WeeklyHeadlineSummary } from "./KpiView";
 
 const PET_RESORT_TAB = "PET_RESORT";
+const PET_RESORT_COPY_TAB = "PET_RESORT_COPY";
 const PET_RESORT_SEGMENTS = KPI_SEGMENTS.filter(
   (segmentDef) => segmentDef.key !== "MOBILE_GROOMING"
 );
@@ -118,7 +119,13 @@ export default async function KpisPage({
   await requireSuperAdmin();
   const params = await searchParams;
 
-  const showPetResort = params.segment !== "MOBILE_GROOMING";
+  const activeTab =
+    params.segment === "MOBILE_GROOMING"
+      ? "MOBILE_GROOMING"
+      : params.segment === PET_RESORT_COPY_TAB
+        ? PET_RESORT_COPY_TAB
+        : PET_RESORT_TAB;
+  const showPetResort = activeTab !== "MOBILE_GROOMING";
   const segment: KpiSegment = "MOBILE_GROOMING";
 
   let weekStart: Date;
@@ -214,7 +221,7 @@ export default async function KpisPage({
           segment={segment}
           week={week}
           data={{}}
-          activeTab={PET_RESORT_TAB}
+          activeTab={activeTab}
           allSegmentsData={allData}
           headlineSummary={headlineSummary}
         />
