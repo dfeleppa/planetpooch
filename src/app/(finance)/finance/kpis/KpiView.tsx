@@ -148,6 +148,34 @@ function formatHeadlineCurrency(cents: number | null): string {
   return cents === null ? "—" : headlineCurrencyFormatter.format(cents / 100);
 }
 
+function getQuarterSummary(week: string) {
+  const selectedDate = fromWeekParam(week);
+  const year = selectedDate.getUTCFullYear();
+  const quarter = Math.floor(selectedDate.getUTCMonth() / 3) + 1;
+  const start = new Date(Date.UTC(year, (quarter - 1) * 3, 1));
+  const end = new Date(Date.UTC(year, quarter * 3, 0));
+  const dateFormatter = new Intl.DateTimeFormat("en-US", {
+    month: "long",
+    day: "numeric",
+    year: "numeric",
+    timeZone: "UTC",
+  });
+
+  return {
+    year,
+    quarter,
+    label: `Quarter ${quarter} (Q${quarter}) ${year}`,
+    dates: `${dateFormatter.format(start)} – ${dateFormatter.format(end)}`,
+  };
+}
+
+function firstSundayInQuarter(year: number, quarter: number): string {
+  const firstDay = new Date(Date.UTC(year, (quarter - 1) * 3, 1));
+  const daysUntilSunday = (7 - firstDay.getUTCDay()) % 7;
+  firstDay.setUTCDate(firstDay.getUTCDate() + daysUntilSunday);
+  return toWeekParam(firstDay);
+}
+
 function HeadlineMetric({ label, value }: { label: string; value: string }) {
   return (
     <Card>
@@ -263,6 +291,8 @@ export function KpiView({
     activeTab === PET_RESORT_TAB || activeTab === PET_RESORT_COPY_TAB;
   const petResortTab =
     activeTab === PET_RESORT_COPY_TAB ? PET_RESORT_COPY_TAB : PET_RESORT_TAB;
+  const isPetResortCopy = activeTab === PET_RESORT_COPY_TAB;
+  const quarterSummary = getQuarterSummary(week);
   const dataWithDerivedValues = useMemo(
     () => withDerivedKpiCells(segment, data),
     [segment, data]
@@ -533,6 +563,64 @@ export function KpiView({
         onChange={(id) => navigate(id, week)}
         className="pp-kpi-screen-tabs mb-6"
       />
+
+      {isPetResortCopy && (
+        <section className="mb-6 rounded-xl border border-gray-200 bg-white px-5 py-4 shadow-sm">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-wider text-gray-500">
+                Quarter
+              </p>
+              <h2 className="mt-1 text-xl font-semibold text-gray-900">
+                {quarterSummary.label}
+              </h2>
+              <p className="mt-1 text-sm text-gray-500">{quarterSummary.dates}</p>
+            </div>
+            <div className="flex gap-2 print:hidden">
+              <label className="flex flex-col gap-1 text-xs font-medium text-gray-500">
+                Year
+                <select
+                  aria-label="Quarter year"
+                  className={SELECT_CLS}
+                  value={quarterSummary.year}
+                  onChange={(event) =>
+                    navigate(
+                      PET_RESORT_COPY_TAB,
+                      firstSundayInQuarter(Number(event.target.value), quarterSummary.quarter)
+                    )
+                  }
+                >
+                  {yearsRange().map((year) => (
+                    <option key={year} value={year}>
+                      {year}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label className="flex flex-col gap-1 text-xs font-medium text-gray-500">
+                Quarter
+                <select
+                  aria-label="Quarter"
+                  className={SELECT_CLS}
+                  value={quarterSummary.quarter}
+                  onChange={(event) =>
+                    navigate(
+                      PET_RESORT_COPY_TAB,
+                      firstSundayInQuarter(quarterSummary.year, Number(event.target.value))
+                    )
+                  }
+                >
+                  {[1, 2, 3, 4].map((quarter) => (
+                    <option key={quarter} value={quarter}>
+                      Q{quarter}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            </div>
+          </div>
+        </section>
+      )}
 
       {isPetResort ? (
         <>
