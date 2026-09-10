@@ -219,13 +219,13 @@ const QUARTER_METRIC_LABELS: Record<string, string> = {
   "DAYCARE:full_day_enrichment_activity": "Full Enrich.",
   "DAYCARE:half_day_enrichment_activity": "Half Enrich.",
   "DAYCARE:evaluations": "Evals",
-  "DAYCARE:avg_daily_occupancy": "Avg Daily",
+  "DAYCARE:avg_daily_occupancy": "Avg.\nDaily\nDogs",
   "DAYCARE:staff_hours": "Staff Hrs",
   "DAYCARE:unique_clients": "Clients",
   "DAYCARE:avg_visits": "Avg Visits",
   "IN_HOUSE_GROOMING:revenue": "Rev.",
   "IN_HOUSE_GROOMING:upsells": "Upsells",
-  "IN_HOUSE_GROOMING:total_pets_serviced": "Total Pets",
+  "IN_HOUSE_GROOMING:total_pets_serviced": "Total\nPets",
 };
 
 const PRIMARY_QUARTER_KPI_ORDER = [
@@ -787,7 +787,7 @@ export function KpiView({
                     <TableHeader rowSpan={2} className="w-[3%] px-1 py-2 text-center text-[9px]">
                       Week
                     </TableHeader>
-                    <TableHeader rowSpan={2} className="w-[7%] px-1 py-2 text-[9px]">
+                    <TableHeader rowSpan={2} className="w-[7%] border-l border-gray-200 px-1 py-2 text-center text-[9px]">
                       Dates
                     </TableHeader>
                     {PET_RESORT_SEGMENTS.map((segDef) => {
@@ -796,7 +796,7 @@ export function KpiView({
                         <TableHeader
                           key={segDef.key}
                           colSpan={metrics.length}
-                          className="border-l border-gray-200 px-1 py-2 text-center text-[9px] leading-tight text-gray-700"
+                          className="border-l border-gray-200 px-1 py-2 text-center text-[9px] font-bold leading-tight text-gray-900"
                         >
                           {segDef.key === "IN_HOUSE_GROOMING" ? "In-House" : segDef.label}
                         </TableHeader>
@@ -806,10 +806,10 @@ export function KpiView({
                   <tr>
                     {PET_RESORT_SEGMENTS.flatMap((segDef) =>
                       quarterMetricsForSegment(segDef, showSecondaryKpis)
-                        .map((metric, index) => (
+                        .map((metric) => (
                           <TableHeader
                             key={`${segDef.key}-${metric.key}`}
-                            className={`whitespace-normal px-1 py-2 text-center text-[9px] leading-tight normal-case tracking-normal ${isPrimaryQuarterMetric(segDef.key, metric.key) ? "font-bold text-gray-900" : "font-medium"} ${index === 0 ? "border-l border-gray-200" : ""}`}
+                            className={`whitespace-pre-line border-l border-gray-200 px-1 py-2 text-center text-[9px] leading-tight normal-case tracking-normal ${isPrimaryQuarterMetric(segDef.key, metric.key) ? "font-bold text-gray-900" : "font-medium"}`}
                           >
                             {quarterMetricLabel(segDef.key, metric.key, metric.label)}
                           </TableHeader>
@@ -824,16 +824,16 @@ export function KpiView({
                         <TableCell className="px-1 py-2 text-center text-[10px] font-semibold">
                           {weekIndex + 1}
                         </TableCell>
-                        <TableCell className="whitespace-nowrap px-1 py-2 text-[9px] text-gray-500">
+                        <TableCell className="whitespace-nowrap border-l border-gray-200 px-1 py-2 text-center text-[9px] text-gray-500">
                           {formatCompactWeekRange(quarterWeek.week)}
                         </TableCell>
                         {PET_RESORT_SEGMENTS.flatMap((segDef) => {
                           const segmentWeek = quarterlySegmentsData[segDef.key]?.[weekIndex];
                           return quarterMetricsForSegment(segDef, showSecondaryKpis)
-                            .map((metric, index) => (
+                            .map((metric) => (
                               <TableCell
                                 key={`${segDef.key}-${metric.key}`}
-                                className={`whitespace-nowrap px-1 py-2 text-right text-[9px] tabular-nums ${isPrimaryQuarterMetric(segDef.key, metric.key) ? "font-bold text-gray-950" : "font-normal"} ${index === 0 ? "border-l border-gray-200" : ""}`}
+                                className={`whitespace-nowrap border-l border-gray-200 px-1 py-2 text-center text-[9px] tabular-nums ${isPrimaryQuarterMetric(segDef.key, metric.key) ? "font-bold text-gray-950" : "font-normal"}`}
                               >
                                 {formatQuarterKpiValue(
                                   segmentWeek?.data[metric.key]?.value ?? null,
