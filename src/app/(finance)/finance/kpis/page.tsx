@@ -36,21 +36,19 @@ function getQuarterWeekStarts(selectedWeek: Date): Date[] {
   return Array.from({ length: 13 }, (_, index) => addWeeks(firstDay, index));
 }
 
-async function getQuarterlyHeadlineSummary(
-  quarterWeekStarts: Date[]
-): Promise<QuarterlyHeadlineSummary> {
-  const completedWeekStarts = quarterWeekStarts.filter(
-    (weekStart) => weekStart.getTime() < currentWeekStart().getTime()
-  );
-  const completedWeeks = completedWeekStarts.length;
-  if (completedWeeks === 0) {
-    const empty = { average: null, total: null, runRate: null };
-    return { completedWeeks, netSales: empty, payroll: empty, payrollPercent: empty };
-  }
+type QuarterHeadlinePeriod = {
+  totalSales: number;
+  totalPayroll: number;
+  averagePayrollPercent: number | null;
+  aggregatePayrollPercent: number | null;
+};
 
-  const rangeStart = completedWeekStarts[0];
-  const rangeEnd = addWeeks(completedWeekStarts[completedWeeks - 1], 1);
-  const payrollCheckDates = completedWeekStarts.map((weekStart) => {
+async function getQuarterHeadlinePeriod(
+  weekStarts: Date[]
+): Promise<QuarterHeadlinePeriod> {
+  const rangeStart = weekStarts[0];
+  const rangeEnd = addWeeks(weekStarts[weekStarts.length - 1], 1);
+  const payrollCheckDates = weekStarts.map((weekStart) => {
     const checkDate = new Date(weekStart);
     checkDate.setUTCDate(checkDate.getUTCDate() + 12);
     return checkDate;
@@ -88,10 +86,10 @@ async function getQuarterlyHeadlineSummary(
     );
   }
 
-  const weeklySales = completedWeekStarts.map(
+  const weeklySales = weekStarts.map(
     (weekStart) => salesByWeek.get(toWeekParam(weekStart)) ?? 0
   );
-  const weeklyPayroll = completedWeekStarts.map(
+  const weeklyPayroll = weekStarts.map(
     (weekStart) => payrollByWeek.get(toWeekParam(weekStart)) ?? 0
   );
   const totalSales = weeklySales.reduce((sum, value) => sum + value, 0);
@@ -101,29 +99,98 @@ async function getQuarterlyHeadlineSummary(
       ? [(weeklyPayroll[index] / sales) * 100]
       : []
   );
-  const averageSales = totalSales / completedWeeks;
-  const averagePayroll = totalPayroll / completedWeeks;
   const aggregatePayrollPercent = totalSales > 0 ? (totalPayroll / totalSales) * 100 : null;
   const averagePayrollPercent = weeklyPercentages.length
     ? weeklyPercentages.reduce((sum, value) => sum + value, 0) / weeklyPercentages.length
     : null;
 
+  return { totalSales, totalPayroll, averagePayrollPercent, aggregatePayrollPercent };
+}
+
+function percentChange(current: number | null, previous: number | null): number | null {
+  if (current === null || previous === null || previous === 0) return null;
+  return ((current - previous) / Math.abs(previous)) * 100;
+}
+
+async function getQuarterlyHeadlineSummary(
+  quarterWeekStarts: Date[]
+): Promise<QuarterlyHeadlineSummary> {
+  const completedWeekStarts = quarterWeekStarts.filter(
+    (weekStart) => weekStart.getTime() < currentWeekStart().getTime()
+  );
+  const completedWeeks = completedWeekStarts.length;
+  const emptyRollup = {
+    average: null,
+    total: null,
+    runRate: null,
+    lastYearChange: { average: null, total: null, runRate: null },
+  };
+  if (completedWeeks === 0) {
+    return {
+      completedWeeks,
+      netSales: emptyRollup,
+      payroll: emptyRollup,
+      payrollPercent: emptyRollup,
+    };
+  }
+
+  const priorYearAnchor = new Date(completedWeekStarts[0]);
+  priorYearAnchor.setUTCFullYear(priorYearAnchor.getUTCFullYear() - 1);
+  const priorYearWeekStarts = getQuarterWeekStarts(priorYearAnchor).slice(0, completedWeeks);
+  const [current, prior] = await Promise.all([
+    getQuarterHeadlinePeriod(completedWeekStarts),
+    getQuarterHeadlinePeriod(priorYearWeekStarts),
+  ]);
+
+  const averageSales = current.totalSales / completedWeeks;
+  const priorAverageSales = prior.totalSales / completedWeeks;
+  const averagePayroll = current.totalPayroll / completedWeeks;
+  const priorAveragePayroll = prior.totalPayroll / completedWeeks;
+  const runRateSales = averageSales * 13;
+  const priorRunRateSales = priorAverageSales * 13;
+  const runRatePayroll = averagePayroll * 13;
+  const priorRunRatePayroll = priorAveragePayroll * 13;
+
   return {
     completedWeeks,
     netSales: {
       average: Math.round(averageSales),
-      total: totalSales,
-      runRate: Math.round(averageSales * 13),
+      total: current.totalSales,
+      runRate: Math.round(runRateSales),
+      lastYearChange: {
+        average: percentChange(averageSales, priorAverageSales),
+        total: percentChange(current.totalSales, prior.totalSales),
+        runRate: percentChange(runRateSales, priorRunRateSales),
+      },
     },
     payroll: {
       average: Math.round(averagePayroll),
-      total: totalPayroll,
-      runRate: Math.round(averagePayroll * 13),
+      total: current.totalPayroll,
+      runRate: Math.round(runRatePayroll),
+      lastYearChange: {
+        average: percentChange(averagePayroll, priorAveragePayroll),
+        total: percentChange(current.totalPayroll, prior.totalPayroll),
+        runRate: percentChange(runRatePayroll, priorRunRatePayroll),
+      },
     },
     payrollPercent: {
-      average: averagePayrollPercent,
-      total: aggregatePayrollPercent,
-      runRate: aggregatePayrollPercent,
+      average: current.averagePayrollPercent,
+      total: current.aggregatePayrollPercent,
+      runRate: current.aggregatePayrollPercent,
+      lastYearChange: {
+        average:
+          current.averagePayrollPercent !== null && prior.averagePayrollPercent !== null
+            ? current.averagePayrollPercent - prior.averagePayrollPercent
+            : null,
+        total:
+          current.aggregatePayrollPercent !== null && prior.aggregatePayrollPercent !== null
+            ? current.aggregatePayrollPercent - prior.aggregatePayrollPercent
+            : null,
+        runRate:
+          current.aggregatePayrollPercent !== null && prior.aggregatePayrollPercent !== null
+            ? current.aggregatePayrollPercent - prior.aggregatePayrollPercent
+            : null,
+      },
     },
   };
 }
@@ -227,11 +294,11 @@ export default async function KpisPage({
   const params = await searchParams;
 
   const activeTab =
-    params.segment === "MOBILE_GROOMING"
-      ? "MOBILE_GROOMING"
-      : params.segment === PET_RESORT_COPY_TAB
-        ? PET_RESORT_COPY_TAB
-        : PET_RESORT_TAB;
+    params.segment === PET_RESORT_TAB
+      ? PET_RESORT_TAB
+      : params.segment === "MOBILE_GROOMING"
+        ? "MOBILE_GROOMING"
+        : PET_RESORT_COPY_TAB;
   const showPetResort = activeTab !== "MOBILE_GROOMING";
   const segment: KpiSegment = "MOBILE_GROOMING";
 

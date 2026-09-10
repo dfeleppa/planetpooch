@@ -56,6 +56,11 @@ type QuarterlyHeadlineRollup = {
   average: number | null;
   total: number | null;
   runRate: number | null;
+  lastYearChange: {
+    average: number | null;
+    total: number | null;
+    runRate: number | null;
+  };
 };
 
 export type QuarterlyHeadlineSummary = {
@@ -360,6 +365,14 @@ function QuarterlyHeadlineMetric({
       ? quarterCurrencyFormatter.format(value / 100)
       : `${Math.round(value)}%`;
   };
+  const formatLastYearChange = (change: number | null) => {
+    if (change === null) return "No prior-year data";
+    const rounded = Math.round(change);
+    const sign = rounded > 0 ? "+" : "";
+    return format === "percent"
+      ? `${sign}${rounded} pts vs last year`
+      : `${sign}${rounded}% vs last year`;
+  };
 
   return (
     <Card>
@@ -372,7 +385,12 @@ function QuarterlyHeadlineMetric({
             ["Average", rollup.average],
             ["Total", rollup.total],
             ["Run rate", rollup.runRate],
-          ] as const).map(([name, value]) => (
+          ] as const).map(([name, value]) => {
+            const comparisonKey = name === "Run rate" ? "runRate" : name.toLowerCase();
+            const change = rollup.lastYearChange[
+              comparisonKey as keyof QuarterlyHeadlineRollup["lastYearChange"]
+            ];
+            return (
             <div key={name}>
               <p className="text-[10px] font-medium uppercase tracking-wide text-gray-400">
                 {name}
@@ -380,8 +398,22 @@ function QuarterlyHeadlineMetric({
               <p className="mt-0.5 text-base font-semibold tabular-nums text-gray-900">
                 {formatValue(value)}
               </p>
+              <p
+                className={`mt-0.5 text-[10px] font-medium ${
+                  change === null
+                    ? "text-gray-400"
+                    : change > 0
+                      ? "text-emerald-600"
+                      : change < 0
+                        ? "text-amber-600"
+                        : "text-gray-500"
+                }`}
+              >
+                {formatLastYearChange(change)}
+              </p>
             </div>
-          ))}
+            );
+          })}
         </div>
       </CardContent>
     </Card>
@@ -737,9 +769,9 @@ export function KpiView({
   }
 
   const tabs = [
-    { id: PET_RESORT_TAB, label: "Pet Resort" },
+    { id: PET_RESORT_COPY_TAB, label: "Pet Resort" },
     { id: "MOBILE_GROOMING", label: "Mobile Grooming" },
-    { id: PET_RESORT_COPY_TAB, label: "Pet Resort Copy" },
+    { id: PET_RESORT_TAB, label: "Pet Resort (legacy)" },
   ];
 
   return (
@@ -864,35 +896,37 @@ export function KpiView({
               <div className="mb-2 flex justify-end print:hidden">
                 <div className="flex items-center gap-2">
                   <span className="text-xs font-medium text-gray-500">Secondary KPIs</span>
-                  <button
-                    type="button"
-                    aria-label="Show or hide secondary KPIs"
-                    aria-pressed={showSecondaryKpis}
-                    onClick={() => setShowSecondaryKpis((current) => !current)}
-                    className="inline-flex rounded-full border border-gray-200 bg-gray-100 p-0.5 text-xs font-semibold shadow-inner"
-                  >
-                    <span
-                      className={`rounded-full px-3 py-1 transition-colors ${
-                        !showSecondaryKpis
-                          ? "bg-white text-blue-700 shadow-sm"
-                          : "text-gray-500"
-                      }`}
-                    >
-                      Show
-                    </span>
-                    <span
+                  <div className="inline-flex rounded-full border border-gray-200 bg-gray-100 p-0.5 text-xs font-semibold shadow-inner">
+                    <button
+                      type="button"
+                      aria-pressed={showSecondaryKpis}
+                      onClick={() => setShowSecondaryKpis(true)}
                       className={`rounded-full px-3 py-1 transition-colors ${
                         showSecondaryKpis
                           ? "bg-white text-blue-700 shadow-sm"
                           : "text-gray-500"
                       }`}
                     >
+                      Show
+                    </button>
+                    <button
+                      type="button"
+                      aria-pressed={!showSecondaryKpis}
+                      onClick={() => setShowSecondaryKpis(false)}
+                      className={`rounded-full px-3 py-1 transition-colors ${
+                        !showSecondaryKpis
+                          ? "bg-white text-blue-700 shadow-sm"
+                          : "text-gray-500"
+                      }`}
+                    >
                       Hide
-                    </span>
-                  </button>
+                    </button>
+                  </div>
                 </div>
               </div>
-              <Table className="w-full table-fixed text-[10px]">
+              <Table
+                className={`${showSecondaryKpis ? "min-w-[1800px]" : "w-full"} table-fixed text-[10px]`}
+              >
                 <TableHead>
                   <tr>
                     <TableHeader
