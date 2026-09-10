@@ -181,6 +181,27 @@ function firstSundayInQuarter(year: number, quarter: number): string {
   return toWeekParam(firstDay);
 }
 
+const quarterCurrencyFormatter = new Intl.NumberFormat("en-US", {
+  style: "currency",
+  currency: "USD",
+  maximumFractionDigits: 0,
+});
+
+function formatQuarterKpiValue(value: number | null, format: KpiFormat): string {
+  if (value === null) return "—";
+  const displayValue = value / 100;
+  if (format === "currency") return quarterCurrencyFormatter.format(displayValue);
+  if (format === "percent") return `${Math.round(displayValue)}%`;
+  return Math.round(displayValue).toLocaleString("en-US");
+}
+
+function formatCompactWeekRange(week: string): string {
+  const start = fromWeekParam(week);
+  const end = new Date(start);
+  end.setUTCDate(end.getUTCDate() + 6);
+  return `${start.getUTCMonth() + 1}/${start.getUTCDate()} - ${end.getUTCMonth() + 1}/${end.getUTCDate()}`;
+}
+
 function HeadlineMetric({ label, value }: { label: string; value: string }) {
   return (
     <Card>
@@ -674,52 +695,89 @@ export function KpiView({
             <WeeklyHeadline week={week} summary={headlineSummary} business="PET_RESORT" />
           </div>
 
+          {isPetResortCopy && quarterlySegmentsData ? (
+            <div className="pp-kpi-report-segments">
+              <Table className="whitespace-nowrap text-xs">
+                <TableHead>
+                  <tr>
+                    <TableHeader rowSpan={2} className="px-2 py-2 text-center">
+                      Week
+                    </TableHeader>
+                    <TableHeader rowSpan={2} className="px-2 py-2">
+                      Dates
+                    </TableHeader>
+                    {PET_RESORT_SEGMENTS.map((segDef) => {
+                      const metrics = segDef.metrics.filter(
+                        (metric) => !isNotWorkingSection(segDef.key, metric.section)
+                      );
+                      return (
+                        <TableHeader
+                          key={segDef.key}
+                          colSpan={metrics.length}
+                          className="border-l border-gray-200 px-2 py-2 text-center text-gray-700"
+                        >
+                          {segDef.label}
+                        </TableHeader>
+                      );
+                    })}
+                  </tr>
+                  <tr>
+                    {PET_RESORT_SEGMENTS.flatMap((segDef) =>
+                      segDef.metrics
+                        .filter((metric) => !isNotWorkingSection(segDef.key, metric.section))
+                        .map((metric, index) => (
+                          <TableHeader
+                            key={`${segDef.key}-${metric.key}`}
+                            className={`px-2 py-2 text-right normal-case tracking-normal ${index === 0 ? "border-l border-gray-200" : ""}`}
+                          >
+                            {metric.label}
+                          </TableHeader>
+                        ))
+                    )}
+                  </tr>
+                </TableHead>
+                <TableBody>
+                  {(quarterlySegmentsData[PET_RESORT_SEGMENTS[0].key] ?? []).map(
+                    (quarterWeek, weekIndex) => (
+                      <TableRow key={quarterWeek.week}>
+                        <TableCell className="px-2 py-2 text-center font-semibold">
+                          {weekIndex + 1}
+                        </TableCell>
+                        <TableCell className="px-2 py-2 text-gray-500">
+                          {formatCompactWeekRange(quarterWeek.week)}
+                        </TableCell>
+                        {PET_RESORT_SEGMENTS.flatMap((segDef) => {
+                          const segmentWeek = quarterlySegmentsData[segDef.key]?.[weekIndex];
+                          return segDef.metrics
+                            .filter((metric) => !isNotWorkingSection(segDef.key, metric.section))
+                            .map((metric, index) => (
+                              <TableCell
+                                key={`${segDef.key}-${metric.key}`}
+                                className={`px-2 py-2 text-right text-xs tabular-nums ${index === 0 ? "border-l border-gray-200" : ""}`}
+                              >
+                                {formatQuarterKpiValue(
+                                  segmentWeek?.data[metric.key]?.value ?? null,
+                                  metric.format
+                                )}
+                              </TableCell>
+                            ));
+                        })}
+                      </TableRow>
+                    )
+                  )}
+                </TableBody>
+              </Table>
+            </div>
+          ) : (
           <div className="pp-kpi-report-segments flex flex-col gap-8 print:gap-4">
             {PET_RESORT_SEGMENTS.map((segDef) => {
               const segData = allSegmentsDataWithDerivedValues?.[segDef.key];
               if (!segData || segDef.metrics.length === 0) return null;
-              const quarterWeeks = quarterlySegmentsData?.[segDef.key];
-              const quarterMetrics = segDef.metrics.filter(
-                (metric) => !isNotWorkingSection(segDef.key, metric.section)
-              );
               return (
                 <section className="pp-kpi-report-segment" key={segDef.key}>
                   <h2 className="text-lg font-semibold text-gray-900 mb-3 print:text-base">
                     {segDef.label}
                   </h2>
-                  {isPetResortCopy && quarterWeeks ? (
-                    <Table className="whitespace-nowrap">
-                      <TableHead>
-                        <tr>
-                          <TableHeader>Week</TableHeader>
-                          <TableHeader>Dates</TableHeader>
-                          {quarterMetrics.map((metric) => (
-                            <TableHeader key={metric.key} className="text-right">
-                              {metric.label}
-                            </TableHeader>
-                          ))}
-                        </tr>
-                      </TableHead>
-                      <TableBody>
-                        {quarterWeeks.map((quarterWeek, index) => (
-                          <TableRow key={quarterWeek.week}>
-                            <TableCell className="font-medium">Week {index + 1}</TableCell>
-                            <TableCell className="text-gray-500">
-                              {formatWeekRange(fromWeekParam(quarterWeek.week))}
-                            </TableCell>
-                            {quarterMetrics.map((metric) => (
-                              <TableCell key={metric.key} className="text-right tabular-nums">
-                                {formatKpiTableValue(
-                                  quarterWeek.data[metric.key]?.value ?? null,
-                                  metric.format
-                                )}
-                              </TableCell>
-                            ))}
-                          </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
-                  ) : (
                   <div className="flex flex-col gap-4">
                     {SECTION_ORDER.map((section) => {
                       if (isNotWorkingSection(segDef.key, section)) return null;
@@ -777,11 +835,11 @@ export function KpiView({
                       );
                     })}
                   </div>
-                  )}
                 </section>
               );
             })}
           </div>
+          )}
         </>
       ) : (
         <>
