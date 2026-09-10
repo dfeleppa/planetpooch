@@ -52,6 +52,19 @@ export type QuarterlyKpiWeek = {
   data: Record<string, KpiCell>;
 };
 
+type QuarterlyHeadlineRollup = {
+  average: number | null;
+  total: number | null;
+  runRate: number | null;
+};
+
+export type QuarterlyHeadlineSummary = {
+  completedWeeks: number;
+  netSales: QuarterlyHeadlineRollup;
+  payroll: QuarterlyHeadlineRollup;
+  payrollPercent: QuarterlyHeadlineRollup;
+};
+
 type MobileGroomingImportReport = {
   finishedAppointments: number;
   uniqueClients: number;
@@ -332,6 +345,78 @@ function WeeklyHeadline({
   );
 }
 
+function QuarterlyHeadlineMetric({
+  label,
+  rollup,
+  format,
+}: {
+  label: string;
+  rollup: QuarterlyHeadlineRollup;
+  format: "currency" | "percent";
+}) {
+  const formatValue = (value: number | null) => {
+    if (value === null) return "—";
+    return format === "currency"
+      ? quarterCurrencyFormatter.format(value / 100)
+      : `${Math.round(value)}%`;
+  };
+
+  return (
+    <Card>
+      <CardContent className="py-3">
+        <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-gray-600">
+          {label}
+        </p>
+        <div className="grid grid-cols-3 gap-2">
+          {([
+            ["Average", rollup.average],
+            ["Total", rollup.total],
+            ["Run rate", rollup.runRate],
+          ] as const).map(([name, value]) => (
+            <div key={name}>
+              <p className="text-[10px] font-medium uppercase tracking-wide text-gray-400">
+                {name}
+              </p>
+              <p className="mt-0.5 text-base font-semibold tabular-nums text-gray-900">
+                {formatValue(value)}
+              </p>
+            </div>
+          ))}
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+function QuarterlyHeadline({
+  summary,
+  dates,
+}: {
+  summary: QuarterlyHeadlineSummary;
+  dates: string;
+}) {
+  return (
+    <section className="mb-4" aria-labelledby="quarterly-headline-heading">
+      <div className="mb-2 flex items-baseline justify-between gap-3">
+        <div>
+          <h2 id="quarterly-headline-heading" className="text-sm font-semibold text-gray-900">
+            Quarterly headline
+          </h2>
+          <p className="text-[10px] text-gray-400">
+            Based on {summary.completedWeeks} completed {summary.completedWeeks === 1 ? "week" : "weeks"}
+          </p>
+        </div>
+        <p className="text-xs text-gray-500">{dates}</p>
+      </div>
+      <div className="grid gap-3 lg:grid-cols-3">
+        <QuarterlyHeadlineMetric label="Pet Resort net sales" rollup={summary.netSales} format="currency" />
+        <QuarterlyHeadlineMetric label="Pet Resort payroll" rollup={summary.payroll} format="currency" />
+        <QuarterlyHeadlineMetric label="Payroll % of net sales" rollup={summary.payrollPercent} format="percent" />
+      </div>
+    </section>
+  );
+}
+
 function withDerivedKpiCells(
   segment: KpiSegment,
   cells: Record<string, KpiCell>
@@ -373,6 +458,7 @@ export function KpiView({
   activeTab,
   allSegmentsData,
   quarterlySegmentsData,
+  quarterlyHeadlineSummary,
   headlineSummary,
 }: {
   segment: KpiSegment;
@@ -381,6 +467,7 @@ export function KpiView({
   activeTab?: string;
   allSegmentsData?: Record<string, Record<string, KpiCell>>;
   quarterlySegmentsData?: Record<string, QuarterlyKpiWeek[]>;
+  quarterlyHeadlineSummary?: QuarterlyHeadlineSummary;
   headlineSummary: WeeklyHeadlineSummary;
 }) {
   const router = useRouter();
@@ -763,26 +850,45 @@ export function KpiView({
             </div>
           )}
 
-          <div className={isPetResortCopy ? "[&>section]:mb-4 [&_.py-4]:py-2" : undefined}>
+          {isPetResortCopy && quarterlyHeadlineSummary ? (
+            <QuarterlyHeadline
+              summary={quarterlyHeadlineSummary}
+              dates={quarterSummary.dates}
+            />
+          ) : (
             <WeeklyHeadline week={week} summary={headlineSummary} business="PET_RESORT" />
-          </div>
+          )}
 
           {isPetResortCopy && quarterlySegmentsData ? (
             <div className="pp-kpi-report-segments">
               <div className="mb-2 flex justify-end print:hidden">
-                <div className="flex flex-col items-center gap-1">
+                <div className="flex items-center gap-2">
                   <span className="text-xs font-medium text-gray-500">Secondary KPIs</span>
                   <button
                     type="button"
+                    aria-label="Show or hide secondary KPIs"
                     aria-pressed={showSecondaryKpis}
                     onClick={() => setShowSecondaryKpis((current) => !current)}
-                    className={`min-w-20 rounded-full border px-4 py-1.5 text-xs font-semibold transition-colors ${
-                      showSecondaryKpis
-                        ? "border-gray-300 bg-gray-100 text-gray-700 hover:bg-gray-200"
-                        : "border-blue-200 bg-blue-50 text-blue-700 hover:bg-blue-100"
-                    }`}
+                    className="inline-flex rounded-full border border-gray-200 bg-gray-100 p-0.5 text-xs font-semibold shadow-inner"
                   >
-                    {showSecondaryKpis ? "Hide" : "Show"}
+                    <span
+                      className={`rounded-full px-3 py-1 transition-colors ${
+                        !showSecondaryKpis
+                          ? "bg-white text-blue-700 shadow-sm"
+                          : "text-gray-500"
+                      }`}
+                    >
+                      Show
+                    </span>
+                    <span
+                      className={`rounded-full px-3 py-1 transition-colors ${
+                        showSecondaryKpis
+                          ? "bg-white text-blue-700 shadow-sm"
+                          : "text-gray-500"
+                      }`}
+                    >
+                      Hide
+                    </span>
                   </button>
                 </div>
               </div>

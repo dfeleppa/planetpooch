@@ -16,6 +16,7 @@ import { getResortStaffHoursByWeek } from "@/lib/payroll-kpis";
 import {
   KpiView,
   type KpiCell,
+  type QuarterlyHeadlineSummary,
   type QuarterlyKpiWeek,
   type WeeklyHeadlineSummary,
 } from "./KpiView";
@@ -33,6 +34,98 @@ function getQuarterWeekStarts(selectedWeek: Date): Date[] {
   const daysUntilSunday = (7 - firstDay.getUTCDay()) % 7;
   firstDay.setUTCDate(firstDay.getUTCDate() + daysUntilSunday);
   return Array.from({ length: 13 }, (_, index) => addWeeks(firstDay, index));
+}
+
+async function getQuarterlyHeadlineSummary(
+  quarterWeekStarts: Date[]
+): Promise<QuarterlyHeadlineSummary> {
+  const completedWeekStarts = quarterWeekStarts.filter(
+    (weekStart) => weekStart.getTime() < currentWeekStart().getTime()
+  );
+  const completedWeeks = completedWeekStarts.length;
+  if (completedWeeks === 0) {
+    const empty = { average: null, total: null, runRate: null };
+    return { completedWeeks, netSales: empty, payroll: empty, payrollPercent: empty };
+  }
+
+  const rangeStart = completedWeekStarts[0];
+  const rangeEnd = addWeeks(completedWeekStarts[completedWeeks - 1], 1);
+  const payrollCheckDates = completedWeekStarts.map((weekStart) => {
+    const checkDate = new Date(weekStart);
+    checkDate.setUTCDate(checkDate.getUTCDate() + 12);
+    return checkDate;
+  });
+
+  const [salesRows, payrollRuns] = await Promise.all([
+    prisma.$queryRaw<{ weekStart: Date; netSalesCents: bigint }[]>`
+      SELECT
+        (date_trunc('week', COALESCE("salesDatetime", "completedTime", "createdTime") + interval '1 day') - interval '1 day')::date AS "weekStart",
+        COALESCE(SUM("subTotalCents" - "discountCents"), 0)::bigint AS "netSalesCents"
+      FROM "MoegoOrder"
+      WHERE "businessId" = ${PET_RESORT_BUSINESS_ID}
+        AND "status" = ANY(${[...REVENUE_ORDER_STATUSES]})
+        AND COALESCE("salesDatetime", "completedTime", "createdTime") >= ${rangeStart}
+        AND COALESCE("salesDatetime", "completedTime", "createdTime") < ${rangeEnd}
+      GROUP BY 1
+    `,
+    prisma.financePetResortPayrollRun.findMany({
+      where: { checkDate: { in: payrollCheckDates } },
+      select: { checkDate: true, amount: true },
+    }),
+  ]);
+
+  const salesByWeek = new Map(
+    salesRows.map((row) => [toWeekParam(new Date(row.weekStart)), Number(row.netSalesCents)])
+  );
+  const payrollByWeek = new Map<string, number>();
+  for (const run of payrollRuns) {
+    const payrollWeekStart = new Date(run.checkDate);
+    payrollWeekStart.setUTCDate(payrollWeekStart.getUTCDate() - 12);
+    const key = toWeekParam(payrollWeekStart);
+    payrollByWeek.set(
+      key,
+      (payrollByWeek.get(key) ?? 0) + Math.round(Number(run.amount) * 100)
+    );
+  }
+
+  const weeklySales = completedWeekStarts.map(
+    (weekStart) => salesByWeek.get(toWeekParam(weekStart)) ?? 0
+  );
+  const weeklyPayroll = completedWeekStarts.map(
+    (weekStart) => payrollByWeek.get(toWeekParam(weekStart)) ?? 0
+  );
+  const totalSales = weeklySales.reduce((sum, value) => sum + value, 0);
+  const totalPayroll = weeklyPayroll.reduce((sum, value) => sum + value, 0);
+  const weeklyPercentages = weeklySales.flatMap((sales, index) =>
+    sales > 0 && weeklyPayroll[index] > 0
+      ? [(weeklyPayroll[index] / sales) * 100]
+      : []
+  );
+  const averageSales = totalSales / completedWeeks;
+  const averagePayroll = totalPayroll / completedWeeks;
+  const aggregatePayrollPercent = totalSales > 0 ? (totalPayroll / totalSales) * 100 : null;
+  const averagePayrollPercent = weeklyPercentages.length
+    ? weeklyPercentages.reduce((sum, value) => sum + value, 0) / weeklyPercentages.length
+    : null;
+
+  return {
+    completedWeeks,
+    netSales: {
+      average: Math.round(averageSales),
+      total: totalSales,
+      runRate: Math.round(averageSales * 13),
+    },
+    payroll: {
+      average: Math.round(averagePayroll),
+      total: totalPayroll,
+      runRate: Math.round(averagePayroll * 13),
+    },
+    payrollPercent: {
+      average: averagePayrollPercent,
+      total: aggregatePayrollPercent,
+      runRate: aggregatePayrollPercent,
+    },
+  };
 }
 
 async function getWeeklyHeadlineSummary(weekStart: Date): Promise<WeeklyHeadlineSummary> {
@@ -162,6 +255,10 @@ export default async function KpisPage({
   const quarterWeekStarts =
     activeTab === PET_RESORT_COPY_TAB ? getQuarterWeekStarts(weekStart) : [];
   const headlineSummaryPromise = getWeeklyHeadlineSummary(weekStart);
+  const quarterlyHeadlineSummaryPromise =
+    activeTab === PET_RESORT_COPY_TAB
+      ? getQuarterlyHeadlineSummary(quarterWeekStarts)
+      : Promise.resolve(null);
   const staffHoursByWeekPromise =
     showPetResort
       ? getResortStaffHoursByWeek([
@@ -179,6 +276,7 @@ export default async function KpisPage({
       quarterlyValueRows,
       staffHoursByWeek,
       headlineSummary,
+      quarterlyHeadlineSummary,
     ] = await Promise.all([
       prisma.kpiWeeklyValue.findMany({
         where: {
@@ -212,6 +310,7 @@ export default async function KpisPage({
         : Promise.resolve([]),
       staffHoursByWeekPromise,
       headlineSummaryPromise,
+      quarterlyHeadlineSummaryPromise,
     ]);
 
     const allData: Record<string, Record<string, KpiCell>> = {};
@@ -289,6 +388,7 @@ export default async function KpisPage({
           activeTab={activeTab}
           allSegmentsData={allData}
           quarterlySegmentsData={quarterlySegmentsData}
+          quarterlyHeadlineSummary={quarterlyHeadlineSummary ?? undefined}
           headlineSummary={headlineSummary}
         />
       </div>
