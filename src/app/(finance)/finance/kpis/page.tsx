@@ -463,7 +463,11 @@ export default async function KpisPage({
     }
 
     return (
-      <div className="pp-kpi-print-page">
+      <div
+        className={`pp-kpi-print-page ${
+          activeTab === PET_RESORT_COPY_TAB ? "pp-kpi-quarterly-print-page" : ""
+        }`}
+      >
         <div className="pp-kpi-screen-heading mb-6">
           <h2 className="text-xl font-semibold text-gray-900">KPIs</h2>
           <p className="text-gray-500 mt-1">

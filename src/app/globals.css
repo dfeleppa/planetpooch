@@ -921,6 +921,11 @@ body {
     margin: 0.42in;
   }
 
+  @page pp-kpi-quarterly-report {
+    size: letter landscape;
+    margin: 0.25in;
+  }
+
   @page pp-mobile-weekly-report {
     size: letter portrait;
     margin: 0.42in;
@@ -938,6 +943,106 @@ body {
     page: pp-kpi-report;
     color: #111827;
     font-size: 8pt;
+  }
+
+  .pp-kpi-print-page.pp-kpi-quarterly-print-page {
+    page: pp-kpi-quarterly-report;
+  }
+
+  .pp-kpi-quarterly-report {
+    font-size: 6pt;
+  }
+
+  .pp-kpi-quarterly-report .pp-kpi-quarter-card {
+    display: none !important;
+  }
+
+  .pp-kpi-quarterly-report .pp-kpi-print-header {
+    margin-bottom: 0.1in;
+    padding-bottom: 0.06in;
+  }
+
+  .pp-kpi-quarterly-report .pp-kpi-print-header h1 {
+    font-size: 14pt;
+  }
+
+  .pp-kpi-quarterly-report .pp-kpi-quarterly-headline {
+    margin-bottom: 0.1in !important;
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+
+  .pp-kpi-quarterly-report .pp-kpi-quarterly-headline > div:first-child {
+    margin-bottom: 0.04in !important;
+  }
+
+  .pp-kpi-quarterly-report .pp-kpi-quarterly-headline > div:last-child {
+    display: grid !important;
+    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+    gap: 0.06in !important;
+  }
+
+  .pp-kpi-quarterly-report .pp-kpi-quarterly-headline-card {
+    border-radius: 0.04in !important;
+    box-shadow: none !important;
+  }
+
+  .pp-kpi-quarterly-report .pp-kpi-quarterly-headline-card-content {
+    padding: 0.05in 0.07in !important;
+  }
+
+  .pp-kpi-quarterly-report .pp-kpi-quarterly-headline p {
+    margin-top: 0 !important;
+    margin-bottom: 0.015in !important;
+    font-size: 5.5pt !important;
+    line-height: 1.1 !important;
+  }
+
+  .pp-kpi-quarterly-report .pp-kpi-quarterly-headline [class*="text-base"] {
+    font-size: 8pt !important;
+  }
+
+  .pp-kpi-quarterly-report .pp-kpi-report-segments {
+    overflow: visible !important;
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+
+  .pp-kpi-quarterly-report .pp-kpi-report-segments > .overflow-x-auto {
+    overflow: visible !important;
+    border-radius: 0 !important;
+  }
+
+  .pp-kpi-quarterly-report .pp-kpi-quarterly-table {
+    width: 100% !important;
+    min-width: 0 !important;
+    table-layout: fixed !important;
+    font-size: 5pt !important;
+  }
+
+  .pp-kpi-quarterly-report .pp-kpi-quarterly-table th,
+  .pp-kpi-quarterly-report .pp-kpi-quarterly-table td {
+    width: auto !important;
+    min-width: 0 !important;
+    height: auto !important;
+    padding: 0.025in 0.012in !important;
+    overflow-wrap: anywhere;
+    white-space: normal !important;
+    font-size: 4.8pt !important;
+    line-height: 1.05 !important;
+    text-align: center !important;
+    vertical-align: middle !important;
+  }
+
+  .pp-kpi-quarterly-report .pp-kpi-quarterly-table th {
+    font-size: 4.5pt !important;
+    letter-spacing: 0 !important;
+  }
+
+  .pp-kpi-quarterly-report .pp-kpi-quarterly-table tbody tr {
+    height: 0.24in;
+    break-inside: avoid;
+    page-break-inside: avoid;
   }
 
   .pp-finance-screen-header,

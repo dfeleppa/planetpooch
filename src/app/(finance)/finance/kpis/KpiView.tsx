@@ -375,8 +375,8 @@ function QuarterlyHeadlineMetric({
   };
 
   return (
-    <Card>
-      <CardContent className="py-3">
+    <Card className="pp-kpi-quarterly-headline-card">
+      <CardContent className="pp-kpi-quarterly-headline-card-content py-3">
         <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-gray-600">
           {label}
         </p>
@@ -428,7 +428,7 @@ function QuarterlyHeadline({
   dates: string;
 }) {
   return (
-    <section className="mb-4" aria-labelledby="quarterly-headline-heading">
+    <section className="pp-kpi-quarterly-headline mb-4" aria-labelledby="quarterly-headline-heading">
       <div className="mb-2 flex items-baseline justify-between gap-3">
         <div>
           <h2 id="quarterly-headline-heading" className="text-sm font-semibold text-gray-900">
@@ -777,7 +777,7 @@ export function KpiView({
   ];
 
   return (
-    <div>
+    <div className={isPetResortCopy ? "pp-kpi-quarterly-report" : undefined}>
       <Tabs
         tabs={tabs}
         activeTab={isPetResort ? petResortTab : "MOBILE_GROOMING"}
@@ -786,7 +786,7 @@ export function KpiView({
       />
 
       {isPetResortCopy && (
-        <section className="mb-6 rounded-xl border border-gray-200 bg-white px-5 py-4 shadow-sm">
+        <section className="pp-kpi-quarter-card mb-6 rounded-xl border border-gray-200 bg-white px-5 py-4 shadow-sm">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
             <div>
               <p className="text-xs font-semibold uppercase tracking-wider text-gray-500">
@@ -848,11 +848,23 @@ export function KpiView({
           <header className="pp-kpi-print-header">
             <div>
               <div className="pp-kpi-print-eyebrow">Planet Pooch</div>
-              <h1>Pet Resort Weekly KPI Report</h1>
+              <h1>
+                {isPetResortCopy
+                  ? "Pet Resort Quarterly KPI Report"
+                  : "Pet Resort Weekly KPI Report"}
+              </h1>
             </div>
             <div className="pp-kpi-print-period">
-              <strong>{formatWeekLabel(fromWeekParam(week))}</strong>
-              <span>{formatWeekRange(fromWeekParam(week))}</span>
+              <strong>
+                {isPetResortCopy
+                  ? quarterSummary.label
+                  : formatWeekLabel(fromWeekParam(week))}
+              </strong>
+              <span>
+                {isPetResortCopy
+                  ? quarterSummary.dates
+                  : formatWeekRange(fromWeekParam(week))}
+              </span>
             </div>
           </header>
 
@@ -927,7 +939,7 @@ export function KpiView({
                 </div>
               </div>
               <Table
-                className={`${showSecondaryKpis ? "min-w-[1800px]" : "w-full"} table-fixed text-[10px]`}
+                className={`pp-kpi-quarterly-table ${showSecondaryKpis ? "min-w-[1800px]" : "w-full"} table-fixed text-[10px]`}
               >
                 <TableHead>
                   <tr>
