@@ -227,8 +227,27 @@ const QUARTER_METRIC_LABELS: Record<string, string> = {
   "IN_HOUSE_GROOMING:total_pets_serviced": "Pets",
 };
 
+const PRIMARY_QUARTER_KPI_KEYS = new Set([
+  "BOARDING:revenue",
+  "BOARDING:nights",
+  "BOARDING:occupancy_rate",
+  "TRAINING:group_revenue",
+  "TRAINING:one_on_one_revenue",
+  "TRAINING:training_evaluations",
+  "DAYCARE:total_daycare_appointments",
+  "DAYCARE:avg_daily_occupancy",
+  "DAYCARE:staff_hours",
+  "DAYCARE:unique_clients",
+  "IN_HOUSE_GROOMING:revenue",
+  "IN_HOUSE_GROOMING:total_pets_serviced",
+]);
+
 function quarterMetricLabel(segment: KpiSegment, metricKey: string, fallback: string): string {
   return QUARTER_METRIC_LABELS[`${segment}:${metricKey}`] ?? fallback;
+}
+
+function isPrimaryQuarterMetric(segment: KpiSegment, metricKey: string): boolean {
+  return PRIMARY_QUARTER_KPI_KEYS.has(`${segment}:${metricKey}`);
 }
 
 function HeadlineMetric({ label, value }: { label: string; value: string }) {
@@ -369,6 +388,7 @@ export function KpiView({
   const [saving, setSaving] = useState(false);
   const [importingMoego, setImportingMoego] = useState(false);
   const [importMessage, setImportMessage] = useState<string | null>(null);
+  const [showSecondaryKpis, setShowSecondaryKpis] = useState(false);
 
   // Leave edit mode whenever the server data changes (segment/week switch).
   useEffect(() => {
@@ -674,6 +694,18 @@ export function KpiView({
                   ))}
                 </select>
               </label>
+              <label className="flex flex-col gap-1 text-xs font-medium text-gray-500">
+                KPIs
+                <select
+                  aria-label="KPI visibility"
+                  className={SELECT_CLS}
+                  value={showSecondaryKpis ? "all" : "primary"}
+                  onChange={(event) => setShowSecondaryKpis(event.target.value === "all")}
+                >
+                  <option value="primary">Primary only</option>
+                  <option value="all">Primary + Secondary</option>
+                </select>
+              </label>
             </div>
           </div>
         </section>
@@ -737,7 +769,10 @@ export function KpiView({
                     </TableHeader>
                     {PET_RESORT_SEGMENTS.map((segDef) => {
                       const metrics = segDef.metrics.filter(
-                        (metric) => !isNotWorkingSection(segDef.key, metric.section)
+                        (metric) =>
+                          !isNotWorkingSection(segDef.key, metric.section) &&
+                          (showSecondaryKpis ||
+                            isPrimaryQuarterMetric(segDef.key, metric.key))
                       );
                       return (
                         <TableHeader
@@ -753,7 +788,12 @@ export function KpiView({
                   <tr>
                     {PET_RESORT_SEGMENTS.flatMap((segDef) =>
                       segDef.metrics
-                        .filter((metric) => !isNotWorkingSection(segDef.key, metric.section))
+                        .filter(
+                          (metric) =>
+                            !isNotWorkingSection(segDef.key, metric.section) &&
+                            (showSecondaryKpis ||
+                              isPrimaryQuarterMetric(segDef.key, metric.key))
+                        )
                         .map((metric, index) => (
                           <TableHeader
                             key={`${segDef.key}-${metric.key}`}
@@ -778,7 +818,12 @@ export function KpiView({
                         {PET_RESORT_SEGMENTS.flatMap((segDef) => {
                           const segmentWeek = quarterlySegmentsData[segDef.key]?.[weekIndex];
                           return segDef.metrics
-                            .filter((metric) => !isNotWorkingSection(segDef.key, metric.section))
+                            .filter(
+                              (metric) =>
+                                !isNotWorkingSection(segDef.key, metric.section) &&
+                                (showSecondaryKpis ||
+                                  isPrimaryQuarterMetric(segDef.key, metric.key))
+                            )
                             .map((metric, index) => (
                               <TableCell
                                 key={`${segDef.key}-${metric.key}`}
