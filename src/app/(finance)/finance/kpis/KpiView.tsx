@@ -202,6 +202,35 @@ function formatCompactWeekRange(week: string): string {
   return `${start.getUTCMonth() + 1}/${start.getUTCDate()} - ${end.getUTCMonth() + 1}/${end.getUTCDate()}`;
 }
 
+const QUARTER_METRIC_LABELS: Record<string, string> = {
+  "BOARDING:revenue": "Revenue",
+  "BOARDING:package_sales": "Packages",
+  "BOARDING:addon_sales": "Add-ons",
+  "BOARDING:nights": "Nights",
+  "BOARDING:occupancy_rate": "Occ. %",
+  "TRAINING:product_sales": "Product $",
+  "TRAINING:group_revenue": "Group $",
+  "TRAINING:one_on_one_revenue": "1:1 $",
+  "TRAINING:training_evaluations": "Evals",
+  "DAYCARE:total_daycare_appointments": "Total Appts",
+  "DAYCARE:total_appointments": "Full Day",
+  "DAYCARE:half_day_daycare": "Half Day",
+  "DAYCARE:full_day_enrichment_activity": "Full Enrich.",
+  "DAYCARE:half_day_enrichment_activity": "Half Enrich.",
+  "DAYCARE:evaluations": "Evals",
+  "DAYCARE:avg_daily_occupancy": "Avg Daily",
+  "DAYCARE:staff_hours": "Staff Hrs",
+  "DAYCARE:unique_clients": "Clients",
+  "DAYCARE:avg_visits": "Avg Visits",
+  "IN_HOUSE_GROOMING:revenue": "Revenue",
+  "IN_HOUSE_GROOMING:upsells": "Upsells",
+  "IN_HOUSE_GROOMING:total_pets_serviced": "Pets",
+};
+
+function quarterMetricLabel(segment: KpiSegment, metricKey: string, fallback: string): string {
+  return QUARTER_METRIC_LABELS[`${segment}:${metricKey}`] ?? fallback;
+}
+
 function HeadlineMetric({ label, value }: { label: string; value: string }) {
   return (
     <Card>
@@ -697,13 +726,13 @@ export function KpiView({
 
           {isPetResortCopy && quarterlySegmentsData ? (
             <div className="pp-kpi-report-segments">
-              <Table className="whitespace-nowrap text-xs">
+              <Table className="w-full table-fixed text-[10px]">
                 <TableHead>
                   <tr>
-                    <TableHeader rowSpan={2} className="px-2 py-2 text-center">
+                    <TableHeader rowSpan={2} className="w-[3%] px-1 py-2 text-center text-[9px]">
                       Week
                     </TableHeader>
-                    <TableHeader rowSpan={2} className="px-2 py-2">
+                    <TableHeader rowSpan={2} className="w-[7%] px-1 py-2 text-[9px]">
                       Dates
                     </TableHeader>
                     {PET_RESORT_SEGMENTS.map((segDef) => {
@@ -714,9 +743,9 @@ export function KpiView({
                         <TableHeader
                           key={segDef.key}
                           colSpan={metrics.length}
-                          className="border-l border-gray-200 px-2 py-2 text-center text-gray-700"
+                          className="border-l border-gray-200 px-1 py-2 text-center text-[9px] leading-tight text-gray-700"
                         >
-                          {segDef.label}
+                          {segDef.key === "IN_HOUSE_GROOMING" ? "In-House" : segDef.label}
                         </TableHeader>
                       );
                     })}
@@ -728,9 +757,9 @@ export function KpiView({
                         .map((metric, index) => (
                           <TableHeader
                             key={`${segDef.key}-${metric.key}`}
-                            className={`px-2 py-2 text-right normal-case tracking-normal ${index === 0 ? "border-l border-gray-200" : ""}`}
+                            className={`whitespace-normal px-1 py-2 text-center text-[9px] leading-tight normal-case tracking-normal ${index === 0 ? "border-l border-gray-200" : ""}`}
                           >
-                            {metric.label}
+                            {quarterMetricLabel(segDef.key, metric.key, metric.label)}
                           </TableHeader>
                         ))
                     )}
@@ -740,10 +769,10 @@ export function KpiView({
                   {(quarterlySegmentsData[PET_RESORT_SEGMENTS[0].key] ?? []).map(
                     (quarterWeek, weekIndex) => (
                       <TableRow key={quarterWeek.week}>
-                        <TableCell className="px-2 py-2 text-center font-semibold">
+                        <TableCell className="px-1 py-2 text-center text-[10px] font-semibold">
                           {weekIndex + 1}
                         </TableCell>
-                        <TableCell className="px-2 py-2 text-gray-500">
+                        <TableCell className="whitespace-nowrap px-1 py-2 text-[9px] text-gray-500">
                           {formatCompactWeekRange(quarterWeek.week)}
                         </TableCell>
                         {PET_RESORT_SEGMENTS.flatMap((segDef) => {
@@ -753,7 +782,7 @@ export function KpiView({
                             .map((metric, index) => (
                               <TableCell
                                 key={`${segDef.key}-${metric.key}`}
-                                className={`px-2 py-2 text-right text-xs tabular-nums ${index === 0 ? "border-l border-gray-200" : ""}`}
+                                className={`whitespace-nowrap px-1 py-2 text-right text-[9px] tabular-nums ${index === 0 ? "border-l border-gray-200" : ""}`}
                               >
                                 {formatQuarterKpiValue(
                                   segmentWeek?.data[metric.key]?.value ?? null,
