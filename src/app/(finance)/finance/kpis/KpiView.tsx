@@ -717,18 +717,6 @@ export function KpiView({
                   ))}
                 </select>
               </label>
-              <label className="flex flex-col gap-1 text-xs font-medium text-gray-500">
-                KPIs
-                <select
-                  aria-label="KPI visibility"
-                  className={SELECT_CLS}
-                  value={showSecondaryKpis ? "all" : "primary"}
-                  onChange={(event) => setShowSecondaryKpis(event.target.value === "all")}
-                >
-                  <option value="primary">Primary only</option>
-                  <option value="all">Primary + Secondary</option>
-                </select>
-              </label>
             </div>
           </div>
         </section>
@@ -781,13 +769,36 @@ export function KpiView({
 
           {isPetResortCopy && quarterlySegmentsData ? (
             <div className="pp-kpi-report-segments">
+              <div className="mb-2 flex justify-end print:hidden">
+                <div className="flex flex-col items-center gap-1">
+                  <span className="text-xs font-medium text-gray-500">Secondary KPIs</span>
+                  <button
+                    type="button"
+                    aria-pressed={showSecondaryKpis}
+                    onClick={() => setShowSecondaryKpis((current) => !current)}
+                    className={`min-w-20 rounded-full border px-4 py-1.5 text-xs font-semibold transition-colors ${
+                      showSecondaryKpis
+                        ? "border-gray-300 bg-gray-100 text-gray-700 hover:bg-gray-200"
+                        : "border-blue-200 bg-blue-50 text-blue-700 hover:bg-blue-100"
+                    }`}
+                  >
+                    {showSecondaryKpis ? "Hide" : "Show"}
+                  </button>
+                </div>
+              </div>
               <Table className="w-full table-fixed text-[10px]">
                 <TableHead>
                   <tr>
-                    <TableHeader rowSpan={2} className="w-[3%] px-1 py-2 text-center text-[9px]">
+                    <TableHeader
+                      rowSpan={2}
+                      className="w-[5%] min-w-10 align-middle px-1 py-2 text-center text-[9px]"
+                    >
                       Week
                     </TableHeader>
-                    <TableHeader rowSpan={2} className="w-[7%] border-l border-gray-200 px-1 py-2 text-center text-[9px]">
+                    <TableHeader
+                      rowSpan={2}
+                      className="w-[9%] min-w-16 whitespace-nowrap border-l border-gray-200 align-middle px-2 py-2 text-center text-[9px]"
+                    >
                       Dates
                     </TableHeader>
                     {PET_RESORT_SEGMENTS.map((segDef) => {
@@ -796,7 +807,7 @@ export function KpiView({
                         <TableHeader
                           key={segDef.key}
                           colSpan={metrics.length}
-                          className="border-l border-gray-200 px-1 py-2 text-center text-[9px] font-bold leading-tight text-gray-900"
+                          className="h-8 border-l border-gray-200 align-middle px-1 py-2 text-center text-[9px] font-bold leading-tight text-gray-900"
                         >
                           {segDef.key === "IN_HOUSE_GROOMING" ? "In-House" : segDef.label}
                         </TableHeader>
@@ -809,7 +820,7 @@ export function KpiView({
                         .map((metric) => (
                           <TableHeader
                             key={`${segDef.key}-${metric.key}`}
-                            className={`whitespace-pre-line border-l border-gray-200 px-1 py-2 text-center text-[9px] leading-tight normal-case tracking-normal ${isPrimaryQuarterMetric(segDef.key, metric.key) ? "font-bold text-gray-900" : "font-medium"}`}
+                            className={`h-14 whitespace-pre-line border-l border-gray-200 align-middle px-1 py-2 text-center text-[9px] leading-tight normal-case tracking-normal ${isPrimaryQuarterMetric(segDef.key, metric.key) ? "font-bold text-gray-900" : "font-medium"}`}
                           >
                             {quarterMetricLabel(segDef.key, metric.key, metric.label)}
                           </TableHeader>
@@ -821,10 +832,10 @@ export function KpiView({
                   {(quarterlySegmentsData[PET_RESORT_SEGMENTS[0].key] ?? []).map(
                     (quarterWeek, weekIndex) => (
                       <TableRow key={quarterWeek.week}>
-                        <TableCell className="px-1 py-2 text-center text-[10px] font-semibold">
+                        <TableCell className="align-middle px-1 py-2 text-center text-[10px] font-semibold">
                           {weekIndex + 1}
                         </TableCell>
-                        <TableCell className="whitespace-nowrap border-l border-gray-200 px-1 py-2 text-center text-[9px] text-gray-500">
+                        <TableCell className="whitespace-nowrap border-l border-gray-200 align-middle px-1 py-2 text-center text-[9px] text-gray-500">
                           {formatCompactWeekRange(quarterWeek.week)}
                         </TableCell>
                         {PET_RESORT_SEGMENTS.flatMap((segDef) => {
@@ -833,7 +844,7 @@ export function KpiView({
                             .map((metric) => (
                               <TableCell
                                 key={`${segDef.key}-${metric.key}`}
-                                className={`whitespace-nowrap border-l border-gray-200 px-1 py-2 text-center text-[9px] tabular-nums ${isPrimaryQuarterMetric(segDef.key, metric.key) ? "font-bold text-gray-950" : "font-normal"}`}
+                                className={`whitespace-nowrap border-l border-gray-200 align-middle px-1 py-2 text-center text-[9px] tabular-nums ${isPrimaryQuarterMetric(segDef.key, metric.key) ? "font-bold text-gray-950" : "font-normal"}`}
                               >
                                 {formatQuarterKpiValue(
                                   segmentWeek?.data[metric.key]?.value ?? null,
