@@ -18,6 +18,7 @@ import {
   calculateDaycareDerivedMetricValues,
   getSegmentDef,
   type KpiFormat,
+  type KpiSegmentDef,
   type KpiSection,
 } from "@/lib/kpis";
 import {
@@ -222,25 +223,26 @@ const QUARTER_METRIC_LABELS: Record<string, string> = {
   "DAYCARE:staff_hours": "Staff Hrs",
   "DAYCARE:unique_clients": "Clients",
   "DAYCARE:avg_visits": "Avg Visits",
-  "IN_HOUSE_GROOMING:revenue": "Revenue",
+  "IN_HOUSE_GROOMING:revenue": "Rev.",
   "IN_HOUSE_GROOMING:upsells": "Upsells",
-  "IN_HOUSE_GROOMING:total_pets_serviced": "Pets",
+  "IN_HOUSE_GROOMING:total_pets_serviced": "Total Pets",
 };
 
-const PRIMARY_QUARTER_KPI_KEYS = new Set([
-  "BOARDING:revenue",
-  "BOARDING:nights",
+const PRIMARY_QUARTER_KPI_ORDER = [
   "BOARDING:occupancy_rate",
+  "BOARDING:revenue",
   "TRAINING:group_revenue",
   "TRAINING:one_on_one_revenue",
-  "TRAINING:training_evaluations",
-  "DAYCARE:total_daycare_appointments",
   "DAYCARE:avg_daily_occupancy",
-  "DAYCARE:staff_hours",
-  "DAYCARE:unique_clients",
+  "DAYCARE:evaluations",
   "IN_HOUSE_GROOMING:revenue",
   "IN_HOUSE_GROOMING:total_pets_serviced",
-]);
+] as const;
+
+const PRIMARY_QUARTER_KPI_KEYS = new Set<string>(PRIMARY_QUARTER_KPI_ORDER);
+const PRIMARY_QUARTER_KPI_RANK = new Map<string, number>(
+  PRIMARY_QUARTER_KPI_ORDER.map((key, index) => [key, index])
+);
 
 function quarterMetricLabel(segment: KpiSegment, metricKey: string, fallback: string): string {
   return QUARTER_METRIC_LABELS[`${segment}:${metricKey}`] ?? fallback;
@@ -248,6 +250,27 @@ function quarterMetricLabel(segment: KpiSegment, metricKey: string, fallback: st
 
 function isPrimaryQuarterMetric(segment: KpiSegment, metricKey: string): boolean {
   return PRIMARY_QUARTER_KPI_KEYS.has(`${segment}:${metricKey}`);
+}
+
+function quarterMetricsForSegment(
+  segmentDef: KpiSegmentDef,
+  showSecondaryKpis: boolean
+) {
+  return segmentDef.metrics
+    .filter(
+      (metric) =>
+        !isNotWorkingSection(segmentDef.key, metric.section) &&
+        (showSecondaryKpis || isPrimaryQuarterMetric(segmentDef.key, metric.key))
+    )
+    .sort((left, right) => {
+      const leftRank =
+        PRIMARY_QUARTER_KPI_RANK.get(`${segmentDef.key}:${left.key}`) ??
+        Number.MAX_SAFE_INTEGER;
+      const rightRank =
+        PRIMARY_QUARTER_KPI_RANK.get(`${segmentDef.key}:${right.key}`) ??
+        Number.MAX_SAFE_INTEGER;
+      return leftRank - rightRank;
+    });
 }
 
 function HeadlineMetric({ label, value }: { label: string; value: string }) {
@@ -768,12 +791,7 @@ export function KpiView({
                       Dates
                     </TableHeader>
                     {PET_RESORT_SEGMENTS.map((segDef) => {
-                      const metrics = segDef.metrics.filter(
-                        (metric) =>
-                          !isNotWorkingSection(segDef.key, metric.section) &&
-                          (showSecondaryKpis ||
-                            isPrimaryQuarterMetric(segDef.key, metric.key))
-                      );
+                      const metrics = quarterMetricsForSegment(segDef, showSecondaryKpis);
                       return (
                         <TableHeader
                           key={segDef.key}
@@ -787,17 +805,11 @@ export function KpiView({
                   </tr>
                   <tr>
                     {PET_RESORT_SEGMENTS.flatMap((segDef) =>
-                      segDef.metrics
-                        .filter(
-                          (metric) =>
-                            !isNotWorkingSection(segDef.key, metric.section) &&
-                            (showSecondaryKpis ||
-                              isPrimaryQuarterMetric(segDef.key, metric.key))
-                        )
+                      quarterMetricsForSegment(segDef, showSecondaryKpis)
                         .map((metric, index) => (
                           <TableHeader
                             key={`${segDef.key}-${metric.key}`}
-                            className={`whitespace-normal px-1 py-2 text-center text-[9px] leading-tight normal-case tracking-normal ${index === 0 ? "border-l border-gray-200" : ""}`}
+                            className={`whitespace-normal px-1 py-2 text-center text-[9px] leading-tight normal-case tracking-normal ${isPrimaryQuarterMetric(segDef.key, metric.key) ? "font-bold text-gray-900" : "font-medium"} ${index === 0 ? "border-l border-gray-200" : ""}`}
                           >
                             {quarterMetricLabel(segDef.key, metric.key, metric.label)}
                           </TableHeader>
@@ -817,17 +829,11 @@ export function KpiView({
                         </TableCell>
                         {PET_RESORT_SEGMENTS.flatMap((segDef) => {
                           const segmentWeek = quarterlySegmentsData[segDef.key]?.[weekIndex];
-                          return segDef.metrics
-                            .filter(
-                              (metric) =>
-                                !isNotWorkingSection(segDef.key, metric.section) &&
-                                (showSecondaryKpis ||
-                                  isPrimaryQuarterMetric(segDef.key, metric.key))
-                            )
+                          return quarterMetricsForSegment(segDef, showSecondaryKpis)
                             .map((metric, index) => (
                               <TableCell
                                 key={`${segDef.key}-${metric.key}`}
-                                className={`whitespace-nowrap px-1 py-2 text-right text-[9px] tabular-nums ${index === 0 ? "border-l border-gray-200" : ""}`}
+                                className={`whitespace-nowrap px-1 py-2 text-right text-[9px] tabular-nums ${isPrimaryQuarterMetric(segDef.key, metric.key) ? "font-bold text-gray-950" : "font-normal"} ${index === 0 ? "border-l border-gray-200" : ""}`}
                               >
                                 {formatQuarterKpiValue(
                                   segmentWeek?.data[metric.key]?.value ?? null,
