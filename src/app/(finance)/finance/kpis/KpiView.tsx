@@ -46,6 +46,11 @@ export type WeeklyHeadlineSummary = {
   resortPayrollPercent: number | null;
 };
 
+export type QuarterlyKpiWeek = {
+  week: string;
+  data: Record<string, KpiCell>;
+};
+
 type MobileGroomingImportReport = {
   finishedAppointments: number;
   uniqueClients: number;
@@ -275,6 +280,7 @@ export function KpiView({
   data,
   activeTab,
   allSegmentsData,
+  quarterlySegmentsData,
   headlineSummary,
 }: {
   segment: KpiSegment;
@@ -282,6 +288,7 @@ export function KpiView({
   data: Record<string, KpiCell>;
   activeTab?: string;
   allSegmentsData?: Record<string, Record<string, KpiCell>>;
+  quarterlySegmentsData?: Record<string, QuarterlyKpiWeek[]>;
   headlineSummary: WeeklyHeadlineSummary;
 }) {
   const router = useRouter();
@@ -635,20 +642,23 @@ export function KpiView({
             </div>
           </header>
 
-          <div className="pp-kpi-report-controls flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between mb-6">
-            <WeekPicker week={week} onChange={(w) => navigate(petResortTab, w)} />
-            <div className="flex gap-2 print:hidden">
+          <div className={`pp-kpi-report-controls flex mb-6 ${isPetResortCopy ? "justify-end" : "flex-col gap-4 sm:flex-row sm:items-end sm:justify-between"}`}>
+            {!isPetResortCopy && (
+              <WeekPicker week={week} onChange={(w) => navigate(petResortTab, w)} />
+            )}
+            <div className="flex flex-nowrap gap-2 print:hidden">
               <Button
                 variant="secondary"
+                className="whitespace-nowrap"
                 onClick={importPetResortMoegoActuals}
                 disabled={importingMoego}
               >
                 {importingMoego ? "Importing…" : "Import Pet Resort"}
               </Button>
-              <Button variant="secondary" onClick={exportCsv}>
+              <Button variant="secondary" className="whitespace-nowrap" onClick={exportCsv}>
                 Export CSV
               </Button>
-              <Button variant="secondary" onClick={printReport}>
+              <Button variant="secondary" className="whitespace-nowrap" onClick={printReport}>
                 Print / PDF
               </Button>
             </div>
@@ -660,17 +670,56 @@ export function KpiView({
             </div>
           )}
 
-          <WeeklyHeadline week={week} summary={headlineSummary} business="PET_RESORT" />
+          <div className={isPetResortCopy ? "[&>section]:mb-4 [&_.py-4]:py-2" : undefined}>
+            <WeeklyHeadline week={week} summary={headlineSummary} business="PET_RESORT" />
+          </div>
 
           <div className="pp-kpi-report-segments flex flex-col gap-8 print:gap-4">
             {PET_RESORT_SEGMENTS.map((segDef) => {
               const segData = allSegmentsDataWithDerivedValues?.[segDef.key];
               if (!segData || segDef.metrics.length === 0) return null;
+              const quarterWeeks = quarterlySegmentsData?.[segDef.key];
+              const quarterMetrics = segDef.metrics.filter(
+                (metric) => !isNotWorkingSection(segDef.key, metric.section)
+              );
               return (
                 <section className="pp-kpi-report-segment" key={segDef.key}>
                   <h2 className="text-lg font-semibold text-gray-900 mb-3 print:text-base">
                     {segDef.label}
                   </h2>
+                  {isPetResortCopy && quarterWeeks ? (
+                    <Table className="whitespace-nowrap">
+                      <TableHead>
+                        <tr>
+                          <TableHeader>Week</TableHeader>
+                          <TableHeader>Dates</TableHeader>
+                          {quarterMetrics.map((metric) => (
+                            <TableHeader key={metric.key} className="text-right">
+                              {metric.label}
+                            </TableHeader>
+                          ))}
+                        </tr>
+                      </TableHead>
+                      <TableBody>
+                        {quarterWeeks.map((quarterWeek, index) => (
+                          <TableRow key={quarterWeek.week}>
+                            <TableCell className="font-medium">Week {index + 1}</TableCell>
+                            <TableCell className="text-gray-500">
+                              {formatWeekRange(fromWeekParam(quarterWeek.week))}
+                            </TableCell>
+                            {quarterMetrics.map((metric) => (
+                              <TableCell key={metric.key} className="text-right tabular-nums">
+                                {formatKpiTableValue(
+                                  quarterWeek.data[metric.key]?.value ?? null,
+                                  metric.format
+                                )}
+                              </TableCell>
+                            ))}
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  ) : (
                   <div className="flex flex-col gap-4">
                     {SECTION_ORDER.map((section) => {
                       if (isNotWorkingSection(segDef.key, section)) return null;
@@ -728,6 +777,7 @@ export function KpiView({
                       );
                     })}
                   </div>
+                  )}
                 </section>
               );
             })}

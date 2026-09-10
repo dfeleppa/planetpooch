@@ -13,13 +13,27 @@ import { resolveStandingAmount, type StandingRow } from "@/lib/kpi-standing";
 import { PET_RESORT_BUSINESS_ID } from "@/lib/moego/businesses";
 import { REVENUE_ORDER_STATUSES } from "@/lib/moego/metrics";
 import { getResortStaffHoursByWeek } from "@/lib/payroll-kpis";
-import { KpiView, type KpiCell, type WeeklyHeadlineSummary } from "./KpiView";
+import {
+  KpiView,
+  type KpiCell,
+  type QuarterlyKpiWeek,
+  type WeeklyHeadlineSummary,
+} from "./KpiView";
 
 const PET_RESORT_TAB = "PET_RESORT";
 const PET_RESORT_COPY_TAB = "PET_RESORT_COPY";
 const PET_RESORT_SEGMENTS = KPI_SEGMENTS.filter(
   (segmentDef) => segmentDef.key !== "MOBILE_GROOMING"
 );
+
+function getQuarterWeekStarts(selectedWeek: Date): Date[] {
+  const year = selectedWeek.getUTCFullYear();
+  const quarter = Math.floor(selectedWeek.getUTCMonth() / 3);
+  const firstDay = new Date(Date.UTC(year, quarter * 3, 1));
+  const daysUntilSunday = (7 - firstDay.getUTCDay()) % 7;
+  firstDay.setUTCDate(firstDay.getUTCDate() + daysUntilSunday);
+  return Array.from({ length: 13 }, (_, index) => addWeeks(firstDay, index));
+}
 
 async function getWeeklyHeadlineSummary(weekStart: Date): Promise<WeeklyHeadlineSummary> {
   const weekEndExclusive = new Date(weekStart);
@@ -145,10 +159,16 @@ export default async function KpisPage({
   const week = toWeekParam(weekStart);
   const previousWeekStart = addWeeks(weekStart, -1);
   const previousWeek = toWeekParam(previousWeekStart);
+  const quarterWeekStarts =
+    activeTab === PET_RESORT_COPY_TAB ? getQuarterWeekStarts(weekStart) : [];
   const headlineSummaryPromise = getWeeklyHeadlineSummary(weekStart);
   const staffHoursByWeekPromise =
     showPetResort
-      ? getResortStaffHoursByWeek([weekStart, previousWeekStart])
+      ? getResortStaffHoursByWeek([
+          weekStart,
+          previousWeekStart,
+          ...quarterWeekStarts,
+        ])
       : Promise.resolve(new Map<string, number>());
 
   if (showPetResort) {
@@ -156,6 +176,7 @@ export default async function KpisPage({
       valueRows,
       previousValueRows,
       standingRows,
+      quarterlyValueRows,
       staffHoursByWeek,
       headlineSummary,
     ] = await Promise.all([
@@ -180,6 +201,15 @@ export default async function KpisPage({
         },
         select: { segment: true, metricKey: true, field: true, amount: true, effectiveWeekStart: true },
       }),
+      quarterWeekStarts.length
+        ? prisma.kpiWeeklyValue.findMany({
+            where: {
+              segment: { in: PET_RESORT_SEGMENTS.map((segmentDef) => segmentDef.key) },
+              weekStart: { in: quarterWeekStarts },
+            },
+            select: { segment: true, weekStart: true, metricKey: true, value: true },
+          })
+        : Promise.resolve([]),
       staffHoursByWeekPromise,
       headlineSummaryPromise,
     ]);
@@ -208,6 +238,41 @@ export default async function KpisPage({
       );
     }
 
+    const quarterlySegmentsData: Record<string, QuarterlyKpiWeek[]> = {};
+    for (const segDef of PET_RESORT_SEGMENTS) {
+      quarterlySegmentsData[segDef.key] = quarterWeekStarts.map((quarterWeekStart) => {
+        const quarterWeek = toWeekParam(quarterWeekStart);
+        const rows = quarterlyValueRows.filter(
+          (row) =>
+            row.segment === segDef.key &&
+            row.weekStart.getTime() === quarterWeekStart.getTime()
+        );
+        const valueByKey = new Map(rows.map((row) => [row.metricKey, row.value]));
+        const quarterData: Record<string, KpiCell> = {};
+        for (const metric of segDef.metrics) {
+          quarterData[metric.key] = {
+            value: valueByKey.get(metric.key) ?? null,
+            previousValue: null,
+            target: null,
+            average: null,
+          };
+        }
+        return {
+          week: quarterWeek,
+          data: withDerivedKpiCells(
+            segDef.key,
+            withPayrollStaffHours(
+              segDef.key,
+              quarterData,
+              staffHoursByWeek,
+              quarterWeek,
+              toWeekParam(addWeeks(quarterWeekStart, -1))
+            )
+          ),
+        };
+      });
+    }
+
     return (
       <div className="pp-kpi-print-page">
         <div className="pp-kpi-screen-heading mb-6">
@@ -223,6 +288,7 @@ export default async function KpisPage({
           data={{}}
           activeTab={activeTab}
           allSegmentsData={allData}
+          quarterlySegmentsData={quarterlySegmentsData}
           headlineSummary={headlineSummary}
         />
       </div>
