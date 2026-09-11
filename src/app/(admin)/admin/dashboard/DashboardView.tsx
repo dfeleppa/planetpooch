@@ -56,10 +56,10 @@ export function DashboardView({ data }: { data: AdminDashboardData }) {
   const payrollPercent = payroll?.totalCents != null && current?.netSalesCents != null && current.netSalesCents > 0
     ? payroll.totalCents / current.netSalesCents * 100 : null;
   const maxSales = Math.max(1, ...(sales?.weeks.map((week) => Math.abs(week.netSalesCents ?? 0)) ?? []));
-  const kpiHref = `/finance/kpis?segment=${resort ? "PET_RESORT" : "MOBILE_GROOMING"}&week=${toWeekParam(periods.weekStart)}`;
+  const kpiHref = `/finance/kpis?segment=${resort ? "PET_RESORT_COPY" : "MOBILE_GROOMING"}&week=${toWeekParam(periods.weekStart)}`;
   const payrollHref = resort ? "/finance/payroll" : "/finance/payroll/mobile-grooming";
   const shortcuts = [
-    { href: kpiHref, title: "Weekly KPIs", detail: "Actuals, targets, and forecasts" },
+    { href: kpiHref, title: resort ? "Quarterly KPIs" : "Weekly KPIs", detail: "Actuals, targets, and forecasts" },
     { href: "/finance/profit-loss", title: "Profit & Loss", detail: "Revenue, expenses, and margins" },
     { href: payrollHref, title: "Payroll", detail: resort ? "Pay runs and check dates" : "Weekly grooming reports" },
     { href: "/admin/scheduling", title: "Scheduling", detail: "Team availability and coverage" },
