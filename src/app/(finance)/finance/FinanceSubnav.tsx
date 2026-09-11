@@ -51,12 +51,20 @@ export function FinanceSubnav() {
         !currentPathname.startsWith("/finance/payroll/commissions"),
     },
     ...(business.company === "RESORT"
-      ? [{
-          href: "/finance/payroll/commissions",
-          label: "Commissions",
-          isActive: (currentPathname: string) =>
-            currentPathname.startsWith("/finance/payroll/commissions"),
-        }]
+      ? [
+          {
+            href: "/finance/payroll/commissions",
+            label: "Commissions",
+            isActive: (currentPathname: string) =>
+              currentPathname.startsWith("/finance/payroll/commissions"),
+          },
+          {
+            href: "/finance/targets",
+            label: "Targets",
+            isActive: (currentPathname: string) =>
+              currentPathname.startsWith("/finance/targets"),
+          },
+        ]
       : []),
   ];
 
