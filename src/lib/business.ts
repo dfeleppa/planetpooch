@@ -67,7 +67,7 @@ export function businessSwitchPath(href: string, company: BusinessCompany): stri
   if (/^\/modules\/.+/.test(path)) path = "/modules";
   if (/^\/maintenance\/(inventory|schedules|tasks)\/.+/.test(path)) path = path.split("/").slice(0, 3).join("/");
   if (/^\/marketing\/(create|ideas|scripts)\/.+/.test(path)) path = "/marketing/create";
-  if (path.startsWith("/finance/moego/customers/")) path = "/finance/moego";
+  if (path === "/finance/moego" || path.startsWith("/finance/moego/customers/")) path = "/finance/profit-loss";
   if (path.startsWith("/finance/payroll")) {
     path = company === "GROOMING" ? "/finance/payroll/mobile-grooming"
       : path.endsWith("/commissions") ? path : "/finance/payroll";

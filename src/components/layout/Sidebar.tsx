@@ -50,7 +50,8 @@ const marketingNav: NavItem[] = [
 ];
 
 const financeNav: NavItem[] = [
-  { href: "/finance", label: "Finance & Payroll", icon: "$" },
+  { href: "/finance", label: "Finance", icon: "$" },
+  { href: "/finance/payroll", label: "Payroll", icon: "◷" },
 ];
 
 const schedulingNavItem: NavItem = {
@@ -79,7 +80,11 @@ export function Sidebar() {
   const business = useBusiness();
   const operationsNav = sharedNav.filter((item) => business.company === "RESORT" || item.href === "/maintenance");
   const businessEmployeeNav = employeeNav.filter((item) => business.company === "RESORT" || item.href !== "/career");
-  const businessFinanceNav = financeNav;
+  const businessFinanceNav = financeNav.map((item) =>
+    item.href === "/finance/payroll" && business.company === "GROOMING"
+      ? { ...item, href: "/finance/payroll/mobile-grooming" }
+      : item
+  );
   const pathname = usePathname();
   const { data: session } = useSession();
   const role = session?.user?.role;
@@ -242,17 +247,33 @@ export function Sidebar() {
         )}
 
         <nav className="mt-4 flex flex-1 flex-col gap-4 overflow-y-auto">
+          {/* Management section — SUPER_ADMIN only */}
           {isSuperAdmin && (
-            <Link
-              href="/admin/dashboard"
-              title={isCollapsed ? "Dashboard" : undefined}
-              aria-current={pathname === "/admin/dashboard" ? "page" : undefined}
-              className={navItemClass(pathname === "/admin/dashboard")}
-            >
-              {activeRail(pathname === "/admin/dashboard")}
-              <span className={cn("text-[14px] w-4 text-center flex-shrink-0", pathname === "/admin/dashboard" ? "text-pp-accent" : "text-pp-ink-3")} aria-hidden="true">▣</span>
-              {!isCollapsed && <span className="truncate">Dashboard</span>}
-            </Link>
+            <>
+              {!isCollapsed ? (
+                <div className="px-2.5 pt-1 text-[10px] font-medium uppercase tracking-[0.08em] text-pp-ink-4">
+                  Management
+                </div>
+              ) : (
+                <div className="mx-1.5 h-px bg-pp-line" />
+              )}
+              <div className="-mt-2 flex flex-col gap-px">
+                {[{ href: "/admin/dashboard", label: "Dashboard", icon: "▣" }, ...businessFinanceNav].map((item) => {
+                  const active = item.href === "/admin/dashboard"
+                    ? pathname === item.href
+                    : isActive(item.href);
+                  return (
+                    <Link key={item.href} href={item.href} title={isCollapsed ? item.label : undefined} aria-current={active ? "page" : undefined} className={navItemClass(active)}>
+                      {activeRail(active)}
+                      <span className={cn("text-[14px] w-4 text-center flex-shrink-0", active ? "text-pp-accent" : "text-pp-ink-3")} aria-hidden="true">
+                        {item.icon}
+                      </span>
+                      {!isCollapsed && <span className="truncate">{item.label}</span>}
+                    </Link>
+                  );
+                })}
+              </div>
+            </>
           )}
           {/* Operations */}
           {!isCollapsed ? (
@@ -274,33 +295,6 @@ export function Sidebar() {
               );
             })}
           </div>
-
-          {/* Finance section — SUPER_ADMIN only */}
-          {isSuperAdmin && (
-            <>
-              {!isCollapsed ? (
-                <div className="px-2.5 pt-1 text-[10px] font-medium uppercase tracking-[0.08em] text-pp-ink-4">
-                  Finance
-                </div>
-              ) : (
-                <div className="mx-1.5 h-px bg-pp-line" />
-              )}
-              <div className="-mt-2 flex flex-col gap-px">
-                {businessFinanceNav.map((item) => {
-                  const active = isActive(item.href);
-                  return (
-                    <Link key={item.href} href={item.href} title={isCollapsed ? item.label : undefined} className={navItemClass(active)}>
-                      {activeRail(active)}
-                      <span className={cn("text-[14px] w-4 text-center flex-shrink-0", active ? "text-pp-accent" : "text-pp-ink-3")}>
-                        {item.icon}
-                      </span>
-                      {!isCollapsed && <span className="truncate">{item.label}</span>}
-                    </Link>
-                  );
-                })}
-              </div>
-            </>
-          )}
 
           {/* Human Resources — admin navs only (plain employee nav has no header) */}
           {isAdminNav && !isCollapsed && (

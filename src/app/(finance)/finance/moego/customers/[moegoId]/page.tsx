@@ -24,10 +24,10 @@ export default async function MoegoCustomerPage({
     <div>
       <div className="mb-4">
         <Link
-          href="/finance/moego"
+          href="/finance/profit-loss#moego"
           className="text-sm text-gray-500 hover:text-gray-900"
         >
-          ← MoeGo
+          ← Profit &amp; Loss
         </Link>
       </div>
       <div className="mb-6">

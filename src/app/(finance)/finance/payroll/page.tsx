@@ -2,6 +2,7 @@ import { requireSuperAdmin } from "@/lib/auth-helpers";
 import { prisma } from "@/lib/prisma";
 import { getActiveBusiness } from "@/lib/business-server";
 import { redirect } from "next/navigation";
+import { PayrollSubnav } from "./PayrollSubnav";
 import {
   PetResortPayrollLedger,
   type PetResortPayrollRunRow,
@@ -24,6 +25,7 @@ export default async function PetResortPayrollPage() {
 
   return (
     <div className="space-y-5">
+      <PayrollSubnav active="pet-resort" />
       <div>
         <h2 className="text-xl font-semibold text-gray-900">Payroll</h2>
         <p className="mt-1 text-gray-500">Pet Resort payroll runs uploaded through Supabase</p>

@@ -16,48 +16,25 @@ const baseFinanceSections: FinanceSection[] = [
     href: "/finance/profit-loss",
     label: "Profit & Loss",
     isActive: (pathname) =>
-      pathname === "/finance" || pathname.startsWith("/finance/profit-loss"),
+      pathname === "/finance" ||
+      pathname.startsWith("/finance/profit-loss") ||
+      pathname.startsWith("/finance/moego"),
   },
   {
     href: "/finance/kpis",
     label: "KPIs",
     isActive: (pathname) => pathname.startsWith("/finance/kpis"),
   },
-  {
-    href: "/finance/data",
-    label: "Data",
-    isActive: (pathname) => pathname.startsWith("/finance/data"),
-  },
-  {
-    href: "/finance/moego",
-    label: "MoeGo",
-    isActive: (pathname) => pathname.startsWith("/finance/moego"),
-  },
 ];
 
 export function FinanceSubnav() {
   const pathname = usePathname();
   const business = useBusiness();
-  const payrollHref = business.company === "RESORT"
-    ? "/finance/payroll"
-    : "/finance/payroll/mobile-grooming";
+  if (pathname.startsWith("/finance/payroll")) return null;
   const financeSections: FinanceSection[] = [
     ...baseFinanceSections,
-    {
-      href: payrollHref,
-      label: "Payroll",
-      isActive: (currentPathname) =>
-        currentPathname.startsWith("/finance/payroll") &&
-        !currentPathname.startsWith("/finance/payroll/commissions"),
-    },
     ...(business.company === "RESORT"
       ? [
-          {
-            href: "/finance/payroll/commissions",
-            label: "Commissions",
-            isActive: (currentPathname: string) =>
-              currentPathname.startsWith("/finance/payroll/commissions"),
-          },
           {
             href: "/finance/targets",
             label: "Targets",

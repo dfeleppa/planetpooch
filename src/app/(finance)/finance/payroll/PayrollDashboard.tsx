@@ -32,6 +32,7 @@ import {
   type PayrollCategoryValue,
 } from "@/lib/payroll";
 import { cn } from "@/lib/utils";
+import { PayrollSubnav } from "./PayrollSubnav";
 
 const MS_PER_DAY = 86_400_000;
 const MOEGO_CLOCK_INOUT_URL =
@@ -1376,6 +1377,8 @@ export function PayrollDashboard({
         mobilePayrollView === "report" && "pp-mobile-weekly-report-active"
       )}
     >
+      <PayrollSubnav active={business} />
+
       {isMobileGrooming && (
         <div>
           <p className="mb-1 text-sm font-medium text-gray-700">View</p>
