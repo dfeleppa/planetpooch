@@ -1,3 +1,4 @@
+import { marketingCompanyWhere } from "@/lib/marketing/business";
 import Link from "next/link";
 import { requireMarketing } from "@/lib/auth-helpers";
 import { prisma } from "@/lib/prisma";
@@ -24,6 +25,7 @@ export default async function CreateAdsPage({
 
   const briefs = await prisma.marketingIdea.findMany({
     where: {
+      ...await marketingCompanyWhere(),
       ...(activeStatus === "ALL" ? {} : { status: activeStatus }),
       ...(activeService ? { serviceLine: activeService } : {}),
     },

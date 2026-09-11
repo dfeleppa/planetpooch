@@ -1,13 +1,10 @@
 import { requireAuth } from "@/lib/auth-helpers";
 import { prisma } from "@/lib/prisma";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/Table";
-import { CompanyFilterTabs, resolveCompanyParam } from "@/components/ui/CompanyFilterTabs";
-import { Company } from "@prisma/client";
+import { getActiveBusiness } from "@/lib/business-server";
 import Link from "next/link";
 
 const STATUS_LABELS: Record<string, string> = {
@@ -26,21 +23,14 @@ const STATUS_VARIANT: Record<string, "default" | "info" | "success" | "danger" |
   SKIPPED: "warning",
 };
 
-function defaultCompany(userCompany: Company | null | undefined): Company {
-  return userCompany === "RESORT" ? "RESORT" : "GROOMING";
-}
-
 export default async function MaintenanceTasksPage({
   searchParams,
 }: {
   searchParams: Promise<{ status?: string; company?: string }>;
 }) {
   await requireAuth();
-  const session = await getServerSession(authOptions);
-  const user = session?.user as { company?: Company | null } | undefined;
-  const { status, company: companyParam } = await searchParams;
-  const resolved = resolveCompanyParam(companyParam, defaultCompany(user?.company));
-  const active: Company = resolved === "ALL" ? defaultCompany(user?.company) : resolved;
+  const { status } = await searchParams;
+  const active = (await getActiveBusiness()).company;
 
   const tasks = await prisma.maintenanceTask.findMany({
     where: {
@@ -83,15 +73,6 @@ export default async function MaintenanceTasksPage({
             </Link>
           ))}
         </div>
-      </div>
-
-      <div className="mb-4">
-        <CompanyFilterTabs
-          basePath="/maintenance/tasks"
-          active={active}
-          extraParams={{ status }}
-          hideAll
-        />
       </div>
 
       {tasks.length === 0 ? (

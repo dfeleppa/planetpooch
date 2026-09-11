@@ -1,3 +1,4 @@
+import { marketingCompanyWhere } from "@/lib/marketing/business";
 import { prisma } from "@/lib/prisma";
 import type { BrandVoiceProfile } from "@prisma/client";
 import {
@@ -28,6 +29,7 @@ export function readProofBank(profile: BrandVoiceProfile | null): ProofBankEntry
  */
 export async function getLatestVoiceProfile(): Promise<BrandVoiceProfile | null> {
   return prisma.brandVoiceProfile.findFirst({
+    where: await marketingCompanyWhere(),
     orderBy: { version: "desc" },
   });
 }
@@ -41,6 +43,7 @@ export async function saveNewVoiceProfileVersion(
   input: SaveVoiceProfileInput,
   createdById: string | null
 ): Promise<BrandVoiceProfile> {
+  const companyWhere = await marketingCompanyWhere();
   return prisma.$transaction(async (tx) => {
     const latest = await tx.brandVoiceProfile.findFirst({
       orderBy: { version: "desc" },
@@ -49,6 +52,7 @@ export async function saveNewVoiceProfileVersion(
     const nextVersion = (latest?.version ?? 0) + 1;
     return tx.brandVoiceProfile.create({
       data: {
+        ...companyWhere,
         version: nextVersion,
         tone: input.tone,
         doRules: input.doRules,

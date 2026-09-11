@@ -1,10 +1,11 @@
 import { requireSuperAdmin } from "@/lib/auth-helpers";
-import { listMoegoBusinesses } from "@/lib/moego/businesses";
+import { getActiveBusiness } from "@/lib/business-server";
 import { MoegoDashboard } from "./MoegoDashboard";
 
 export default async function MoegoPage() {
   await requireSuperAdmin();
-  const businesses = await listMoegoBusinesses();
+  const business = await getActiveBusiness();
+  const businesses = [{ id: business.moegoId, label: business.label }];
   return (
     <div>
       <div className="mb-6">

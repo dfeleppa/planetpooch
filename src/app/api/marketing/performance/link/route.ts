@@ -1,3 +1,5 @@
+import { metaBusinessWhere } from "@/lib/marketing/campaign-business";
+import { marketingChildWhere } from "@/lib/marketing/business";
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { getSession, hasMarketingAccess } from "@/lib/auth-helpers";
@@ -39,10 +41,12 @@ export async function POST(req: NextRequest) {
     );
   }
   const { adId, scriptId } = parsed.data;
+  const ad = await prisma.metaAdInsight.findFirst({ where: { adId, ...await metaBusinessWhere() }, select: { id: true } });
+  if (!ad) return NextResponse.json({ error: "Ad not found for this business." }, { status: 404 });
 
   if (scriptId) {
     const exists = await prisma.script.findUnique({
-      where: { id: scriptId },
+      where: { id: scriptId, ...await marketingChildWhere() },
       select: { id: true },
     });
     if (!exists) {

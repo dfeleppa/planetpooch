@@ -1,4 +1,5 @@
-import { requireEmployeeManager, getCompanyFilter } from "@/lib/auth-helpers";
+import { getEmployeeBusinessWhere } from "@/lib/business-server";
+import { requireEmployeeManager } from "@/lib/auth-helpers";
 import { prisma } from "@/lib/prisma";
 import Link from "next/link";
 import { formatDate } from "@/lib/utils";
@@ -127,25 +128,11 @@ export default async function AdminEmployeesPage({
     progress?: string;
   }>;
 }) {
-  const session = await requireEmployeeManager();
-  const sessionUser = session.user as {
-    role: Role;
-    company: Company;
-    jobTitle: string | null;
-  };
-  const companyFilter = getCompanyFilter(
-    sessionUser.role,
-    sessionUser.company,
-    sessionUser.jobTitle
-  );
-  const isSuperAdmin = sessionUser.role === "SUPER_ADMIN" || sessionUser.role === "ADMIN";
+  await requireEmployeeManager();
 
   const sp = await searchParams;
   const tab: Tab = sp.status === "terminated" ? "terminated" : "active";
   const q = (sp.q ?? "").trim();
-  const companyParam = ["GROOMING", "RESORT", "CORPORATE"].includes(sp.company ?? "")
-    ? (sp.company as Company)
-    : null;
   const jobTitleParam = (sp.jobTitle ?? "").trim();
   const sort = parseSort(sp.sort, tab);
   const progress: ProgressFilter = tab === "active" ? parseProgress(sp.progress) : "all";
@@ -155,10 +142,7 @@ export default async function AdminEmployeesPage({
       ? { terminatedAt: { not: null } }
       : { terminatedAt: null };
 
-  // SUPER_ADMIN can narrow with the dropdown; MANAGER is already scoped to
-  // their own company by `getCompanyFilter` and ignores the param.
-  const companyWhere =
-    isSuperAdmin && companyParam ? { company: companyParam } : companyFilter;
+  const companyWhere = await getEmployeeBusinessWhere();
 
   const where: Prisma.UserWhereInput = {
     ...companyWhere,
@@ -379,7 +363,6 @@ export default async function AdminEmployeesPage({
 
   const hasActiveFilters = !!(
     q ||
-    companyParam ||
     jobTitleParam ||
     sp.sort ||
     (progress && progress !== "all")
@@ -394,7 +377,7 @@ export default async function AdminEmployeesPage({
           <p className="pp-sub">
             {tab === "terminated"
               ? "Past employees — records preserved for retention."
-              : "Track training progress across companies and roles."}
+              : "Track training progress for this business and shared corporate staff."}
           </p>
         </div>
         {tab === "active" && (
@@ -415,7 +398,7 @@ export default async function AdminEmployeesPage({
             <div className="pp-kpi-label">Active employees</div>
             <div className="pp-kpi-value">{kpiTotal}</div>
             <div className="pp-kpi-meta">
-              across {Object.keys(COMPANY_LABELS).length} companies
+              in this business view
             </div>
           </div>
           <div className="pp-kpi">
@@ -471,16 +454,13 @@ export default async function AdminEmployeesPage({
       {/* Toolbar */}
       <EmployeeFilters
         tab={tab}
-        isSuperAdmin={isSuperAdmin}
         q={q}
-        company={companyParam ?? ""}
         jobTitle={jobTitleParam}
         sort={sort}
         progress={progress}
         defaultSort={tab === "terminated" ? "terminated-new" : "name"}
         jobTitleOptions={jobTitleOptions}
         sortOptions={sortOptions.map((o) => ({ key: o.key, label: o.label }))}
-        companyLabels={COMPANY_LABELS}
         progressCounts={progressCounts}
         hasActiveFilters={hasActiveFilters}
       />

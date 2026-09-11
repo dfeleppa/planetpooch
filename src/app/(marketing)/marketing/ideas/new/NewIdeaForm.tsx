@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useBusiness } from "@/components/business/BusinessProvider";
 import { useRouter } from "next/navigation";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -19,11 +20,13 @@ type Objective = (typeof OBJECTIVES)[number]["value"];
 type Channel = "META" | "GOOGLE_SEARCH";
 
 export function NewIdeaForm() {
+  const business = useBusiness();
+  const serviceLines = business.company === "RESORT" ? SERVICE_LINES : SERVICE_LINES.filter((line) => line === "GROOMING" || line === "MULTIPLE");
   const router = useRouter();
   const [title, setTitle] = useState("");
   const [insight, setInsight] = useState("");
   const [audience, setAudience] = useState("");
-  const [serviceLine, setServiceLine] = useState<ServiceLine>("BOARDING");
+  const [serviceLine, setServiceLine] = useState<ServiceLine>(business.company === "RESORT" ? "BOARDING" : "GROOMING");
   const [objective, setObjective] = useState<Objective>("LEADS");
   const [channels, setChannels] = useState<Channel[]>(["META", "GOOGLE_SEARCH"]);
   const [offer, setOffer] = useState("");
@@ -94,7 +97,7 @@ export function NewIdeaForm() {
                 onChange={(event) => setServiceLine(event.target.value as ServiceLine)}
                 className="rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
               >
-                {SERVICE_LINES.map((line) => <option key={line} value={line}>{SERVICE_LINE_LABELS[line]}</option>)}
+                {serviceLines.map((line) => <option key={line} value={line}>{SERVICE_LINE_LABELS[line]}</option>)}
               </select>
             </div>
           </div>

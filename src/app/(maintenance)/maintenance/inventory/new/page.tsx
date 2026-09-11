@@ -1,25 +1,11 @@
+import { getActiveBusiness } from "@/lib/business-server";
 import { requireAdmin } from "@/lib/auth-helpers";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
 import { NewInventoryItemForm } from "./NewInventoryItemForm";
-import { Company } from "@prisma/client";
 
-export default async function NewInventoryItemPage({
-  searchParams,
-}: {
-  searchParams: Promise<{ company?: string }>;
-}) {
+export default async function NewInventoryItemPage() {
   await requireAdmin();
-  const session = await getServerSession(authOptions);
-  const user = session?.user as { company?: Company | null } | undefined;
-  const { company: companyParam } = await searchParams;
 
-  const initialCompany: Company =
-    companyParam === "RESORT" || companyParam === "GROOMING"
-      ? companyParam
-      : user?.company === "RESORT"
-        ? "RESORT"
-        : "GROOMING";
+  const initialCompany = (await getActiveBusiness()).company;
 
   return (
     <div className="max-w-lg">

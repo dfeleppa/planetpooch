@@ -1,3 +1,4 @@
+import { getActiveBusiness } from "@/lib/business-server";
 import { requireAuth } from "@/lib/auth-helpers";
 import { prisma } from "@/lib/prisma";
 import { getServerSession } from "next-auth";
@@ -21,7 +22,7 @@ export default async function ScheduleDetailPage({
   const { scheduleId } = await params;
 
   const schedule = await prisma.maintenanceSchedule.findUnique({
-    where: { id: scheduleId },
+    where: { id: scheduleId, company: (await getActiveBusiness()).company },
     include: {
       requirements: { include: { inventoryItem: true } },
       tasks: { orderBy: { dueDate: "desc" }, take: 20, include: { assignedTo: { select: { name: true } } } },

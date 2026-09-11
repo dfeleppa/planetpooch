@@ -213,21 +213,6 @@ export function AdReportingDashboard({
       {/* Filters */}
       <div className="flex flex-col sm:flex-row sm:items-center gap-3 mb-6">
         <select
-          value={business}
-          onChange={(e) =>
-            update({ business: e.target.value || undefined })
-          }
-          className="rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-          aria-label="Filter by business"
-        >
-          {BUSINESSES.map((b) => (
-            <option key={b.value} value={b.value}>
-              {b.label}
-            </option>
-          ))}
-        </select>
-
-        <select
           value={String(selectedMonth)}
           onChange={(e) =>
             update({

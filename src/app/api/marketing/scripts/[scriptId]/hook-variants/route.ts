@@ -1,3 +1,4 @@
+import { marketingChildWhere } from "@/lib/marketing/business";
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getSession, hasMarketingAccess } from "@/lib/auth-helpers";
@@ -26,7 +27,7 @@ export async function POST(
 
   const { scriptId } = await params;
   const script = await prisma.script.findUnique({
-    where: { id: scriptId },
+    where: { id: scriptId, ...await marketingChildWhere() },
     include: { idea: true, angle: true },
   });
   if (!script) {

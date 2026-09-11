@@ -1,3 +1,5 @@
+import { metaBusinessWhere } from "@/lib/marketing/campaign-business";
+import { marketingChildWhere } from "@/lib/marketing/business";
 import { prisma } from "@/lib/prisma";
 
 export type AdAggregate = {
@@ -35,8 +37,7 @@ export const SORTABLE_COLUMNS = [
 export type SortColumn = (typeof SORTABLE_COLUMNS)[number];
 export type SortDir = "asc" | "desc";
 
-export const DAY_PRESETS = [7, 30, 90] as const;
-export type DayPreset = (typeof DAY_PRESETS)[number];
+export { DAY_PRESETS, type DayPreset } from "./performance-options";
 
 export type AggregateOptions = {
   days?: number;
@@ -140,6 +141,7 @@ export async function getAdAggregates(
   // renames in Ads Manager show through.
   const rows = await prisma.metaAdInsight.findMany({
     where: {
+      ...await metaBusinessWhere(),
       date: { gte: windowStart(days) },
       ...(campaign ? { campaignName: campaign } : {}),
       ...(scriptId ? { scriptId } : {}),
@@ -244,6 +246,7 @@ export async function getScriptLeaderboard(
 
   const rows = await prisma.metaAdInsight.findMany({
     where: {
+      ...await metaBusinessWhere(),
       date: { gte: windowStart(days) },
       scriptId: { not: null },
     },
@@ -326,7 +329,7 @@ export async function getScriptLeaderboard(
 /** Total spend (in cents) across every insight row in the trailing window. */
 export async function getTotalSpendCents(days = 30): Promise<number> {
   const result = await prisma.metaAdInsight.aggregate({
-    where: { date: { gte: windowStart(days) } },
+    where: { ...await metaBusinessWhere(), date: { gte: windowStart(days) } },
     _sum: { spendCents: true },
   });
   return result._sum.spendCents ?? 0;
@@ -350,6 +353,7 @@ export async function getLinkableScripts(
   limit = 200
 ): Promise<LinkableScript[]> {
   const rows = await prisma.script.findMany({
+    where: await marketingChildWhere(),
     select: {
       id: true,
       platform: true,
@@ -375,6 +379,7 @@ export async function getLinkableScripts(
 export async function getCampaigns(days = 30): Promise<string[]> {
   const rows = await prisma.metaAdInsight.findMany({
     where: {
+      ...await metaBusinessWhere(),
       date: { gte: windowStart(days) },
       campaignName: { not: null },
     },
@@ -409,7 +414,8 @@ export async function getScriptPerformance(
   since.setUTCDate(since.getUTCDate() - (days - 1));
 
   const rows = await prisma.metaAdInsight.findMany({
-    where: { scriptId, date: { gte: since } },
+    where: {
+      ...await metaBusinessWhere(), scriptId, date: { gte: since } },
     select: {
       adId: true,
       spendCents: true,

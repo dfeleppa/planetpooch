@@ -3,7 +3,6 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { Company } from "@prisma/client";
 import { cn } from "@/lib/utils";
 
 type Tab = "active" | "terminated";
@@ -21,16 +20,13 @@ interface ProgressCounts {
 
 interface Props {
   tab: Tab;
-  isSuperAdmin: boolean;
   q: string;
-  company: Company | "";
   jobTitle: string;
   sort: string;
   progress: ProgressFilter;
   defaultSort: string;
   jobTitleOptions: string[];
   sortOptions: SortOption[];
-  companyLabels: Record<Company, string>;
   progressCounts: ProgressCounts;
   hasActiveFilters: boolean;
 }
@@ -52,7 +48,6 @@ export function EmployeeFilters(props: Props) {
 
   function navigate(next: {
     q: string;
-    company: Company | "";
     jobTitle: string;
     sort: string;
     progress: ProgressFilter;
@@ -60,7 +55,6 @@ export function EmployeeFilters(props: Props) {
     const params = new URLSearchParams();
     params.set("status", props.tab);
     if (next.q) params.set("q", next.q);
-    if (next.company) params.set("company", String(next.company));
     if (next.jobTitle) params.set("jobTitle", next.jobTitle);
     if (next.sort && next.sort !== props.defaultSort) params.set("sort", next.sort);
     if (next.progress !== "all") params.set("progress", next.progress);
@@ -73,17 +67,6 @@ export function EmployeeFilters(props: Props) {
     e.preventDefault();
     navigate({
       q: search,
-      company: props.company,
-      jobTitle: props.jobTitle,
-      sort: props.sort,
-      progress: props.progress,
-    });
-  }
-
-  function onCompanyChange(e: React.ChangeEvent<HTMLSelectElement>) {
-    navigate({
-      q: search,
-      company: (e.target.value || "") as Company | "",
       jobTitle: props.jobTitle,
       sort: props.sort,
       progress: props.progress,
@@ -93,7 +76,6 @@ export function EmployeeFilters(props: Props) {
   function onJobTitleChange(e: React.ChangeEvent<HTMLSelectElement>) {
     navigate({
       q: search,
-      company: props.company,
       jobTitle: e.target.value,
       sort: props.sort,
       progress: props.progress,
@@ -103,7 +85,6 @@ export function EmployeeFilters(props: Props) {
   function onSortChange(e: React.ChangeEvent<HTMLSelectElement>) {
     navigate({
       q: search,
-      company: props.company,
       jobTitle: props.jobTitle,
       sort: e.target.value,
       progress: props.progress,
@@ -113,7 +94,6 @@ export function EmployeeFilters(props: Props) {
   function onProgressChip(next: ProgressFilter) {
     navigate({
       q: search,
-      company: props.company,
       jobTitle: props.jobTitle,
       sort: props.sort,
       progress: next,
@@ -159,20 +139,6 @@ export function EmployeeFilters(props: Props) {
       )}
 
       <div className="pp-spacer" />
-
-      {props.isSuperAdmin && (
-        <div className="pp-select-group">
-          <label htmlFor="company-select">Company</label>
-          <select id="company-select" value={props.company} onChange={onCompanyChange}>
-            <option value="">All</option>
-            {(Object.keys(props.companyLabels) as Company[]).map((c) => (
-              <option key={c} value={c}>
-                {props.companyLabels[c]}
-              </option>
-            ))}
-          </select>
-        </div>
-      )}
 
       {props.jobTitleOptions.length > 0 && (
         <div className="pp-select-group">

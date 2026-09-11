@@ -5,15 +5,11 @@ import { authOptions } from "@/lib/auth";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/EmptyState";
-import { CompanyFilterTabs, resolveCompanyParam } from "@/components/ui/CompanyFilterTabs";
+import { getActiveBusiness } from "@/lib/business-server";
 import { InventoryTable } from "./InventoryTable";
 import { Company } from "@prisma/client";
 import Link from "next/link";
 import { MaintenanceSubnav } from "@/components/maintenance/MaintenanceSubnav";
-
-function defaultCompany(userCompany: Company | null | undefined): Company {
-  return userCompany === "RESORT" ? "RESORT" : "GROOMING";
-}
 
 export default async function InventoryPage({
   searchParams,
@@ -25,9 +21,8 @@ export default async function InventoryPage({
   const user = session?.user as { role?: string; company?: Company | null } | undefined;
   const canManage = isManagerOrAbove(user?.role);
 
-  const { company: companyParam } = await searchParams;
-  const resolved = resolveCompanyParam(companyParam, defaultCompany(user?.company));
-  const active: Company = resolved === "ALL" ? defaultCompany(user?.company) : resolved;
+  await searchParams;
+  const active = (await getActiveBusiness()).company;
 
   const items = await prisma.inventoryItem.findMany({
     where: { company: active },
@@ -50,10 +45,6 @@ export default async function InventoryPage({
       </div>
 
       <MaintenanceSubnav active="inventory" company={active} />
-
-      <div className="mb-4">
-        <CompanyFilterTabs basePath="/maintenance/inventory" active={active} hideAll />
-      </div>
 
       {items.length === 0 ? (
         <Card>

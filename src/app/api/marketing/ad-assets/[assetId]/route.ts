@@ -1,3 +1,4 @@
+import { marketingChildWhere } from "@/lib/marketing/business";
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getSession, hasMarketingAccess } from "@/lib/auth-helpers";
@@ -19,7 +20,7 @@ export async function PATCH(
 
   try {
     const asset = await prisma.adAsset.update({
-      where: { id: assetId },
+      where: { id: assetId, ...await marketingChildWhere() },
       data: parsed.data,
     });
     return NextResponse.json({ asset });
@@ -40,7 +41,7 @@ export async function DELETE(
 
   const { assetId } = await params;
   try {
-    await prisma.adAsset.delete({ where: { id: assetId } });
+    await prisma.adAsset.delete({ where: { id: assetId, ...await marketingChildWhere() } });
     return NextResponse.json({ ok: true });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Delete failed";

@@ -1,7 +1,8 @@
+import { getEmployeeBusinessWhere } from "@/lib/business-server";
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { getSession, getCompanyFilter, isManagerOrAbove } from "@/lib/auth-helpers";
-import { Company, Prisma, Role } from "@prisma/client";
+import { getSession, isManagerOrAbove } from "@/lib/auth-helpers";
+import { Prisma } from "@prisma/client";
 
 export async function GET(req: NextRequest) {
   const session = await getSession();
@@ -9,8 +10,7 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
-  const sessionUser = session.user as { role: Role; company: Company | null };
-  const companyFilter = getCompanyFilter(sessionUser.role, sessionUser.company);
+  const companyFilter = await getEmployeeBusinessWhere();
 
   const searchParams = req.nextUrl.searchParams;
   const userId = searchParams.get("userId");

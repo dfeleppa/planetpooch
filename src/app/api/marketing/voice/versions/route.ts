@@ -1,3 +1,4 @@
+import { marketingCompanyWhere } from "@/lib/marketing/business";
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getSession, hasMarketingAccess } from "@/lib/auth-helpers";
@@ -9,6 +10,7 @@ export async function GET() {
   }
 
   const versions = await prisma.brandVoiceProfile.findMany({
+    where: await marketingCompanyWhere(),
     orderBy: { version: "desc" },
     select: {
       id: true,

@@ -1,3 +1,4 @@
+import { getActiveBusiness } from "@/lib/business-server";
 import Link from "next/link";
 import { requireMarketing } from "@/lib/auth-helpers";
 import { AdReportingDashboard } from "../ad-reporting/AdReportingDashboard";
@@ -18,6 +19,7 @@ type SearchParams = {
 export default async function EvaluateAdsPage({ searchParams }: { searchParams: Promise<SearchParams> }) {
   await requireMarketing();
   const query = await searchParams;
+  const business = await getActiveBusiness();
   const view = query.view === "creatives" ? "creatives" : "overview";
 
   return (
@@ -36,7 +38,7 @@ export default async function EvaluateAdsPage({ searchParams }: { searchParams: 
       </nav>
 
       {view === "overview" ? (
-        <AdReportingDashboard business={query.business ?? ""} month={query.month} year={query.year} />
+        <AdReportingDashboard business={business.key} month={query.month} year={query.year} />
       ) : (
         <MetaCreativePerformance searchParams={query} />
       )}

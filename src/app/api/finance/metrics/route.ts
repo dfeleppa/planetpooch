@@ -6,6 +6,7 @@ import {
   dateParamFromDate,
   WEEKLY_FINANCE_YTD_BASE,
   weekHasFinanceYtdBase,
+  sumBusinessFinanceYtd,
   type FinanceYtdTotals,
 } from "@/lib/finance-ytd";
 
@@ -49,6 +50,13 @@ async function calculateWeeklyFinanceYtd({
   year: number;
 }): Promise<FinanceYtdTotals | null> {
   const weekEnd = dateParamFromDate(periodEnd);
+  if (business === "pet-resort-weekly" || business === "mobile-grooming-weekly") {
+    const metrics = await prisma.financeMetric.findMany({
+      where: { business, periodEnd: { gte: new Date(Date.UTC(year, 0, 1)), lte: periodEnd } },
+      select: { totalRevenue: true, totalProfit: true, nonPayrollExpenses: true, payrollExpenses: true },
+    });
+    return sumBusinessFinanceYtd(metrics);
+  }
   if (
     business !== WEEKLY_FINANCE_YTD_BASE.business ||
     !weekHasFinanceYtdBase(weekEnd, year)
@@ -93,13 +101,13 @@ async function calculateWeeklyFinanceYtd({
   return totals;
 }
 
-function ytdResponse(totals: FinanceYtdTotals) {
+function ytdResponse(totals: FinanceYtdTotals, business: string) {
   return {
     totalRevenue: totals.totalRevenue,
     totalProfit: totals.totalProfit,
     nonPayrollExpenses: null,
     payrollExpenses: null,
-    baseWeekEnd: WEEKLY_FINANCE_YTD_BASE.weekEnd,
+    ...(business === WEEKLY_FINANCE_YTD_BASE.business ? { baseWeekEnd: WEEKLY_FINANCE_YTD_BASE.weekEnd } : {}),
   };
 }
 
@@ -145,7 +153,7 @@ export async function GET(req: NextRequest) {
   return NextResponse.json({
     metric,
     ytd: calculatedYtd
-      ? ytdResponse(calculatedYtd)
+      ? ytdResponse(calculatedYtd, business)
       : {
           totalRevenue: metric?.ytdRevenue ?? null,
           totalProfit: metric?.ytdNetProfit ?? null,
@@ -176,6 +184,8 @@ export async function PUT(req: NextRequest) {
     "all-businesses-weekly",
     "mobile-grooming-manual",
     "pet-resort-manual",
+    "pet-resort-weekly",
+    "mobile-grooming-weekly",
   ];
   if (!validBusinesses.includes(business)) {
     return NextResponse.json({ error: "Invalid business" }, { status: 400 });
@@ -236,6 +246,6 @@ export async function PUT(req: NextRequest) {
 
   return NextResponse.json({
     metric,
-    ...(calculatedYtd ? { ytd: ytdResponse(calculatedYtd) } : {}),
+    ...(calculatedYtd ? { ytd: ytdResponse(calculatedYtd, business) } : {}),
   });
 }

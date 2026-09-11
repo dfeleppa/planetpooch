@@ -1,3 +1,5 @@
+import { getCampaignBusinessAssignments } from "@/lib/marketing/campaign-business";
+import { CampaignBusinessAssignments } from "./CampaignBusinessAssignments";
 import Link from "next/link";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import {
@@ -46,11 +48,12 @@ export async function MetaCreativePerformance({ searchParams }: { searchParams: 
   const sort = parseSort(searchParams.sort);
   const dir: SortDir = searchParams.dir === "asc" ? "asc" : "desc";
 
-  const [ads, campaigns, scripts, unlinked] = await Promise.all([
+  const [ads, campaigns, scripts, unlinked, assignments] = await Promise.all([
     getAdAggregates({ days, campaign, linked: link, sort, dir }),
     getCampaigns(days),
     getLinkableScripts(),
     getAdAggregates({ days, linked: "unlinked" }),
+    getCampaignBusinessAssignments(),
   ]);
   const totals = ads.reduce((acc, ad) => ({
     spend: acc.spend + ad.spendCents,
@@ -65,6 +68,7 @@ export async function MetaCreativePerformance({ searchParams }: { searchParams: 
 
   return (
     <div>
+      <CampaignBusinessAssignments campaigns={assignments} />
       <div className="mb-4 flex flex-col gap-3 rounded-xl border border-gray-200 bg-white p-4 lg:flex-row lg:items-center lg:justify-between">
         <PerformanceFilters days={days} campaign={campaign} campaigns={campaigns} />
         <PerformanceActions />

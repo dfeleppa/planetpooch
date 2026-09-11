@@ -1,3 +1,4 @@
+import { marketingHookWhere } from "@/lib/marketing/business";
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getSession, hasMarketingAccess } from "@/lib/auth-helpers";
@@ -19,7 +20,7 @@ export async function PATCH(
 
   try {
     const hook = await prisma.hook.update({
-      where: { id: hookId },
+      where: { id: hookId, ...await marketingHookWhere() },
       data: parsed.data,
     });
     return NextResponse.json(hook);
@@ -41,7 +42,7 @@ export async function DELETE(
 
   const { hookId } = await params;
   try {
-    await prisma.hook.delete({ where: { id: hookId } });
+    await prisma.hook.delete({ where: { id: hookId, ...await marketingHookWhere() } });
     return NextResponse.json({ ok: true });
   } catch (err) {
     const message =

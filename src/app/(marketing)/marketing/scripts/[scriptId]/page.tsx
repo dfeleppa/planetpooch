@@ -1,3 +1,4 @@
+import { marketingChildWhere } from "@/lib/marketing/business";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { requireMarketing } from "@/lib/auth-helpers";
@@ -15,7 +16,7 @@ export default async function ScriptDetailPage({
   const { scriptId } = await params;
 
   const script = await prisma.script.findUnique({
-    where: { id: scriptId },
+    where: { id: scriptId, ...await marketingChildWhere() },
     include: {
       idea: { select: { id: true, title: true } },
       angle: {

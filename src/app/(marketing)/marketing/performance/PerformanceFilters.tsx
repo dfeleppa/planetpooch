@@ -3,7 +3,7 @@
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useTransition } from "react";
 import { cn } from "@/lib/utils";
-import { DAY_PRESETS } from "@/lib/marketing/performance";
+import { DAY_PRESETS } from "@/lib/marketing/performance-options";
 
 export function PerformanceFilters({
   days,

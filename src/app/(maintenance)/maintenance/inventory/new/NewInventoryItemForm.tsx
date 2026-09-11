@@ -25,7 +25,7 @@ export function NewInventoryItemForm({ initialCompany }: { initialCompany: Compa
   const [newCategoryName, setNewCategoryName] = useState("");
   const [creatingCategory, setCreatingCategory] = useState(false);
 
-  const [company, setCompany] = useState<Company>(initialCompany);
+  const company = initialCompany;
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [categoryId, setCategoryId] = useState("");
@@ -125,17 +125,6 @@ export function NewInventoryItemForm({ initialCompany }: { initialCompany: Compa
     <form onSubmit={handleSubmit}>
       <Card>
         <CardContent className="space-y-4">
-          <div className="flex flex-col gap-1">
-            <label className="text-sm font-medium text-gray-700">Company</label>
-            <select
-              value={company}
-              onChange={(e) => setCompany(e.target.value as Company)}
-              className="rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-            >
-              <option value="GROOMING">Planet Pooch Mobile Grooming</option>
-              <option value="RESORT">Planet Pooch Pet Resort</option>
-            </select>
-          </div>
           <Input
             label="Item Name"
             value={name}

@@ -1,3 +1,4 @@
+import { marketingCompanyWhere, marketingChildWhere } from "@/lib/marketing/business";
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getSession, hasMarketingAccess } from "@/lib/auth-helpers";
@@ -19,7 +20,7 @@ export async function GET(
 
   const { ideaId } = await params;
   const assets = await prisma.adAsset.findMany({
-    where: { ideaId },
+    where: { ideaId, ...await marketingChildWhere() },
     orderBy: { createdAt: "desc" },
   });
   return NextResponse.json({ assets });
@@ -38,7 +39,7 @@ export async function POST(
   const parsed = await validateBody(req, GenerateAdAssetSchema);
   if (!parsed.ok) return parsed.response;
 
-  const idea = await prisma.marketingIdea.findUnique({ where: { id: ideaId } });
+  const idea = await prisma.marketingIdea.findUnique({ where: { id: ideaId, ...await marketingCompanyWhere() } });
   if (!idea) {
     return NextResponse.json({ error: "Brief not found" }, { status: 404 });
   }

@@ -234,18 +234,18 @@ export function MoegoDashboard({ businesses }: { businesses: BusinessOption[] })
 
   return (
     <div>
-      {businesses.length > 0 ? (
+      {businesses.length > 1 ? (
         <Tabs
           tabs={businesses.map((b) => ({ id: b.id, label: b.label }))}
           activeTab={business}
           onChange={setBusiness}
           className="mb-6"
         />
-      ) : (
+      ) : businesses.length === 0 ? (
         <div className="mb-6 p-3 rounded-lg bg-amber-50 border border-amber-200 text-sm text-amber-800">
           No MoeGo businesses found yet. Run a sync below to populate order data.
         </div>
-      )}
+      ) : null}
       <div className="flex flex-col gap-3 mb-6">
         <div className="flex flex-wrap items-end gap-3">
           <div className="flex flex-col gap-1">
@@ -463,13 +463,13 @@ export function MoegoDashboard({ businesses }: { businesses: BusinessOption[] })
         <Card>
           <CardContent className="py-4">
             <p className="text-xs text-gray-500 uppercase tracking-wide">
-              CAC (Meta, account-wide)
+              CAC (Meta / new customers)
             </p>
             <p className="text-3xl font-bold text-gray-900 mt-1">
               {loading || !metrics ? "—" : dollars(metrics.cacCents)}
             </p>
             <p className="text-xs text-gray-400 mt-1">
-              Meta spend (all businesses):{" "}
+              Meta spend (assigned campaigns):{" "}
               {metrics ? dollars(metrics.metaSpendCents) : "—"}
             </p>
           </CardContent>

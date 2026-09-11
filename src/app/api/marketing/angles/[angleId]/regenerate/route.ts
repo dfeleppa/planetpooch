@@ -1,3 +1,4 @@
+import { marketingChildWhere } from "@/lib/marketing/business";
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getSession, hasMarketingAccess } from "@/lib/auth-helpers";
@@ -19,7 +20,7 @@ export async function POST(
 
   const { angleId } = await params;
   const target = await prisma.angle.findUnique({
-    where: { id: angleId },
+    where: { id: angleId, ...await marketingChildWhere() },
     include: { idea: true },
   });
   if (!target) {
@@ -71,7 +72,7 @@ export async function POST(
   // Replace the existing angle in place — keeps the ID stable so any UI
   // selection state stays valid.
   const updated = await prisma.angle.update({
-    where: { id: angleId },
+    where: { id: angleId, ...await marketingChildWhere() },
     data: {
       name: result.angle.name,
       emotionalRegister: result.angle.emotional_register,

@@ -1,3 +1,4 @@
+import { marketingCompanyWhere } from "@/lib/marketing/business";
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getSession, hasMarketingAccess } from "@/lib/auth-helpers";
@@ -15,7 +16,7 @@ export async function GET(
 
   const { ideaId } = await params;
   const idea = await prisma.marketingIdea.findUnique({
-    where: { id: ideaId },
+    where: { id: ideaId, ...await marketingCompanyWhere() },
     include: { createdBy: { select: { id: true, name: true } } },
   });
   if (!idea) {
@@ -39,7 +40,7 @@ export async function PATCH(
 
   try {
     const idea = await prisma.marketingIdea.update({
-      where: { id: ideaId },
+      where: { id: ideaId, ...await marketingCompanyWhere() },
       data: parsed.data,
     });
     return NextResponse.json(idea);
@@ -61,7 +62,7 @@ export async function DELETE(
 
   const { ideaId } = await params;
   try {
-    await prisma.marketingIdea.delete({ where: { id: ideaId } });
+    await prisma.marketingIdea.delete({ where: { id: ideaId, ...await marketingCompanyWhere() } });
     return NextResponse.json({ ok: true });
   } catch (err) {
     const message =

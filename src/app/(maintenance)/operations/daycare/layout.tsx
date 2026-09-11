@@ -1,5 +1,7 @@
 import { requireAuth } from "@/lib/auth-helpers";
 import { DaycareSubnav } from "./DaycareSubnav";
+import { getActiveBusiness } from "@/lib/business-server";
+import { redirect } from "next/navigation";
 
 export default async function DaycareLayout({
   children,
@@ -7,6 +9,7 @@ export default async function DaycareLayout({
   children: React.ReactNode;
 }) {
   await requireAuth();
+  if ((await getActiveBusiness()).company !== "RESORT") redirect("/maintenance");
 
   return (
     <div className="mx-auto max-w-7xl">

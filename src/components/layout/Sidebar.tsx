@@ -6,6 +6,7 @@ import { usePathname } from "next/navigation";
 import { signOut, useSession } from "next-auth/react";
 import { cn } from "@/lib/utils";
 import { useState, useEffect } from "react";
+import { useBusiness } from "@/components/business/BusinessProvider";
 
 interface NavItem {
   href: string;
@@ -76,6 +77,11 @@ const ROLE_LABELS: Record<string, string> = {
 };
 
 export function Sidebar() {
+  const business = useBusiness();
+  const operationsNav = sharedNav.filter((item) => business.company === "RESORT" || item.href === "/maintenance");
+  const businessEmployeeNav = employeeNav.filter((item) => business.company === "RESORT" || item.href !== "/career");
+  const businessFinanceNav = financeNav.map((item) => item.href === "/finance/payroll" && business.company === "GROOMING"
+    ? { ...item, href: "/finance/payroll/mobile-grooming" } : item);
   const pathname = usePathname();
   const { data: session } = useSession();
   const role = session?.user?.role;
@@ -98,13 +104,13 @@ export function Sidebar() {
     : employeeNav;
   const nav =
     baseNav === employeeNav
-      ? employeeNav
+      ? businessEmployeeNav
       : baseNav
           .filter((item) => !["/admin/employees", "/admin/org-chart", "/admin/audit-log"].includes(item.href))
           .map((item) => (item.href === "/admin" ? { ...item, href: "/admin/employees" } : item));
   // The admin navs (super admin / manager) are the HR links;
   // the plain employee nav (Dashboard / Modules / Search) is not.
-  const isAdminNav = nav !== employeeNav;
+  const isAdminNav = baseNav !== employeeNav;
 
   const [collapsed, setCollapsed] = useState(
     () =>
@@ -147,7 +153,7 @@ export function Sidebar() {
     if (href === "/dashboard" || href === "/admin") return pathname === href;
     if (pathname !== href && !pathname.startsWith(href + "/")) return false;
     // Longest-prefix wins: don't highlight /maintenance when on /maintenance/inventory.
-    const candidates = [...nav, ...sharedNav, ...marketingNav, ...financeNav]
+    const candidates = [...nav, ...operationsNav, ...marketingNav, ...businessFinanceNav]
       .map((n) => n.href)
       .filter((h) => h !== "/dashboard" && h !== "/admin")
       .filter((h) => pathname === h || pathname.startsWith(h + "/"));
@@ -245,7 +251,7 @@ export function Sidebar() {
             <div className="mx-1.5 h-px bg-pp-line" />
           )}
           <div className="-mt-2 flex flex-col gap-px">
-            {sharedNav.map((item) => {
+            {operationsNav.map((item) => {
               const active = isActive(item.href);
               return (
                 <Link key={item.href} href={item.href} title={isCollapsed ? item.label : undefined} className={navItemClass(active)}>
@@ -270,7 +276,7 @@ export function Sidebar() {
                 <div className="mx-1.5 h-px bg-pp-line" />
               )}
               <div className="-mt-2 flex flex-col gap-px">
-                {financeNav.map((item) => {
+                {businessFinanceNav.map((item) => {
                   const active = isActive(item.href);
                   return (
                     <Link key={item.href} href={item.href} title={isCollapsed ? item.label : undefined} className={navItemClass(active)}>
@@ -358,7 +364,7 @@ export function Sidebar() {
                 <div className="mx-1.5 h-px bg-pp-line" />
               )}
               <div className="-mt-2 flex flex-col gap-px">
-                {employeeNav.map((item) => {
+                {businessEmployeeNav.map((item) => {
                   const active = pathname === item.href;
                   return (
                     <Link key={item.href} href={item.href} title={isCollapsed ? item.label : undefined} className={navItemClass(active)}>

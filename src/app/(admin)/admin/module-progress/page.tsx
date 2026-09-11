@@ -1,3 +1,4 @@
+import { getEmployeeBusinessWhere } from "@/lib/business-server";
 import { requireAdmin, activeUserWhere } from "@/lib/auth-helpers";
 import { prisma } from "@/lib/prisma";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
@@ -9,7 +10,7 @@ export default async function AdminModuleProgressPage() {
   await requireAdmin();
 
   const employees = await prisma.user.findMany({
-    where: { role: "EMPLOYEE", ...activeUserWhere() },
+    where: { role: "EMPLOYEE", ...activeUserWhere(), ...await getEmployeeBusinessWhere() },
     select: { id: true, name: true, email: true },
     orderBy: { name: "asc" },
   });
@@ -24,7 +25,7 @@ export default async function AdminModuleProgressPage() {
   });
 
   const completions = await prisma.lessonCompletion.findMany({
-    where: { isCompleted: true },
+    where: { isCompleted: true, userId: { in: employees.map((employee) => employee.id) } },
     select: { userId: true, lessonId: true },
   });
 

@@ -1,3 +1,4 @@
+import { marketingCompanyWhere } from "@/lib/marketing/business";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { requireMarketing } from "@/lib/auth-helpers";
@@ -16,7 +17,7 @@ export default async function IdeaDetailPage({
   const { ideaId } = await params;
 
   const idea = await prisma.marketingIdea.findUnique({
-    where: { id: ideaId },
+    where: { id: ideaId, ...await marketingCompanyWhere() },
     include: {
       createdBy: { select: { id: true, name: true } },
       angles: { orderBy: { createdAt: "asc" } },

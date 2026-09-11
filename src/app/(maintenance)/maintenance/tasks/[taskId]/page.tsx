@@ -1,3 +1,4 @@
+import { getActiveBusiness } from "@/lib/business-server";
 import { requireAuth } from "@/lib/auth-helpers";
 import { prisma } from "@/lib/prisma";
 import { notFound } from "next/navigation";
@@ -23,7 +24,7 @@ export default async function MaintenanceTaskDetailPage({
   const { taskId } = await params;
 
   const task = await prisma.maintenanceTask.findUnique({
-    where: { id: taskId },
+    where: { id: taskId, company: (await getActiveBusiness()).company },
     include: {
       schedule: {
         include: {

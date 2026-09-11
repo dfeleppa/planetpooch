@@ -1,3 +1,4 @@
+import { marketingChildWhere } from "@/lib/marketing/business";
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getSession, hasMarketingAccess } from "@/lib/auth-helpers";
@@ -24,7 +25,7 @@ export async function PATCH(
 
   try {
     const angle = await prisma.angle.update({
-      where: { id: angleId },
+      where: { id: angleId, ...await marketingChildWhere() },
       data: {
         ...parsed.data,
         ...(fieldEdited ? { wasEdited: true } : {}),
@@ -48,7 +49,7 @@ export async function DELETE(
 
   const { angleId } = await params;
   try {
-    await prisma.angle.delete({ where: { id: angleId } });
+    await prisma.angle.delete({ where: { id: angleId, ...await marketingChildWhere() } });
     return NextResponse.json({ ok: true });
   } catch (err) {
     const message = err instanceof Error ? err.message : "Failed to delete angle";

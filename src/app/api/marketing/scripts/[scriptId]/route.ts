@@ -1,3 +1,4 @@
+import { marketingChildWhere } from "@/lib/marketing/business";
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getSession, hasMarketingAccess } from "@/lib/auth-helpers";
@@ -15,7 +16,7 @@ export async function GET(
 
   const { scriptId } = await params;
   const script = await prisma.script.findUnique({
-    where: { id: scriptId },
+    where: { id: scriptId, ...await marketingChildWhere() },
     include: {
       idea: { select: { id: true, title: true } },
       createdBy: { select: { id: true, name: true } },
@@ -43,7 +44,7 @@ export async function PATCH(
 
   try {
     const script = await prisma.script.update({
-      where: { id: scriptId },
+      where: { id: scriptId, ...await marketingChildWhere() },
       data: parsed.data,
     });
     return NextResponse.json(script);
@@ -65,7 +66,7 @@ export async function DELETE(
 
   const { scriptId } = await params;
   try {
-    await prisma.script.delete({ where: { id: scriptId } });
+    await prisma.script.delete({ where: { id: scriptId, ...await marketingChildWhere() } });
     return NextResponse.json({ ok: true });
   } catch (err) {
     const message =

@@ -1,7 +1,7 @@
-import { requireEmployeeManager, getCompanyFilter } from "@/lib/auth-helpers";
+import { getActiveBusiness, getEmployeeBusinessWhere } from "@/lib/business-server";
+import { requireEmployeeManager } from "@/lib/auth-helpers";
 import { prisma } from "@/lib/prisma";
 import { DAYS_OF_WEEK, formatTimeLabel } from "@/lib/availability";
-import { Company, Role } from "@prisma/client";
 import Link from "next/link";
 import { AdminPeopleNav } from "../AdminPeopleNav";
 import { SchedulingPrintButton } from "./SchedulingPrintButton";
@@ -20,22 +20,14 @@ function formatAvailability(startTime: string, endTime: string): string {
 }
 
 export default async function SchedulingPage() {
-  const session = await requireEmployeeManager();
-  const sessionUser = session.user as {
-    role: Role;
-    company: Company | null;
-    jobTitle: string | null;
-  };
-  const companyFilter = getCompanyFilter(
-    sessionUser.role,
-    sessionUser.company,
-    sessionUser.jobTitle,
-  );
+  await requireEmployeeManager();
+  const business = await getActiveBusiness();
+  const companyFilter = await getEmployeeBusinessWhere();
 
   const employees = await prisma.user.findMany({
     where: {
       terminatedAt: null,
-      AND: [{ company: "RESORT" }, companyFilter],
+      AND: [{ company: business.company }, companyFilter],
     },
     orderBy: [{ firstName: "asc" }, { lastName: "asc" }],
     select: {
@@ -54,7 +46,7 @@ export default async function SchedulingPage() {
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Scheduling</h1>
           <p className="mt-1 text-gray-500">
-            Review weekly availability for active Planet Pooch Resort employees.
+            Review weekly availability for active {business.label} employees.
           </p>
         </div>
         <SchedulingPrintButton />

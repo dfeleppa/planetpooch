@@ -1,3 +1,4 @@
+import { getActiveBusiness } from "@/lib/business-server";
 import { requireSuperAdmin } from "@/lib/auth-helpers";
 import { prisma } from "@/lib/prisma";
 import { KpiSegment } from "@prisma/client";
@@ -293,12 +294,9 @@ export default async function KpisPage({
   await requireSuperAdmin();
   const params = await searchParams;
 
-  const activeTab =
-    params.segment === PET_RESORT_TAB
-      ? PET_RESORT_TAB
-      : params.segment === "MOBILE_GROOMING"
-        ? "MOBILE_GROOMING"
-        : PET_RESORT_COPY_TAB;
+  const business = await getActiveBusiness();
+  const activeTab = business.company === "GROOMING" ? "MOBILE_GROOMING"
+    : params.segment === PET_RESORT_TAB ? PET_RESORT_TAB : PET_RESORT_COPY_TAB;
   const showPetResort = activeTab !== "MOBILE_GROOMING";
   const segment: KpiSegment = "MOBILE_GROOMING";
 

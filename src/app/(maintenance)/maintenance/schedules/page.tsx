@@ -5,15 +5,11 @@ import { authOptions } from "@/lib/auth";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { CompanyFilterTabs, resolveCompanyParam } from "@/components/ui/CompanyFilterTabs";
+import { getActiveBusiness } from "@/lib/business-server";
 import { formatRecurrenceInterval } from "@/lib/maintenance";
 import { Company } from "@prisma/client";
 import Link from "next/link";
 import { MaintenanceSubnav } from "@/components/maintenance/MaintenanceSubnav";
-
-function defaultCompany(userCompany: Company | null | undefined): Company {
-  return userCompany === "RESORT" ? "RESORT" : "GROOMING";
-}
 
 export default async function SchedulesPage({
   searchParams,
@@ -25,9 +21,8 @@ export default async function SchedulesPage({
   const user = session?.user as { role?: string; company?: Company | null } | undefined;
   const canManage = isManagerOrAbove(user?.role);
 
-  const { company: companyParam } = await searchParams;
-  const resolved = resolveCompanyParam(companyParam, defaultCompany(user?.company));
-  const active: Company = resolved === "ALL" ? defaultCompany(user?.company) : resolved;
+  await searchParams;
+  const active = (await getActiveBusiness()).company;
 
   const schedules = await prisma.maintenanceSchedule.findMany({
     where: { company: active },
@@ -63,10 +58,6 @@ export default async function SchedulesPage({
       </div>
 
       <MaintenanceSubnav active="schedules" company={active} />
-
-      <div className="mb-4">
-        <CompanyFilterTabs basePath="/maintenance/schedules" active={active} hideAll />
-      </div>
 
       {schedules.length === 0 ? (
         <Card>

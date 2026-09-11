@@ -1,3 +1,4 @@
+import { getActiveBusiness } from "@/lib/business-server";
 import { requireAuth, isManagerOrAbove } from "@/lib/auth-helpers";
 import { prisma } from "@/lib/prisma";
 import { getServerSession } from "next-auth";
@@ -38,7 +39,7 @@ export default async function InventoryItemPage({
   const { itemId } = await params;
 
   const item = await prisma.inventoryItem.findUnique({
-    where: { id: itemId },
+    where: { id: itemId, company: (await getActiveBusiness()).company },
     include: {
       category: true,
       adjustments: {

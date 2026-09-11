@@ -1,4 +1,6 @@
 import { prisma } from "@/lib/prisma";
+import { businessFor } from "@/lib/business";
+import { metaCampaignWhereForCompany } from "@/lib/marketing/campaign-business";
 
 /**
  * Order statuses that represent real, collected money. CREATED orders are
@@ -46,6 +48,10 @@ export async function getMoegoMetrics({
 }): Promise<MoegoMetrics> {
   const windowStart = from;
   const windowEnd = to;
+  const business = businessFor(businessId);
+  const campaignWhere = business
+    ? await metaCampaignWhereForCompany(business.company)
+    : { campaignId: { in: [] as string[] } };
 
   // "Net sales" = subtotal − discounts (excludes tax & tips), matching
   // MoeGo's sales report. Attributed to *when the money landed* —
@@ -82,7 +88,6 @@ export async function getMoegoMetrics({
     newCustomerRows,
     allTimeRevenueRows,
     totalCustomerRows,
-    newCustomerAccountCount,
     metaSpend,
   ] = await Promise.all([
     prisma.$queryRaw<{ n: number }[]>`
@@ -105,13 +110,9 @@ export async function getMoegoMetrics({
       WHERE "businessId" = ${businessId} AND "customerMoegoId" IS NOT NULL
         AND "status" = ANY(${[...REVENUE_ORDER_STATUSES]})
     `,
-    // Account-wide new customers — only used for the account-wide CAC tile,
-    // since Meta spend (MetaAdInsight) isn't attributable to a business.
-    prisma.moegoCustomer.count({
-      where: { createdTime: { gte: windowStart, lt: windowEnd } },
-    }),
     prisma.metaAdInsight.aggregate({
       where: {
+        ...campaignWhere,
         date: {
           gte: new Date(windowStart.toISOString().slice(0, 10)),
           lt: new Date(windowEnd.toISOString().slice(0, 10)),
@@ -192,8 +193,8 @@ export async function getMoegoMetrics({
     allTimeAvgLtvCents,
     metaSpendCents,
     cacCents:
-      newCustomerAccountCount > 0
-        ? Math.round(metaSpendCents / newCustomerAccountCount)
+      newCustomerCount > 0
+        ? Math.round(metaSpendCents / newCustomerCount)
         : 0,
     leadSources,
     lastSync,

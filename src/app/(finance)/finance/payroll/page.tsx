@@ -1,5 +1,7 @@
 import { requireSuperAdmin } from "@/lib/auth-helpers";
 import { prisma } from "@/lib/prisma";
+import { getActiveBusiness } from "@/lib/business-server";
+import { redirect } from "next/navigation";
 import { PayrollSubnav } from "./PayrollSubnav";
 import {
   PetResortPayrollLedger,
@@ -8,6 +10,7 @@ import {
 
 export default async function PetResortPayrollPage() {
   await requireSuperAdmin();
+  if ((await getActiveBusiness()).company === "GROOMING") redirect("/finance/payroll/mobile-grooming");
 
   const payrollRuns = await prisma.financePetResortPayrollRun.findMany({
     orderBy: [{ checkDate: "desc" }, { payRunAt: "desc" }],

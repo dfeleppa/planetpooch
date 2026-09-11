@@ -1,3 +1,4 @@
+import { marketingCompanyWhere } from "@/lib/marketing/business";
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getSession, hasMarketingAccess } from "@/lib/auth-helpers";
@@ -25,6 +26,7 @@ export async function GET(req: NextRequest) {
 
   const ideas = await prisma.marketingIdea.findMany({
     where: {
+      ...await marketingCompanyWhere(),
       ...(statusFilter?.success ? { status: statusFilter.data } : {}),
       ...(serviceLineFilter?.success
         ? { serviceLine: serviceLineFilter.data }
@@ -51,6 +53,7 @@ export async function POST(req: NextRequest) {
   try {
     const idea = await prisma.marketingIdea.create({
       data: {
+        ...await marketingCompanyWhere(),
         title: parsed.data.title,
         insight: parsed.data.insight,
         audience: parsed.data.audience,

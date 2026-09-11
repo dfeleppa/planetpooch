@@ -6,15 +6,10 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/Select";
-import {
-  WEEKLY_FINANCE_YTD_BASE,
-  weekHasFinanceYtdBase,
-  weekIsFinanceYtdBase,
-  type FinanceYtdTotals,
-} from "@/lib/finance-ytd";
+import type { FinanceYtdTotals } from "@/lib/finance-ytd";
+import { useBusiness } from "@/components/business/BusinessProvider";
 import { cn } from "@/lib/utils";
 
-const BUSINESS_KEY = WEEKLY_FINANCE_YTD_BASE.business;
 const MS_PER_DAY = 86_400_000;
 
 type MetricResponse = {
@@ -182,6 +177,8 @@ export function WeeklyFinancialSnapshot({
   year?: string;
   week?: string;
 }) {
+  const business = useBusiness();
+  const businessKey = `${business.key}-weekly`;
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -194,13 +191,6 @@ export function WeeklyFinancialSnapshot({
     : defaultWeekStartForYear(selectedYear, weekOptions);
   const selectedWeek =
     weekOptions.find((option) => option.weekStart === selectedWeekStart) ?? weekOptions[0];
-  const selectedWeekHasYtdBase = selectedWeek
-    ? weekHasFinanceYtdBase(selectedWeek.weekEnd, selectedYear)
-    : false;
-  const selectedWeekIsYtdBase = selectedWeek
-    ? weekIsFinanceYtdBase(selectedWeek.weekEnd, selectedYear)
-    : false;
-
   const [form, setForm] = useState<SnapshotForm>(EMPTY_FORM);
   const [loadedWeekMetric, setLoadedWeekMetric] = useState<FinanceYtdTotals>(EMPTY_TOTALS);
   const [loadedYtd, setLoadedYtd] = useState<FinanceYtdTotals>(EMPTY_TOTALS);
@@ -247,21 +237,17 @@ export function WeeklyFinancialSnapshot({
     ? null
     : calculatedNetProfitCents ?? 0;
   const calculatedYtdRevenueCents = (() => {
-    if (!selectedWeekHasYtdBase) return null;
-    if (selectedWeekIsYtdBase) return WEEKLY_FINANCE_YTD_BASE.totalRevenue;
-    if (loadedYtd.totalRevenue === null || currentRevenueContributionCents === null) return null;
+    if (currentRevenueContributionCents === null || (loadedYtd.totalRevenue === null && form.totalRevenue.trim() === "")) return null;
     return (
-      loadedYtd.totalRevenue -
+      (loadedYtd.totalRevenue ?? 0) -
       (loadedWeekMetric.totalRevenue ?? 0) +
       currentRevenueContributionCents
     );
   })();
   const calculatedYtdNetProfitCents = (() => {
-    if (!selectedWeekHasYtdBase) return null;
-    if (selectedWeekIsYtdBase) return WEEKLY_FINANCE_YTD_BASE.totalProfit;
-    if (loadedYtd.totalProfit === null || currentNetProfitContributionCents === null) return null;
+    if (currentNetProfitContributionCents === null || (loadedYtd.totalProfit === null && !hasNetProfitSourceInput)) return null;
     return (
-      loadedYtd.totalProfit -
+      (loadedYtd.totalProfit ?? 0) -
       (loadedWeekMetric.totalProfit ?? 0) +
       currentNetProfitContributionCents
     );
@@ -276,7 +262,7 @@ export function WeeklyFinancialSnapshot({
     setMessage(null);
 
     const params = new URLSearchParams({
-      business: BUSINESS_KEY,
+      business: businessKey,
       from: selectedWeek.weekStart,
       to: selectedWeek.weekEnd,
       year: String(selectedYear),
@@ -318,7 +304,7 @@ export function WeeklyFinancialSnapshot({
     return () => {
       cancelled = true;
     };
-  }, [selectedWeek, selectedYear]);
+  }, [selectedWeek, selectedYear, businessKey]);
 
   function updateUrl(patch: Record<string, string | undefined>) {
     const next = new URLSearchParams(searchParams.toString());
@@ -362,7 +348,7 @@ export function WeeklyFinancialSnapshot({
       totalProfit: calculatedNetProfitCents,
     };
     const payload = {
-      business: BUSINESS_KEY,
+      business: businessKey,
       periodStart: selectedWeek.weekStart,
       periodEnd: selectedWeek.weekEnd,
       totalRevenue: nextLoadedWeekMetric.totalRevenue,

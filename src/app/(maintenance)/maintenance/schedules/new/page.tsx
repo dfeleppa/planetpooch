@@ -1,29 +1,15 @@
+import { getActiveBusiness } from "@/lib/business-server";
 import { requireAdmin } from "@/lib/auth-helpers";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { NewScheduleForm } from "./NewScheduleForm";
-import { Company } from "@prisma/client";
 
-export default async function NewSchedulePage({
-  searchParams,
-}: {
-  searchParams: Promise<{ company?: string }>;
-}) {
+export default async function NewSchedulePage() {
   await requireAdmin();
-  const session = await getServerSession(authOptions);
-  const user = session?.user as { company?: Company | null } | undefined;
-  const { company: companyParam } = await searchParams;
 
-  const initialCompany: Company =
-    companyParam === "RESORT" || companyParam === "GROOMING"
-      ? companyParam
-      : user?.company === "RESORT"
-        ? "RESORT"
-        : "GROOMING";
+  const initialCompany = (await getActiveBusiness()).company;
 
   const allItems = await prisma.inventoryItem.findMany({
-    where: { company: { in: ["RESORT", "GROOMING"] } },
+    where: { company: initialCompany },
     orderBy: { name: "asc" },
     select: { id: true, name: true, unit: true, company: true },
   });

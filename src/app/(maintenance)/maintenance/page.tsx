@@ -1,30 +1,15 @@
 import { requireAuth } from "@/lib/auth-helpers";
 import { prisma } from "@/lib/prisma";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { CompanyFilterTabs, resolveCompanyParam } from "@/components/ui/CompanyFilterTabs";
-import { Company } from "@prisma/client";
+import { getActiveBusiness } from "@/lib/business-server";
 import Link from "next/link";
 import { MaintenanceSubnav } from "@/components/maintenance/MaintenanceSubnav";
 
-function defaultCompany(userCompany: Company | null | undefined): Company {
-  return userCompany === "RESORT" ? "RESORT" : "GROOMING";
-}
-
-export default async function MaintenanceDashboardPage({
-  searchParams,
-}: {
-  searchParams: Promise<{ company?: string }>;
-}) {
+export default async function MaintenanceDashboardPage() {
   await requireAuth();
-  const session = await getServerSession(authOptions);
-  const user = session?.user as { company?: Company | null } | undefined;
 
-  const { company: companyParam } = await searchParams;
-  const resolved = resolveCompanyParam(companyParam, defaultCompany(user?.company));
-  const active: Company = resolved === "ALL" ? defaultCompany(user?.company) : resolved;
+  const active = (await getActiveBusiness()).company;
 
   const now = new Date();
   const sevenDaysFromNow = new Date(now);
@@ -72,10 +57,6 @@ export default async function MaintenanceDashboardPage({
       </div>
 
       <MaintenanceSubnav active="dashboard" company={active} />
-
-      <div className="mb-6">
-        <CompanyFilterTabs basePath="/maintenance" active={active} hideAll />
-      </div>
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-8">
         <Card>

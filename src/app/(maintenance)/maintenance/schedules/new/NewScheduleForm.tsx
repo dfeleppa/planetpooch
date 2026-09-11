@@ -33,7 +33,7 @@ export function NewScheduleForm({
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
 
-  const [company, setCompany] = useState<Company>(initialCompany);
+  const company = initialCompany;
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [recurrenceInterval, setRecurrenceInterval] = useState("YEARLY");
@@ -108,20 +108,6 @@ export function NewScheduleForm({
     <form onSubmit={handleSubmit} className="space-y-6">
       <Card>
         <CardContent className="space-y-4">
-          <div className="flex flex-col gap-1">
-            <label className="text-sm font-medium text-gray-700">Company</label>
-            <select
-              value={company}
-              onChange={(e) => {
-                setCompany(e.target.value as Company);
-                setRequirements([]);
-              }}
-              className="rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-            >
-              <option value="GROOMING">Planet Pooch Mobile Grooming</option>
-              <option value="RESORT">Planet Pooch Pet Resort</option>
-            </select>
-          </div>
           <Input
             label="Title"
             value={title}
@@ -189,7 +175,7 @@ export function NewScheduleForm({
             </p>
           )}
           {requirements.length === 0 && filteredItems.length > 0 && (
-            <p className="text-xs text-gray-500">No requirements added. Click "+ Add Item" to require inventory for this schedule.</p>
+            <p className="text-xs text-gray-500">No requirements added. Click &quot;+ Add Item&quot; to require inventory for this schedule.</p>
           )}
           <div className="space-y-2">
             {requirements.map((req, i) => {

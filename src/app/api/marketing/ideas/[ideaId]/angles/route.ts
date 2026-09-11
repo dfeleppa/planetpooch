@@ -1,3 +1,4 @@
+import { marketingCompanyWhere, marketingChildWhere } from "@/lib/marketing/business";
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getSession, hasMarketingAccess } from "@/lib/auth-helpers";
@@ -23,7 +24,7 @@ export async function GET(
 
   const { ideaId } = await params;
   const angles = await prisma.angle.findMany({
-    where: { ideaId },
+    where: { ideaId, ...await marketingChildWhere() },
     orderBy: { createdAt: "asc" },
   });
   return NextResponse.json({ angles });
@@ -39,7 +40,7 @@ export async function POST(
   }
 
   const { ideaId } = await params;
-  const idea = await prisma.marketingIdea.findUnique({ where: { id: ideaId } });
+  const idea = await prisma.marketingIdea.findUnique({ where: { id: ideaId, ...await marketingCompanyWhere() } });
   if (!idea) {
     return NextResponse.json({ error: "Idea not found" }, { status: 404 });
   }

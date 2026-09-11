@@ -1,6 +1,8 @@
 import { KpiSegment } from "@prisma/client";
 import { requireSuperAdmin } from "@/lib/auth-helpers";
 import { prisma } from "@/lib/prisma";
+import { getActiveBusiness } from "@/lib/business-server";
+import { redirect } from "next/navigation";
 import { PayrollSubnav } from "../PayrollSubnav";
 import { CommissionsLedger, type CommissionRow } from "./CommissionsLedger";
 
@@ -71,6 +73,7 @@ function buildCommissionRows(
 
 export default async function CommissionsPage() {
   await requireSuperAdmin();
+  if ((await getActiveBusiness()).company !== "RESORT") redirect("/finance/payroll/mobile-grooming");
 
   const [
     trainingValues,

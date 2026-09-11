@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getToken } from "next-auth/jwt";
 import type { NextRequest } from "next/server";
+import { businessCookieName, businessFor, resolveBusiness } from "@/lib/business";
 
 export async function proxy(req: NextRequest) {
   const { pathname } = req.nextUrl;
@@ -83,12 +84,27 @@ export async function proxy(req: NextRequest) {
     return NextResponse.redirect(new URL("/dashboard", req.url));
   }
 
-  return NextResponse.next();
+  const requestHeaders = new Headers(req.headers);
+  requestHeaders.set("x-portal-url", req.nextUrl.toString());
+  const response = NextResponse.next({ request: { headers: requestHeaders } });
+  const preferenceName = businessCookieName(token.id as string);
+  if (!req.cookies.has(preferenceName)) {
+    const legacy = businessFor(req.nextUrl.searchParams.get("company"))
+      ?? businessFor(req.nextUrl.searchParams.get("business"))
+      ?? businessFor(req.nextUrl.searchParams.get("segment"))
+      ?? (pathname.startsWith("/finance/payroll/mobile-grooming") ? businessFor("GROOMING") : undefined);
+    const business = resolveBusiness({ id: token.id as string, role, company: token.company, jobTitle }, legacy?.company);
+    response.cookies.set(preferenceName, business.company, {
+      httpOnly: true, sameSite: "lax", secure: req.nextUrl.protocol === "https:", path: "/", maxAge: 60 * 60 * 24 * 365,
+    });
+  }
+  return response;
 }
 
 export const config = {
   matcher: [
     "/dashboard/:path*",
+    "/career/:path*",
     "/modules/:path*",
     "/admin/:path*",
     "/search/:path*",

@@ -771,19 +771,18 @@ export function KpiView({
   }
 
   const tabs = [
-    { id: PET_RESORT_COPY_TAB, label: "Pet Resort" },
-    { id: "MOBILE_GROOMING", label: "Mobile Grooming" },
-    { id: PET_RESORT_TAB, label: "Pet Resort (legacy)" },
+    { id: PET_RESORT_COPY_TAB, label: "Quarterly" },
+    { id: PET_RESORT_TAB, label: "Weekly (legacy)" },
   ];
 
   return (
     <div className={isPetResortCopy ? "pp-kpi-quarterly-report" : undefined}>
-      <Tabs
+      {isPetResort && <Tabs
         tabs={tabs}
         activeTab={isPetResort ? petResortTab : "MOBILE_GROOMING"}
         onChange={(id) => navigate(id, week)}
         className="pp-kpi-screen-tabs mb-6"
-      />
+      />}
 
       {isPetResortCopy && (
         <section className="pp-kpi-quarter-card mb-6 rounded-xl border border-gray-200 bg-white px-5 py-4 shadow-sm">

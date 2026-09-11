@@ -709,6 +709,7 @@ model EmployeeDocumentIssue {
 /// to voice changes.
 model BrandVoiceProfile {
   id              String   @id @default(cuid())
+  company         Company  @default(RESORT)
   version         Int      @unique
   tone            String   @default("")
   doRules         String   @default("")
@@ -749,6 +750,7 @@ model BrandVoiceProfile {
   createdBy User? @relation("VoiceProfileCreator", fields: [createdById], references: [id], onDelete: SetNull)
 
   @@index([version])
+  @@index([company, version])
 }
 
 /// The seed insight a campaign is built around — the "vets cage dogs all day,
@@ -756,6 +758,7 @@ model BrandVoiceProfile {
 /// hang off an idea. Status moves: DRAFT → IN_PRODUCTION → SHIPPED → ARCHIVED.
 model MarketingIdea {
   id          String      @id @default(cuid())
+  company     Company     @default(RESORT)
   title       String
   insight     String      @default("")
   audience    String      @default("")
@@ -776,6 +779,7 @@ model MarketingIdea {
   angles    Angle[]
   adAssets  AdAsset[]
 
+  @@index([company, status])
   @@index([status])
   @@index([serviceLine])
   @@index([createdAt])
@@ -959,6 +963,14 @@ model MetaAdInsight {
   @@unique([adId, date])
   @@index([date])
   @@index([scriptId])
+}
+
+/// Business attribution for a shared Meta account. Existing insight rows stay intact.
+model MetaCampaignBusiness {
+  campaignId String    @id
+  companies  Company[] @default([])
+
+  @@index([companies], type: Gin)
 }
 
 /// Manual override of the auto-linker. When a row exists here for an adId,
