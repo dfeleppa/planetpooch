@@ -51,7 +51,6 @@ const marketingNav: NavItem[] = [
 
 const financeNav: NavItem[] = [
   { href: "/finance", label: "Finance & Payroll", icon: "$" },
-  { href: "/finance/payroll", label: "Payroll", icon: "◷" },
 ];
 
 const schedulingNavItem: NavItem = {
@@ -80,8 +79,7 @@ export function Sidebar() {
   const business = useBusiness();
   const operationsNav = sharedNav.filter((item) => business.company === "RESORT" || item.href === "/maintenance");
   const businessEmployeeNav = employeeNav.filter((item) => business.company === "RESORT" || item.href !== "/career");
-  const businessFinanceNav = financeNav.map((item) => item.href === "/finance/payroll" && business.company === "GROOMING"
-    ? { ...item, href: "/finance/payroll/mobile-grooming" } : item);
+  const businessFinanceNav = financeNav;
   const pathname = usePathname();
   const { data: session } = useSession();
   const role = session?.user?.role;

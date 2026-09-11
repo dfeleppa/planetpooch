@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
+import { useBusiness } from "@/components/business/BusinessProvider";
 
 type FinanceSection = {
   href: string;
@@ -10,7 +11,7 @@ type FinanceSection = {
   isActive: (pathname: string) => boolean;
 };
 
-const financeSections: FinanceSection[] = [
+const baseFinanceSections: FinanceSection[] = [
   {
     href: "/finance/profit-loss",
     label: "Profit & Loss",
@@ -36,8 +37,28 @@ const financeSections: FinanceSection[] = [
 
 export function FinanceSubnav() {
   const pathname = usePathname();
-
-  if (pathname.startsWith("/finance/payroll")) return null;
+  const business = useBusiness();
+  const payrollHref = business.company === "RESORT"
+    ? "/finance/payroll"
+    : "/finance/payroll/mobile-grooming";
+  const financeSections: FinanceSection[] = [
+    ...baseFinanceSections,
+    {
+      href: payrollHref,
+      label: "Payroll",
+      isActive: (currentPathname) =>
+        currentPathname.startsWith("/finance/payroll") &&
+        !currentPathname.startsWith("/finance/payroll/commissions"),
+    },
+    ...(business.company === "RESORT"
+      ? [{
+          href: "/finance/payroll/commissions",
+          label: "Commissions",
+          isActive: (currentPathname: string) =>
+            currentPathname.startsWith("/finance/payroll/commissions"),
+        }]
+      : []),
+  ];
 
   return (
     <nav className="pp-tabs mb-6" aria-label="Finance sections">
