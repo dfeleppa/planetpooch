@@ -2,6 +2,7 @@ import Link from "next/link";
 import type { ReactNode } from "react";
 import type { AdminDashboardData } from "@/lib/admin-dashboard";
 import { formatWeekRange, toWeekParam } from "@/lib/week";
+import { DailyPriorityChecklist } from "./DailyPriorityChecklist";
 
 const money = (cents: number | null | undefined) => cents == null ? "—" :
   (cents / 100).toLocaleString("en-US", { style: "currency", currency: "USD" });
@@ -81,6 +82,8 @@ export function DashboardView({ data }: { data: AdminDashboardData }) {
           </form>
         </div>
       </header>
+
+      {resort && <DailyPriorityChecklist dateKey={periods.today.toISOString().slice(0, 10)} />}
 
       {data.unavailable.length > 0 && (
         <div role="status" className="rounded-lg border border-pp-warn-line bg-pp-warn-bg px-4 py-3 text-sm text-pp-warn">
