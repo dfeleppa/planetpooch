@@ -64,6 +64,15 @@ export async function proxy(req: NextRequest) {
   const canAccessAdmin = isManagerOrAbove;
   const canAccessFinance = role === "SUPER_ADMIN" || role === "ADMIN";
 
+  // The business overview contains finance data; managers and CMO titles
+  // alone do not grant access, including through a direct URL.
+  if (
+    (pathname === "/admin/dashboard" || pathname.startsWith("/admin/dashboard/")) &&
+    !canAccessFinance
+  ) {
+    return NextResponse.redirect(new URL("/dashboard", req.url));
+  }
+
   // Module management section: top-tier admins and CMO can edit.
   if (pathname.startsWith("/admin/modules") && !canEditModules) {
     return NextResponse.redirect(new URL("/admin", req.url));

@@ -242,6 +242,18 @@ export function Sidebar() {
         )}
 
         <nav className="mt-4 flex flex-1 flex-col gap-4 overflow-y-auto">
+          {isSuperAdmin && (
+            <Link
+              href="/admin/dashboard"
+              title={isCollapsed ? "Dashboard" : undefined}
+              aria-current={pathname === "/admin/dashboard" ? "page" : undefined}
+              className={navItemClass(pathname === "/admin/dashboard")}
+            >
+              {activeRail(pathname === "/admin/dashboard")}
+              <span className={cn("text-[14px] w-4 text-center flex-shrink-0", pathname === "/admin/dashboard" ? "text-pp-accent" : "text-pp-ink-3")} aria-hidden="true">▣</span>
+              {!isCollapsed && <span className="truncate">Dashboard</span>}
+            </Link>
+          )}
           {/* Operations */}
           {!isCollapsed ? (
             <div className="px-2.5 pt-1 text-[10px] font-medium uppercase tracking-[0.08em] text-pp-ink-4">Operations</div>
