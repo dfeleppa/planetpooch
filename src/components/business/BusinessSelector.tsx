@@ -30,8 +30,8 @@ export function BusinessSelector({ options }: { options: readonly Business[] }) 
   }
 
   return (
-    <header className="pp-business-header mb-6 flex flex-wrap items-center justify-between gap-3 border-b border-pp-line pb-4 print:hidden">
-      <div className="flex min-w-0 flex-wrap items-center gap-3">
+    <header className="pp-business-header mb-6 flex flex-col items-end gap-3 border-b border-pp-line pb-4 print:hidden">
+      <div className="flex min-w-0 max-w-full flex-wrap items-center justify-end gap-3">
         <label htmlFor="business-selector" className="text-xs font-medium uppercase tracking-wide text-pp-ink-3">Business</label>
         <select id="business-selector" value={business.company} disabled={switching || options.length < 2}
           onChange={(event) => void switchBusiness(event.target.value)}
@@ -40,7 +40,7 @@ export function BusinessSelector({ options }: { options: readonly Business[] }) 
         </select>
         {switching && <span role="status" className="text-sm text-pp-ink-3">Switching business…</span>}
       </div>
-      {error && <p role="alert" className="text-sm text-red-700">{error}</p>}
+      {error && <p role="alert" className="text-right text-sm text-red-700">{error}</p>}
     </header>
   );
 }
