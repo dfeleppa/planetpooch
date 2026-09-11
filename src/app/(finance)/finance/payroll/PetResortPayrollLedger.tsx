@@ -21,8 +21,6 @@ export type PetResortPayrollRunRow = {
   checkDate: string;
   amount: string;
   payPeriod: string;
-  schedule: string;
-  payRunAt: string;
 };
 
 const easternYearFormatter = new Intl.DateTimeFormat("en-US", {
@@ -42,16 +40,6 @@ const checkDateFormatter = new Intl.DateTimeFormat("en-US", {
   year: "numeric",
 });
 
-const payRunFormatter = new Intl.DateTimeFormat("en-US", {
-  timeZone: "America/New_York",
-  month: "short",
-  day: "numeric",
-  year: "numeric",
-  hour: "numeric",
-  minute: "2-digit",
-  timeZoneName: "short",
-});
-
 const moneyFormatter = new Intl.NumberFormat("en-US", {
   style: "currency",
   currency: "USD",
@@ -66,8 +54,6 @@ const initialEntry = {
   amount: "",
   payPeriodStart: "",
   payPeriodEnd: "",
-  schedule: "Weekly",
-  payRunAt: "",
 };
 
 function quarterForDate(date: string): number {
@@ -99,13 +85,11 @@ export function PetResortPayrollLedger({ rows }: { rows: PetResortPayrollRunRow[
     setError("");
 
     try {
-      const parsedPayRunAt = new Date(entry.payRunAt);
-      if (Number.isNaN(parsedPayRunAt.getTime())) {
-        setError("Enter a valid pay-run date and time.");
-        return;
-      }
-      const payRunAt = parsedPayRunAt.toISOString();
-      const result = await createPetResortPayrollRun({ ...entry, payRunAt });
+      const result = await createPetResortPayrollRun({
+        ...entry,
+        schedule: "Weekly",
+        payRunAt: new Date().toISOString(),
+      });
       if (!result.ok) {
         setError(result.error);
         return;
@@ -161,8 +145,6 @@ export function PetResortPayrollLedger({ rows }: { rows: PetResortPayrollRunRow[
                 <TableHeader>Check date</TableHeader>
                 <TableHeader className="text-right">Amount</TableHeader>
                 <TableHeader>Pay period</TableHeader>
-                <TableHeader>Schedule</TableHeader>
-                <TableHeader>Pay run date and time (ET)</TableHeader>
                 <TableHeader>Action</TableHeader>
               </TableRow>
             </TableHead>
@@ -245,31 +227,6 @@ export function PetResortPayrollLedger({ rows }: { rows: PetResortPayrollRunRow[
                   </div>
                 </TableCell>
                 <TableCell>
-                  <label htmlFor="new-payroll-schedule" className="sr-only">
-                    Schedule
-                  </label>
-                  <input
-                    id="new-payroll-schedule"
-                    value={entry.schedule}
-                    onChange={(event) => setEntry({ ...entry, schedule: event.target.value })}
-                    className={inputClassName}
-                    required
-                  />
-                </TableCell>
-                <TableCell>
-                  <label htmlFor="new-pay-run-at" className="sr-only">
-                    Pay run date and time (ET)
-                  </label>
-                  <input
-                    id="new-pay-run-at"
-                    type="datetime-local"
-                    value={entry.payRunAt}
-                    onChange={(event) => setEntry({ ...entry, payRunAt: event.target.value })}
-                    className="w-full min-w-52 rounded-lg border border-gray-300 bg-white px-2 py-2 text-sm text-gray-900 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                    required
-                  />
-                </TableCell>
-                <TableCell>
                   <Button type="submit" size="sm" disabled={saving} className="whitespace-nowrap">
                     {saving ? "Saving…" : "Add payroll"}
                   </Button>
@@ -277,7 +234,7 @@ export function PetResortPayrollLedger({ rows }: { rows: PetResortPayrollRunRow[
               </TableRow>
               {visibleRows.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={7} className="py-10 text-center text-gray-500">
+                  <TableCell colSpan={5} className="py-10 text-center text-gray-500">
                     No Pet Resort payroll runs for Q{quarter} {year}.
                   </TableCell>
                 </TableRow>
@@ -292,10 +249,6 @@ export function PetResortPayrollLedger({ rows }: { rows: PetResortPayrollRunRow[
                       {moneyFormatter.format(Number(row.amount))}
                     </TableCell>
                     <TableCell>{row.payPeriod}</TableCell>
-                    <TableCell>{row.schedule}</TableCell>
-                    <TableCell className="whitespace-nowrap">
-                      {payRunFormatter.format(new Date(row.payRunAt))}
-                    </TableCell>
                     <TableCell />
                   </TableRow>
                 ))

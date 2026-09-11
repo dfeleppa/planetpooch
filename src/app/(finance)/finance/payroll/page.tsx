@@ -21,8 +21,6 @@ export default async function PetResortPayrollPage() {
     checkDate: run.checkDate.toISOString().slice(0, 10),
     amount: run.amount.toString(),
     payPeriod: run.payPeriod,
-    schedule: run.schedule,
-    payRunAt: run.payRunAt.toISOString(),
   }));
 
   return (
