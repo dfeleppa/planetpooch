@@ -89,7 +89,9 @@ function unauthorized() {
   return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 }
 
-async function canAccessPayroll() {
+async function canAccessPayroll(req: NextRequest) {
+  const cronSecret = process.env.CRON_SECRET;
+  if (cronSecret && req.headers.get("authorization") === `Bearer ${cronSecret}`) return true;
   const session = await getSession();
   return !!session?.user && isSuperAdmin((session.user as { role?: string }).role);
 }
@@ -663,7 +665,7 @@ async function loadWeeklyMobileGroomingTotals(
 }
 
 export async function GET(req: NextRequest) {
-  if (!(await canAccessPayroll())) return unauthorized();
+  if (!(await canAccessPayroll(req))) return unauthorized();
 
   const business = cleanPayrollBusiness(req.nextUrl.searchParams.get("business"));
   const savedWeeks = await prisma.financePayrollWeek.findMany({
@@ -719,7 +721,7 @@ export async function GET(req: NextRequest) {
 }
 
 async function savePayroll(req: NextRequest) {
-  if (!(await canAccessPayroll())) return unauthorized();
+  if (!(await canAccessPayroll(req))) return unauthorized();
 
   const body = await req.json();
   const payload = (body?.payrollUpload ?? body) as Record<string, unknown>;
@@ -729,8 +731,11 @@ async function savePayroll(req: NextRequest) {
     return NextResponse.json({ error: weekDates.error }, { status: 400 });
   }
 
-  const isMoegoImport = payload.source === "moego-clock-inout" && business === "pet-resort";
-  const automationReview = isMoegoImport
+  const isReviewedMoegoImport = payload.source === "moego-clock-inout" && business === "pet-resort";
+  const isAutomatedMobileImport =
+    payload.source === "moego-mobile-grooming-cron" && business === "mobile-grooming";
+  const isMoegoImport = isReviewedMoegoImport || isAutomatedMobileImport;
+  const automationReview = isReviewedMoegoImport
     ? validateMoegoClockInOutUpload(payload, weekDates.weekStart.toISOString().slice(0, 10), weekDates.weekEnd.toISOString().slice(0, 10))
     : null;
   const reviewAcknowledged = payload.reviewAcknowledged === true;
@@ -799,7 +804,7 @@ async function savePayroll(req: NextRequest) {
           ? {
               automationStatus: reviewAcknowledged ? "reviewed" : "imported",
               reviewReasons: reviewAcknowledged ? automationReview?.reasons ?? [] : [],
-              sourceRowCount: automationReview?.sourceRowCount ?? null,
+              sourceRowCount: automationReview?.sourceRowCount ?? normalizedMobileEntries.entries.length,
               sourceGeneratedAt: sourceGeneratedAt(payload.generatedAt),
             }
           : {
@@ -817,7 +822,7 @@ async function savePayroll(req: NextRequest) {
           ? reviewAcknowledged ? "reviewed" : "imported"
           : "manual",
         reviewReasons: reviewAcknowledged ? automationReview?.reasons ?? [] : [],
-        sourceRowCount: automationReview?.sourceRowCount ?? null,
+        sourceRowCount: automationReview?.sourceRowCount ?? normalizedMobileEntries.entries.length,
         sourceGeneratedAt: sourceGeneratedAt(payload.generatedAt),
       },
     });
@@ -881,7 +886,7 @@ async function savePayroll(req: NextRequest) {
 }
 
 export async function PATCH(req: NextRequest) {
-  if (!(await canAccessPayroll())) return unauthorized();
+  if (!(await canAccessPayroll(req))) return unauthorized();
 
   const body = await req.json();
   const payload = (body?.payrollUpload ?? body) as Record<string, unknown>;

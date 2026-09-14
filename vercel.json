@@ -15,6 +15,14 @@
     {
       "path": "/api/finance/payroll/cron",
       "schedule": "0 13 * * 1"
+    },
+    {
+      "path": "/api/finance/payroll/mobile-grooming/cron",
+      "schedule": "0 5 * * 6"
+    },
+    {
+      "path": "/api/finance/payroll/mobile-grooming/cron",
+      "schedule": "0 6 * * 6"
     }
   ]
 }

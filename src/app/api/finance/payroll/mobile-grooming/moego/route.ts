@@ -50,7 +50,9 @@ function unauthorized() {
   return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 }
 
-async function canAccessPayroll() {
+async function canAccessPayroll(req: NextRequest) {
+  const cronSecret = process.env.CRON_SECRET;
+  if (cronSecret && req.headers.get("authorization") === `Bearer ${cronSecret}`) return true;
   const session = await getSession();
   return !!session?.user && isSuperAdmin((session.user as { role?: string }).role);
 }
@@ -438,7 +440,7 @@ function totalsFor(entries: MobilePayrollImportEntry[]) {
 }
 
 export async function POST(req: NextRequest) {
-  if (!(await canAccessPayroll())) return unauthorized();
+  if (!(await canAccessPayroll(req))) return unauthorized();
 
   let body: Record<string, unknown>;
   try {
