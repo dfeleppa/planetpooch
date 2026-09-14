@@ -102,45 +102,40 @@ export function WeeklyRecurringTasks({ dateKey }: { dateKey: string }) {
         </form>
       )}
 
-      {tasks.length === 0 ? (
-        <div className="px-5 py-8 text-center">
-          <p className="text-sm font-medium text-pp-ink">No weekly tasks yet</p>
-          <p className="mt-1 text-sm text-pp-ink-3">Add recurring work, then assign it to the day it should happen.</p>
-        </div>
-      ) : (
-        <div className="grid gap-px bg-pp-line sm:grid-cols-2 xl:grid-cols-4">
+      <div className="overflow-x-auto">
+        <div className="grid min-w-[70rem] grid-cols-7 gap-px bg-pp-line">
           {DAYS.map((dayName, dayIndex) => {
             const dayTasks = tasks.filter((task) => task.day === dayName);
             return (
-              <div key={dayName} className="min-h-32 bg-pp-surface p-4">
-                <div className="mb-3 flex items-baseline justify-between gap-2">
-                  <h3 className="text-sm font-semibold text-pp-ink">{dayName}</h3>
-                  <span className="text-xs text-pp-ink-4">{friendlyDate(dateKey, dayIndex)}</span>
-                </div>
-                {dayTasks.length === 0 ? <p className="text-xs text-pp-ink-4">Nothing scheduled</p> : (
-                  <ul className="space-y-2">
-                    {dayTasks.map((task) => (
-                      <li key={task.id} className="rounded-lg border border-pp-line bg-pp-surface-2 p-3">
-                        <label className="flex cursor-pointer items-start gap-2">
-                          <input type="checkbox" checked={Boolean(completed[task.id])} onChange={() => toggleTask(task.id)} className="mt-0.5 h-4 w-4 shrink-0 accent-pp-accent" />
-                          <span className={`min-w-0 flex-1 break-words text-sm leading-5 ${completed[task.id] ? "text-pp-ink-4 line-through" : "text-pp-ink"}`}>{task.title}</span>
-                        </label>
-                        <div className="mt-2 flex items-center gap-2 pl-6">
-                          <label className="sr-only" htmlFor={`move-${task.id}`}>Move {task.title}</label>
-                          <select id={`move-${task.id}`} aria-label={`Move ${task.title} to another day`} value={task.day} onChange={(event) => moveTask(task.id, event.target.value as Day)} className="min-w-0 flex-1 rounded border border-pp-line bg-pp-surface px-2 py-1 text-xs text-pp-ink-3">
-                            {DAYS.map((item) => <option key={item}>{item}</option>)}
-                          </select>
-                          <button type="button" onClick={() => removeTask(task.id)} aria-label={`Remove ${task.title}`} className="rounded px-2 py-1 text-xs text-pp-ink-4 hover:bg-pp-warn-bg hover:text-pp-warn">Remove</button>
-                        </div>
-                      </li>
-                    ))}
-                  </ul>
-                )}
+              <div key={dayName} className="min-h-40 bg-pp-surface p-4">
+                  <div className="mb-3 flex items-baseline justify-between gap-2">
+                    <h3 className="text-sm font-semibold text-pp-ink">{dayName}</h3>
+                    <span className="text-xs text-pp-ink-4">{friendlyDate(dateKey, dayIndex)}</span>
+                  </div>
+                  {dayTasks.length === 0 ? <p className="text-xs text-pp-ink-4">Nothing scheduled</p> : (
+                    <ul className="space-y-2">
+                      {dayTasks.map((task) => (
+                        <li key={task.id} className="rounded-lg border border-pp-line bg-pp-surface-2 p-3">
+                          <label className="flex cursor-pointer items-start gap-2">
+                            <input type="checkbox" checked={Boolean(completed[task.id])} onChange={() => toggleTask(task.id)} className="mt-0.5 h-4 w-4 shrink-0 accent-pp-accent" />
+                            <span className={`min-w-0 flex-1 break-words text-sm leading-5 ${completed[task.id] ? "text-pp-ink-4 line-through" : "text-pp-ink"}`}>{task.title}</span>
+                          </label>
+                          <div className="mt-2 flex items-center gap-2 pl-6">
+                            <label className="sr-only" htmlFor={`move-${task.id}`}>Move {task.title}</label>
+                            <select id={`move-${task.id}`} aria-label={`Move ${task.title} to another day`} value={task.day} onChange={(event) => moveTask(task.id, event.target.value as Day)} className="min-w-0 flex-1 rounded border border-pp-line bg-pp-surface px-2 py-1 text-xs text-pp-ink-3">
+                              {DAYS.map((item) => <option key={item}>{item}</option>)}
+                            </select>
+                            <button type="button" onClick={() => removeTask(task.id)} aria-label={`Remove ${task.title}`} className="rounded px-2 py-1 text-xs text-pp-ink-4 hover:bg-pp-warn-bg hover:text-pp-warn">Remove</button>
+                          </div>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
               </div>
             );
           })}
         </div>
-      )}
+      </div>
     </section>
   );
 }
