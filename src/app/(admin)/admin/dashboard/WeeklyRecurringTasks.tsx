@@ -155,7 +155,11 @@ export function WeeklyRecurringTasks({ dateKey }: { dateKey: string }) {
                                     <path d="m11.5 5.5 3 3" />
                                   </svg>
                                 </button>
-                                <button type="button" onClick={() => removeTask(task.id)} aria-label={`Remove ${task.title}`} className="rounded px-2 py-1 text-xs text-pp-ink-4 hover:bg-pp-warn-bg hover:text-pp-warn">Remove</button>
+                                <button type="button" onClick={() => removeTask(task.id)} aria-label={`Remove ${task.title}`} title="Remove task" className="rounded p-1.5 text-pp-ink-4 hover:bg-pp-warn-bg hover:text-pp-warn">
+                                  <svg aria-hidden="true" viewBox="0 0 20 20" fill="none" className="h-4 w-4" stroke="currentColor" strokeWidth="1.7">
+                                    <path d="m5 5 10 10M15 5 5 15" />
+                                  </svg>
+                                </button>
                               </div>
                             </>
                           )}
