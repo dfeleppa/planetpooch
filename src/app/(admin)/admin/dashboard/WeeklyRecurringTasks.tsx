@@ -29,6 +29,9 @@ export function WeeklyRecurringTasks({ dateKey }: { dateKey: string }) {
   const [showForm, setShowForm] = useState(false);
   const [title, setTitle] = useState("");
   const [day, setDay] = useState<Day>(DAYS[new Date(`${dateKey}T12:00:00`).getDay()]);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editTitle, setEditTitle] = useState("");
+  const [editDay, setEditDay] = useState<Day>("Sunday");
 
   useEffect(() => {
     try {
@@ -66,8 +69,18 @@ export function WeeklyRecurringTasks({ dateKey }: { dateKey: string }) {
     });
   }
 
-  function moveTask(id: string, nextDay: Day) {
-    saveTasks(tasks.map((task) => task.id === id ? { ...task, day: nextDay } : task));
+  function startEditing(task: WeeklyTask) {
+    setEditingId(task.id);
+    setEditTitle(task.title);
+    setEditDay(task.day);
+  }
+
+  function submitEdit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const cleanTitle = editTitle.trim();
+    if (!editingId || !cleanTitle) return;
+    saveTasks(tasks.map((task) => task.id === editingId ? { ...task, title: cleanTitle, day: editDay } : task));
+    setEditingId(null);
   }
 
   function removeTask(id: string) {
@@ -116,17 +129,36 @@ export function WeeklyRecurringTasks({ dateKey }: { dateKey: string }) {
                     <ul className="space-y-2">
                       {dayTasks.map((task) => (
                         <li key={task.id} className="rounded-lg border border-pp-line bg-pp-surface-2 p-3">
-                          <label className="flex cursor-pointer items-start gap-2">
-                            <input type="checkbox" checked={Boolean(completed[task.id])} onChange={() => toggleTask(task.id)} className="mt-0.5 h-4 w-4 shrink-0 accent-pp-accent" />
-                            <span className={`min-w-0 flex-1 break-words text-sm leading-5 ${completed[task.id] ? "text-pp-ink-4 line-through" : "text-pp-ink"}`}>{task.title}</span>
-                          </label>
-                          <div className="mt-2 flex items-center gap-2 pl-6">
-                            <label className="sr-only" htmlFor={`move-${task.id}`}>Move {task.title}</label>
-                            <select id={`move-${task.id}`} aria-label={`Move ${task.title} to another day`} value={task.day} onChange={(event) => moveTask(task.id, event.target.value as Day)} className="min-w-0 flex-1 rounded border border-pp-line bg-pp-surface px-2 py-1 text-xs text-pp-ink-3">
-                              {DAYS.map((item) => <option key={item}>{item}</option>)}
-                            </select>
-                            <button type="button" onClick={() => removeTask(task.id)} aria-label={`Remove ${task.title}`} className="rounded px-2 py-1 text-xs text-pp-ink-4 hover:bg-pp-warn-bg hover:text-pp-warn">Remove</button>
-                          </div>
+                          {editingId === task.id ? (
+                            <form onSubmit={submitEdit} className="space-y-2">
+                              <label className="sr-only" htmlFor={`edit-title-${task.id}`}>Task name</label>
+                              <input id={`edit-title-${task.id}`} autoFocus value={editTitle} onChange={(event) => setEditTitle(event.target.value)} className="w-full rounded border border-pp-line bg-pp-surface px-2 py-1.5 text-sm text-pp-ink outline-none focus:border-pp-accent" />
+                              <label className="sr-only" htmlFor={`edit-day-${task.id}`}>Day</label>
+                              <select id={`edit-day-${task.id}`} value={editDay} onChange={(event) => setEditDay(event.target.value as Day)} className="w-full rounded border border-pp-line bg-pp-surface px-2 py-1.5 text-xs text-pp-ink-2">
+                                {DAYS.map((item) => <option key={item}>{item}</option>)}
+                              </select>
+                              <div className="flex justify-end gap-2">
+                                <button type="button" onClick={() => setEditingId(null)} className="rounded px-2 py-1 text-xs text-pp-ink-3 hover:bg-pp-bg-2">Cancel</button>
+                                <button type="submit" className="rounded bg-pp-accent px-2 py-1 text-xs font-medium text-white hover:opacity-90">Save</button>
+                              </div>
+                            </form>
+                          ) : (
+                            <>
+                              <label className="flex cursor-pointer items-start gap-2">
+                                <input type="checkbox" checked={Boolean(completed[task.id])} onChange={() => toggleTask(task.id)} className="mt-0.5 h-4 w-4 shrink-0 accent-pp-accent" />
+                                <span className={`min-w-0 flex-1 break-words text-sm leading-5 ${completed[task.id] ? "text-pp-ink-4 line-through" : "text-pp-ink"}`}>{task.title}</span>
+                              </label>
+                              <div className="mt-2 flex items-center justify-end gap-1">
+                                <button type="button" onClick={() => startEditing(task)} aria-label={`Edit ${task.title}`} title="Edit task" className="rounded p-1.5 text-pp-ink-4 hover:bg-pp-bg-2 hover:text-pp-ink">
+                                  <svg aria-hidden="true" viewBox="0 0 20 20" fill="none" className="h-4 w-4" stroke="currentColor" strokeWidth="1.7">
+                                    <path d="M4 16h3l8.5-8.5a2.12 2.12 0 0 0-3-3L4 13v3Z" />
+                                    <path d="m11.5 5.5 3 3" />
+                                  </svg>
+                                </button>
+                                <button type="button" onClick={() => removeTask(task.id)} aria-label={`Remove ${task.title}`} className="rounded px-2 py-1 text-xs text-pp-ink-4 hover:bg-pp-warn-bg hover:text-pp-warn">Remove</button>
+                              </div>
+                            </>
+                          )}
                         </li>
                       ))}
                     </ul>
