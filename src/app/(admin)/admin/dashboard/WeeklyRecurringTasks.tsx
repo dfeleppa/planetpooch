@@ -58,8 +58,8 @@ function TaskCard({ task, checked, editing, editTitle, editDay, onToggle, onEdit
       ) : (
         <>
           <div {...listeners} {...attributes} className="cursor-grab touch-none active:cursor-grabbing" title="Drag to another day">
-            <label className="flex cursor-pointer items-start gap-2" onPointerDown={(event) => event.stopPropagation()}>
-              <input type="checkbox" checked={checked} onChange={onToggle} className="mt-0.5 h-4 w-4 shrink-0 accent-pp-accent" />
+            <label className="flex cursor-grab items-start gap-2 active:cursor-grabbing">
+              <input type="checkbox" checked={checked} onChange={onToggle} onPointerDown={(event) => event.stopPropagation()} className="mt-0.5 h-4 w-4 shrink-0 cursor-pointer accent-pp-accent" />
               <span className={`min-w-0 flex-1 break-words text-sm leading-5 ${checked ? "text-pp-ink-4 line-through" : "text-pp-ink"}`}>{task.title}</span>
             </label>
           </div>
