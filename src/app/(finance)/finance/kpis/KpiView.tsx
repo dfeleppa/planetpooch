@@ -531,6 +531,9 @@ export function KpiView({
   const [draft, setDraft] = useState<Record<string, KpiCell>>({});
   const [saving, setSaving] = useState(false);
   const [importingMoego, setImportingMoego] = useState(false);
+  const [importingPetResortRange, setImportingPetResortRange] = useState<
+    "quarter" | "last-two-weeks" | null
+  >(null);
   const [importMessage, setImportMessage] = useState<string | null>(null);
   const [showSecondaryKpis, setShowSecondaryKpis] = useState(false);
 
@@ -597,11 +600,11 @@ export function KpiView({
     }
   }
 
-  async function requestMoegoImport(targetSegment: KpiSegment) {
+  async function requestMoegoImport(targetSegment: KpiSegment, weekStart = week) {
     const res = await fetch(MOEGO_IMPORT_ENDPOINTS[targetSegment], {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ weekStart: week }),
+      body: JSON.stringify({ weekStart }),
     });
     const json = (await res.json().catch(() => ({}))) as {
       error?: string;
@@ -674,36 +677,75 @@ export function KpiView({
     }
   }
 
-  async function importPetResortMoegoActuals() {
+  async function importPetResortMoegoActuals(
+    range: "quarter" | "last-two-weeks"
+  ) {
+    const loadedQuarterWeeks = (
+      quarterlySegmentsData?.[PET_RESORT_SEGMENTS[0].key] ?? []
+    ).map((quarterWeek) => quarterWeek.week);
+    const quarterFirstWeek = fromWeekParam(
+      firstSundayInQuarter(quarterSummary.year, quarterSummary.quarter)
+    );
+    const quarterWeeks = loadedQuarterWeeks.length
+      ? loadedQuarterWeeks
+      : Array.from({ length: 13 }, (_, index) => {
+          const weekStart = new Date(quarterFirstWeek);
+          weekStart.setUTCDate(weekStart.getUTCDate() + index * 7);
+          return toWeekParam(weekStart);
+        });
+    const currentWeek = new Date();
+    currentWeek.setUTCHours(0, 0, 0, 0);
+    currentWeek.setUTCDate(currentWeek.getUTCDate() - currentWeek.getUTCDay());
+    const completedQuarterWeeks = quarterWeeks.filter(
+      (quarterWeek) => fromWeekParam(quarterWeek).getTime() < currentWeek.getTime()
+    );
+    const weeksToImport =
+      range === "quarter" ? completedQuarterWeeks : completedQuarterWeeks.slice(-2);
+
+    if (weeksToImport.length === 0) {
+      setImportMessage("There are no completed weeks to import in the selected quarter.");
+      return;
+    }
+
     setImportingMoego(true);
+    setImportingPetResortRange(range);
     setImportMessage(null);
     const imported: string[] = [];
     const failed: string[] = [];
     try {
-      for (const segDef of PET_RESORT_SEGMENTS) {
-        try {
-          const { res, json } = await requestMoegoImport(segDef.key);
-          if (res.ok && json.report) {
-            imported.push(segDef.label);
-          } else {
-            failed.push(`${segDef.label}: ${json.error ?? "Import failed"}`);
+      for (const weekStart of weeksToImport) {
+        for (const segDef of PET_RESORT_SEGMENTS) {
+          try {
+            const { res, json } = await requestMoegoImport(segDef.key, weekStart);
+            if (res.ok && json.report) {
+              imported.push(`${segDef.label} (${weekStart})`);
+            } else {
+              failed.push(
+                `${segDef.label} (${weekStart}): ${json.error ?? "Import failed"}`
+              );
+            }
+          } catch (error) {
+            failed.push(
+              `${segDef.label} (${weekStart}): ${
+                error instanceof Error ? error.message : "Import failed"
+              }`
+            );
           }
-        } catch (error) {
-          failed.push(
-            `${segDef.label}: ${error instanceof Error ? error.message : "Import failed"}`
-          );
         }
       }
 
       const importedAt = formatImportedAt();
       const successMessage = imported.length
-        ? `Imported MoeGo actuals for ${imported.join(", ")}.`
+        ? `Imported Pet Resort MoeGo actuals for ${weeksToImport.length} ${
+            weeksToImport.length === 1 ? "week" : "weeks"
+          } (${imported.length} segment imports).`
         : "No MoeGo actuals were imported.";
       const failureMessage = failed.length ? ` Failed: ${failed.join("; ")}.` : "";
       setImportMessage(withImportedAt(`${successMessage}${failureMessage}`, importedAt));
       router.refresh();
     } finally {
       setImportingMoego(false);
+      setImportingPetResortRange(null);
     }
   }
 
@@ -875,10 +917,22 @@ export function KpiView({
               <Button
                 variant="secondary"
                 className="whitespace-nowrap"
-                onClick={importPetResortMoegoActuals}
+                onClick={() => importPetResortMoegoActuals("quarter")}
                 disabled={importingMoego}
               >
-                {importingMoego ? "Importing…" : "Import Pet Resort"}
+                {importingPetResortRange === "quarter"
+                  ? "Importing Quarter…"
+                  : "Import Entire Quarter"}
+              </Button>
+              <Button
+                variant="secondary"
+                className="whitespace-nowrap"
+                onClick={() => importPetResortMoegoActuals("last-two-weeks")}
+                disabled={importingMoego}
+              >
+                {importingPetResortRange === "last-two-weeks"
+                  ? "Importing 2 Weeks…"
+                  : "Import Last 2 Weeks"}
               </Button>
               <Button variant="secondary" className="whitespace-nowrap" onClick={exportCsv}>
                 Export CSV
