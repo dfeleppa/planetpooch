@@ -6,6 +6,11 @@ import {
   GhlApiError,
   GhlConfigError,
 } from "@/lib/ghl/client";
+import {
+  ATTRIBUTION_SPEND_CENTS,
+  getAttributedRevenueCents,
+  isAttributionPeriod,
+} from "@/lib/marketing/attribution-2026";
 
 export const maxDuration = 120;
 
@@ -238,6 +243,30 @@ export async function GET(req: NextRequest) {
   const from = parseDate(sp.get("from")) ?? defaultFrom;
   const to = parseDate(sp.get("to")) ?? now;
   const toExclusive = addDays(to, 1);
+  const attributedRevenue = getAttributedRevenueCents(from, to);
+  const fullAttributionPeriod = isAttributionPeriod(from, to);
+
+  if (fullAttributionPeriod) {
+    return NextResponse.json({
+      metric: {
+        totalRevenue: Object.values(attributedRevenue).reduce((sum, value) => sum + value, 0),
+        totalProfit: null,
+        totalCustomers: null,
+        totalAdSpend: Object.values(ATTRIBUTION_SPEND_CENTS).reduce(
+          (sum, value) => sum + value,
+          0,
+        ),
+        totalConversions: null,
+        metaAdSpend: ATTRIBUTION_SPEND_CENTS.meta,
+        metaRevenue: attributedRevenue.meta,
+        googleAdSpend: ATTRIBUTION_SPEND_CENTS["google-ads"],
+        googleRevenue: attributedRevenue["google-ads"],
+        googleLsaAdSpend: ATTRIBUTION_SPEND_CENTS["google-lsa"],
+        googleLsaRevenue: attributedRevenue["google-lsa"],
+        attributionThrough: "2026-09-05",
+      },
+    });
+  }
 
   let agg: AggData;
   try {
@@ -304,9 +333,12 @@ export async function GET(req: NextRequest) {
       totalAdSpend: monthSummary.metaSpendCents,
       totalConversions: monthSummary.totalConversions,
       metaAdSpend: monthSummary.metaSpendCents,
-      metaRevenue: monthSummary.metaRevenueCents,
+      metaRevenue: attributedRevenue.meta,
       googleAdSpend: null,
-      googleRevenue: null,
+      googleRevenue: attributedRevenue["google-ads"],
+      googleLsaAdSpend: null,
+      googleLsaRevenue: attributedRevenue["google-lsa"],
+      attributionThrough: "2026-09-05",
       statement: {
         ...statement,
         ytdRevenue: ytdStatement.income,

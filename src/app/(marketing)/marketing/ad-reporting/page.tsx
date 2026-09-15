@@ -5,6 +5,7 @@ import { AdReportingDashboard } from "./AdReportingDashboard";
 type SearchParams = {
   month?: string;
   year?: string;
+  range?: string;
   source?: string;
 };
 
@@ -23,6 +24,7 @@ export default async function AdReportingPage({ searchParams }: { searchParams: 
         business={business.key}
         month={query.month}
         year={query.year}
+        range={query.range}
         source={query.source}
       />
     </div>
