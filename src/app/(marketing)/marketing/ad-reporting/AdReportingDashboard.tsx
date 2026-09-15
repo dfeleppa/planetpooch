@@ -8,6 +8,7 @@ import {
   FacebookCampaignReportTable,
   GoogleCampaignReportTable,
 } from "./CampaignReportTables";
+import { GoogleLsaLeadReportTable } from "./GoogleLsaLeadReportTable";
 
 const BUSINESSES = [
   { value: "", label: "All Businesses" },
@@ -319,9 +320,7 @@ export function AdReportingDashboard({
         <GoogleCampaignReportTable business={business} from={from} to={to} />
       )}
       {selectedSource === "google-lsa" && (
-        <Card className="mt-6 rounded-lg p-8 text-center text-sm text-gray-500 shadow-none">
-          No Google LSA campaign report is available for this period.
-        </Card>
+        <GoogleLsaLeadReportTable business={business} from={from} to={to} />
       )}
 
       <p className="mt-6 text-xs text-gray-400">

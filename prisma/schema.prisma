@@ -1088,6 +1088,32 @@ model FinanceGoogleCampaignReportRow {
   @@index([campaignId], map: "FinanceGoogleCampaignReport_campaign_id_idx")
 }
 
+/// Google Local Services Ads lead rows imported for marketing reporting.
+/// Access is restricted to the authenticated server-side reporting API.
+model FinanceGoogleLsaLeadReportRow {
+  id           String   @id @default(cuid())
+  business     String
+  periodStart  DateTime @db.Date
+  periodEnd    DateTime @db.Date
+  rowOrder     Int      @default(0)
+  customer     String?
+  jobType      String?
+  searchIntent String?
+  location     String?
+  leadType     String?
+  chargeStatus String?
+  leadReceived String?
+  lastActivity String?
+  totalPaidCents Int?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([business, periodStart, periodEnd, rowOrder], map: "FinanceGoogleLsaLeadReport_business_period_row_order_key")
+  @@index([business, periodStart, periodEnd], map: "FinanceGoogleLsaLeadReport_business_period_idx")
+  @@index([customer], map: "FinanceGoogleLsaLeadReport_customer_idx")
+}
+
 enum PayrollCategory {
   TRAINING
   GROOMING
