@@ -6,9 +6,14 @@ import { cn } from "@/lib/utils";
 
 const sections = [
   {
+    href: "/marketing/ad-reporting",
+    label: "Reporting",
+    active: (path: string) => path.startsWith("/marketing/ad-reporting"),
+  },
+  {
     href: "/marketing/evaluate",
     label: "Evaluate Ads",
-    active: (path: string) => path === "/marketing" || path.startsWith("/marketing/evaluate") || path.startsWith("/marketing/performance") || path.startsWith("/marketing/ad-reporting"),
+    active: (path: string) => path === "/marketing" || path.startsWith("/marketing/evaluate") || path.startsWith("/marketing/performance"),
   },
   {
     href: "/marketing/create",
