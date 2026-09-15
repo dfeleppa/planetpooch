@@ -132,10 +132,12 @@ export function AdReportingDashboard({
   business,
   month,
   year,
+  source,
 }: {
   business: string;
   month?: string;
   year?: string;
+  source?: string;
 }) {
   const router = useRouter();
   const pathname = usePathname();
@@ -207,6 +209,10 @@ export function AdReportingDashboard({
     BUSINESSES.find((b) => b.value === business)?.label ?? "All Businesses";
 
   const kpis = computeKPIs(metric);
+  const selectedSource =
+    source === "meta" || source === "google-ads" || source === "google-lsa"
+      ? source
+      : "all";
 
   return (
     <div className={cn(isPending && "opacity-60 pointer-events-none")}>
@@ -306,8 +312,17 @@ export function AdReportingDashboard({
         />
       </div>
 
-      <FacebookCampaignReportTable business={business} from={from} to={to} />
-      <GoogleCampaignReportTable business={business} from={from} to={to} />
+      {(selectedSource === "all" || selectedSource === "meta") && (
+        <FacebookCampaignReportTable business={business} from={from} to={to} />
+      )}
+      {(selectedSource === "all" || selectedSource === "google-ads") && (
+        <GoogleCampaignReportTable business={business} from={from} to={to} />
+      )}
+      {selectedSource === "google-lsa" && (
+        <Card className="mt-6 rounded-lg p-8 text-center text-sm text-gray-500 shadow-none">
+          No Google LSA campaign report is available for this period.
+        </Card>
+      )}
 
       <p className="mt-6 text-xs text-gray-400">
         Showing {businessLabel} &middot; {rangeLabel}
