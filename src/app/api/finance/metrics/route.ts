@@ -9,6 +9,12 @@ import {
   sumBusinessFinanceYtd,
   type FinanceYtdTotals,
 } from "@/lib/finance-ytd";
+import {
+  fetchWeeklyPetResortRevenue,
+  PET_RESORT_WEEKLY_EXPENSE_CENTS,
+} from "@/lib/moego/pet-resort-weekly-finance";
+
+export const maxDuration = 120;
 
 function isSuperAdmin(role: string) {
   return role === Role.SUPER_ADMIN || role === Role.ADMIN;
@@ -38,6 +44,33 @@ function metricNetProfit(metric: {
     (metric.nonPayrollExpenses ?? 0) -
     (metric.payrollExpenses ?? 0)
   );
+}
+
+function replaceSelectedWeekInYtd(
+  totals: FinanceYtdTotals | null,
+  savedMetric: {
+    totalRevenue: number | null;
+    totalProfit: number | null;
+    nonPayrollExpenses: number | null;
+    payrollExpenses: number | null;
+  } | null,
+  effectiveMetric: {
+    totalRevenue: number | null;
+    totalProfit: number | null;
+    nonPayrollExpenses: number | null;
+    payrollExpenses: number | null;
+  }
+): FinanceYtdTotals | null {
+  if (!totals) return null;
+  const savedProfit = savedMetric ? metricNetProfit(savedMetric) : 0;
+  return {
+    totalRevenue:
+      (totals.totalRevenue ?? 0) -
+      (savedMetric?.totalRevenue ?? 0) +
+      (effectiveMetric.totalRevenue ?? 0),
+    totalProfit:
+      (totals.totalProfit ?? 0) - savedProfit + metricNetProfit(effectiveMetric),
+  };
 }
 
 async function calculateWeeklyFinanceYtd({
@@ -130,7 +163,7 @@ export async function GET(req: NextRequest) {
   const periodStart = new Date(from);
   const periodEnd = new Date(to);
 
-  const metric = await prisma.financeMetric.findUnique({
+  const savedMetric = await prisma.financeMetric.findUnique({
     where: {
       business_periodStart_periodEnd: {
         business,
@@ -140,18 +173,71 @@ export async function GET(req: NextRequest) {
     },
   });
 
-  if (sp.get("includeYtd") !== "1") {
-    return NextResponse.json({ metric });
+  let metric = savedMetric;
+  let moegoRevenue:
+    | { source: "live-api"; orderCount: number }
+    | { source: "saved"; warning: string }
+    | undefined;
+
+  if (business === "pet-resort-weekly") {
+    let totalRevenue = savedMetric?.totalRevenue ?? null;
+    try {
+      const liveRevenue = await fetchWeeklyPetResortRevenue(
+        periodStart,
+        new Date(periodEnd.getTime() + 24 * 60 * 60 * 1000)
+      );
+      totalRevenue = liveRevenue.revenueCents;
+      moegoRevenue = { source: "live-api", orderCount: liveRevenue.orderCount };
+    } catch (error) {
+      const warning = error instanceof Error ? error.message : "MoeGo API pull failed.";
+      moegoRevenue = { source: "saved", warning };
+    }
+
+    metric = {
+      ...(savedMetric ?? {
+        id: "pet-resort-weekly-live",
+        business,
+        periodStart,
+        periodEnd,
+        ytdRevenue: null,
+        ytdNetProfit: null,
+        totalCustomers: null,
+        totalAdSpend: null,
+        totalConversions: null,
+        metaAdSpend: null,
+        metaRevenue: null,
+        googleAdSpend: null,
+        googleRevenue: null,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      }),
+      totalRevenue,
+      nonPayrollExpenses: PET_RESORT_WEEKLY_EXPENSE_CENTS,
+      payrollExpenses: null,
+      totalProfit:
+        totalRevenue === null
+          ? null
+          : totalRevenue - PET_RESORT_WEEKLY_EXPENSE_CENTS,
+    };
   }
 
-  const calculatedYtd = await calculateWeeklyFinanceYtd({
+  if (sp.get("includeYtd") !== "1") {
+    return NextResponse.json({ metric, moegoRevenue });
+  }
+
+  let calculatedYtd = await calculateWeeklyFinanceYtd({
     business,
     periodEnd,
     year,
   });
 
+  if (business === "pet-resort-weekly" && metric) {
+    calculatedYtd = replaceSelectedWeekInYtd(calculatedYtd, savedMetric, metric);
+  }
+
   return NextResponse.json({
     metric,
+    moegoRevenue,
     ytd: calculatedYtd
       ? ytdResponse(calculatedYtd, business)
       : {
@@ -219,6 +305,15 @@ export async function PUT(req: NextRequest) {
       }
       cleanData[field] = Math.round(num);
     }
+  }
+
+  if (business === "pet-resort-weekly") {
+    cleanData.nonPayrollExpenses = PET_RESORT_WEEKLY_EXPENSE_CENTS;
+    cleanData.payrollExpenses = null;
+    cleanData.totalProfit =
+      cleanData.totalRevenue === null
+        ? null
+        : cleanData.totalRevenue - PET_RESORT_WEEKLY_EXPENSE_CENTS;
   }
 
   const metric = await prisma.financeMetric.upsert({

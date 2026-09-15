@@ -22,6 +22,9 @@ type MetricResponse = {
   ytd?: FinanceYtdTotals & {
     baseWeekEnd?: string;
   };
+  moegoRevenue?:
+    | { source: "live-api"; orderCount: number }
+    | { source: "saved"; warning: string };
   error?: string;
 };
 
@@ -179,6 +182,7 @@ export function WeeklyFinancialSnapshot({
 }) {
   const business = useBusiness();
   const businessKey = `${business.key}-weekly`;
+  const isPetResort = business.key === "pet-resort";
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -198,6 +202,7 @@ export function WeeklyFinancialSnapshot({
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [revenueSource, setRevenueSource] = useState<MetricResponse["moegoRevenue"]>();
 
   const years = useMemo(() => {
     const currentYear = utcToday().getUTCFullYear();
@@ -288,6 +293,7 @@ export function WeeklyFinancialSnapshot({
           totalRevenue: json.ytd?.totalRevenue ?? null,
           totalProfit: json.ytd?.totalProfit ?? null,
         });
+        setRevenueSource(json.moegoRevenue);
       })
       .catch((err) => {
         if (!cancelled) {
@@ -295,6 +301,7 @@ export function WeeklyFinancialSnapshot({
           setLoadedWeekMetric(EMPTY_TOTALS);
           setLoadedYtd(EMPTY_TOTALS);
           setError(err instanceof Error ? err.message : "Could not load weekly report.");
+          setRevenueSource(undefined);
         }
       })
       .finally(() => {
@@ -445,25 +452,34 @@ export function WeeklyFinancialSnapshot({
 
       <Card>
         <CardContent className="space-y-4">
-          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+          <div
+            className={cn(
+              "grid gap-4 md:grid-cols-2",
+              isPetResort ? "xl:grid-cols-3" : "xl:grid-cols-4"
+            )}
+          >
             <MoneyInput
-              label="Income"
+              label={isPetResort ? "Income (MoeGo)" : "Income"}
               value={form.totalRevenue}
               onChange={(value) => updateField("totalRevenue", value)}
-              disabled={loading || saving}
+              disabled={loading || saving || isPetResort}
+              readOnly={isPetResort}
             />
             <MoneyInput
-              label="Expenses"
+              label={isPetResort ? "Weekly expenses" : "Expenses"}
               value={form.nonPayrollExpenses}
               onChange={(value) => updateField("nonPayrollExpenses", value)}
-              disabled={loading || saving}
+              disabled={loading || saving || isPetResort}
+              readOnly={isPetResort}
             />
-            <MoneyInput
-              label="Payroll"
-              value={form.payrollExpenses}
-              onChange={(value) => updateField("payrollExpenses", value)}
-              disabled={loading || saving}
-            />
+            {!isPetResort && (
+              <MoneyInput
+                label="Payroll"
+                value={form.payrollExpenses}
+                onChange={(value) => updateField("payrollExpenses", value)}
+                disabled={loading || saving}
+              />
+            )}
             <MoneyInput
               label="Net Profit"
               value={calculatedNetProfitInput}
@@ -471,6 +487,18 @@ export function WeeklyFinancialSnapshot({
               readOnly
             />
           </div>
+          {isPetResort && revenueSource?.source === "live-api" && (
+            <p className="text-sm text-gray-500">
+              Revenue pulled live from {revenueSource.orderCount} MoeGo order
+              {revenueSource.orderCount === 1 ? "" : "s"}. Weekly expenses are fixed at
+              $16,750.
+            </p>
+          )}
+          {isPetResort && revenueSource?.source === "saved" && (
+            <p className="text-sm text-amber-700">
+              MoeGo could not be reached, so saved revenue is shown. Weekly expenses remain fixed at $16,750.
+            </p>
+          )}
         </CardContent>
       </Card>
 
