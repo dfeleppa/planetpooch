@@ -81,6 +81,7 @@ export function RevenueChart({
   const [bucket, setBucket] = useState<BucketChoice>("auto");
   const [metric, setMetric] = useState<"sales" | "profit">("sales");
   const [compare, setCompare] = useState(false);
+  const [chartType, setChartType] = useState<"bar" | "line">("bar");
   const title = metric === "sales" ? "Net Sales" : "Net Profit";
   const [data, setData] = useState<ApiResponse | null>(null);
   const [loading, setLoading] = useState(true);
@@ -171,13 +172,24 @@ export function RevenueChart({
     <Card>
       <CardHeader>
         <div className="flex flex-col gap-3">
-          <div>
+          <div className="flex items-start justify-between gap-4">
+            <div>
             <h2 className="text-base font-semibold text-gray-900">{title}</h2>
             <p className="text-xs text-gray-500 mt-1">
               {metric === "sales" ? "Subtotal minus discounts (excludes tax & tips)" : "Estimated net profit: net sales minus $16,500/week expenses, prorated daily to the selected dates"}, bucketed by{" "}
               <span className="font-medium">{data?.bucket ?? bucket}</span>
               {data?.autoBucket ? " (auto)" : ""}.
             </p>
+            </div>
+            <div role="group" aria-label="Chart type" className="flex shrink-0 gap-1 rounded-lg bg-gray-100 p-1">
+              {(["bar", "line"] as const).map((type) => (
+                <button key={type} type="button" aria-pressed={chartType === type}
+                  onClick={() => setChartType(type)}
+                  className={`rounded-md px-2.5 py-1.5 text-xs font-medium ${chartType === type ? "bg-white text-gray-900 shadow-sm" : "text-gray-600 hover:text-gray-900"}`}>
+                  {type === "bar" ? "Bar" : "Line"}
+                </button>
+              ))}
+            </div>
           </div>
           <div className="flex flex-wrap items-center gap-2">
             <label className="flex items-center gap-2 text-xs font-medium text-gray-700">
@@ -250,7 +262,7 @@ export function RevenueChart({
           <div className="mb-4 text-xs text-gray-600 space-y-1">
             <p><span className="text-blue-600">— Current period</span> · <span className="text-yellow-700">- - Prior period: {formatDate(comparison.from)} – {formatDate(new Date(new Date(comparison.to).getTime() - 1).toISOString())}</span></p>
             <p>Prior {title.toLowerCase()}: {dollars(priorTotal)} · Change: {change > 0 ? "+" : ""}{dollars(change)}{priorTotal > 0 ? ` (${change > 0 ? "+" : ""}${(change / priorTotal * 100).toFixed(1)}%)` : " (percentage unavailable for zero or negative prior total)"}</p>
-            <p>Prior points aligned by elapsed time; each pair covers the same number of days.</p>
+            <p>Prior {chartType === "bar" ? "bars" : "points"} aligned by elapsed time; each pair covers the same number of days.</p>
           </div>
         )}
         {loading && !data ? (
@@ -266,7 +278,7 @@ export function RevenueChart({
               className="w-full h-auto"
               preserveAspectRatio="none"
               role="img"
-              aria-label={`${title} line graph${comparison ? " with prior period comparison" : ""}`}
+              aria-label={`${title} ${chartType} graph${comparison ? " with prior period comparison" : ""}`}
             >
               {/* Y-axis grid lines + labels */}
               {yTicks.map((v, i) => {
@@ -297,7 +309,7 @@ export function RevenueChart({
               {/* Current and prior series share the same timeline and scale. */}
               {(comparison ? [data.buckets, comparison.buckets] : [data.buckets]).map((rows, series) => (
                 <g key={series}>
-                  <polyline
+                  {chartType === "line" && <polyline
                     points={rows.map((b, i) => `${PAD.left + i * barW + barW / 2},${yPosition(value(b))}`).join(" ")}
                     fill="none"
                     stroke={series === 1 ? "#eab308" : "#2563eb"}
@@ -305,8 +317,18 @@ export function RevenueChart({
                     strokeDasharray={series === 1 ? "6 4" : undefined}
                     strokeLinejoin="round"
                     strokeLinecap="round"
-                  />
-                  {rows.map((b, i) => (
+                  />}
+                  {rows.map((b, i) => chartType === "bar" ? (
+                    <rect key={b.date}
+                      x={PAD.left + i * barW + series * barW / (comparison ? 2 : 1) + 1}
+                      y={Math.min(zeroY, yPosition(value(b)))}
+                      width={Math.max(0.5, barW / (comparison ? 2 : 1) - 2)}
+                      height={Math.abs(yPosition(value(b)) - zeroY)}
+                      fill={series === 1 ? "#eab308" : value(b) < 0 ? "#dc2626" : "#2563eb"}
+                      rx={1}>
+                      <title>{`Sales: ${dollars(b.revenueCents)}\nExpenses: ${dollars(b.expenseCents)}\nProfit: ${dollars(b.profitCents)}`}</title>
+                    </rect>
+                  ) : (
                     <circle key={b.date}
                       cx={PAD.left + i * barW + barW / 2}
                       cy={yPosition(value(b))}
