@@ -314,7 +314,7 @@ export function RevenueChart({
                       fill={series === 1 ? "#64748b" : "#2563eb"}
                       stroke="white" strokeWidth={1}>
                       <title>
-                        {series === 1 ? "Prior period, aligned with " : "Current period: "}{bucketLabel(b.date, data.bucket)} — {title}: {dollars(value(b))} · {b.orders} order{b.orders === 1 ? "" : "s"}
+                        {`Sales: ${dollars(b.revenueCents)}\nExpenses: ${dollars(b.expenseCents)}\nProfit: ${dollars(b.profitCents)}`}
                       </title>
                     </circle>
                   ))}
