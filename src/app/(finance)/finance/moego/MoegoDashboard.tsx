@@ -428,65 +428,6 @@ export function MoegoDashboard({ businesses }: { businesses: BusinessOption[] })
         </div>
       )}
 
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-6">
-        <Card>
-          <CardContent className="py-4">
-            <p className="text-xs text-gray-500 uppercase tracking-wide">
-              Net Sales
-            </p>
-            <p className="text-3xl font-bold text-gray-900 mt-1">
-              {loading || !metrics ? "—" : dollars(metrics.revenueCents)}
-            </p>
-            <p className="text-xs text-gray-400 mt-1">
-              {metrics?.orderCount ?? 0} orders &middot;{" "}
-              {metrics?.uniqueCustomers ?? 0} customers
-            </p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="py-4">
-            <p className="text-xs text-gray-500 uppercase tracking-wide">
-              Avg Net Sales / Customer
-            </p>
-            <p className="text-3xl font-bold text-gray-900 mt-1">
-              {loading || !metrics
-                ? "—"
-                : dollars(metrics.avgRevenuePerCustomerCents)}
-            </p>
-            <p className="text-xs text-gray-400 mt-1">
-              all-time LTV:{" "}
-              {metrics ? dollars(metrics.allTimeAvgLtvCents) : "—"}
-            </p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="py-4">
-            <p className="text-xs text-gray-500 uppercase tracking-wide">
-              CAC (Meta / new customers)
-            </p>
-            <p className="text-3xl font-bold text-gray-900 mt-1">
-              {loading || !metrics ? "—" : dollars(metrics.cacCents)}
-            </p>
-            <p className="text-xs text-gray-400 mt-1">
-              Meta spend (assigned campaigns):{" "}
-              {metrics ? dollars(metrics.metaSpendCents) : "—"}
-            </p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="py-4">
-            <p className="text-xs text-gray-500 uppercase tracking-wide">
-              New Customers
-            </p>
-            <p className="text-3xl font-bold text-gray-900 mt-1">
-              {loading ? "—" : metrics?.newCustomers ?? 0}
-            </p>
-            <p className="text-xs text-gray-400 mt-1">
-              total: {metrics?.totalCustomers ?? 0}
-            </p>
-          </CardContent>
-        </Card>
-      </div>
 
       <div className="mb-6">
         <RevenueChart from={from} to={to} business={business} />
