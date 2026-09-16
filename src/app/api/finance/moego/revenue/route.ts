@@ -3,7 +3,7 @@ import { Prisma } from "@prisma/client";
 import { getSession } from "@/lib/auth-helpers";
 import { prisma } from "@/lib/prisma";
 import { REVENUE_ORDER_STATUSES } from "@/lib/moego/metrics";
-import { profitBuckets, priorPeriod, yearAgoPeriod, CHART_WEEKLY_EXPENSE_CENTS } from "@/lib/moego/chart-profit";
+import { profitBuckets, yearAgoBuckets, yearAgoPeriod, CHART_WEEKLY_EXPENSE_CENTS } from "@/lib/moego/chart-profit";
 
 type Bucket = "day" | "week" | "month" | "quarter" | "year";
 
@@ -148,34 +148,27 @@ export async function GET(req: NextRequest) {
         profitCents: yearAgoSales - yearAgoExpenses, orders: Number(yearAgoRows[0]?.orders ?? 0) },
     };
     let comparison = null;
-    if (sp.get("compare") === "prior") {
-      const prior = priorPeriod(from, to);
-      // Shift prior sales onto the current timeline before grouping. This
-      // gives every pair the same duration, including partial edge buckets.
+    if (["year", "prior"].includes(sp.get("compare") ?? "")) {
+      // Accept the legacy toggle parameter too, but always use last year.
+      // Daily aggregation aligns calendar dates without duration shifts.
       const priorRows = await prisma.$queryRaw<RawRow[]>`
         SELECT
-          date_trunc(${bucketLit}, COALESCE("salesDatetime", "completedTime", "createdTime") + (${prior.durationMs}::double precision * INTERVAL '1 millisecond')) AS bucket,
+          date_trunc('day', COALESCE("salesDatetime", "completedTime", "createdTime")) AS bucket,
           COALESCE(SUM("subTotalCents" - "discountCents"), 0)::bigint AS "revenueCents",
           COUNT(*)::bigint AS orders
         FROM "MoegoOrder"
-        WHERE COALESCE("salesDatetime", "completedTime", "createdTime") >= ${prior.from}
-          AND COALESCE("salesDatetime", "completedTime", "createdTime") < ${prior.to}
+        WHERE COALESCE("salesDatetime", "completedTime", "createdTime") >= ${yearAgo.from}
+          AND COALESCE("salesDatetime", "completedTime", "createdTime") < ${yearAgo.to}
           AND "businessId" = ${business}
           AND "status" = ANY(${[...REVENUE_ORDER_STATUSES]})
         GROUP BY 1 ORDER BY 1 ASC
       `;
-      const priorBuckets = profitBuckets(from, to, bucket, priorRows.map(r => ({
+      const priorBuckets = yearAgoBuckets(from, to, bucket, priorRows.map(r => ({
         date: r.bucket, revenueCents: Number(r.revenueCents), orders: Number(r.orders),
       })));
       comparison = {
-        from: prior.from, to: prior.to,
+        ...yearComparison,
         buckets: priorBuckets,
-        total: priorBuckets.reduce((sum, b) => ({
-          revenueCents: sum.revenueCents + b.revenueCents,
-          expenseCents: sum.expenseCents + b.expenseCents,
-          profitCents: sum.profitCents + b.profitCents,
-          orders: sum.orders + b.orders,
-        }), { revenueCents: 0, expenseCents: 0, profitCents: 0, orders: 0 }),
       };
     }
     return NextResponse.json({

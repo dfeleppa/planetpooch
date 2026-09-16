@@ -118,7 +118,7 @@ export function RevenueChart({
       setError(null);
       try {
         const params = new URLSearchParams({ from, to, bucket, business });
-        if (compare) params.set("compare", "prior");
+        if (compare) params.set("compare", "year");
         const res = await fetch(
           `/api/finance/moego/revenue?${params.toString()}`,
           { cache: "no-store" }
@@ -147,9 +147,6 @@ export function RevenueChart({
   const value = (b: BucketRow) => metric === "sales" ? b.revenueCents : b.profitCents;
   const comparison = compare ? data?.comparison : null;
   const values = [...(data?.buckets.map(value) ?? []), ...(comparison?.buckets.map(value) ?? [])];
-  const currentTotal = data ? (metric === "sales" ? data.total.revenueCents : data.total.profitCents) : 0;
-  const priorTotal = comparison ? (metric === "sales" ? comparison.total.revenueCents : comparison.total.profitCents) : 0;
-  const change = currentTotal - priorTotal;
   const formatDate = (iso: string) => new Date(iso).toLocaleDateString("en-US", { month: "2-digit", day: "2-digit", year: "numeric", timeZone: "UTC" });
   const rangeLabel = (start: string, end: string) => `${formatDate(start)} - ${formatDate(new Date(new Date(end).getTime() - 1).toISOString())}`;
   const max = Math.max(0, ...values);
@@ -213,7 +210,7 @@ export function RevenueChart({
           <div className="flex flex-wrap items-center gap-2">
             <label className="flex items-center gap-2 text-xs font-medium text-gray-700">
               <input type="checkbox" checked={compare} onChange={e => setCompare(e.target.checked)} />
-              Compare to prior period
+              Compare to last year
             </label>
             <div className="flex gap-1 bg-gray-100 rounded-lg p-1" role="group" aria-label="Chart metric">
               {(["sales", "profit"] as const).map((m) => (
@@ -280,12 +277,6 @@ export function RevenueChart({
             {!loading && data?.yearComparison && <YearTrend current={data.total.profitCents} previous={data.yearComparison.total.profitCents} range={rangeLabel(data.yearComparison.from, data.yearComparison.to)} />}
           </div>
         </div>
-        {comparison && !loading && (
-          <div className="mb-4 text-xs text-gray-600 space-y-1">
-            <p>Prior {title.toLowerCase()}: {dollars(priorTotal)} · Change: {change > 0 ? "+" : ""}{dollars(change)}{priorTotal > 0 ? ` (${change > 0 ? "+" : ""}${(change / priorTotal * 100).toFixed(1)}%)` : " (percentage unavailable for zero or negative prior total)"}</p>
-            <p>Prior {chartType === "bar" ? "bars" : "points"} aligned by elapsed time; each pair covers the same number of days.</p>
-          </div>
-        )}
         {loading && !data ? (
           <p className="text-sm text-gray-400 py-6 text-center">Loading…</p>
         ) : !data || data.buckets.length === 0 ? (
@@ -299,7 +290,7 @@ export function RevenueChart({
               className="w-full h-auto"
               preserveAspectRatio="none"
               role="img"
-              aria-label={`${title} ${chartType} graph${comparison ? " with prior period comparison" : ""}`}
+              aria-label={`${title} ${chartType} graph${comparison ? " with last year comparison" : ""}`}
             >
               {/* Y-axis grid lines + labels */}
               {yTicks.map((v, i) => {
@@ -405,7 +396,7 @@ export function RevenueChart({
               {comparison && (
                 <span className="inline-flex items-center gap-2">
                   <span className="h-2 w-2 shrink-0 rounded-full" style={{ backgroundColor: COMPARISON_COLOR }} aria-hidden="true" />
-                  {rangeLabel(comparison.from, comparison.to)} (Comparison)
+                  {rangeLabel(comparison.from, comparison.to)} (Last year)
                 </span>
               )}
             </div>

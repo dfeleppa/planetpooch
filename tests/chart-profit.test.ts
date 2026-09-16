@@ -1,6 +1,45 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { profitBuckets, priorPeriod, yearAgoPeriod, metricTrend, type ChartBucket } from "../src/lib/moego/chart-profit";
+import { profitBuckets, priorPeriod, yearAgoBuckets, yearAgoPeriod, metricTrend, type ChartBucket } from "../src/lib/moego/chart-profit";
+
+test("30-day selection compares matching dates last year across New Year", () => {
+  const range = yearAgoPeriod(new Date("2026-12-20"), new Date("2027-01-19"));
+  assert.equal(range.from.toISOString(), "2025-12-20T00:00:00.000Z");
+  assert.equal(range.to.toISOString(), "2026-01-19T00:00:00.000Z");
+});
+
+test("YTD comparison aligns historical calendar dates for every bucket", () => {
+  const from = new Date("2026-01-01"), to = new Date("2026-09-17");
+  for (const bucket of ["day", "week", "month", "quarter", "year"] as ChartBucket[]) {
+    const rows = yearAgoBuckets(from, to, bucket, [
+      { date: new Date("2025-01-01"), revenueCents: 100, orders: 1 },
+      { date: new Date("2025-09-16"), revenueCents: 200, orders: 2 },
+    ]);
+    assert.deepEqual(rows.map(r => r.date), profitBuckets(from, to, bucket, []).map(r => r.date));
+    assert.equal(rows[0].revenueCents, bucket === "year" ? 300 : 100);
+    assert.equal(rows.reduce((s, r) => s + r.revenueCents, 0), 300);
+    assert.equal(rows.reduce((s, r) => s + r.orders, 0), 3);
+    assert.equal(rows.reduce((s, r) => s + r.expenseCents, 0), 61_050_000);
+    assert.equal(rows.reduce((s, r) => s + r.profitCents, 0), 300 - 61_050_000);
+  }
+});
+
+test("comparison conserves historical leap-day sales and actual expenses", () => {
+  for (const bucket of ["day", "week", "month", "quarter", "year"] as ChartBucket[]) {
+    const rows = yearAgoBuckets(new Date("2025-02-28"), new Date("2025-03-02"), bucket, [
+      { date: new Date("2024-02-28"), revenueCents: 100, orders: 1 },
+      { date: new Date("2024-02-29"), revenueCents: 200, orders: 2 },
+      { date: new Date("2024-03-01"), revenueCents: 300, orders: 3 },
+    ]);
+    assert.equal(rows.reduce((s, r) => s + r.revenueCents, 0), 600);
+    assert.equal(rows.reduce((s, r) => s + r.expenseCents, 0), Math.round(3 / 7 * 1_650_000));
+  }
+  const leapOnly = yearAgoBuckets(new Date("2024-02-29"), new Date("2024-03-01"), "day", [
+    { date: new Date("2023-02-28"), revenueCents: 100, orders: 1 },
+  ]);
+  assert.equal(leapOnly[0].revenueCents, 100);
+  assert.equal(leapOnly[0].expenseCents, Math.round(1_650_000 / 7));
+});
 
 test("year comparison uses matching calendar dates and includes leap-day endpoints", () => {
   const range = yearAgoPeriod(new Date("2026-01-01"), new Date("2026-09-17"));
