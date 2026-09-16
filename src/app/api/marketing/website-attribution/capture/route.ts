@@ -87,7 +87,7 @@ export async function POST(request: Request) {
       await tx.$executeRaw`
         INSERT INTO "WebsiteAttributionVisit"
           ("id", "visitorId", "company", "landingPage", "referrerOrigin", "campaign", "clickIds")
-        VALUES (${data.event_id}, ${data.visitor_id}, 'RESORT', ${landingPage}, ${referrerOrigin},
+        VALUES (${data.event_id}::uuid, ${data.visitor_id}::uuid, 'RESORT', ${landingPage}, ${referrerOrigin},
           ${JSON.stringify(data.campaign)}::jsonb, ${JSON.stringify(data.click_ids)}::jsonb)
         ON CONFLICT ("id") DO NOTHING`;
       // Rate-limit identifiers are transient; raw IP addresses are never stored.

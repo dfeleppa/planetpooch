@@ -79,6 +79,7 @@ test("valid capture uses idempotent insert, server-pinned company and clean URLs
   const insert = writes.find((w) => w.sql.includes("WebsiteAttributionVisit"));
   assert.match(insert.sql, /ON CONFLICT \("id"\) DO NOTHING/);
   assert.match(insert.sql, /'RESORT'/);
+  assert.match(insert.sql, /VALUES \(\?::uuid, \?::uuid/);
   assert(!JSON.stringify(insert).includes("private"));
 });
 
