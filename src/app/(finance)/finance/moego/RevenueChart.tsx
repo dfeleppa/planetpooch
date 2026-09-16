@@ -248,7 +248,7 @@ export function RevenueChart({
         </div>
         {comparison && !loading && (
           <div className="mb-4 text-xs text-gray-600 space-y-1">
-            <p><span className="text-blue-600">— Current period</span> · <span className="text-slate-500">- - Prior period: {formatDate(comparison.from)} – {formatDate(new Date(new Date(comparison.to).getTime() - 1).toISOString())}</span></p>
+            <p><span className="text-blue-600">— Current period</span> · <span className="text-yellow-700">- - Prior period: {formatDate(comparison.from)} – {formatDate(new Date(new Date(comparison.to).getTime() - 1).toISOString())}</span></p>
             <p>Prior {title.toLowerCase()}: {dollars(priorTotal)} · Change: {change > 0 ? "+" : ""}{dollars(change)}{priorTotal > 0 ? ` (${change > 0 ? "+" : ""}${(change / priorTotal * 100).toFixed(1)}%)` : " (percentage unavailable for zero or negative prior total)"}</p>
             <p>Prior points aligned by elapsed time; each pair covers the same number of days.</p>
           </div>
@@ -300,7 +300,7 @@ export function RevenueChart({
                   <polyline
                     points={rows.map((b, i) => `${PAD.left + i * barW + barW / 2},${yPosition(value(b))}`).join(" ")}
                     fill="none"
-                    stroke={series === 1 ? "#64748b" : "#2563eb"}
+                    stroke={series === 1 ? "#eab308" : "#2563eb"}
                     strokeWidth={2.5}
                     strokeDasharray={series === 1 ? "6 4" : undefined}
                     strokeLinejoin="round"
@@ -311,7 +311,7 @@ export function RevenueChart({
                       cx={PAD.left + i * barW + barW / 2}
                       cy={yPosition(value(b))}
                       r={barCount > 60 ? 2 : 3.5}
-                      fill={series === 1 ? "#64748b" : "#2563eb"}
+                      fill={series === 1 ? "#eab308" : "#2563eb"}
                       stroke="white" strokeWidth={1}>
                       <title>
                         {`Sales: ${dollars(b.revenueCents)}\nExpenses: ${dollars(b.expenseCents)}\nProfit: ${dollars(b.profitCents)}`}
