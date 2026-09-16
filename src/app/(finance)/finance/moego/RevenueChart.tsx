@@ -22,6 +22,7 @@ type ApiResponse = {
   buckets: BucketRow[];
   weeklyExpenseCents: number;
   total: { revenueCents: number; expenseCents: number; profitCents: number; orders: number };
+  comparison: { from: string; to: string; buckets: BucketRow[]; total: ApiResponse["total"] } | null;
 };
 
 const BUCKETS: { value: BucketChoice; label: string }[] = [
@@ -79,6 +80,7 @@ export function RevenueChart({
 }) {
   const [bucket, setBucket] = useState<BucketChoice>("auto");
   const [metric, setMetric] = useState<"sales" | "profit">("sales");
+  const [compare, setCompare] = useState(false);
   const title = metric === "sales" ? "Net Sales" : "Net Profit";
   const [data, setData] = useState<ApiResponse | null>(null);
   const [loading, setLoading] = useState(true);
@@ -93,9 +95,11 @@ export function RevenueChart({
     let cancelled = false;
     async function load() {
       setLoading(true);
+      setData(null);
       setError(null);
       try {
         const params = new URLSearchParams({ from, to, bucket, business });
+        if (compare) params.set("compare", "prior");
         const res = await fetch(
           `/api/finance/moego/revenue?${params.toString()}`,
           { cache: "no-store" }
@@ -119,10 +123,15 @@ export function RevenueChart({
     return () => {
       cancelled = true;
     };
-  }, [from, to, bucket, business]);
+  }, [from, to, bucket, business, compare]);
 
   const value = (b: BucketRow) => metric === "sales" ? b.revenueCents : b.profitCents;
-  const values = data?.buckets.map(value) ?? [];
+  const comparison = compare ? data?.comparison : null;
+  const values = [...(data?.buckets.map(value) ?? []), ...(comparison?.buckets.map(value) ?? [])];
+  const currentTotal = data ? (metric === "sales" ? data.total.revenueCents : data.total.profitCents) : 0;
+  const priorTotal = comparison ? (metric === "sales" ? comparison.total.revenueCents : comparison.total.profitCents) : 0;
+  const change = currentTotal - priorTotal;
+  const formatDate = (iso: string) => new Date(iso).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", timeZone: "UTC" });
   const max = Math.max(0, ...values);
   const min = Math.min(0, ...values);
   const span = max - min || 1;
@@ -172,6 +181,10 @@ export function RevenueChart({
             </p>
           </div>
           <div className="flex flex-wrap items-center gap-2">
+            <label className="flex items-center gap-2 text-xs font-medium text-gray-700">
+              <input type="checkbox" checked={compare} onChange={e => setCompare(e.target.checked)} />
+              Compare to prior period
+            </label>
             <div className="flex gap-1 bg-gray-100 rounded-lg p-1" role="group" aria-label="Chart metric">
               {(["sales", "profit"] as const).map((m) => (
                 <button key={m} type="button" aria-pressed={metric === m}
@@ -211,34 +224,36 @@ export function RevenueChart({
         <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 mb-4">
           <div>
             <p className="text-xs text-gray-500 uppercase tracking-wide">
-              Total {title.toLowerCase()}
+              Net Sales
             </p>
             <p className="text-2xl font-bold text-gray-900">
-              {loading || !data ? "—" : dollars(metric === "sales" ? data.total.revenueCents : data.total.profitCents)}
+              {loading || !data ? "—" : dollars(data.total.revenueCents)}
             </p>
           </div>
           <div>
             <p className="text-xs text-gray-500 uppercase tracking-wide">
-              Orders
+              Estimated Expenses
             </p>
             <p className="text-2xl font-bold text-gray-900">
-              {loading || !data ? "—" : data.total.orders.toLocaleString()}
+              {loading || !data ? "—" : dollars(data.total.expenseCents)}
             </p>
           </div>
           <div>
             <p className="text-xs text-gray-500 uppercase tracking-wide">
-              {metric === "sales" ? "Avg order" : "Estimated expenses"}
+              Net Profit
             </p>
             <p className="text-2xl font-bold text-gray-900">
-              {loading || !data
-                ? "—"
-                : metric === "profit" ? dollars(data.total.expenseCents)
-                : data.total.orders === 0 ? "—" : dollars(
-                    Math.round(data.total.revenueCents / data.total.orders)
-                  )}
+              {loading || !data ? "—" : dollars(data.total.profitCents)}
             </p>
           </div>
         </div>
+        {comparison && !loading && (
+          <div className="mb-4 text-xs text-gray-600 space-y-1">
+            <p><span className="text-blue-600">■ Current period</span> · <span className="text-slate-500">■ Prior period: {formatDate(comparison.from)} – {formatDate(new Date(new Date(comparison.to).getTime() - 1).toISOString())}</span></p>
+            <p>Prior {title.toLowerCase()}: {dollars(priorTotal)} · Change: {change > 0 ? "+" : ""}{dollars(change)}{priorTotal > 0 ? ` (${change > 0 ? "+" : ""}${(change / priorTotal * 100).toFixed(1)}%)` : " (percentage unavailable for zero or negative prior total)"}</p>
+            <p>Prior bars aligned by elapsed time; each pair covers the same number of days.</p>
+          </div>
+        )}
         {loading && !data ? (
           <p className="text-sm text-gray-400 py-6 text-center">Loading…</p>
         ) : !data || data.buckets.length === 0 ? (
@@ -278,29 +293,33 @@ export function RevenueChart({
                 );
               })}
               {/* Bars */}
-              {data.buckets.map((b, i) => {
-                const x = PAD.left + i * barW + gap / 2;
-                const w = Math.max(1, barW - gap);
+              {data.buckets.flatMap((current, i) => {
+                const paired = comparison?.buckets[i];
+                return (paired ? [current, paired] : [current]).map((b, series) => {
+                const slotW = barW / (paired ? 2 : 1);
+                const x = PAD.left + i * barW + series * slotW + gap / 2;
+                const w = Math.max(0.5, slotW - gap);
                 const amount = value(b);
                 const h = Math.abs(yPosition(amount) - zeroY);
                 const y = Math.min(zeroY, yPosition(amount));
                 return (
                   <rect
-                    key={b.date}
+                    key={`${b.date}-${series}`}
                     x={x}
                     y={y}
                     width={w}
                     height={h}
-                    fill={amount < 0 ? "#dc2626" : "#2563eb"}
+                    fill={series === 1 ? "#94a3b8" : amount < 0 ? "#dc2626" : "#2563eb"}
                     rx={1}
                   >
                     <title>
-                      {bucketLabel(b.date, data.bucket)} —{" "}
+                      {series === 1 ? "Prior period, aligned with " : "Current period: "}{bucketLabel(b.date, data.bucket)} —{" "}
                       {title}: {dollars(amount)} · {b.orders} order
                       {b.orders === 1 ? "" : "s"}
                     </title>
                   </rect>
                 );
+                });
               })}
               {/* X-axis labels: evenly spaced, rotated when crowded */}
               {labelIndices.map((i) => {

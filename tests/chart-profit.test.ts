@@ -1,6 +1,23 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { profitBuckets, type ChartBucket } from "../src/lib/moego/chart-profit";
+import { profitBuckets, priorPeriod, type ChartBucket } from "../src/lib/moego/chart-profit";
+
+test("prior period is adjacent, non-overlapping and equal length across leap day", () => {
+  const from = new Date("2024-03-01");
+  const to = new Date("2024-03-08");
+  const prior = priorPeriod(from, to);
+  assert.equal(prior.from.toISOString(), "2024-02-23T00:00:00.000Z");
+  assert.equal(prior.to.toISOString(), from.toISOString());
+  assert.equal(prior.to.getTime() - prior.from.getTime(), to.getTime() - from.getTime());
+});
+
+test("aligned prior buckets keep identical dates and expenses for partial months", () => {
+  const from = new Date("2026-01-15"), to = new Date("2026-03-04");
+  const current = profitBuckets(from, to, "month", []);
+  const prior = profitBuckets(from, to, "month", [{ date: new Date("2026-02-01"), revenueCents: 100, orders: 1 }]);
+  assert.deepEqual(prior.map(b => [b.date, b.expenseCents]), current.map(b => [b.date, b.expenseCents]));
+  assert.equal(prior[1].revenueCents, 100);
+});
 
 test("seven days cost $16,500, including days without sales", () => {
   const rows = profitBuckets(new Date("2026-09-13"), new Date("2026-09-20"), "day", [

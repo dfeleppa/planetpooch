@@ -1,33 +1,13 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Tabs } from "@/components/ui/Tabs";
 import { RevenueChart } from "./RevenueChart";
 
 type BusinessOption = { id: string; label: string };
 
-type LeadSourceRow = {
-  source: string;
-  customers: number;
-  revenueCents: number;
-  avgRevenueCents: number;
-};
-
 type MoegoMetrics = {
-  windowStart: string;
-  windowEnd: string;
-  revenueCents: number;
-  orderCount: number;
-  uniqueCustomers: number;
-  newCustomers: number;
-  totalCustomers: number;
-  avgRevenuePerCustomerCents: number;
-  allTimeAvgLtvCents: number;
-  metaSpendCents: number;
-  cacCents: number;
-  leadSources: LeadSourceRow[];
   lastSync: {
     customer: string | null;
     order: string | null;
@@ -35,9 +15,7 @@ type MoegoMetrics = {
   };
 };
 
-/// Page-wide quick ranges. Each fills the global From/To pickers; every
-/// panel (KPI tiles, lead source breakdown, revenue chart, customers
-/// table) refetches against the new window.
+/// Quick ranges fill the chart's global From/To pickers.
 const QUICK_RANGES = [
   { label: "7d", days: 7 },
   { label: "30d", days: 30 },
@@ -49,14 +27,6 @@ const QUICK_RANGES = [
 
 function ymd(d: Date): string {
   return d.toISOString().slice(0, 10);
-}
-
-function dollars(cents: number): string {
-  return (cents / 100).toLocaleString("en-US", {
-    style: "currency",
-    currency: "USD",
-    maximumFractionDigits: 0,
-  });
 }
 
 function relative(iso: string | null): string {
@@ -80,9 +50,7 @@ export function MoegoDashboard({ businesses }: { businesses: BusinessOption[] })
   // business at a time.
   const [business, setBusiness] = useState<string>(businesses[0]?.id ?? "");
 
-  // Page-wide date range; drives the KPI tiles, lead-source breakdown,
-  // revenue chart, and customers table (filtered to customers acquired
-  // in the same window).
+  // Page-wide date range drives the revenue/profit chart.
   const today = useMemo(() => ymd(new Date()), []);
   const thirtyAgo = useMemo(
     () => ymd(new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)),
@@ -92,7 +60,6 @@ export function MoegoDashboard({ businesses }: { businesses: BusinessOption[] })
   const [to, setTo] = useState<string>(today);
 
   const [metrics, setMetrics] = useState<MoegoMetrics | null>(null);
-  const [loading, setLoading] = useState(true);
   const [syncing, setSyncing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [companies, setCompanies] = useState<DiscoveredCompany[] | null>(null);
@@ -108,10 +75,8 @@ export function MoegoDashboard({ businesses }: { businesses: BusinessOption[] })
     async (fromStr: string, toStr: string, businessStr: string) => {
       if (!businessStr) {
         setMetrics(null);
-        setLoading(false);
         return;
       }
-      setLoading(true);
       setError(null);
       try {
         const res = await fetch(
@@ -127,8 +92,6 @@ export function MoegoDashboard({ businesses }: { businesses: BusinessOption[] })
         setMetrics((await res.json()) as MoegoMetrics);
       } catch (e) {
         setError(e instanceof Error ? e.message : "Failed to load metrics");
-      } finally {
-        setLoading(false);
       }
     },
     []
@@ -433,56 +396,6 @@ export function MoegoDashboard({ businesses }: { businesses: BusinessOption[] })
         <RevenueChart from={from} to={to} business={business} />
       </div>
 
-      <Card>
-        <CardHeader>
-          <h2 className="text-base font-semibold text-gray-900">
-            Lead source breakdown
-          </h2>
-          <p className="text-xs text-gray-500 mt-1">
-            Customers with orders in the selected date range, grouped by
-            MoeGo lead source.
-          </p>
-        </CardHeader>
-        <CardContent className="pt-0">
-          {loading ? (
-            <p className="text-sm text-gray-400 py-6 text-center">Loading…</p>
-          ) : !metrics || metrics.leadSources.length === 0 ? (
-            <p className="text-sm text-gray-400 py-6 text-center">
-              No customers in this window yet.
-            </p>
-          ) : (
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="text-left text-xs text-gray-500 uppercase tracking-wide border-b border-gray-200">
-                  <th className="py-2 font-medium">Source</th>
-                  <th className="py-2 font-medium text-right">Customers</th>
-                  <th className="py-2 font-medium text-right">Net Sales</th>
-                  <th className="py-2 font-medium text-right">Avg Net Sales</th>
-                </tr>
-              </thead>
-              <tbody>
-                {metrics.leadSources.map((row) => (
-                  <tr
-                    key={row.source}
-                    className="border-b border-gray-100 last:border-b-0"
-                  >
-                    <td className="py-2 text-gray-900">{row.source}</td>
-                    <td className="py-2 text-right tabular-nums text-gray-900">
-                      {row.customers}
-                    </td>
-                    <td className="py-2 text-right tabular-nums text-gray-700">
-                      {dollars(row.revenueCents)}
-                    </td>
-                    <td className="py-2 text-right tabular-nums text-gray-700">
-                      {dollars(row.avgRevenueCents)}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          )}
-        </CardContent>
-      </Card>
 
     </div>
   );

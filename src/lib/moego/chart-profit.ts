@@ -2,6 +2,11 @@ export type ChartBucket = "day" | "week" | "month" | "quarter" | "year";
 export const CHART_WEEKLY_EXPENSE_CENTS = 1_650_000;
 const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
 
+export function priorPeriod(from: Date, to: Date) {
+  const durationMs = to.getTime() - from.getTime();
+  return { from: new Date(from.getTime() - durationMs), to: new Date(from), durationMs };
+}
+
 function bucketStart(date: Date, bucket: ChartBucket): Date {
   const d = new Date(date);
   d.setUTCHours(0, 0, 0, 0);
