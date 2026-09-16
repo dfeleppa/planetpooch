@@ -45,6 +45,7 @@ const sharedNav: NavItem[] = [
 ];
 
 const marketingNav: NavItem[] = [
+  { href: "/marketing/website-attribution", label: "Website Attribution", icon: "↗" },
   { href: "/marketing/ad-reporting", label: "Reporting", icon: "▤" },
   { href: "/marketing/evaluate", label: "Evaluate Ads", icon: "%" },
   { href: "/marketing/create", label: "Create Ads", icon: "✦" },

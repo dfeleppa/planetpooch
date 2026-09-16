@@ -2,6 +2,29 @@ generator client {
   provider = "prisma-client-js"
 }
 
+/// Anonymous website visits, not leads or form submissions. Server access only.
+model WebsiteAttributionVisit {
+  id             String   @id @db.Uuid
+  visitorId      String   @db.Uuid
+  company        Company
+  createdAt      DateTime @default(now())
+  landingPage    String
+  referrerOrigin String   @default("")
+  campaign       Json     @default("{}")
+  clickIds       Json     @default("{}")
+
+  @@index([company, createdAt(sort: Desc)])
+  @@index([visitorId, createdAt])
+}
+
+model WebsiteAttributionRateBucket {
+  key    String   @id
+  minute DateTime
+  count  Int
+
+  @@index([minute])
+}
+
 datasource db {
   provider  = "postgresql"
   url       = env("POSTGRES_PRISMA_URL")
