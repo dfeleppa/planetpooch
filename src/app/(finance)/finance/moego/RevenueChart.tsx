@@ -5,6 +5,8 @@ import { Card, CardContent, CardHeader } from "@/components/ui/card";
 
 type Bucket = "day" | "week" | "month" | "quarter" | "year";
 type BucketChoice = Bucket | "auto";
+const CURRENT_COLOR = "#2563eb";
+const COMPARISON_COLOR = "#ffd43b";
 
 type BucketRow = {
   date: string;
@@ -132,7 +134,8 @@ export function RevenueChart({
   const currentTotal = data ? (metric === "sales" ? data.total.revenueCents : data.total.profitCents) : 0;
   const priorTotal = comparison ? (metric === "sales" ? comparison.total.revenueCents : comparison.total.profitCents) : 0;
   const change = currentTotal - priorTotal;
-  const formatDate = (iso: string) => new Date(iso).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", timeZone: "UTC" });
+  const formatDate = (iso: string) => new Date(iso).toLocaleDateString("en-US", { month: "2-digit", day: "2-digit", year: "numeric", timeZone: "UTC" });
+  const rangeLabel = (start: string, end: string) => `${formatDate(start)} - ${formatDate(new Date(new Date(end).getTime() - 1).toISOString())}`;
   const max = Math.max(0, ...values);
   const min = Math.min(0, ...values);
   const span = max - min || 1;
@@ -260,7 +263,6 @@ export function RevenueChart({
         </div>
         {comparison && !loading && (
           <div className="mb-4 text-xs text-gray-600 space-y-1">
-            <p><span className="text-blue-600">— Current period</span> · <span className="text-yellow-700">- - Prior period: {formatDate(comparison.from)} – {formatDate(new Date(new Date(comparison.to).getTime() - 1).toISOString())}</span></p>
             <p>Prior {title.toLowerCase()}: {dollars(priorTotal)} · Change: {change > 0 ? "+" : ""}{dollars(change)}{priorTotal > 0 ? ` (${change > 0 ? "+" : ""}${(change / priorTotal * 100).toFixed(1)}%)` : " (percentage unavailable for zero or negative prior total)"}</p>
             <p>Prior {chartType === "bar" ? "bars" : "points"} aligned by elapsed time; each pair covers the same number of days.</p>
           </div>
@@ -312,7 +314,7 @@ export function RevenueChart({
                   {chartType === "line" && <polyline
                     points={rows.map((b, i) => `${PAD.left + i * barW + barW / 2},${yPosition(value(b))}`).join(" ")}
                     fill="none"
-                    stroke={series === 1 ? "#eab308" : "#2563eb"}
+                    stroke={series === 1 ? COMPARISON_COLOR : CURRENT_COLOR}
                     strokeWidth={2.5}
                     strokeDasharray={series === 1 ? "6 4" : undefined}
                     strokeLinejoin="round"
@@ -324,7 +326,7 @@ export function RevenueChart({
                       y={Math.min(zeroY, yPosition(value(b)))}
                       width={Math.max(0.5, barW / (comparison ? 2 : 1) - 2)}
                       height={Math.abs(yPosition(value(b)) - zeroY)}
-                      fill={series === 1 ? "#eab308" : value(b) < 0 ? "#dc2626" : "#2563eb"}
+                      fill={series === 1 ? COMPARISON_COLOR : CURRENT_COLOR}
                       rx={1}>
                       <title>{`Sales: ${dollars(b.revenueCents)}\nExpenses: ${dollars(b.expenseCents)}\nProfit: ${dollars(b.profitCents)}`}</title>
                     </rect>
@@ -333,7 +335,7 @@ export function RevenueChart({
                       cx={PAD.left + i * barW + barW / 2}
                       cy={yPosition(value(b))}
                       r={barCount > 60 ? 2 : 3.5}
-                      fill={series === 1 ? "#eab308" : "#2563eb"}
+                      fill={series === 1 ? COMPARISON_COLOR : CURRENT_COLOR}
                       stroke="white" strokeWidth={1}>
                       <title>
                         {`Sales: ${dollars(b.revenueCents)}\nExpenses: ${dollars(b.expenseCents)}\nProfit: ${dollars(b.profitCents)}`}
@@ -376,6 +378,18 @@ export function RevenueChart({
                 );
               })}
             </svg>
+            <div className="mt-3 flex flex-wrap items-center justify-center gap-x-6 gap-y-2 text-xs text-gray-600" aria-label="Chart legend">
+              <span className="inline-flex items-center gap-2">
+                <span className="h-2 w-2 shrink-0 rounded-full" style={{ backgroundColor: CURRENT_COLOR }} aria-hidden="true" />
+                {rangeLabel(data.from, data.to)}
+              </span>
+              {comparison && (
+                <span className="inline-flex items-center gap-2">
+                  <span className="h-2 w-2 shrink-0 rounded-full" style={{ backgroundColor: COMPARISON_COLOR }} aria-hidden="true" />
+                  {rangeLabel(comparison.from, comparison.to)} (Comparison)
+                </span>
+              )}
+            </div>
           </div>
         )}
       </CardContent>
