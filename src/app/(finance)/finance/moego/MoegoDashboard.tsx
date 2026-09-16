@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Tabs } from "@/components/ui/Tabs";
 import { RevenueChart } from "./RevenueChart";
+import { yearToDateRange } from "@/lib/moego/chart-date-range";
 
 type BusinessOption = { id: string; label: string };
 
@@ -20,6 +21,7 @@ const QUICK_RANGES = [
   { label: "7d", days: 7 },
   { label: "30d", days: 30 },
   { label: "90d", days: 90 },
+  { label: "YTD", days: null },
   { label: "1y", days: 365 },
   { label: "2y", days: 730 },
   { label: "All", days: 365 * 10 }, // effectively all history we backfill
@@ -101,7 +103,13 @@ export function MoegoDashboard({ businesses }: { businesses: BusinessOption[] })
     void load(from, to, business);
   }, [from, to, business, load]);
 
-  function applyQuickRange(days: number) {
+  function applyQuickRange(days: number | null) {
+    if (days === null) {
+      const range = yearToDateRange();
+      setFrom(range.from);
+      setTo(range.to);
+      return;
+    }
     const t = new Date();
     const f = new Date(t.getTime() - days * 24 * 60 * 60 * 1000);
     setFrom(ymd(f));
@@ -239,10 +247,11 @@ export function MoegoDashboard({ businesses }: { businesses: BusinessOption[] })
             <span className="text-xs font-medium text-gray-700 uppercase tracking-wide">
               Quick
             </span>
-            <div className="flex gap-1">
+            <div className="flex flex-wrap gap-1">
               {QUICK_RANGES.map((r) => (
                 <button
                   key={r.label}
+                  type="button"
                   onClick={() => applyQuickRange(r.days)}
                   className="px-2.5 py-1.5 text-xs font-medium rounded-md bg-gray-100 hover:bg-gray-200 text-gray-700"
                 >

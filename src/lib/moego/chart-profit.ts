@@ -2,6 +2,32 @@ export type ChartBucket = "day" | "week" | "month" | "quarter" | "year";
 export const CHART_WEEKLY_EXPENSE_CENTS = 1_650_000;
 const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
 
+function previousYear(date: Date) {
+  const d = new Date(date);
+  const day = d.getUTCDate();
+  d.setUTCDate(1);
+  d.setUTCFullYear(d.getUTCFullYear() - 1);
+  const lastDay = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth() + 1, 0)).getUTCDate();
+  d.setUTCDate(Math.min(day, lastDay));
+  return d;
+}
+
+// Shift inclusive endpoint dates, then restore the exclusive query boundary.
+// Feb 29 maps to Feb 28 in a non-leap year rather than spilling into March.
+export function yearAgoPeriod(from: Date, to: Date) {
+  return { from: previousYear(from), to: new Date(previousYear(new Date(to.getTime() - 1)).getTime() + 1) };
+}
+
+export function metricTrend(current: number, previous: number, lowerIsBetter = false) {
+  const difference = current - previous;
+  return {
+    difference,
+    percentage: previous === 0 ? null : difference / Math.abs(previous) * 100,
+    direction: difference > 0 ? "up" : difference < 0 ? "down" : "flat",
+    favorable: difference === 0 ? null : lowerIsBetter ? difference < 0 : difference > 0,
+  };
+}
+
 export function priorPeriod(from: Date, to: Date) {
   const durationMs = to.getTime() - from.getTime();
   return { from: new Date(from.getTime() - durationMs), to: new Date(from), durationMs };

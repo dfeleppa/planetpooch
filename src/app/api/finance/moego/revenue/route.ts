@@ -3,7 +3,7 @@ import { Prisma } from "@prisma/client";
 import { getSession } from "@/lib/auth-helpers";
 import { prisma } from "@/lib/prisma";
 import { REVENUE_ORDER_STATUSES } from "@/lib/moego/metrics";
-import { profitBuckets, priorPeriod, CHART_WEEKLY_EXPENSE_CENTS } from "@/lib/moego/chart-profit";
+import { profitBuckets, priorPeriod, yearAgoPeriod, CHART_WEEKLY_EXPENSE_CENTS } from "@/lib/moego/chart-profit";
 
 type Bucket = "day" | "week" | "month" | "quarter" | "year";
 
@@ -130,6 +130,23 @@ export async function GET(req: NextRequest) {
     })));
     const expenseCents = buckets.reduce((sum, b) => sum + b.expenseCents, 0);
     const revenueCents = Number(totalRow[0]?.revenueCents ?? 0);
+    const yearAgo = yearAgoPeriod(from, to);
+    const yearAgoRows = await prisma.$queryRaw<{ revenueCents: bigint; orders: bigint }[]>`
+      SELECT COALESCE(SUM("subTotalCents" - "discountCents"), 0)::bigint AS "revenueCents",
+        COUNT(*)::bigint AS orders
+      FROM "MoegoOrder"
+      WHERE COALESCE("salesDatetime", "completedTime", "createdTime") >= ${yearAgo.from}
+        AND COALESCE("salesDatetime", "completedTime", "createdTime") < ${yearAgo.to}
+        AND "businessId" = ${business}
+        AND "status" = ANY(${[...REVENUE_ORDER_STATUSES]})
+    `;
+    const yearAgoSales = Number(yearAgoRows[0]?.revenueCents ?? 0);
+    const yearAgoExpenses = Math.round((yearAgo.to.getTime() - yearAgo.from.getTime()) / (7 * 24 * 60 * 60 * 1000) * CHART_WEEKLY_EXPENSE_CENTS);
+    const yearComparison = {
+      from: yearAgo.from, to: yearAgo.to,
+      total: { revenueCents: yearAgoSales, expenseCents: yearAgoExpenses,
+        profitCents: yearAgoSales - yearAgoExpenses, orders: Number(yearAgoRows[0]?.orders ?? 0) },
+    };
     let comparison = null;
     if (sp.get("compare") === "prior") {
       const prior = priorPeriod(from, to);
@@ -168,6 +185,7 @@ export async function GET(req: NextRequest) {
       autoBucket: bucketRaw === "auto",
       buckets,
       comparison,
+      yearComparison,
       weeklyExpenseCents: CHART_WEEKLY_EXPENSE_CENTS,
       total: {
         revenueCents,

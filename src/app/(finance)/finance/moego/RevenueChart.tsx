@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import { metricTrend } from "@/lib/moego/chart-profit";
 
 type Bucket = "day" | "week" | "month" | "quarter" | "year";
 type BucketChoice = Bucket | "auto";
@@ -25,6 +26,7 @@ type ApiResponse = {
   weeklyExpenseCents: number;
   total: { revenueCents: number; expenseCents: number; profitCents: number; orders: number };
   comparison: { from: string; to: string; buckets: BucketRow[]; total: ApiResponse["total"] } | null;
+  yearComparison: { from: string; to: string; total: ApiResponse["total"] };
 };
 
 const BUCKETS: { value: BucketChoice; label: string }[] = [
@@ -42,6 +44,20 @@ function dollars(cents: number): string {
     currency: "USD",
     maximumFractionDigits: 0,
   });
+}
+
+function YearTrend({ current, previous, lowerIsBetter = false, range }: {
+  current: number; previous: number; lowerIsBetter?: boolean; range: string;
+}) {
+  const trend = metricTrend(current, previous, lowerIsBetter);
+  const color = trend.favorable === null ? "text-gray-500" : trend.favorable ? "text-green-600" : "text-red-600";
+  const arrow = trend.direction === "up" ? "↑" : trend.direction === "down" ? "↓" : "→";
+  return (
+    <p className={`mt-1 text-xs font-medium ${color}`} title={`Compared with ${range}, based on synced MoeGo orders. Percentage uses the absolute value of last year's baseline.`}>
+      <span aria-label={trend.direction === "flat" ? "Unchanged" : trend.direction === "up" ? "Increase" : "Decrease"}>{arrow}</span>{" "}
+      {dollars(Math.abs(trend.difference))} ({trend.percentage === null ? "N/A" : `${Math.abs(trend.percentage).toFixed(1)}%`}) vs last year
+    </p>
+  );
 }
 
 /// Bucket-aware date label. Quarter labels are computed client-side
@@ -243,6 +259,7 @@ export function RevenueChart({
             <p className="text-2xl font-bold text-gray-900">
               {loading || !data ? "—" : dollars(data.total.revenueCents)}
             </p>
+            {!loading && data?.yearComparison && <YearTrend current={data.total.revenueCents} previous={data.yearComparison.total.revenueCents} range={rangeLabel(data.yearComparison.from, data.yearComparison.to)} />}
           </div>
           <div>
             <p className="text-xs text-gray-500 uppercase tracking-wide">
@@ -251,6 +268,7 @@ export function RevenueChart({
             <p className="text-2xl font-bold text-gray-900">
               {loading || !data ? "—" : dollars(data.total.expenseCents)}
             </p>
+            {!loading && data?.yearComparison && <YearTrend current={data.total.expenseCents} previous={data.yearComparison.total.expenseCents} lowerIsBetter range={rangeLabel(data.yearComparison.from, data.yearComparison.to)} />}
           </div>
           <div>
             <p className="text-xs text-gray-500 uppercase tracking-wide">
@@ -259,6 +277,7 @@ export function RevenueChart({
             <p className="text-2xl font-bold text-gray-900">
               {loading || !data ? "—" : dollars(data.total.profitCents)}
             </p>
+            {!loading && data?.yearComparison && <YearTrend current={data.total.profitCents} previous={data.yearComparison.total.profitCents} range={rangeLabel(data.yearComparison.from, data.yearComparison.to)} />}
           </div>
         </div>
         {comparison && !loading && (

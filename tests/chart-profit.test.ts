@@ -1,6 +1,28 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { profitBuckets, priorPeriod, type ChartBucket } from "../src/lib/moego/chart-profit";
+import { profitBuckets, priorPeriod, yearAgoPeriod, metricTrend, type ChartBucket } from "../src/lib/moego/chart-profit";
+
+test("year comparison uses matching calendar dates and includes leap-day endpoints", () => {
+  const range = yearAgoPeriod(new Date("2026-01-01"), new Date("2026-09-17"));
+  assert.equal(range.from.toISOString(), "2025-01-01T00:00:00.000Z");
+  assert.equal(range.to.toISOString(), "2025-09-17T00:00:00.000Z");
+  const leap = yearAgoPeriod(new Date("2024-02-29"), new Date("2024-03-01"));
+  assert.equal(leap.from.toISOString(), "2023-02-28T00:00:00.000Z");
+  assert.equal(leap.to.toISOString(), "2023-03-01T00:00:00.000Z");
+});
+
+test("trend handles growth, decline, expenses, losses, zero and flat baselines", () => {
+  assert.equal(metricTrend(120, 100).percentage, 20);
+  assert.equal(metricTrend(120, 100).favorable, true);
+  assert.equal(metricTrend(80, 100).direction, "down");
+  assert.equal(metricTrend(80, 100).favorable, false);
+  assert.equal(metricTrend(80, 100, true).favorable, true);
+  assert.equal(metricTrend(120, 100, true).favorable, false);
+  assert.equal(metricTrend(50, -100).percentage, 150);
+  assert.equal(metricTrend(50, -100).favorable, true);
+  assert.equal(metricTrend(50, 0).percentage, null);
+  assert.equal(metricTrend(100, 100).favorable, null);
+});
 
 test("prior period is adjacent, non-overlapping and equal length across leap day", () => {
   const from = new Date("2024-03-01");
