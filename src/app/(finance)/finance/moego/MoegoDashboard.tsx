@@ -4,7 +4,6 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Tabs } from "@/components/ui/Tabs";
-import { CustomersTable } from "./CustomersTable";
 import { RevenueChart } from "./RevenueChart";
 
 type BusinessOption = { id: string; label: string };
@@ -544,9 +543,6 @@ export function MoegoDashboard({ businesses }: { businesses: BusinessOption[] })
         </CardContent>
       </Card>
 
-      <div className="mt-6">
-        <CustomersTable from={from} to={to} business={business} />
-      </div>
     </div>
   );
 }

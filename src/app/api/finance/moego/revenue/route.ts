@@ -3,6 +3,7 @@ import { Prisma } from "@prisma/client";
 import { getSession } from "@/lib/auth-helpers";
 import { prisma } from "@/lib/prisma";
 import { REVENUE_ORDER_STATUSES } from "@/lib/moego/metrics";
+import { profitBuckets, CHART_WEEKLY_EXPENSE_CENTS } from "@/lib/moego/chart-profit";
 
 type Bucket = "day" | "week" | "month" | "quarter" | "year";
 
@@ -124,18 +125,22 @@ export async function GET(req: NextRequest) {
         AND "status" = ANY(${[...REVENUE_ORDER_STATUSES]})
     `;
 
+    const buckets = profitBuckets(from, to, bucket, rows.map(r => ({
+      date: r.bucket, revenueCents: Number(r.revenueCents), orders: Number(r.orders),
+    })));
+    const expenseCents = buckets.reduce((sum, b) => sum + b.expenseCents, 0);
+    const revenueCents = Number(totalRow[0]?.revenueCents ?? 0);
     return NextResponse.json({
       from,
       to,
       bucket,
       autoBucket: bucketRaw === "auto",
-      buckets: rows.map((r) => ({
-        date: r.bucket,
-        revenueCents: Number(r.revenueCents),
-        orders: Number(r.orders),
-      })),
+      buckets,
+      weeklyExpenseCents: CHART_WEEKLY_EXPENSE_CENTS,
       total: {
-        revenueCents: Number(totalRow[0]?.revenueCents ?? 0),
+        revenueCents,
+        expenseCents,
+        profitCents: revenueCents - expenseCents,
         orders: Number(totalRow[0]?.orders ?? 0),
       },
     });

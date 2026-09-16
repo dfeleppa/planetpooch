@@ -9,6 +9,8 @@ type BucketChoice = Bucket | "auto";
 type BucketRow = {
   date: string;
   revenueCents: number;
+  expenseCents: number;
+  profitCents: number;
   orders: number;
 };
 
@@ -18,7 +20,8 @@ type ApiResponse = {
   bucket: Bucket;
   autoBucket: boolean;
   buckets: BucketRow[];
-  total: { revenueCents: number; orders: number };
+  weeklyExpenseCents: number;
+  total: { revenueCents: number; expenseCents: number; profitCents: number; orders: number };
 };
 
 const BUCKETS: { value: BucketChoice; label: string }[] = [
@@ -75,6 +78,8 @@ export function RevenueChart({
   business: string;
 }) {
   const [bucket, setBucket] = useState<BucketChoice>("auto");
+  const [metric, setMetric] = useState<"sales" | "profit">("sales");
+  const title = metric === "sales" ? "Net Sales" : "Net Profit";
   const [data, setData] = useState<ApiResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -116,10 +121,11 @@ export function RevenueChart({
     };
   }, [from, to, bucket, business]);
 
-  const max =
-    data && data.buckets.length > 0
-      ? Math.max(...data.buckets.map((b) => b.revenueCents))
-      : 0;
+  const value = (b: BucketRow) => metric === "sales" ? b.revenueCents : b.profitCents;
+  const values = data?.buckets.map(value) ?? [];
+  const max = Math.max(0, ...values);
+  const min = Math.min(0, ...values);
+  const span = max - min || 1;
 
   /// SVG coordinate system. Wider than the chart wrapper would let us
   /// fit dense daily ranges (~30 bars) without crowding, while still
@@ -129,13 +135,15 @@ export function RevenueChart({
   const PAD = { top: 16, right: 12, bottom: 40, left: 64 };
   const innerW = W - PAD.left - PAD.right;
   const innerH = H - PAD.top - PAD.bottom;
+  const yPosition = (v: number) => PAD.top + (max - v) / span * innerH;
+  const zeroY = yPosition(0);
   const barCount = data?.buckets.length ?? 0;
   const barW = barCount > 0 ? innerW / barCount : 0;
   const gap = barCount > 60 ? 0.5 : barCount > 30 ? 1 : 2;
 
   const yTicks =
-    max > 0
-      ? [0, 0.25, 0.5, 0.75, 1].map((f) => Math.round(max * f))
+    max !== min
+      ? Array.from(new Set([0, ...[0, 0.25, 0.5, 0.75, 1].map((f) => Math.round(min + span * f))])).sort((a, b) => a - b)
       : [0];
 
   /// X-axis labels: aim for ~6–10 labels regardless of bar count.
@@ -156,19 +164,30 @@ export function RevenueChart({
       <CardHeader>
         <div className="flex flex-col gap-3">
           <div>
-            <h2 className="text-base font-semibold text-gray-900">Net Sales</h2>
+            <h2 className="text-base font-semibold text-gray-900">{title}</h2>
             <p className="text-xs text-gray-500 mt-1">
-              Subtotal minus discounts (excludes tax &amp; tips), bucketed by{" "}
+              {metric === "sales" ? "Subtotal minus discounts (excludes tax & tips)" : "Estimated net profit: net sales minus $16,500/week expenses, prorated daily to the selected dates"}, bucketed by{" "}
               <span className="font-medium">{data?.bucket ?? bucket}</span>
               {data?.autoBucket ? " (auto)" : ""}.
             </p>
           </div>
           <div className="flex flex-wrap items-center gap-2">
+            <div className="flex gap-1 bg-gray-100 rounded-lg p-1" role="group" aria-label="Chart metric">
+              {(["sales", "profit"] as const).map((m) => (
+                <button key={m} type="button" aria-pressed={metric === m}
+                  onClick={() => setMetric(m)}
+                  className={`px-2.5 py-1.5 text-xs font-medium rounded-md ${metric === m ? "bg-white text-gray-900 shadow-sm" : "text-gray-600 hover:text-gray-900"}`}>
+                  {m === "sales" ? "Net Sales" : "Net Profit"}
+                </button>
+              ))}
+            </div>
             <span className="text-xs font-medium text-gray-700">Bucket</span>
             <div className="flex gap-1 bg-gray-100 rounded-lg p-1">
               {BUCKETS.map((b) => (
                 <button
                   key={b.value}
+                  type="button"
+                  aria-pressed={bucket === b.value}
                   onClick={() => setBucket(b.value)}
                   className={`px-2.5 py-1.5 text-xs font-medium rounded-md transition-colors ${
                     bucket === b.value
@@ -192,10 +211,10 @@ export function RevenueChart({
         <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 mb-4">
           <div>
             <p className="text-xs text-gray-500 uppercase tracking-wide">
-              Total net sales
+              Total {title.toLowerCase()}
             </p>
             <p className="text-2xl font-bold text-gray-900">
-              {loading || !data ? "—" : dollars(data.total.revenueCents)}
+              {loading || !data ? "—" : dollars(metric === "sales" ? data.total.revenueCents : data.total.profitCents)}
             </p>
           </div>
           <div>
@@ -208,12 +227,13 @@ export function RevenueChart({
           </div>
           <div>
             <p className="text-xs text-gray-500 uppercase tracking-wide">
-              Avg order
+              {metric === "sales" ? "Avg order" : "Estimated expenses"}
             </p>
             <p className="text-2xl font-bold text-gray-900">
-              {loading || !data || data.total.orders === 0
+              {loading || !data
                 ? "—"
-                : dollars(
+                : metric === "profit" ? dollars(data.total.expenseCents)
+                : data.total.orders === 0 ? "—" : dollars(
                     Math.round(data.total.revenueCents / data.total.orders)
                   )}
             </p>
@@ -234,7 +254,7 @@ export function RevenueChart({
             >
               {/* Y-axis grid lines + labels */}
               {yTicks.map((v, i) => {
-                const y = PAD.top + innerH - (max > 0 ? (v / max) * innerH : 0);
+                const y = yPosition(v);
                 return (
                   <g key={i}>
                     <line
@@ -261,8 +281,9 @@ export function RevenueChart({
               {data.buckets.map((b, i) => {
                 const x = PAD.left + i * barW + gap / 2;
                 const w = Math.max(1, barW - gap);
-                const h = max > 0 ? (b.revenueCents / max) * innerH : 0;
-                const y = PAD.top + innerH - h;
+                const amount = value(b);
+                const h = Math.abs(yPosition(amount) - zeroY);
+                const y = Math.min(zeroY, yPosition(amount));
                 return (
                   <rect
                     key={b.date}
@@ -270,12 +291,12 @@ export function RevenueChart({
                     y={y}
                     width={w}
                     height={h}
-                    fill="#2563eb"
+                    fill={amount < 0 ? "#dc2626" : "#2563eb"}
                     rx={1}
                   >
                     <title>
                       {bucketLabel(b.date, data.bucket)} —{" "}
-                      {dollars(b.revenueCents)} · {b.orders} order
+                      {title}: {dollars(amount)} · {b.orders} order
                       {b.orders === 1 ? "" : "s"}
                     </title>
                   </rect>
