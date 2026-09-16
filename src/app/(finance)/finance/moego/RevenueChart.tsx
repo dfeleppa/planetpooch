@@ -137,7 +137,7 @@ export function RevenueChart({
   const span = max - min || 1;
 
   /// SVG coordinate system. Wider than the chart wrapper would let us
-  /// fit dense daily ranges (~30 bars) without crowding, while still
+  /// fit dense daily ranges without crowding, while still
   /// reading reasonably for sparse ranges (4–12 bars).
   const W = 900;
   const H = 260;
@@ -148,7 +148,6 @@ export function RevenueChart({
   const zeroY = yPosition(0);
   const barCount = data?.buckets.length ?? 0;
   const barW = barCount > 0 ? innerW / barCount : 0;
-  const gap = barCount > 60 ? 0.5 : barCount > 30 ? 1 : 2;
 
   const yTicks =
     max !== min
@@ -249,9 +248,9 @@ export function RevenueChart({
         </div>
         {comparison && !loading && (
           <div className="mb-4 text-xs text-gray-600 space-y-1">
-            <p><span className="text-blue-600">■ Current period</span> · <span className="text-slate-500">■ Prior period: {formatDate(comparison.from)} – {formatDate(new Date(new Date(comparison.to).getTime() - 1).toISOString())}</span></p>
+            <p><span className="text-blue-600">— Current period</span> · <span className="text-slate-500">- - Prior period: {formatDate(comparison.from)} – {formatDate(new Date(new Date(comparison.to).getTime() - 1).toISOString())}</span></p>
             <p>Prior {title.toLowerCase()}: {dollars(priorTotal)} · Change: {change > 0 ? "+" : ""}{dollars(change)}{priorTotal > 0 ? ` (${change > 0 ? "+" : ""}${(change / priorTotal * 100).toFixed(1)}%)` : " (percentage unavailable for zero or negative prior total)"}</p>
-            <p>Prior bars aligned by elapsed time; each pair covers the same number of days.</p>
+            <p>Prior points aligned by elapsed time; each pair covers the same number of days.</p>
           </div>
         )}
         {loading && !data ? (
@@ -266,6 +265,8 @@ export function RevenueChart({
               viewBox={`0 0 ${W} ${H}`}
               className="w-full h-auto"
               preserveAspectRatio="none"
+              role="img"
+              aria-label={`${title} line graph${comparison ? " with prior period comparison" : ""}`}
             >
               {/* Y-axis grid lines + labels */}
               {yTicks.map((v, i) => {
@@ -292,35 +293,33 @@ export function RevenueChart({
                   </g>
                 );
               })}
-              {/* Bars */}
-              {data.buckets.flatMap((current, i) => {
-                const paired = comparison?.buckets[i];
-                return (paired ? [current, paired] : [current]).map((b, series) => {
-                const slotW = barW / (paired ? 2 : 1);
-                const x = PAD.left + i * barW + series * slotW + gap / 2;
-                const w = Math.max(0.5, slotW - gap);
-                const amount = value(b);
-                const h = Math.abs(yPosition(amount) - zeroY);
-                const y = Math.min(zeroY, yPosition(amount));
-                return (
-                  <rect
-                    key={`${b.date}-${series}`}
-                    x={x}
-                    y={y}
-                    width={w}
-                    height={h}
-                    fill={series === 1 ? "#94a3b8" : amount < 0 ? "#dc2626" : "#2563eb"}
-                    rx={1}
-                  >
-                    <title>
-                      {series === 1 ? "Prior period, aligned with " : "Current period: "}{bucketLabel(b.date, data.bucket)} —{" "}
-                      {title}: {dollars(amount)} · {b.orders} order
-                      {b.orders === 1 ? "" : "s"}
-                    </title>
-                  </rect>
-                );
-                });
-              })}
+              <line x1={PAD.left} x2={W - PAD.right} y1={zeroY} y2={zeroY} stroke="#9ca3af" strokeWidth={1.5} />
+              {/* Current and prior series share the same timeline and scale. */}
+              {(comparison ? [data.buckets, comparison.buckets] : [data.buckets]).map((rows, series) => (
+                <g key={series}>
+                  <polyline
+                    points={rows.map((b, i) => `${PAD.left + i * barW + barW / 2},${yPosition(value(b))}`).join(" ")}
+                    fill="none"
+                    stroke={series === 1 ? "#64748b" : "#2563eb"}
+                    strokeWidth={2.5}
+                    strokeDasharray={series === 1 ? "6 4" : undefined}
+                    strokeLinejoin="round"
+                    strokeLinecap="round"
+                  />
+                  {rows.map((b, i) => (
+                    <circle key={b.date}
+                      cx={PAD.left + i * barW + barW / 2}
+                      cy={yPosition(value(b))}
+                      r={barCount > 60 ? 2 : 3.5}
+                      fill={series === 1 ? "#64748b" : "#2563eb"}
+                      stroke="white" strokeWidth={1}>
+                      <title>
+                        {series === 1 ? "Prior period, aligned with " : "Current period: "}{bucketLabel(b.date, data.bucket)} — {title}: {dollars(value(b))} · {b.orders} order{b.orders === 1 ? "" : "s"}
+                      </title>
+                    </circle>
+                  ))}
+                </g>
+              ))}
               {/* X-axis labels: evenly spaced, rotated when crowded */}
               {labelIndices.map((i) => {
                 const b = data.buckets[i];
