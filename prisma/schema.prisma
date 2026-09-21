@@ -25,6 +25,57 @@ model WebsiteAttributionRateBucket {
   @@index([minute])
 }
 
+/// Durable, server-only copy of every new-client form attempt received by the
+/// public website. The append-only events relation preserves every transition.
+model WebsiteFormSubmission {
+  id               String   @id @db.Uuid
+  company          Company  @default(RESORT)
+  formKey          String
+  receivedAt       DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+  payload          Json
+  requestMetadata  Json     @default("{}")
+  firstName        String?
+  lastName         String?
+  phone            String?
+  email            String?
+  pets             Json     @default("[]")
+  services         String[] @default([])
+  marketingConsent Boolean?
+  attribution      Json     @default("{}")
+  status           String   @default("RECEIVED")
+  lastHttpStatus   Int?
+  lastError        String?
+  moegoLeadId      String?
+  moegoCustomerId  String?
+  moegoPetId       String?
+  moegoSyncedAt    DateTime?
+  attemptCount     Int      @default(1)
+  events           WebsiteFormSubmissionEvent[]
+
+  @@index([company, receivedAt(sort: Desc)])
+  @@index([status, updatedAt(sort: Desc)])
+  @@index([phone])
+  @@index([email])
+}
+
+/// Append-only audit trail for WebsiteFormSubmission. Event metadata contains
+/// the complete payload for each received attempt so corrections are not lost.
+model WebsiteFormSubmissionEvent {
+  id           String   @id @default(cuid())
+  submissionId String   @db.Uuid
+  createdAt    DateTime @default(now())
+  eventType    String
+  status       String
+  httpStatus   Int?
+  message      String?
+  metadata     Json     @default("{}")
+  submission   WebsiteFormSubmission @relation(fields: [submissionId], references: [id], onDelete: Cascade)
+
+  @@index([submissionId, createdAt])
+  @@index([status, createdAt(sort: Desc)])
+}
+
 datasource db {
   provider  = "postgresql"
   url       = env("POSTGRES_PRISMA_URL")
