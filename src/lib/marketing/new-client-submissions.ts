@@ -20,7 +20,7 @@ const normalized = z.object({
 export const NewClientLedgerRequest = z.discriminatedUnion("action", [
   z.object({
     action: z.literal("received"), submissionId: z.uuid(), formKey: z.literal("new-client-v1"),
-    payload: jsonRecord, requestMetadata: jsonRecord.default({}),
+    payload: jsonRecord, requestMetadata: jsonRecord.default({}), receivedAt: z.iso.datetime().optional(),
   }).strict(),
   z.object({
     action: z.literal("status"), submissionId: z.uuid(),

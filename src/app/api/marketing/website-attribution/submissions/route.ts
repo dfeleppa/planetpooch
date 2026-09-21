@@ -32,9 +32,10 @@ export async function POST(request: Request) {
       await prisma.$transaction(async (tx) => {
         await tx.$executeRaw`
           INSERT INTO "WebsiteFormSubmission"
-            ("id", "company", "formKey", "payload", "requestMetadata", "attemptCount", "updatedAt")
+            ("id", "company", "formKey", "receivedAt", "payload", "requestMetadata", "attemptCount", "updatedAt")
           VALUES (${data.submissionId}::uuid, 'RESORT'::"Company", ${data.formKey},
-            ${JSON.stringify(data.payload)}::jsonb, ${JSON.stringify(data.requestMetadata)}::jsonb, 1, NOW())
+            ${data.receivedAt ? new Date(data.receivedAt) : new Date()}, ${JSON.stringify(data.payload)}::jsonb,
+            ${JSON.stringify(data.requestMetadata)}::jsonb, 1, NOW())
           ON CONFLICT ("id") DO UPDATE SET
             "payload" = EXCLUDED."payload", "requestMetadata" = EXCLUDED."requestMetadata",
             "attemptCount" = "WebsiteFormSubmission"."attemptCount" + 1, "updatedAt" = NOW()`;

@@ -1,6 +1,8 @@
 import { PrismaClient } from "@prisma/client";
 
-const prisma = new PrismaClient();
+const ledgerSecret = process.env.NEW_CLIENT_LEDGER_SECRET?.trim();
+const ledgerUrl = process.env.NEW_CLIENT_LEDGER_URL?.trim() || "https://app.planet-pooch.com/api/marketing/website-attribution/submissions";
+const prisma = ledgerSecret ? null : new PrismaClient();
 const API = "https://openapi.moego.pet/v1";
 const START = "2026-09-18T00:00:00.000Z";
 
@@ -21,6 +23,13 @@ async function post(path, body) {
   const response = await fetch(`${API}${path}`, { method: "POST", headers, body: JSON.stringify(body) });
   if (!response.ok) throw new Error(`${path} returned ${response.status}`);
   return response.json();
+}
+
+async function saveLedger(body) {
+  const response = await fetch(ledgerUrl, { method: "POST", headers: {
+    Authorization: `Bearer ${ledgerSecret}`, "Content-Type": "application/json",
+  }, body: JSON.stringify(body) });
+  if (!response.ok) throw new Error(`Ledger returned ${response.status}`);
 }
 
 function parseNote(content) {
@@ -73,6 +82,18 @@ for (const lead of leads) {
     submissionId: found.submissionId, attribution: found.attribution,
   };
   const receivedAt = found.received && !Number.isNaN(Date.parse(found.received)) ? new Date(found.received) : new Date(lead.createdTime);
+  if (ledgerSecret) {
+    await saveLedger({ action: "received", submissionId: found.submissionId, formKey: "new-client-v1",
+      receivedAt: receivedAt.toISOString(), payload, requestMetadata: { source: "moego_historical_backfill" } });
+    await saveLedger({ action: "status", submissionId: found.submissionId, status: "SYNCED", httpStatus: 200,
+      message: "Reconstructed from the confirmed MoeGo lead and inquiry note",
+      metadata: { source: "moego_historical_backfill" }, normalized: {
+        firstName: payload.firstName, lastName: payload.lastName, phone: payload.phone, email: payload.email,
+        pets, services: found.services, marketingConsent: found.consent, attribution: found.attribution,
+      }, moegoLeadId: lead.id, moegoCustomerId: firstPet?.customerId ?? null, moegoPetId: firstPet?.id ?? null });
+    inserted++;
+    continue;
+  }
   const result = await prisma.websiteFormSubmission.upsert({
     where: { id: found.submissionId },
     create: { id: found.submissionId, company: "RESORT", formKey: "new-client-v1", receivedAt,
@@ -94,4 +115,4 @@ for (const lead of leads) {
 }
 
 console.log(JSON.stringify({ leadsScanned: leads.length, exactFormRecords: matched, inserted, alreadyPresent: existing }));
-await prisma.$disconnect();
+if (prisma) await prisma.$disconnect();
