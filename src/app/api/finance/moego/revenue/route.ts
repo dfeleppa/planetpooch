@@ -92,20 +92,31 @@ export async function GET(req: NextRequest) {
       ? (bucketRaw as Bucket)
       : autoBucket(spanDays);
 
-  // bucket is allowlisted above, so it's safe to inline as a literal.
-  // We splice via Prisma.raw to avoid the bind-parameter-equality issue
-  // that breaks GROUP BY when the same fragment is interpolated twice.
-  const bucketLit = Prisma.raw(`'${bucket}'`);
+  // PostgreSQL's date_trunc('week', ...) starts weeks on Monday. Planet
+  // Pooch's reporting week is Sunday through Saturday, so shift weekly
+  // timestamps forward one day before truncating and back one day after.
+  // The other bucket values are allowlisted above and safe to inline.
+  const orderTimestamp = Prisma.raw(
+    `COALESCE("salesDatetime", "completedTime", "createdTime")`
+  );
+  const bucketExpression =
+    bucket === "week"
+      ? Prisma.raw(
+          `date_trunc('week', COALESCE("salesDatetime", "completedTime", "createdTime") + INTERVAL '1 day') - INTERVAL '1 day'`
+        )
+      : Prisma.raw(
+          `date_trunc('${bucket}', COALESCE("salesDatetime", "completedTime", "createdTime"))`
+        );
 
   try {
     const rows = await prisma.$queryRaw<RawRow[]>`
       SELECT
-        date_trunc(${bucketLit}, COALESCE("salesDatetime", "completedTime", "createdTime")) AS bucket,
+        ${bucketExpression} AS bucket,
         COALESCE(SUM("subTotalCents" - "discountCents"), 0)::bigint AS "revenueCents",
         COUNT(*)::bigint AS orders
       FROM "MoegoOrder"
-      WHERE COALESCE("salesDatetime", "completedTime", "createdTime") >= ${from}
-        AND COALESCE("salesDatetime", "completedTime", "createdTime") <  ${to}
+      WHERE ${orderTimestamp} >= ${from}
+        AND ${orderTimestamp} <  ${to}
         AND "businessId" = ${business}
         AND "status" = ANY(${[...REVENUE_ORDER_STATUSES]})
       GROUP BY 1

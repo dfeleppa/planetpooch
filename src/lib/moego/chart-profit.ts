@@ -60,7 +60,7 @@ export function priorPeriod(from: Date, to: Date) {
 function bucketStart(date: Date, bucket: ChartBucket): Date {
   const d = new Date(date);
   d.setUTCHours(0, 0, 0, 0);
-  if (bucket === "week") d.setUTCDate(d.getUTCDate() - (d.getUTCDay() + 6) % 7);
+  if (bucket === "week") d.setUTCDate(d.getUTCDate() - d.getUTCDay());
   if (bucket === "month" || bucket === "quarter" || bucket === "year") d.setUTCDate(1);
   if (bucket === "quarter") d.setUTCMonth(Math.floor(d.getUTCMonth() / 3) * 3);
   if (bucket === "year") d.setUTCMonth(0);

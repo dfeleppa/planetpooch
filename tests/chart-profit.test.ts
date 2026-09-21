@@ -2,6 +2,20 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { profitBuckets, priorPeriod, yearAgoBuckets, yearAgoPeriod, metricTrend, type ChartBucket } from "../src/lib/moego/chart-profit";
 
+test("weekly buckets run Sunday through Saturday", () => {
+  const rows = profitBuckets(
+    new Date("2026-09-14T00:00:00.000Z"),
+    new Date("2026-09-21T00:00:00.000Z"),
+    "week",
+    []
+  );
+
+  assert.deepEqual(
+    rows.map((row) => row.date),
+    ["2026-09-13T00:00:00.000Z", "2026-09-20T00:00:00.000Z"]
+  );
+});
+
 test("30-day selection compares matching dates last year across New Year", () => {
   const range = yearAgoPeriod(new Date("2026-12-20"), new Date("2027-01-19"));
   assert.equal(range.from.toISOString(), "2025-12-20T00:00:00.000Z");
