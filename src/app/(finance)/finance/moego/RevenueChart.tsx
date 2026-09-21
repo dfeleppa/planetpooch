@@ -46,6 +46,15 @@ function dollars(cents: number): string {
   });
 }
 
+function compactDollars(cents: number): string {
+  const value = cents / 100;
+  const absolute = Math.abs(value);
+  const sign = value < 0 ? "-" : "";
+  if (absolute >= 1_000_000) return `${sign}$${(absolute / 1_000_000).toFixed(1).replace(/\.0$/, "")}m`;
+  if (absolute >= 1_000) return `${sign}$${(absolute / 1_000).toFixed(1).replace(/\.0$/, "")}k`;
+  return `${sign}$${Math.round(absolute)}`;
+}
+
 function YearTrend({ current, previous, lowerIsBetter = false, range }: {
   current: number; previous: number; lowerIsBetter?: boolean; range: string;
 }) {
@@ -165,6 +174,9 @@ export function RevenueChart({
   const zeroY = yPosition(0);
   const barCount = data?.buckets.length ?? 0;
   const barW = barCount > 0 ? innerW / barCount : 0;
+  const seriesCount = comparison ? 2 : 1;
+  const renderedBarWidth = barW / seriesCount;
+  const showBarValues = chartType === "bar" && barCount <= (comparison ? 6 : 12) && renderedBarWidth >= 42;
 
   const yTicks =
     max !== min
@@ -330,17 +342,43 @@ export function RevenueChart({
                     strokeLinejoin="round"
                     strokeLinecap="round"
                   />}
-                  {rows.map((b, i) => chartType === "bar" ? (
-                    <rect key={b.date}
-                      x={PAD.left + i * barW + series * barW / (comparison ? 2 : 1) + 1}
-                      y={Math.min(zeroY, yPosition(value(b)))}
-                      width={Math.max(0.5, barW / (comparison ? 2 : 1) - 2)}
-                      height={Math.abs(yPosition(value(b)) - zeroY)}
-                      fill={series === 1 ? COMPARISON_COLOR : CURRENT_COLOR}
-                      rx={1}>
-                      <title>{`Sales: ${dollars(b.revenueCents)}\nExpenses: ${dollars(b.expenseCents)}\nProfit: ${dollars(b.profitCents)}`}</title>
-                    </rect>
-                  ) : (
+                  {rows.map((b, i) => chartType === "bar" ? (() => {
+                    const amount = value(b);
+                    const x = PAD.left + i * barW + series * renderedBarWidth + 1;
+                    const y = Math.min(zeroY, yPosition(amount));
+                    const height = Math.abs(yPosition(amount) - zeroY);
+                    const labelInside = height >= 24;
+                    const labelY = labelInside
+                      ? amount >= 0 ? y + 14 : y + height - 6
+                      : amount >= 0 ? Math.max(11, y - 5) : Math.min(H - PAD.bottom - 2, y + height + 12);
+                    return (
+                      <g key={b.date}>
+                        <rect
+                          x={x}
+                          y={y}
+                          width={Math.max(0.5, renderedBarWidth - 2)}
+                          height={height}
+                          fill={series === 1 ? COMPARISON_COLOR : CURRENT_COLOR}
+                          rx={1}
+                        >
+                          <title>{`Sales: ${dollars(b.revenueCents)}\nExpenses: ${dollars(b.expenseCents)}\nProfit: ${dollars(b.profitCents)}`}</title>
+                        </rect>
+                        {showBarValues && amount !== 0 && (
+                          <text
+                            x={x + (renderedBarWidth - 2) / 2}
+                            y={labelY}
+                            fontSize={10}
+                            fontWeight={600}
+                            textAnchor="middle"
+                            fill={labelInside && series === 0 ? "#ffffff" : "#374151"}
+                            aria-hidden="true"
+                          >
+                            {compactDollars(amount)}
+                          </text>
+                        )}
+                      </g>
+                    );
+                  })() : (
                     <circle key={b.date}
                       cx={PAD.left + i * barW + barW / 2}
                       cy={yPosition(value(b))}

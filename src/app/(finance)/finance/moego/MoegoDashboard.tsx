@@ -4,7 +4,10 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Tabs } from "@/components/ui/Tabs";
 import { RevenueChart } from "./RevenueChart";
-import { yearToDateRange } from "@/lib/moego/chart-date-range";
+import {
+  chartPresetRange,
+  type ChartRangePreset,
+} from "@/lib/moego/chart-date-range";
 
 type BusinessOption = { id: string; label: string };
 
@@ -18,18 +21,17 @@ type MoegoMetrics = {
 
 /// Quick ranges fill the chart's global From/To pickers.
 const QUICK_RANGES = [
-  { label: "7d", days: 7 },
-  { label: "30d", days: 30 },
-  { label: "90d", days: 90 },
-  { label: "YTD", days: null },
-  { label: "1y", days: 365 },
-  { label: "2y", days: 730 },
-  { label: "All", days: 365 * 10 }, // effectively all history we backfill
-] as const;
-
-function ymd(d: Date): string {
-  return d.toISOString().slice(0, 10);
-}
+  { value: "last-week", label: "Last week" },
+  { value: "last-month", label: "Last month" },
+  { value: "last-year", label: "Last year" },
+  { value: "7-days", label: "Last 7 days" },
+  { value: "30-days", label: "Last 30 days" },
+  { value: "90-days", label: "Last 90 days" },
+  { value: "year-to-date", label: "Year to date" },
+  { value: "1-year", label: "Last 1 year" },
+  { value: "2-years", label: "Last 2 years" },
+  { value: "all", label: "All time" },
+] satisfies { value: ChartRangePreset; label: string }[];
 
 function relative(iso: string | null): string {
   if (!iso) return "never";
@@ -53,13 +55,11 @@ export function MoegoDashboard({ businesses }: { businesses: BusinessOption[] })
   const [business, setBusiness] = useState<string>(businesses[0]?.id ?? "");
 
   // Page-wide date range drives the revenue/profit chart.
-  const today = useMemo(() => ymd(new Date()), []);
-  const thirtyAgo = useMemo(
-    () => ymd(new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)),
-    []
-  );
-  const [from, setFrom] = useState<string>(thirtyAgo);
+  const defaultRange = useMemo(() => chartPresetRange("30-days"), []);
+  const today = defaultRange.to;
+  const [from, setFrom] = useState<string>(defaultRange.from);
   const [to, setTo] = useState<string>(today);
+  const [quickRange, setQuickRange] = useState<ChartRangePreset | "">("30-days");
 
   const [metrics, setMetrics] = useState<MoegoMetrics | null>(null);
   const [syncing, setSyncing] = useState(false);
@@ -103,17 +103,11 @@ export function MoegoDashboard({ businesses }: { businesses: BusinessOption[] })
     void load(from, to, business);
   }, [from, to, business, load]);
 
-  function applyQuickRange(days: number | null) {
-    if (days === null) {
-      const range = yearToDateRange();
-      setFrom(range.from);
-      setTo(range.to);
-      return;
-    }
-    const t = new Date();
-    const f = new Date(t.getTime() - days * 24 * 60 * 60 * 1000);
-    setFrom(ymd(f));
-    setTo(ymd(t));
+  function applyQuickRange(preset: ChartRangePreset) {
+    const range = chartPresetRange(preset);
+    setQuickRange(preset);
+    setFrom(range.from);
+    setTo(range.to);
   }
 
   /**
@@ -226,7 +220,10 @@ export function MoegoDashboard({ businesses }: { businesses: BusinessOption[] })
               type="date"
               value={from}
               max={to}
-              onChange={(e) => setFrom(e.target.value)}
+              onChange={(e) => {
+                setQuickRange("");
+                setFrom(e.target.value);
+              }}
               className="rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
           </div>
@@ -239,7 +236,10 @@ export function MoegoDashboard({ businesses }: { businesses: BusinessOption[] })
               value={to}
               min={from}
               max={today}
-              onChange={(e) => setTo(e.target.value)}
+              onChange={(e) => {
+                setQuickRange("");
+                setTo(e.target.value);
+              }}
               className="rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
           </div>
@@ -247,18 +247,22 @@ export function MoegoDashboard({ businesses }: { businesses: BusinessOption[] })
             <span className="text-xs font-medium text-gray-700 uppercase tracking-wide">
               Quick
             </span>
-            <div className="flex flex-wrap gap-1">
-              {QUICK_RANGES.map((r) => (
-                <button
-                  key={r.label}
-                  type="button"
-                  onClick={() => applyQuickRange(r.days)}
-                  className="px-2.5 py-1.5 text-xs font-medium rounded-md bg-gray-100 hover:bg-gray-200 text-gray-700"
-                >
-                  {r.label}
-                </button>
+            <select
+              aria-label="Quick range"
+              value={quickRange}
+              onChange={(e) => {
+                const preset = e.target.value as ChartRangePreset | "";
+                if (preset) applyQuickRange(preset);
+              }}
+              className="min-w-40 rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              <option value="">Select range…</option>
+              {QUICK_RANGES.map((range) => (
+                <option key={range.value} value={range.value}>
+                  {range.label}
+                </option>
               ))}
-            </div>
+            </select>
           </div>
         </div>
       </div>
