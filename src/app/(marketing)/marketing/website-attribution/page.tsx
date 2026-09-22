@@ -3,13 +3,18 @@ import { getActiveBusiness } from "@/lib/business-server";
 import { prisma } from "@/lib/prisma";
 import type { WebsiteAttributionVisit } from "@/lib/marketing/website-attribution";
 import type { WebsiteFormSubmissionRow } from "@/lib/marketing/new-client-submissions";
+import { addCalendarDays, resolveSubmissionDateRange } from "@/lib/marketing/submission-date-range";
 
 export const dynamic = "force-dynamic";
 
-export default async function WebsiteAttributionPage() {
+type PageProps = { searchParams: Promise<{ submissionStart?: string; submissionEnd?: string }> };
+
+export default async function WebsiteAttributionPage({ searchParams }: PageProps) {
   await requireMarketing();
   const business = await getActiveBusiness();
   const since = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+  const params = await searchParams;
+  const submissionRange = resolveSubmissionDateRange(params.submissionStart, params.submissionEnd);
   const [totals, visits, submissionTotals, submissions] = await Promise.all([
     prisma.$queryRaw<{ visits: number; visitors: number; tagged: number }[]>`
       SELECT COUNT(*)::int AS visits, COUNT(DISTINCT "visitorId")::int AS visitors,
@@ -25,9 +30,11 @@ export default async function WebsiteAttributionPage() {
         COUNT(*) FILTER (WHERE "status" NOT IN ('SYNCED', 'MOEGO_DUPLICATE_CONFLICT'))::int AS attention,
         COUNT(*) FILTER (WHERE "status" = 'MOEGO_DUPLICATE_CONFLICT')::int AS conflicts
       FROM "WebsiteFormSubmission"
-      WHERE "company" = ${business.company}::"Company" AND "receivedAt" >= ${since}`,
+      WHERE "company" = ${business.company}::"Company"
+        AND "receivedAt" >= ${submissionRange.startAt}
+        AND "receivedAt" < ${submissionRange.endBefore}`,
     prisma.websiteFormSubmission.findMany({
-      where: { company: business.company, receivedAt: { gte: since } },
+      where: { company: business.company, receivedAt: { gte: submissionRange.startAt, lt: submissionRange.endBefore } },
       orderBy: [{ receivedAt: "desc" }, { id: "desc" }], take: 250,
       include: { events: { orderBy: { createdAt: "asc" } } },
     }) as Promise<WebsiteFormSubmissionRow[]>,
@@ -46,6 +53,24 @@ export default async function WebsiteAttributionPage() {
         <p className="mt-2 text-sm text-gray-600">
           Durable copies received from /new-client/ before MoeGo is contacted. Every attempt and status transition is retained. Times are Eastern.
         </p>
+        <form className="mt-5 flex flex-wrap items-end gap-3" method="get">
+          <label className="text-sm font-medium text-gray-700">
+            Start date
+            <input className="mt-1 block rounded-lg border border-gray-300 bg-white px-3 py-2 font-normal text-gray-900" type="date" name="submissionStart" defaultValue={submissionRange.start} />
+          </label>
+          <label className="text-sm font-medium text-gray-700">
+            End date
+            <input className="mt-1 block rounded-lg border border-gray-300 bg-white px-3 py-2 font-normal text-gray-900" type="date" name="submissionEnd" defaultValue={submissionRange.end} />
+          </label>
+          <button className="rounded-lg bg-gray-900 px-4 py-2 text-sm font-medium text-white hover:bg-gray-700" type="submit">Apply dates</button>
+          <div className="flex items-center gap-2 pb-2 text-sm">
+            {[7, 30, 90].map((days) => {
+              const start = addCalendarDays(submissionRange.end, -(days - 1));
+              return <a key={days} className="text-blue-700 hover:underline" href={`?submissionStart=${start}&submissionEnd=${submissionRange.end}`}>{days} days</a>;
+            })}
+          </div>
+        </form>
+        <p className="mt-2 text-sm text-gray-500">Showing submissions received from {submissionRange.start} through {submissionRange.end}, inclusive.</p>
         <div className="my-5 grid gap-4 sm:grid-cols-4">
           {[["Saved submissions", formTotal.submissions], ["Synced to MoeGo", formTotal.synced], ["Needs attention", formTotal.attention], ["Existing-phone conflicts", formTotal.conflicts]].map(([label, value]) => (
             <div key={label} className="rounded-xl border border-gray-200 bg-white p-5">
@@ -83,7 +108,7 @@ export default async function WebsiteAttributionPage() {
                   </td>
                 </tr>
               ))}
-              {submissions.length === 0 && <tr><td colSpan={9} className="px-4 py-8 text-center text-gray-500">No saved new-client submissions in the last 30 days.</td></tr>}
+              {submissions.length === 0 && <tr><td colSpan={9} className="px-4 py-8 text-center text-gray-500">No saved new-client submissions in the selected date range.</td></tr>}
             </tbody>
           </table>
         </div>
