@@ -64,6 +64,10 @@ export async function proxy(req: NextRequest) {
   const canAccessAdmin = isManagerOrAbove;
   const canAccessFinance = role === "SUPER_ADMIN" || role === "ADMIN";
 
+  if (pathname.startsWith("/admin/knowledge") && !canAccessFinance) {
+    return NextResponse.redirect(new URL("/dashboard", req.url));
+  }
+
   // The business overview contains finance data; managers and CMO titles
   // alone do not grant access, including through a direct URL.
   if (

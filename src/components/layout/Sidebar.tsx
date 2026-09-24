@@ -19,6 +19,7 @@ const employeeNav: NavItem[] = [
   { href: "/modules", label: "Modules", icon: "❏" },
   { href: "/career", label: "Career", icon: "↗" },
   { href: "/search", label: "Search", icon: "⌕" },
+  { href: "/knowledge", label: "Ask Pooch", icon: "✦" },
 ];
 
 // Full admin nav — SUPER_ADMIN only (includes module management)
@@ -150,6 +151,7 @@ export function Sidebar() {
   }
 
   function isActive(href: string) {
+    if (href === "/admin/knowledge") return pathname === href || pathname.startsWith(href + "/");
     if (href === "/admin/employees") {
       return adminDashboardPaths.some((path) =>
         path === "/admin" ? pathname === path : pathname === path || pathname.startsWith(path + "/")
@@ -260,7 +262,7 @@ export function Sidebar() {
                 <div className="mx-1.5 h-px bg-pp-line" />
               )}
               <div className="-mt-2 flex flex-col gap-px">
-                {[{ href: "/admin/dashboard", label: "Dashboard", icon: "▣" }, ...businessFinanceNav].map((item) => {
+                {[{ href: "/admin/dashboard", label: "Dashboard", icon: "▣" }, ...businessFinanceNav, { href: "/admin/knowledge", label: "Knowledge library", icon: "✦" }].map((item) => {
                   const active = item.href === "/admin/dashboard"
                     ? pathname === item.href
                     : isActive(item.href);

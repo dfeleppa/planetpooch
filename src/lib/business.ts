@@ -73,7 +73,7 @@ export function businessSwitchPath(href: string, company: BusinessCompany): stri
       : path.endsWith("/commissions") ? path : "/finance/payroll";
   }
   if (company === "GROOMING" && (path.startsWith("/operations/daycare") || path === "/maintenance/checklists" || path === "/career")) path = "/maintenance";
-  const allowed = ["/admin", "/dashboard", "/modules", "/career", "/search", "/maintenance", "/operations", "/finance", "/marketing"];
+  const allowed = ["/admin", "/dashboard", "/modules", "/career", "/search", "/knowledge", "/maintenance", "/operations", "/finance", "/marketing"];
   if (!allowed.some((prefix) => path === prefix || path.startsWith(`${prefix}/`))) return "/dashboard";
   for (const key of ["company", "business", "segment", "jobTitle", "serviceLine", "page", "q"]) url.searchParams.delete(key);
   if (path !== url.pathname) url.search = "";

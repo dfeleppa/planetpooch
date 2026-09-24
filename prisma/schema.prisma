@@ -96,6 +96,27 @@ enum Company {
   CORPORATE
 }
 
+/// Curated source material for the employee knowledge assistant. Access is
+/// checked by the app before any text is sent to the AI provider.
+model KnowledgeArticle {
+  id           String   @id @default(cuid())
+  title        String
+  content      String   @db.Text
+  category     String   @default("General")
+  sourceLabel  String?
+  sourceUrl    String?
+  sourceUpdatedAt DateTime?
+  company      Company?
+  allowedRoles Role[]   @default([SUPER_ADMIN])
+  isPublished  Boolean  @default(false)
+  createdById  String
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@index([isPublished, company, updatedAt])
+  @@index([category])
+}
+
 enum AuditAction {
   COMPLETED
   UNCOMPLETED
