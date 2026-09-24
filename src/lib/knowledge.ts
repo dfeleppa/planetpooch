@@ -2,9 +2,12 @@ import { Company, KnowledgeArticle, Role } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { getVisibleModuleIdsForUser } from "@/lib/module-visibility";
 import { isManagerOrAbove, isSuperAdmin } from "@/lib/auth-helpers";
+import { findAppDataSources } from "@/lib/knowledge-app-data";
+import { isKnowledgeOwner } from "@/lib/knowledge-owner";
 
 export type KnowledgeViewer = {
   id: string;
+  email: string;
   role: Role;
   company: Company;
   jobTitle: string | null;
@@ -13,7 +16,7 @@ export type KnowledgeViewer = {
 export type KnowledgeSource = {
   id: string;
   title: string;
-  kind: "article" | "lesson";
+  kind: "article" | "lesson" | "record";
   url: string;
   excerpt: string;
   updatedAt: string;
@@ -29,7 +32,7 @@ const STOP_WORDS = new Set([
 export async function getKnowledgeViewer(userId: string): Promise<KnowledgeViewer | null> {
   return prisma.user.findFirst({
     where: { id: userId, terminatedAt: null },
-    select: { id: true, role: true, company: true, jobTitle: true },
+    select: { id: true, email: true, role: true, company: true, jobTitle: true },
   });
 }
 
@@ -37,6 +40,7 @@ export function canReadKnowledgeArticle(
   article: Pick<KnowledgeArticle, "isPublished" | "company" | "allowedRoles">,
   viewer: KnowledgeViewer,
 ): boolean {
+  if (isKnowledgeOwner(viewer)) return true;
   if (!article.isPublished) return false;
   if (isSuperAdmin(viewer.role)) return true;
   return (article.company === null || article.company === viewer.company) &&
@@ -76,22 +80,18 @@ export async function findKnowledgeSources(
   viewer: KnowledgeViewer,
   question: string,
 ): Promise<KnowledgeSource[]> {
+  if (!isKnowledgeOwner(viewer)) return [];
   const terms = knowledgeTerms(question);
   if (terms.length === 0) return [];
   const tsquery = terms.join(" | ");
 
-  // Apply company and role checks in SQL, before reading document text into
-  // the application or sending any passage to OpenAI.
+  // Only the verified owner can reach this query. Drafts and all companies are
+  // deliberately included for that account and marked for review in context.
   const articles = await prisma.$queryRaw<KnowledgeArticle[]>`
     SELECT "id", "title", "content", "category", "sourceLabel", "sourceUrl", "sourceUpdatedAt",
            "company", "allowedRoles", "isPublished", "createdById", "createdAt", "updatedAt"
     FROM "KnowledgeArticle"
-    WHERE "isPublished" = true
-      AND (${isSuperAdmin(viewer.role)} OR (
-        ("company" IS NULL OR "company" = ${viewer.company}::"Company")
-        AND ${viewer.role}::"Role" = ANY("allowedRoles")
-      ))
-      AND to_tsvector('english', "title" || ' ' || "content")
+    WHERE to_tsvector('english', "title" || ' ' || "content")
           @@ to_tsquery('english', ${tsquery})
     ORDER BY ts_rank(
       to_tsvector('english', "title" || ' ' || "content"),
@@ -102,10 +102,10 @@ export async function findKnowledgeSources(
 
   const articleSources: KnowledgeSource[] = articles.map((article) => ({
     id: `article:${article.id}`,
-    title: article.title,
+    title: article.isPublished ? article.title : `[Draft] ${article.title}`,
     kind: "article",
     url: `/knowledge/articles/${article.id}`,
-    excerpt: excerptAround(article.content, terms),
+    excerpt: `${article.isPublished ? "" : "Unpublished draft; verify before relying on it.\n"}${excerptAround(article.content, terms)}`,
     updatedAt: (article.sourceUpdatedAt ?? article.updatedAt).toISOString(),
     dateKind: article.sourceUpdatedAt ? "source" : "entry",
   }));
@@ -120,7 +120,6 @@ export async function findKnowledgeSources(
         { title: { contains: term, mode: "insensitive" as const } },
       ]),
       subsection: {
-        module: { title: { not: { startsWith: "(Old)" } } },
         ...(visibleModuleIds ? { moduleId: { in: [...visibleModuleIds] } } : {}),
       },
     },
@@ -129,19 +128,25 @@ export async function findKnowledgeSources(
       title: true,
       searchText: true,
       updatedAt: true,
-      subsection: { select: { moduleId: true } },
+      subsection: { select: { moduleId: true, module: { select: { title: true } } } },
     },
     take: 60,
   });
-  const lessonSources: KnowledgeSource[] = rankKnowledgeLessons(lessons, terms).slice(0, 6).map((lesson) => ({
+  const rankedLessons = rankKnowledgeLessons(lessons, terms);
+  const prioritizedLessons = [
+    ...rankedLessons.filter((lesson) => !lesson.subsection.module.title.startsWith("(Old)")),
+    ...rankedLessons.filter((lesson) => lesson.subsection.module.title.startsWith("(Old)")),
+  ];
+  const lessonSources: KnowledgeSource[] = prioritizedLessons.slice(0, 6).map((lesson) => ({
     id: `lesson:${lesson.id}`,
-    title: lesson.title,
+    title: `${lesson.subsection.module.title.startsWith("(Old)") ? "[Legacy] " : ""}${lesson.title}`,
     kind: "lesson",
     url: `/modules/${lesson.subsection.moduleId}/lessons/${lesson.id}`,
-    excerpt: excerptAround(lesson.searchText, terms),
+    excerpt: `${lesson.subsection.module.title.startsWith("(Old)") ? `From legacy module ${lesson.subsection.module.title}; confirm this procedure is current.\n` : ""}${excerptAround(lesson.searchText, terms)}`,
     updatedAt: lesson.updatedAt.toISOString(),
     dateKind: "entry",
   }));
 
-  return [...articleSources, ...lessonSources].slice(0, 8);
+  const appSources = await findAppDataSources(question, terms);
+  return [...appSources, ...articleSources, ...lessonSources].slice(0, 8);
 }

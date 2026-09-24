@@ -7,6 +7,7 @@ import { signOut, useSession } from "next-auth/react";
 import { cn } from "@/lib/utils";
 import { useState, useEffect } from "react";
 import { useBusiness } from "@/components/business/BusinessProvider";
+import { isKnowledgeOwner } from "@/lib/knowledge-owner";
 
 interface NavItem {
   href: string;
@@ -82,7 +83,6 @@ const ROLE_LABELS: Record<string, string> = {
 export function Sidebar() {
   const business = useBusiness();
   const operationsNav = sharedNav.filter((item) => business.company === "RESORT" || item.href === "/maintenance");
-  const businessEmployeeNav = employeeNav.filter((item) => business.company === "RESORT" || item.href !== "/career");
   const businessFinanceNav = financeNav.map((item) =>
     item.href === "/finance/payroll" && business.company === "GROOMING"
       ? { ...item, href: "/finance/payroll/mobile-grooming" }
@@ -93,6 +93,11 @@ export function Sidebar() {
   const role = session?.user?.role;
   const jobTitle = session?.user?.jobTitle;
   const isSuperAdmin = role === "SUPER_ADMIN" || role === "ADMIN";
+  const isKnowledgeAccount = isKnowledgeOwner({ email: session?.user?.email, role });
+  const businessEmployeeNav = employeeNav.filter((item) =>
+    (business.company === "RESORT" || item.href !== "/career") &&
+    (item.href !== "/knowledge" || isKnowledgeAccount)
+  );
   const isManager = role === "MANAGER";
   // "Manager-tier admin UI" — controls visibility of the Employee View
   // section.
@@ -262,7 +267,7 @@ export function Sidebar() {
                 <div className="mx-1.5 h-px bg-pp-line" />
               )}
               <div className="-mt-2 flex flex-col gap-px">
-                {[{ href: "/admin/dashboard", label: "Dashboard", icon: "▣" }, ...businessFinanceNav, { href: "/admin/knowledge", label: "Knowledge library", icon: "✦" }].map((item) => {
+                {[{ href: "/admin/dashboard", label: "Dashboard", icon: "▣" }, ...businessFinanceNav, ...(isKnowledgeAccount ? [{ href: "/admin/knowledge", label: "Knowledge library", icon: "✦" }] : [])].map((item) => {
                   const active = item.href === "/admin/dashboard"
                     ? pathname === item.href
                     : isActive(item.href);

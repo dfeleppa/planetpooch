@@ -1,9 +1,10 @@
 import { Company, Role } from "@prisma/client";
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { getSession, isSuperAdmin } from "@/lib/auth-helpers";
+import { getSession } from "@/lib/auth-helpers";
 import { isBusinessSwitchOriginAllowed } from "@/lib/business";
 import { getKnowledgeViewer } from "@/lib/knowledge";
+import { isKnowledgeOwner } from "@/lib/knowledge-owner";
 import { prisma } from "@/lib/prisma";
 
 const articleSchema = z.object({
@@ -23,7 +24,7 @@ async function authorizedAdmin() {
   const session = await getSession();
   if (!session?.user?.id) return null;
   const viewer = await getKnowledgeViewer(session.user.id);
-  return viewer && isSuperAdmin(viewer.role) ? viewer : null;
+  return viewer && isKnowledgeOwner(viewer) ? viewer : null;
 }
 
 export async function GET(request: Request) {

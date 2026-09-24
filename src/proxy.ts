@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getToken } from "next-auth/jwt";
 import type { NextRequest } from "next/server";
 import { businessCookieName, businessFor, resolveBusiness } from "@/lib/business";
+import { isKnowledgeOwner } from "@/lib/knowledge-owner";
 
 export async function proxy(req: NextRequest) {
   const { pathname } = req.nextUrl;
@@ -64,7 +65,8 @@ export async function proxy(req: NextRequest) {
   const canAccessAdmin = isManagerOrAbove;
   const canAccessFinance = role === "SUPER_ADMIN" || role === "ADMIN";
 
-  if (pathname.startsWith("/admin/knowledge") && !canAccessFinance) {
+  if ((pathname.startsWith("/admin/knowledge") || pathname.startsWith("/knowledge")) &&
+    !isKnowledgeOwner({ email: token.email, role })) {
     return NextResponse.redirect(new URL("/dashboard", req.url));
   }
 
@@ -121,6 +123,7 @@ export const config = {
     "/modules/:path*",
     "/admin/:path*",
     "/search/:path*",
+    "/knowledge/:path*",
     "/maintenance/:path*",
     "/operations/:path*",
     "/marketing/:path*",

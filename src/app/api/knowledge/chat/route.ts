@@ -3,6 +3,7 @@ import { z } from "zod";
 import { getSession } from "@/lib/auth-helpers";
 import { isBusinessSwitchOriginAllowed } from "@/lib/business";
 import { findKnowledgeSources, getKnowledgeViewer } from "@/lib/knowledge";
+import { isKnowledgeOwner } from "@/lib/knowledge-owner";
 
 export const runtime = "nodejs";
 
@@ -39,9 +40,16 @@ export async function POST(request: Request) {
   }
   const viewer = await getKnowledgeViewer(session.user.id);
   if (!viewer) return NextResponse.json({ error: "Sign in required." }, { status: 401 });
+  if (!isKnowledgeOwner(viewer)) return NextResponse.json({ error: "Forbidden." }, { status: 403 });
   const messages = parsed.data.messages;
   const question = messages[messages.length - 1].content;
-  const sources = await findKnowledgeSources(viewer, question);
+  let sources: Awaited<ReturnType<typeof findKnowledgeSources>>;
+  try {
+    sources = await findKnowledgeSources(viewer, question);
+  } catch (error) {
+    console.error("[knowledge.chat] Source lookup failed", error instanceof Error ? error.name : "unknown");
+    return NextResponse.json({ error: "The knowledge sources are unavailable right now." }, { status: 502 });
+  }
   if (sources.length === 0) {
     return NextResponse.json({
       answer: "I couldn’t find a reliable Planet Pooch source for that yet. Please ask a manager or try a more specific question.",
@@ -72,6 +80,9 @@ export async function POST(request: Request) {
           "Cite each factual claim with source numbers like [1].",
           "If the passages do not answer the question, say you do not know and suggest asking a manager.",
           "Do not invent policies, prices, customer facts, or employee information.",
+          "App records may be synced snapshots. State their dates, business, and limits clearly; do not imply they are live MoeGo or Drive data.",
+          "Unpublished drafts and legacy training are accessible to this owner but may be outdated; label them and do not treat them as approved current policy.",
+          "Keep payroll hours, service prices, commissions, and wages distinct.",
           "Keep the answer concise and practical.",
         ].join(" "),
         input: [

@@ -3,13 +3,13 @@
 import Link from "next/link";
 import { FormEvent, useState } from "react";
 
-type Source = { id: string; title: string; kind: "article" | "lesson"; url: string };
+type Source = { id: string; title: string; kind: "article" | "lesson" | "record"; url: string };
 type Message = { role: "user" | "assistant"; content: string; sources?: Source[] };
 
 const SUGGESTIONS = [
-  "What are the Floor Lead's duties?",
-  "How do I do laundry?",
-  "What does the front desk handle?",
+  "How many customers are in the synced database?",
+  "What are the latest saved finance metrics?",
+  "What are the latest payroll hours?",
 ];
 
 export function KnowledgeChat() {
@@ -55,7 +55,7 @@ export function KnowledgeChat() {
           <span className="rounded-full border border-pp-accent-line bg-pp-accent-soft px-2.5 py-1 text-xs font-medium text-pp-accent">Experimental</span>
         </div>
         <p className="mt-2 text-sm leading-6 text-pp-ink-3">
-          Ask about Planet Pooch procedures and information. Answers use sources you are allowed to see.
+          Ask about Planet Pooch records and procedures. Answers use the app data and training sources available to this account.
           Check the linked sources before acting on sensitive or time critical details.
         </p>
       </header>
