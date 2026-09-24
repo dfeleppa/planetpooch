@@ -8,13 +8,13 @@ import { BUSINESSES } from "@/lib/business";
 type Area = "customers" | "employees" | "payroll" | "finance" | "forms" | "marketing" | "operations";
 
 const intentPatterns: Record<Area, RegExp> = {
-  customers: /\b(customer|client|moego|appointment|visit|lifetime value|ltv|dog|pet)\b/i,
-  employees: /\b(employee|staff|team member|groomer|hire|job title|manager)\b/i,
+  customers: /\b(customers?|clients?|moego|appointments?|visits?|lifetime value|ltv|dogs?|pets?)\b/i,
+  employees: /\b(employees?|staff|team members?|groomers?|hire|job titles?|managers?)\b/i,
   payroll: /\b(payroll|paycheck|hours|clock.in|commission|tip|wage|salary|paid)\b/i,
   finance: /\b(revenue|sales|profit|expense|finance|income|kpi|ad spend|order total)\b/i,
-  forms: /\b(form|submission|lead|referral|attribution|website)\b/i,
-  marketing: /\b(marketing|campaign|advertis\w*|creative|ad idea)\b/i,
-  operations: /\b(maintenance|inventory|stock|suppl\w*|checklist|task)\b/i,
+  forms: /\b(forms?|submissions?|leads?|referrals?|attribution|website)\b/i,
+  marketing: /\b(marketing|campaigns?|advertis\w*|creatives?|ad ideas?)\b/i,
+  operations: /\b(maintenance|inventory|stock|suppl\w*|checklists?|tasks?)\b/i,
 };
 
 export function appDataAreas(question: string): Area[] {
@@ -188,10 +188,13 @@ async function recentForms(): Promise<KnowledgeSource[]> {
     ], form.updatedAt));
 }
 
-async function payrollSources(lookup: string | null): Promise<KnowledgeSource[]> {
+async function payrollSources(lookup: string | null, question: string): Promise<KnowledgeSource[]> {
+  const asksForHours = /\b(hours|shifts|clock.in)\b/i.test(question);
   const [weeks, hours, mobileEntries, commissions] = await Promise.all([
     prisma.financePayrollWeek.findMany({
-      where: { OR: [{ rows: { some: {} } }, { mobileGroomingEntries: { some: {} } }] },
+      where: asksForHours
+        ? { rows: { some: {} } }
+        : { OR: [{ rows: { some: {} } }, { mobileGroomingEntries: { some: {} } }] },
       take: 3, orderBy: { weekStart: "desc" },
       include: { rows: true, mobileGroomingEntries: true },
     }),
@@ -209,7 +212,9 @@ async function payrollSources(lookup: string | null): Promise<KnowledgeSource[]>
     ...weeks.map((week) => recordSource("payroll-week", week.id,
       `Payroll hours: ${week.business}, week of ${date(week.weekStart)}`, "/finance/payroll", [
         `Period: ${date(week.weekStart)} to ${date(week.weekEnd)}; business: ${week.business}.`,
-        `Saved rows: ${week.rows.length}; shifts: ${week.rows.reduce((sum, row) => sum + row.shifts, 0)}; hours: ${(week.rows.reduce((sum, row) => sum + row.totalSeconds, 0) / 3600).toFixed(2)}.`,
+        week.rows.length
+          ? `Saved hours rows: ${week.rows.length}; shifts: ${week.rows.reduce((sum, row) => sum + row.shifts, 0)}; hours: ${(week.rows.reduce((sum, row) => sum + row.totalSeconds, 0) / 3600).toFixed(2)}.`
+          : "No hours rows are stored for this week; mobile grooming service entries do not measure hours.",
         `Mobile grooming service entries: ${week.mobileGroomingEntries.length}; dogs: ${week.mobileGroomingEntries.reduce((sum, row) => sum + row.dogs, 0)}; service prices (not wages): ${money(week.mobileGroomingEntries.reduce((sum, row) => sum + row.priceCents, 0))}.`,
         `Automation status: ${week.automationStatus}; source generated: ${date(week.sourceGeneratedAt)}.`,
       ], week.updatedAt)),
@@ -325,7 +330,7 @@ export async function findAppDataSources(question: string, terms: string[]): Pro
   if (lookup) queries.push(peopleSources(lookup, areas));
   if (areas.includes("customers") && !lookup) queries.push(customerSummary());
   if (areas.includes("forms") && !lookup) queries.push(recentForms());
-  if (areas.includes("payroll")) queries.push(payrollSources(lookup));
+  if (areas.includes("payroll")) queries.push(payrollSources(lookup, question));
   if (/\b(revenue|sales|orders?|income)\b/i.test(question)) queries.push(orderSources(question));
   if (areas.includes("finance")) queries.push(financeSources());
   if (areas.includes("marketing")) queries.push(marketingSources(terms));

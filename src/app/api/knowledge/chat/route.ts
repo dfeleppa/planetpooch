@@ -84,6 +84,7 @@ export async function POST(request: Request) {
           "Unpublished drafts and legacy training are accessible to this owner but may be outdated; label them and do not treat them as approved current policy.",
           "Keep payroll hours, service prices, commissions, and wages distinct.",
           "Keep the answer concise and practical.",
+          "Use plain text without Markdown formatting.",
         ].join(" "),
         input: [
           ...messages.slice(0, -1).map(({ role, content }) => ({ role, content })),

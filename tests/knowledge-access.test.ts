@@ -54,6 +54,7 @@ test("a matching lesson title outranks incidental text matches", () => {
 
 test("app questions route to relevant stored record types", () => {
   assert.deepEqual(appDataAreas("What were payroll hours and revenue last week?"), ["payroll", "finance"]);
+  assert.deepEqual(appDataAreas("How many customers are in the synced database?"), ["customers"]);
   assert.equal(personLookup("What is customer Jane Smith's next appointment?"), "Jane Smith");
 });
 
