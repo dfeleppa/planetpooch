@@ -23,7 +23,7 @@ export type KnowledgeSource = {
 const STOP_WORDS = new Set([
   "about", "are", "can", "could", "does", "for", "from", "how", "our",
   "the", "their", "there", "this", "what", "when", "where", "which", "who",
-  "with", "would", "you", "your",
+  "with", "would", "should", "you", "your",
 ]);
 
 export async function getKnowledgeViewer(userId: string): Promise<KnowledgeViewer | null> {
@@ -54,6 +54,22 @@ function excerptAround(text: string, terms: string[], maxLength = 1600): string 
   const start = positions.length ? Math.max(0, Math.min(...positions) - 160) : 0;
   const excerpt = text.slice(start, start + maxLength).trim();
   return `${start ? "…" : ""}${excerpt}${start + maxLength < text.length ? "…" : ""}`;
+}
+
+export function rankKnowledgeLessons<T extends { title: string; searchText: string }>(
+  lessons: T[],
+  terms: string[],
+): T[] {
+  return [...lessons].sort((a, b) => {
+    const score = (lesson: T) => {
+      const title = lesson.title.toLowerCase();
+      const body = lesson.searchText.toLowerCase();
+      const titleMatches = terms.filter((term) => title.includes(term)).length;
+      const bodyMatches = terms.filter((term) => body.includes(term)).length;
+      return titleMatches * 5 + bodyMatches * 2;
+    };
+    return score(b) - score(a);
+  });
 }
 
 export async function findKnowledgeSources(
@@ -99,7 +115,10 @@ export async function findKnowledgeSources(
     : await getVisibleModuleIdsForUser(viewer.id, viewer.jobTitle, viewer.company);
   const lessons = visibleModuleIds?.size === 0 ? [] : await prisma.lesson.findMany({
     where: {
-      OR: terms.map((term) => ({ searchText: { contains: term, mode: "insensitive" as const } })),
+      OR: terms.flatMap((term) => [
+        { searchText: { contains: term, mode: "insensitive" as const } },
+        { title: { contains: term, mode: "insensitive" as const } },
+      ]),
       ...(visibleModuleIds ? { subsection: { moduleId: { in: [...visibleModuleIds] } } } : {}),
     },
     select: {
@@ -109,9 +128,9 @@ export async function findKnowledgeSources(
       updatedAt: true,
       subsection: { select: { moduleId: true } },
     },
-    take: 6,
+    take: 60,
   });
-  const lessonSources: KnowledgeSource[] = lessons.map((lesson) => ({
+  const lessonSources: KnowledgeSource[] = rankKnowledgeLessons(lessons, terms).slice(0, 6).map((lesson) => ({
     id: `lesson:${lesson.id}`,
     title: lesson.title,
     kind: "lesson",

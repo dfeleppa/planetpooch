@@ -7,9 +7,9 @@ type Source = { id: string; title: string; kind: "article" | "lesson"; url: stri
 type Message = { role: "user" | "assistant"; content: string; sources?: Source[] };
 
 const SUGGESTIONS = [
-  "How do I handle a daycare check-in?",
-  "Where can I find the grooming procedures?",
-  "What should I do if a dog seems unwell?",
+  "What should I do at the start of a playgroup shift?",
+  "How do I put dogs away for midday break?",
+  "What are the boarding check-in steps?",
 ];
 
 export function KnowledgeChat() {

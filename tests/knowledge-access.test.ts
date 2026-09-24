@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { canReadKnowledgeArticle, knowledgeTerms, type KnowledgeViewer } from "../src/lib/knowledge";
+import { canReadKnowledgeArticle, knowledgeTerms, rankKnowledgeLessons, type KnowledgeViewer } from "../src/lib/knowledge";
 
 const employee: KnowledgeViewer = {
   id: "employee-1", role: "EMPLOYEE", company: "RESORT", jobTitle: null,
@@ -29,4 +29,12 @@ test("super admins can review published articles regardless of article roles", (
 
 test("search uses distinct, bounded terms", () => {
   assert.deepEqual(knowledgeTerms("How do I handle daycare daycare check-in?"), ["handle", "daycare", "check"]);
+});
+
+test("a matching lesson title outranks incidental text matches", () => {
+  const lessons = [
+    { title: "MoeGo", searchText: "Log in before your shift." },
+    { title: "1. Clock In & Pre-Shift Setup", searchText: "When you walk in, get a walkie-talkie and check with the shift lead." },
+  ];
+  assert.equal(rankKnowledgeLessons(lessons, knowledgeTerms("What should I do for clock in and pre-shift setup?"))[0].title, lessons[1].title);
 });
