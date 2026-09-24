@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { canReadKnowledgeArticle, knowledgeTerms, rankKnowledgeLessons, type KnowledgeViewer } from "../src/lib/knowledge";
 import { isKnowledgeOwner } from "../src/lib/knowledge-owner";
-import { appDataAreas, orderDateRange, personLookup } from "../src/lib/knowledge-app-data";
+import { appDataAreas, orderDateRange, payrollBusiness, payrollPayPeriod, personLookup } from "../src/lib/knowledge-app-data";
 
 const employee: KnowledgeViewer = {
   id: "employee-1", email: "employee@example.com", role: "EMPLOYEE", company: "RESORT", jobTitle: null,
@@ -61,4 +61,13 @@ test("app questions route to relevant stored record types", () => {
 test("order periods use completed Eastern calendar weeks", () => {
   assert.deepEqual(orderDateRange("What were sales last week?", new Date("2026-09-24T16:00:00Z")),
     { start: "2026-09-13", end: "2026-09-19" });
+});
+
+test("Pet Resort payroll requests target its pay period rather than Mobile Grooming", () => {
+  const question = "What was the payroll for the pet resort last week?";
+  assert.deepEqual(appDataAreas(question), ["payroll"]);
+  assert.equal(payrollBusiness(question), "pet-resort");
+  assert.equal(payrollPayPeriod(orderDateRange(question, new Date("2026-09-24T16:00:00Z"))!),
+    "09/13/2026 to 09/19/2026");
+  assert.equal(payrollBusiness("How many mobile grooming payroll hours?"), "mobile-grooming");
 });

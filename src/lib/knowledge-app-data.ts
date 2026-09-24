@@ -18,7 +18,8 @@ const intentPatterns: Record<Area, RegExp> = {
 };
 
 export function appDataAreas(question: string): Area[] {
-  return (Object.keys(intentPatterns) as Area[]).filter((area) => intentPatterns[area].test(question));
+  return (Object.keys(intentPatterns) as Area[]).filter((area) =>
+    intentPatterns[area].test(area === "customers" ? question.replace(/\bpet[\s-]*resort\b/gi, "resort") : question));
 }
 
 export function personLookup(question: string): string | null {
@@ -60,6 +61,17 @@ export function orderDateRange(question: string, now = new Date()): { start: str
   const dates = question.match(/\b\d{4}-\d{2}-\d{2}\b/g);
   if (dates?.length) return { start: dates[0], end: dates[1] ?? dates[0] };
   return null;
+}
+
+export function payrollBusiness(question: string): "pet-resort" | "mobile-grooming" | null {
+  if (/\b(?:pet[\s-]*resort|resort)\b/i.test(question)) return "pet-resort";
+  if (/\bmobile[\s-]*grooming\b/i.test(question)) return "mobile-grooming";
+  return null;
+}
+
+export function payrollPayPeriod(range: { start: string; end: string }): string {
+  const display = (iso: string) => `${iso.slice(5, 7)}/${iso.slice(8, 10)}/${iso.slice(0, 4)}`;
+  return `${display(range.start)} to ${display(range.end)}`;
 }
 
 function money(cents: number | null | undefined): string {
@@ -190,11 +202,13 @@ async function recentForms(): Promise<KnowledgeSource[]> {
 
 async function payrollSources(lookup: string | null, question: string): Promise<KnowledgeSource[]> {
   const asksForHours = /\b(hours|shifts|clock.in)\b/i.test(question);
+  const business = payrollBusiness(question);
+  if (business === "pet-resort") return petResortPayrollSources(question, asksForHours);
   const [weeks, hours, mobileEntries, commissions] = await Promise.all([
     prisma.financePayrollWeek.findMany({
       where: asksForHours
-        ? { rows: { some: {} } }
-        : { OR: [{ rows: { some: {} } }, { mobileGroomingEntries: { some: {} } }] },
+        ? { ...(business ? { business } : {}), rows: { some: {} } }
+        : { ...(business ? { business } : {}), OR: [{ rows: { some: {} } }, { mobileGroomingEntries: { some: {} } }] },
       take: 3, orderBy: { weekStart: "desc" },
       include: { rows: true, mobileGroomingEntries: true },
     }),
@@ -235,6 +249,63 @@ async function payrollSources(lookup: string | null, question: string): Promise<
         "This record tracks payment status, not the commission amount.",
       ], row.updatedAt)),
   ];
+}
+
+async function petResortPayrollSources(question: string, asksForHours: boolean): Promise<KnowledgeSource[]> {
+  const range = orderDateRange(question);
+  if (asksForHours) {
+    const [matchingWeek, latestWeek] = await Promise.all([
+      range ? prisma.financePayrollWeek.findFirst({
+        where: { business: "pet-resort", weekStart: new Date(`${range.start}T00:00:00.000Z`),
+          weekEnd: new Date(`${range.end}T00:00:00.000Z`), rows: { some: {} } },
+        include: { rows: true },
+      }) : Promise.resolve(null),
+      prisma.financePayrollWeek.findFirst({
+        where: { business: "pet-resort", rows: { some: {} } },
+        orderBy: { weekStart: "desc" }, include: { rows: true },
+      }),
+    ]);
+    const week = matchingWeek ?? latestWeek;
+    const sources: KnowledgeSource[] = [];
+    if (range && !matchingWeek) sources.push(recordSource("payroll-availability", `pet-resort-hours:${range.start}`,
+      `No saved Pet Resort hours for ${range.start} to ${range.end}`, "/finance/payroll", [
+        `No Pet Resort payroll hours rows are stored for ${range.start} to ${range.end}. This is a database availability check, not a zero-hours total.`,
+        week ? `Latest saved Pet Resort hours cover ${date(week.weekStart)} to ${date(week.weekEnd)}.` : "No Pet Resort hours week is stored.",
+      ], new Date()));
+    if (week) sources.push(recordSource("payroll-week", week.id,
+      `Pet Resort payroll hours: ${date(week.weekStart)} to ${date(week.weekEnd)}`, "/finance/payroll", [
+        `Period: ${date(week.weekStart)} to ${date(week.weekEnd)}; business: pet-resort.`,
+        `Saved hours rows: ${week.rows.length}; shifts: ${week.rows.reduce((sum, row) => sum + row.shifts, 0)}; hours: ${(week.rows.reduce((sum, row) => sum + row.totalSeconds, 0) / 3600).toFixed(2)}.`,
+        `Source generated: ${date(week.sourceGeneratedAt)}; saved entry updated: ${week.updatedAt.toISOString()}.`,
+      ], week.updatedAt));
+    return sources;
+  }
+
+  const [matchingRuns, latestRun] = await Promise.all([
+    range ? prisma.financePetResortPayrollRun.findMany({
+      where: { payPeriod: payrollPayPeriod(range) }, orderBy: { payRunAt: "desc" }, take: 10,
+    }) : Promise.resolve([]),
+    prisma.financePetResortPayrollRun.findFirst({ orderBy: { checkDate: "desc" } }),
+  ]);
+  const sources: KnowledgeSource[] = [];
+  if (range) {
+    const matchingTotalCents = matchingRuns.reduce((sum, run) => sum + Math.round(Number(run.amount) * 100), 0);
+    sources.push(recordSource("payroll-availability", `pet-resort-runs:${range.start}`,
+      `Pet Resort payroll for ${range.start} to ${range.end}`, "/finance/payroll", [
+        matchingRuns.length
+          ? `${matchingRuns.length} saved Pet Resort payroll run(s) have pay period ${range.start} to ${range.end}; combined amount: ${money(matchingTotalCents)}.`
+          : `No saved Pet Resort payroll run has pay period ${range.start} to ${range.end}. This is missing data, not a $0 payroll total.`,
+        `Database checked: ${new Date().toISOString()}.`,
+      ], new Date()));
+  }
+  const runs = matchingRuns.length ? matchingRuns : latestRun ? [latestRun] : [];
+  sources.push(...runs.map((run) => recordSource("payroll-run", run.id,
+    `Pet Resort payroll run: ${run.payPeriod}`, "/finance/payroll", [
+      `Business: pet-resort; payroll type: ${run.payrollType}; pay period: ${run.payPeriod}.`,
+      `Amount: $${run.amount.toString()}; check date: ${date(run.checkDate)}; schedule: ${run.schedule}.`,
+      `Run entered: ${run.payRunAt.toISOString()}.`,
+    ], run.updatedAt)));
+  return sources;
 }
 
 async function financeSources(): Promise<KnowledgeSource[]> {
