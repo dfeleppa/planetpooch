@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { canReadKnowledgeArticle, knowledgeTerms, rankKnowledgeLessons, type KnowledgeViewer } from "../src/lib/knowledge";
 import { isKnowledgeOwner } from "../src/lib/knowledge-owner";
-import { appDataAreas, orderDateRange, payrollBusiness, payrollPayPeriod, personLookup } from "../src/lib/knowledge-app-data";
+import { appDataAreas, knowledgeRetrievalQuestion, orderDateRange, payrollBusiness, payrollPayPeriod, personLookup } from "../src/lib/knowledge-app-data";
 
 const employee: KnowledgeViewer = {
   id: "employee-1", email: "employee@example.com", role: "EMPLOYEE", company: "RESORT", jobTitle: null,
@@ -70,4 +70,31 @@ test("Pet Resort payroll requests target its pay period rather than Mobile Groom
   assert.equal(payrollPayPeriod(orderDateRange(question, new Date("2026-09-24T16:00:00Z"))!),
     "09/13/2026 to 09/19/2026");
   assert.equal(payrollBusiness("How many mobile grooming payroll hours?"), "mobile-grooming");
+});
+
+test("a date-only follow-up keeps the payroll topic and selects the new period", () => {
+  const messages: Array<{ role: "user" | "assistant"; content: string }> = [
+    { role: "user", content: "What was payroll for the pet resort for last week?" },
+    { role: "assistant", content: "No saved run for September 13–19." },
+    { role: "user", content: "what about for 09/06/2026 to 09/12/2026" },
+  ];
+  const retrieval = knowledgeRetrievalQuestion(messages);
+  assert.deepEqual(appDataAreas(retrieval), ["payroll"]);
+  assert.equal(payrollBusiness(retrieval), "pet-resort");
+  assert.deepEqual(orderDateRange(retrieval, new Date("2026-09-24T16:00:00Z")),
+    { start: "2026-09-06", end: "2026-09-12" });
+  assert.equal(payrollPayPeriod(orderDateRange(retrieval)!), "09/06/2026 to 09/12/2026");
+});
+
+test("date-only follow-ups can use the last substantive user question", () => {
+  const messages: Array<{ role: "user" | "assistant"; content: string }> = [
+    { role: "user", content: "What was Pet Resort payroll last week?" },
+    { role: "assistant", content: "No saved run." },
+    { role: "user", content: "what about for 09/06/2026 to 09/12/2026" },
+    { role: "assistant", content: "A saved run exists." },
+    { role: "user", content: "what about for 08/30/2026 to 09/05/2026" },
+  ];
+  const retrieval = knowledgeRetrievalQuestion(messages);
+  assert.equal(payrollBusiness(retrieval), "pet-resort");
+  assert.deepEqual(orderDateRange(retrieval), { start: "2026-08-30", end: "2026-09-05" });
 });

@@ -22,6 +22,27 @@ export function appDataAreas(question: string): Area[] {
     intentPatterns[area].test(area === "customers" ? question.replace(/\bpet[\s-]*resort\b/gi, "resort") : question));
 }
 
+export function knowledgeRetrievalQuestion(messages: Array<{ role: "user" | "assistant"; content: string }>): string {
+  const latest = messages.at(-1)?.content ?? "";
+  if (!/^(?:what about|how about|and\b|for\b|same\b)/i.test(latest.trim())) return latest;
+  const prior = messages.slice(0, -1).reverse().find((message) =>
+    message.role === "user" && appDataAreas(message.content).length > 0);
+  if (!prior) return latest;
+  const areas = appDataAreas(latest);
+  if (areas.length === 0) {
+    const topic = prior.content
+      .replace(/\b(?:last|this)\s+(?:week|month|year)\b/gi, "")
+      .replace(/\b(?:\d{4}-\d{2}-\d{2}|\d{1,2}\/\d{1,2}\/\d{4})\b/g, "")
+      .replace(/\s+/g, " ").trim();
+    return `${latest} ${topic}`;
+  }
+  if (areas.includes("payroll") && !payrollBusiness(latest)) {
+    const business = payrollBusiness(prior.content);
+    if (business) return `${latest} ${business}`;
+  }
+  return latest;
+}
+
 export function personLookup(question: string): string | null {
   const email = question.match(/[\w.+-]+@[\w.-]+\.[a-z]{2,}/i)?.[0];
   if (email) return email;
@@ -35,6 +56,16 @@ export function personLookup(question: string): string | null {
 export function orderDateRange(question: string, now = new Date()): { start: string; end: string } | null {
   const lower = question.toLowerCase();
   const today = formatEasternDate(now);
+  const explicitDates = [...question.matchAll(/\b(?:\d{4}-\d{2}-\d{2}|\d{1,2}\/\d{1,2}\/\d{4})\b/g)]
+    .map(([value]) => {
+      const parts = value.includes("/") ? value.split("/").map(Number) : null;
+      const iso = parts
+        ? `${parts[2]}-${String(parts[0]).padStart(2, "0")}-${String(parts[1]).padStart(2, "0")}`
+        : value;
+      const parsed = new Date(`${iso}T00:00:00.000Z`);
+      return !Number.isNaN(parsed.getTime()) && parsed.toISOString().slice(0, 10) === iso ? iso : null;
+    }).filter((value): value is string => value !== null);
+  if (explicitDates.length) return { start: explicitDates[0], end: explicitDates[1] ?? explicitDates[0] };
   if (/\blast week\b/.test(lower)) {
     const range = chartPresetRange("last-week", now);
     return { start: range.from, end: range.to };
@@ -58,8 +89,6 @@ export function orderDateRange(question: string, now = new Date()): { start: str
     return { start: day, end: day };
   }
   if (/\btoday\b/.test(lower)) return { start: today, end: today };
-  const dates = question.match(/\b\d{4}-\d{2}-\d{2}\b/g);
-  if (dates?.length) return { start: dates[0], end: dates[1] ?? dates[0] };
   return null;
 }
 

@@ -4,6 +4,7 @@ import { getSession } from "@/lib/auth-helpers";
 import { isBusinessSwitchOriginAllowed } from "@/lib/business";
 import { findKnowledgeSources, getKnowledgeViewer } from "@/lib/knowledge";
 import { isKnowledgeOwner } from "@/lib/knowledge-owner";
+import { knowledgeRetrievalQuestion } from "@/lib/knowledge-app-data";
 
 export const runtime = "nodejs";
 
@@ -43,9 +44,10 @@ export async function POST(request: Request) {
   if (!isKnowledgeOwner(viewer)) return NextResponse.json({ error: "Forbidden." }, { status: 403 });
   const messages = parsed.data.messages;
   const question = messages[messages.length - 1].content;
+  const retrievalQuestion = knowledgeRetrievalQuestion(messages);
   let sources: Awaited<ReturnType<typeof findKnowledgeSources>>;
   try {
-    sources = await findKnowledgeSources(viewer, question);
+    sources = await findKnowledgeSources(viewer, retrievalQuestion);
   } catch (error) {
     console.error("[knowledge.chat] Source lookup failed", error instanceof Error ? error.name : "unknown");
     return NextResponse.json({ error: "The knowledge sources are unavailable right now." }, { status: 502 });
