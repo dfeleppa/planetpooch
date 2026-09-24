@@ -119,7 +119,10 @@ export async function findKnowledgeSources(
         { searchText: { contains: term, mode: "insensitive" as const } },
         { title: { contains: term, mode: "insensitive" as const } },
       ]),
-      ...(visibleModuleIds ? { subsection: { moduleId: { in: [...visibleModuleIds] } } } : {}),
+      subsection: {
+        module: { title: { not: { startsWith: "(Old)" } } },
+        ...(visibleModuleIds ? { moduleId: { in: [...visibleModuleIds] } } : {}),
+      },
     },
     select: {
       id: true,
