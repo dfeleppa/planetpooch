@@ -4,6 +4,7 @@ import { chartPresetRange } from "@/lib/moego/chart-date-range";
 import { REVENUE_ORDER_STATUSES } from "@/lib/moego/metrics";
 import { addCalendarDays, formatEasternDate, resolveSubmissionDateRange } from "@/lib/marketing/submission-date-range";
 import { BUSINESSES } from "@/lib/business";
+import { findKpiSources, isKpiQuestion } from "@/lib/knowledge-kpis";
 
 type Area = "customers" | "employees" | "payroll" | "finance" | "forms" | "marketing" | "operations";
 
@@ -427,6 +428,7 @@ export async function findAppDataSources(question: string, terms: string[]): Pro
   const areas = appDataAreas(question);
   const lookup = personLookup(question);
   const queries: Array<Promise<KnowledgeSource[]>> = [];
+  if (isKpiQuestion(question)) queries.push(findKpiSources(question, orderDateRange(question)));
   if (lookup) queries.push(peopleSources(lookup, areas));
   if (areas.includes("customers") && !lookup) queries.push(customerSummary());
   if (areas.includes("forms") && !lookup) queries.push(recentForms());

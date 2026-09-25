@@ -5,6 +5,7 @@ import { isManagerOrAbove, isSuperAdmin } from "@/lib/auth-helpers";
 import { findAppDataSources } from "@/lib/knowledge-app-data";
 import { findBroadAppDataSources } from "@/lib/knowledge-broad-data";
 import { isKnowledgeOwner } from "@/lib/knowledge-owner";
+import { isKpiQuestion } from "@/lib/knowledge-kpis";
 
 export type KnowledgeViewer = {
   id: string;
@@ -153,7 +154,7 @@ export async function findKnowledgeSources(
     findBroadAppDataSources(question),
   ]);
   return [
-    ...(broadSources.length ? appSources.slice(0, 3) : appSources),
+    ...(isKpiQuestion(question) ? appSources : broadSources.length ? appSources.slice(0, 3) : appSources),
     ...broadSources,
     ...articleSources,
     ...lessonSources,

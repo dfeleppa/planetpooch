@@ -80,7 +80,8 @@ const querySchema = z.object({
   selectFields: z.array(z.string()).max(20),
   sortField: z.string().nullable(),
   sortDirection: z.enum(["asc", "desc"]),
-  limit: z.number().int().min(0).max(10),
+  // The planner may suggest a larger display limit; execution applies the cap.
+  limit: z.number().int(),
 });
 type DataQuery = z.infer<typeof querySchema>;
 const planSchema = z.object({ queries: z.array(querySchema).max(3) });

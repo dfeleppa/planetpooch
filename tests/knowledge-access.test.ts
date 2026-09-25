@@ -5,6 +5,8 @@ import { canReadKnowledgeArticle, knowledgeTerms, rankKnowledgeLessons, type Kno
 import { isKnowledgeOwner } from "../src/lib/knowledge-owner";
 import { appDataAreas, knowledgeRetrievalQuestion, orderDateRange, payrollBusiness, payrollPayPeriod, personLookup } from "../src/lib/knowledge-app-data";
 import { broadDataCatalog, validateDataQuery } from "../src/lib/knowledge-broad-data";
+import { isKpiQuestion, kpiRequestedWeek } from "../src/lib/knowledge-kpis";
+import { calculateBoardingDerivedMetricValues } from "../src/lib/kpis";
 
 const employee: KnowledgeViewer = {
   id: "employee-1", email: "employee@example.com", role: "EMPLOYEE", company: "RESORT", jobTitle: null,
@@ -121,4 +123,12 @@ test("catalog queries accept saved KPI records but reject blocked fields and unk
   assert.equal(validateDataQuery(query), true);
   assert.equal(validateDataQuery({ ...query, model: "User", selectFields: ["passwordHash"] }), false);
   assert.equal(validateDataQuery({ ...query, model: "MadeUpTable" }), false);
+});
+
+test("boarding week-ending questions use the finance KPI week and derived occupancy", () => {
+  const question = "What was our boarding occupancy rate from week-ending 9/5";
+  assert.equal(isKpiQuestion(question), true);
+  assert.equal(kpiRequestedWeek(question, null, new Date("2026-09-25T16:00:00Z"))?.toISOString().slice(0, 10), "2026-08-30");
+  assert.equal(kpiRequestedWeek("Boarding occupancy for week ending 9/5/26", null)?.toISOString().slice(0, 10), "2026-08-30");
+  assert.equal(calculateBoardingDerivedMetricValues({ nights: 8700 }).occupancy_rate, 3450);
 });
