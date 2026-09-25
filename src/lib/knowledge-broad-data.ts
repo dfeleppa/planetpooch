@@ -232,13 +232,16 @@ function sourceUrl(model: string, row?: Row): string {
   if (model === "User" && row?.id) return `/admin/employees/${encodeURIComponent(String(row.id))}`;
   if (model === "MoegoCustomer" && row?.moegoId) return `/finance/moego/customers/${encodeURIComponent(String(row.moegoId))}`;
   if (model.startsWith("FinancePayroll") || model.startsWith("FinanceMobileGrooming") || model.startsWith("FinancePetResortPayroll") || model === "FinanceEmployeeCommission") return "/finance/payroll";
-  if (model.startsWith("Finance") || model.startsWith("Kpi")) return "/finance";
+  if (model.startsWith("Kpi")) return "/finance/kpis";
+  if (model.startsWith("Finance")) return "/finance";
   if (model.startsWith("MoegoDaycare")) return "/operations/daycare";
   if (model.startsWith("Moego")) return "/finance/moego";
   if (model.startsWith("Website")) return "/marketing/website-attribution";
-  if (model.startsWith("Meta") || /^(Marketing|BrandVoice|AdAsset|Angle|Script|Hook)/.test(model)) return "/marketing";
+  if (model.startsWith("Meta")) return "/marketing/ad-reporting";
+  if (/^(Marketing|BrandVoice|AdAsset|Angle|Script|Hook)/.test(model)) return "/marketing";
   if (/^(Inventory|Maintenance|DailyChecklist)/.test(model)) return "/maintenance";
-  if (/^(Module|Lesson|Completion|Onboarding|OrgPosition|Employee|Esign|Signable)/.test(model)) return "/admin";
+  if (/^(Employee|Esign|Signable|OrgPosition)/.test(model)) return "/admin/employees";
+  if (/^(Module|Lesson|Completion|Onboarding)/.test(model)) return "/admin/modules";
   return "/dashboard";
 }
 
