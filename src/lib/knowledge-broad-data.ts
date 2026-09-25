@@ -3,7 +3,7 @@ import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import type { KnowledgeSource } from "@/lib/knowledge";
 import { orderDateRange } from "@/lib/knowledge-app-data";
-import { resolveSubmissionDateRange } from "@/lib/marketing/submission-date-range";
+import { formatEasternDate, resolveSubmissionDateRange } from "@/lib/marketing/submission-date-range";
 
 type Model = (typeof Prisma.dmmf.datamodel.models)[number];
 type Field = Model["fields"][number];
@@ -142,7 +142,7 @@ async function planDataQueries(question: string): Promise<DataQuery[]> {
         "Do not infer a missing period's value from another period. Do not request fields absent from the catalog.",
         "Prefer specific operational tables over general finance metrics when the question names a report or workflow.",
       ].join(" "),
-      input: `Question: ${question}\n${period ? `Requested Eastern period: ${period.start} to ${period.end}.\n` : ""}Available app data:\n${catalogText()}`,
+      input: `Current Eastern date: ${formatEasternDate(new Date())}. An omitted year means the most recent occurrence on or before today.\nQuestion: ${question}\n${period ? `Requested Eastern period: ${period.start} to ${period.end}.\n` : ""}Available app data:\n${catalogText()}`,
     }),
     cache: "no-store", signal: AbortSignal.timeout(16000),
   });

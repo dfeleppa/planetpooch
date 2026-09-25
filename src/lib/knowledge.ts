@@ -149,10 +149,20 @@ export async function findKnowledgeSources(
     dateKind: "entry",
   }));
 
-  const [appSources, broadSources] = await Promise.all([
-    findAppDataSources(question, terms),
-    findBroadAppDataSources(question),
-  ]);
+  const reportQuestion = isKpiQuestion(question)
+    && !/\bhow many\b.*\b(?:kpi values|kpi records)\b/i.test(question);
+  let appSources: KnowledgeSource[];
+  let broadSources: KnowledgeSource[];
+  if (reportQuestion) {
+    appSources = await findAppDataSources(question, terms);
+    broadSources = appSources.some((source) => source.id.startsWith("record:kpi:"))
+      ? [] : await findBroadAppDataSources(question);
+  } else {
+    [appSources, broadSources] = await Promise.all([
+      findAppDataSources(question, terms),
+      findBroadAppDataSources(question),
+    ]);
+  }
   return [
     ...(isKpiQuestion(question) ? appSources : broadSources.length ? appSources.slice(0, 3) : appSources),
     ...broadSources,
