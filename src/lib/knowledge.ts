@@ -24,6 +24,7 @@ export type KnowledgeSource = {
   excerpt: string;
   updatedAt: string;
   dateKind: "source" | "entry";
+  answer?: string;
 };
 
 const STOP_WORDS = new Set([

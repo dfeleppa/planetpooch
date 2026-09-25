@@ -59,6 +59,14 @@ export async function POST(request: Request) {
     });
   }
 
+  const exactReport = sources.find((source) => source.id.startsWith("record:profit-loss:") && source.answer);
+  if (exactReport) {
+    return NextResponse.json({
+      answer: exactReport.answer,
+      sources: [{ id: exactReport.id, title: exactReport.title, kind: exactReport.kind, url: exactReport.url }],
+    });
+  }
+
   const key = process.env.openai || process.env.OPENAI_API_KEY;
   if (!key) {
     return NextResponse.json({ error: "The assistant is not configured yet." }, { status: 503 });

@@ -65,6 +65,16 @@ export async function findQuarterRevenueSource(question: string): Promise<Knowle
   const total = amounts.reduce((sum, amount) => sum + amount.cents, 0);
   const completeWeeksTotal = amounts.reduce((sum, amount) => sum + amount.completeWeekCents, 0);
   const partial = range.end < range.quarterEnd;
+  const asksCombined = /\b(?:both businesses|all businesses|combined|company[ -]?wide)\b/i.test(question);
+  const requestedBusiness = /\bmobile[ -]?grooming\b/i.test(question) ? "Mobile Grooming"
+    : /\bpet[ -]?resort\b/i.test(question) ? "Pet Resort" : activeBusiness.label;
+  const selected = amounts.find((amount) => amount.label === requestedBusiness) ?? amounts[0];
+  const label = asksCombined ? "Both businesses combined" : selected.label;
+  const calendarCents = asksCombined ? total : selected.cents;
+  const weekCents = asksCombined ? completeWeeksTotal : selected.completeWeekCents;
+  const answer = partial && fullWeeks
+    ? `${label} Q${range.quarter} ${range.year} net sales for completed Sunday–Saturday reporting weeks (${fullWeeks.start} through ${fullWeeks.end}) were ${money(weekCents)}. Calendar Q${range.quarter} to date (${range.start} through ${range.end}) is ${money(calendarCents)}; the quarter ends ${range.quarterEnd}. [1]`
+    : `${label} Q${range.quarter} ${range.year} net sales for ${range.start} through ${range.end} were ${money(calendarCents)}. [1]`;
   return [{
     id: `record:profit-loss:q${range.quarter}-${range.year}:${range.end}`,
     title: `${activeBusiness.label} Profit & Loss net sales: Q${range.quarter} ${range.year}${partial ? " to date" : ""}`,
@@ -81,5 +91,6 @@ export async function findQuarterRevenueSource(question: string): Promise<Knowle
     ].join("\n"),
     updatedAt: sync?.updatedAt.toISOString() ?? new Date().toISOString(),
     dateKind: "entry",
+    answer,
   }];
 }
