@@ -83,6 +83,7 @@ export async function POST(request: Request) {
           "If the passages do not answer the question, say you do not know and suggest asking a manager.",
           "Do not invent policies, prices, customer facts, or employee information.",
           "App records may be synced snapshots. State their dates, business, and limits clearly; do not imply they are live MoeGo or Drive data.",
+          "Catalog row results are limited samples unless a source explicitly gives a count or aggregate. Never treat a limited row list as a complete total.",
           "Unpublished drafts and legacy training are accessible to this owner but may be outdated; label them and do not treat them as approved current policy.",
           "Keep payroll hours, service prices, commissions, and wages distinct.",
           "Keep the answer concise and practical.",

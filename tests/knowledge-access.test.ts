@@ -1,8 +1,10 @@
 import assert from "node:assert/strict";
 import test from "node:test";
+import { Prisma } from "@prisma/client";
 import { canReadKnowledgeArticle, knowledgeTerms, rankKnowledgeLessons, type KnowledgeViewer } from "../src/lib/knowledge";
 import { isKnowledgeOwner } from "../src/lib/knowledge-owner";
 import { appDataAreas, knowledgeRetrievalQuestion, orderDateRange, payrollBusiness, payrollPayPeriod, personLookup } from "../src/lib/knowledge-app-data";
+import { broadDataCatalog, validateDataQuery } from "../src/lib/knowledge-broad-data";
 
 const employee: KnowledgeViewer = {
   id: "employee-1", email: "employee@example.com", role: "EMPLOYEE", company: "RESORT", jobTitle: null,
@@ -97,4 +99,26 @@ test("date-only follow-ups can use the last substantive user question", () => {
   const retrieval = knowledgeRetrievalQuestion(messages);
   assert.equal(payrollBusiness(retrieval), "pet-resort");
   assert.deepEqual(orderDateRange(retrieval), { start: "2026-08-30", end: "2026-09-05" });
+});
+
+test("catalog covers every app model while excluding credentials and raw form metadata", () => {
+  const catalog = broadDataCatalog();
+  assert.equal(catalog.length, Prisma.dmmf.datamodel.models.length);
+  assert.equal(catalog.find((item) => item.model === "User")?.fields.includes("passwordHash"), false);
+  assert.equal(catalog.find((item) => item.model === "WebsiteFormSubmission")?.fields.includes("payload"), false);
+  assert.equal(catalog.find((item) => item.model === "WebsiteFormSubmission")?.fields.includes("requestMetadata"), false);
+  assert.equal(catalog.some((item) => item.model === "KpiWeeklyValue"), true);
+  assert.equal(catalog.some((item) => item.model === "MoegoDaycarePackageCreditRow"), true);
+});
+
+test("catalog queries accept saved KPI records but reject blocked fields and unknown models", () => {
+  const query = {
+    model: "KpiWeeklyValue", kind: "rows" as const,
+    filters: [{ field: "metricKey", op: "contains" as const, value: "daycare" }],
+    field: null, groupField: null, selectFields: ["metricKey", "value", "weekStart"],
+    sortField: "weekStart", sortDirection: "desc" as const, limit: 5,
+  };
+  assert.equal(validateDataQuery(query), true);
+  assert.equal(validateDataQuery({ ...query, model: "User", selectFields: ["passwordHash"] }), false);
+  assert.equal(validateDataQuery({ ...query, model: "MadeUpTable" }), false);
 });

@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { getVisibleModuleIdsForUser } from "@/lib/module-visibility";
 import { isManagerOrAbove, isSuperAdmin } from "@/lib/auth-helpers";
 import { findAppDataSources } from "@/lib/knowledge-app-data";
+import { findBroadAppDataSources } from "@/lib/knowledge-broad-data";
 import { isKnowledgeOwner } from "@/lib/knowledge-owner";
 
 export type KnowledgeViewer = {
@@ -147,6 +148,14 @@ export async function findKnowledgeSources(
     dateKind: "entry",
   }));
 
-  const appSources = await findAppDataSources(question, terms);
-  return [...appSources, ...articleSources, ...lessonSources].slice(0, 8);
+  const [appSources, broadSources] = await Promise.all([
+    findAppDataSources(question, terms),
+    findBroadAppDataSources(question),
+  ]);
+  return [
+    ...(broadSources.length ? appSources.slice(0, 3) : appSources),
+    ...broadSources,
+    ...articleSources,
+    ...lessonSources,
+  ].slice(0, 10);
 }
