@@ -145,9 +145,15 @@ async function planDataQueries(question: string): Promise<DataQuery[]> {
     }),
     cache: "no-store", signal: AbortSignal.timeout(16000),
   });
-  if (!response.ok) throw new Error(`Data planner returned ${response.status}`);
-  const parsed = planSchema.safeParse(JSON.parse(outputText(await response.json())));
-  if (!parsed.success) throw new Error("Data planner returned an invalid plan");
+  if (!response.ok) {
+    const body = await response.json().catch(() => null) as { error?: { code?: string; message?: string } } | null;
+    throw new Error(`Data planner returned ${response.status}: ${body?.error?.code ?? "unknown"}: ${body?.error?.message?.slice(0, 200) ?? "no details"}`);
+  }
+  const result = await response.json();
+  const raw = outputText(result);
+  if (!raw) throw new Error(`Data planner returned no text: ${result.status ?? "unknown"}, ${result.incomplete_details?.reason ?? "no detail"}`);
+  const parsed = planSchema.safeParse(JSON.parse(raw));
+  if (!parsed.success) throw new Error(`Data planner returned an invalid plan: ${parsed.error.issues[0]?.message ?? "unknown"}`);
   return parsed.data.queries;
 }
 
@@ -321,7 +327,7 @@ export async function findBroadAppDataSources(question: string): Promise<Knowled
     }
     return groups.flatMap((group) => group.status === "fulfilled" ? group.value : []).slice(0, 5);
   } catch (error) {
-    console.error("[knowledge.data] Broad lookup failed", error instanceof Error ? error.name : "unknown");
+    console.error("[knowledge.data] Broad lookup failed", error instanceof Error ? error.message : "unknown");
     return [];
   }
 }
