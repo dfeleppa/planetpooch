@@ -7,7 +7,7 @@ import { appDataAreas, knowledgeRetrievalQuestion, orderDateRange, payrollBusine
 import { broadDataCatalog, validateDataQuery } from "../src/lib/knowledge-broad-data";
 import { isKpiQuestion, kpiRequestedWeek } from "../src/lib/knowledge-kpis";
 import { calculateBoardingDerivedMetricValues } from "../src/lib/kpis";
-import { quarterRevenueRange } from "../src/lib/knowledge-finance";
+import { completedWeeksWithin, quarterRevenueRange } from "../src/lib/knowledge-finance";
 
 const employee: KnowledgeViewer = {
   id: "employee-1", email: "employee@example.com", role: "EMPLOYEE", company: "RESORT", jobTitle: null,
@@ -75,6 +75,8 @@ test("quarter revenue uses the current partial quarter and a complete historical
   assert.deepEqual(quarterRevenueRange("Q2 2026 net sales", now),
     { quarter: 2, year: 2026, start: "2026-04-01", end: "2026-06-30", quarterEnd: "2026-06-30" });
   assert.equal(quarterRevenueRange("What is Q4 revenue?", now), null);
+  assert.deepEqual(completedWeeksWithin("2026-07-01", "2026-09-25"),
+    { start: "2026-07-05", end: "2026-09-19" });
 });
 
 test("Pet Resort payroll requests target its pay period rather than Mobile Grooming", () => {
