@@ -80,7 +80,7 @@ const querySchema = z.object({
   selectFields: z.array(z.string()).max(20),
   sortField: z.string().nullable(),
   sortDirection: z.enum(["asc", "desc"]),
-  limit: z.number().int().min(1).max(10),
+  limit: z.number().int().min(0).max(10),
 });
 type DataQuery = z.infer<typeof querySchema>;
 const planSchema = z.object({ queries: z.array(querySchema).max(3) });
@@ -291,7 +291,7 @@ async function executeDataQuery(query: DataQuery): Promise<KnowledgeSource[]> {
   }
   if (query.kind === "group_count" || query.kind === "group_sum") {
     const isSum = query.kind === "group_sum";
-    const rows = await delegate.groupBy({ by: [query.groupField!], where, take: Math.min(query.limit, 8),
+    const rows = await delegate.groupBy({ by: [query.groupField!], where, take: Math.max(1, Math.min(query.limit, 8)),
       _count: { _all: true }, ...(isSum ? { _sum: { [query.field!]: true } } : {}),
       orderBy: isSum ? { _sum: { [query.field!]: "desc" } } : { _count: { _all: "desc" } },
     });
@@ -305,7 +305,7 @@ async function executeDataQuery(query: DataQuery): Promise<KnowledgeSource[]> {
   if (selected.length === 0) selected.push(...item.fields.slice(0, 12).map((field) => field.name));
   const select = Object.fromEntries(selected.map((field) => [field, true]));
   const sortField = query.sortField ?? item.fields.find((field) => ["updatedAt", "syncedAt", "createdAt", "date", "weekStart"].includes(field.name))?.name;
-  const rows = await delegate.findMany({ where, select, take: Math.min(query.limit, 5),
+  const rows = await delegate.findMany({ where, select, take: Math.max(1, Math.min(query.limit, 5)),
     ...(sortField ? { orderBy: { [sortField]: query.sortDirection } } : {}) });
   if (!rows.length) return [source(query.model, `empty:${label}`, `No records: ${label}`,
     ["No matching saved records were found. This is missing data, not a zero value.", checked])];
@@ -313,7 +313,7 @@ async function executeDataQuery(query: DataQuery): Promise<KnowledgeSource[]> {
     const id = String(row.id ?? row.moegoId ?? row.customerId ?? row.campaignId ?? index);
     const name = row.title ?? row.name ?? row.customerName ?? row.employeeName ?? row.metricKey ?? row.date ?? id;
     return source(query.model, id, `${query.model}: ${display(name)}`,
-      [`Saved ${query.model} record matching ${label}. This is one of up to ${Math.min(query.limit, 5)} returned rows, not a complete count.`,
+      [`Saved ${query.model} record matching ${label}. This is one of up to ${Math.max(1, Math.min(query.limit, 5))} returned rows, not a complete count.`,
         ...selected.map((field) => `${field}: ${display(row[field], field)}`)], row);
   });
 }
