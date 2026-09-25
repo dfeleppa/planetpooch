@@ -2,8 +2,13 @@ import { requireSuperAdmin } from "@/lib/auth-helpers";
 import { MoegoDashboard } from "../moego/MoegoDashboard";
 import { getActiveBusiness } from "@/lib/business-server";
 
-export default async function ProfitLossPage() {
+export default async function ProfitLossPage({ searchParams }: {
+  searchParams: Promise<{ from?: string; to?: string }>;
+}) {
   await requireSuperAdmin();
+  const { from, to } = await searchParams;
+  const validRange = typeof from === "string" && typeof to === "string"
+    && /^\d{4}-\d{2}-\d{2}$/.test(from) && /^\d{4}-\d{2}-\d{2}$/.test(to) && from <= to;
   const business = await getActiveBusiness();
   const businesses = [{ id: business.moegoId, label: business.label }];
 
@@ -18,7 +23,8 @@ export default async function ProfitLossPage() {
         id="moego"
         className="scroll-mt-6"
       >
-        <MoegoDashboard key={business.moegoId} businesses={businesses} />
+        <MoegoDashboard key={business.moegoId} businesses={businesses}
+          initialRange={validRange ? { from, to } : undefined} />
       </div>
     </div>
   );

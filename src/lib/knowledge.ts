@@ -6,6 +6,7 @@ import { findAppDataSources } from "@/lib/knowledge-app-data";
 import { findBroadAppDataSources } from "@/lib/knowledge-broad-data";
 import { isKnowledgeOwner } from "@/lib/knowledge-owner";
 import { isKpiQuestion } from "@/lib/knowledge-kpis";
+import { quarterRevenueRange } from "@/lib/knowledge-finance";
 
 export type KnowledgeViewer = {
   id: string;
@@ -149,13 +150,14 @@ export async function findKnowledgeSources(
     dateKind: "entry",
   }));
 
-  const reportQuestion = isKpiQuestion(question)
-    && !/\bhow many\b.*\b(?:kpi values|kpi records)\b/i.test(question);
+  const quarterRevenueQuestion = Boolean(quarterRevenueRange(question));
+  const reportQuestion = quarterRevenueQuestion || (isKpiQuestion(question)
+    && !/\bhow many\b.*\b(?:kpi values|kpi records)\b/i.test(question));
   let appSources: KnowledgeSource[];
   let broadSources: KnowledgeSource[];
   if (reportQuestion) {
     appSources = await findAppDataSources(question, terms);
-    broadSources = appSources.some((source) => source.id.startsWith("record:kpi:"))
+    broadSources = appSources.some((source) => source.id.startsWith("record:kpi:") || source.id.startsWith("record:profit-loss:"))
       ? [] : await findBroadAppDataSources(question);
   } else {
     [appSources, broadSources] = await Promise.all([
@@ -164,7 +166,7 @@ export async function findKnowledgeSources(
     ]);
   }
   return [
-    ...(isKpiQuestion(question) ? appSources : broadSources.length ? appSources.slice(0, 3) : appSources),
+    ...(reportQuestion ? appSources : broadSources.length ? appSources.slice(0, 3) : appSources),
     ...broadSources,
     ...articleSources,
     ...lessonSources,

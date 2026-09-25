@@ -7,6 +7,7 @@ import { appDataAreas, knowledgeRetrievalQuestion, orderDateRange, payrollBusine
 import { broadDataCatalog, validateDataQuery } from "../src/lib/knowledge-broad-data";
 import { isKpiQuestion, kpiRequestedWeek } from "../src/lib/knowledge-kpis";
 import { calculateBoardingDerivedMetricValues } from "../src/lib/kpis";
+import { quarterRevenueRange } from "../src/lib/knowledge-finance";
 
 const employee: KnowledgeViewer = {
   id: "employee-1", email: "employee@example.com", role: "EMPLOYEE", company: "RESORT", jobTitle: null,
@@ -65,6 +66,15 @@ test("app questions route to relevant stored record types", () => {
 test("order periods use completed Eastern calendar weeks", () => {
   assert.deepEqual(orderDateRange("What were sales last week?", new Date("2026-09-24T16:00:00Z")),
     { start: "2026-09-13", end: "2026-09-19" });
+});
+
+test("quarter revenue uses the current partial quarter and a complete historical quarter", () => {
+  const now = new Date("2026-09-25T16:00:00Z");
+  assert.deepEqual(quarterRevenueRange("What was total revenue for quarter 3 this year?", now),
+    { quarter: 3, year: 2026, start: "2026-07-01", end: "2026-09-25", quarterEnd: "2026-09-30" });
+  assert.deepEqual(quarterRevenueRange("Q2 2026 net sales", now),
+    { quarter: 2, year: 2026, start: "2026-04-01", end: "2026-06-30", quarterEnd: "2026-06-30" });
+  assert.equal(quarterRevenueRange("What is Q4 revenue?", now), null);
 });
 
 test("Pet Resort payroll requests target its pay period rather than Mobile Grooming", () => {

@@ -5,6 +5,7 @@ import { REVENUE_ORDER_STATUSES } from "@/lib/moego/metrics";
 import { addCalendarDays, formatEasternDate, resolveSubmissionDateRange } from "@/lib/marketing/submission-date-range";
 import { BUSINESSES } from "@/lib/business";
 import { findKpiSources, isKpiQuestion } from "@/lib/knowledge-kpis";
+import { findQuarterRevenueSource, quarterRevenueRange } from "@/lib/knowledge-finance";
 
 type Area = "customers" | "employees" | "payroll" | "finance" | "forms" | "marketing" | "operations";
 
@@ -425,6 +426,7 @@ async function operationsSources(terms: string[]): Promise<KnowledgeSource[]> {
 }
 
 export async function findAppDataSources(question: string, terms: string[]): Promise<KnowledgeSource[]> {
+  if (quarterRevenueRange(question)) return findQuarterRevenueSource(question);
   const areas = appDataAreas(question);
   const lookup = personLookup(question);
   const queries: Array<Promise<KnowledgeSource[]>> = [];

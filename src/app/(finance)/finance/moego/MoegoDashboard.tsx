@@ -49,7 +49,10 @@ type DiscoveredCompany = {
   name?: string;
   country?: string;};
 
-export function MoegoDashboard({ businesses }: { businesses: BusinessOption[] }) {
+export function MoegoDashboard({ businesses, initialRange }: {
+  businesses: BusinessOption[];
+  initialRange?: { from: string; to: string };
+}) {
   // Selected business. No combined view — every panel is scoped to one
   // business at a time.
   const [business, setBusiness] = useState<string>(businesses[0]?.id ?? "");
@@ -57,9 +60,9 @@ export function MoegoDashboard({ businesses }: { businesses: BusinessOption[] })
   // Page-wide date range drives the revenue/profit chart.
   const defaultRange = useMemo(() => chartPresetRange("30-days"), []);
   const today = defaultRange.to;
-  const [from, setFrom] = useState<string>(defaultRange.from);
-  const [to, setTo] = useState<string>(today);
-  const [quickRange, setQuickRange] = useState<ChartRangePreset | "">("30-days");
+  const [from, setFrom] = useState<string>(initialRange?.from ?? defaultRange.from);
+  const [to, setTo] = useState<string>(initialRange?.to ?? today);
+  const [quickRange, setQuickRange] = useState<ChartRangePreset | "">(initialRange ? "" : "30-days");
 
   const [metrics, setMetrics] = useState<MoegoMetrics | null>(null);
   const [syncing, setSyncing] = useState(false);
