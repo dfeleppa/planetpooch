@@ -294,7 +294,10 @@ export default async function KpisPage({
   await requireSuperAdmin();
   const params = await searchParams;
 
-  const business = await getActiveBusiness();
+  // Report source links can open the named business without changing the saved preference.
+  const business = params.segment === "MOBILE_GROOMING" ? { company: "GROOMING" as const }
+    : params.segment === PET_RESORT_TAB || params.segment === PET_RESORT_COPY_TAB
+      ? { company: "RESORT" as const } : await getActiveBusiness();
   const activeTab = business.company === "GROOMING" ? "MOBILE_GROOMING"
     : params.segment === PET_RESORT_TAB ? PET_RESORT_TAB : PET_RESORT_COPY_TAB;
   const showPetResort = activeTab !== "MOBILE_GROOMING";

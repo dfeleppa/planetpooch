@@ -1,15 +1,16 @@
 import { requireSuperAdmin } from "@/lib/auth-helpers";
 import { MoegoDashboard } from "../moego/MoegoDashboard";
 import { getActiveBusiness } from "@/lib/business-server";
+import { businessFor } from "@/lib/business";
 
 export default async function ProfitLossPage({ searchParams }: {
-  searchParams: Promise<{ from?: string; to?: string }>;
+  searchParams: Promise<{ from?: string; to?: string; business?: string }>;
 }) {
   await requireSuperAdmin();
-  const { from, to } = await searchParams;
+  const { from, to, business: requestedBusiness } = await searchParams;
   const validRange = typeof from === "string" && typeof to === "string"
     && /^\d{4}-\d{2}-\d{2}$/.test(from) && /^\d{4}-\d{2}-\d{2}$/.test(to) && from <= to;
-  const business = await getActiveBusiness();
+  const business = businessFor(requestedBusiness) ?? await getActiveBusiness();
   const businesses = [{ id: business.moegoId, label: business.label }];
 
   return (

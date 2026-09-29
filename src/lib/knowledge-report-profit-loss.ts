@@ -73,7 +73,7 @@ export async function findProfitLossReport(question: string): Promise<KnowledgeS
     id: `record:report:profit-loss:${businesses.map((business) => business.key).join("+")}:${period.start}:${period.end}`,
     title: `Profit & Loss report: ${label}, ${period.label}`,
     kind: "record",
-    url: `/finance/profit-loss?from=${period.start}&to=${period.end}`,
+    url: `/finance/profit-loss?from=${period.start}&to=${period.end}&business=${businesses[0].key}`,
     excerpt: [
       `Report: Profit & Loss. Business: ${label}. Period: ${period.start} through ${period.end}.`,
       ...totals.map(({ business, total }) => `${business.label}: net sales ${money(total.revenueCents)}; ${total.orders} orders; estimated expenses ${money(total.expenseCents)}; net profit ${money(total.profitCents)}.`),

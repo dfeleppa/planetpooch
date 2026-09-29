@@ -70,9 +70,9 @@ export async function findQuarterRevenueSource(question: string): Promise<Knowle
     : `${label} Q${range.quarter} ${range.year} net sales for ${range.start} through ${range.end} were ${money(calendarCents)}. [1]`;
   return [{
     id: `record:profit-loss:q${range.quarter}-${range.year}:${range.end}`,
-    title: `${activeBusiness.label} Profit & Loss net sales: Q${range.quarter} ${range.year}${partial ? " to date" : ""}`,
+    title: `${label} Profit & Loss net sales: Q${range.quarter} ${range.year}${partial ? " to date" : ""}`,
     kind: "record",
-    url: `/finance/profit-loss?from=${fullWeeks?.start ?? range.start}&to=${fullWeeks?.end ?? range.end}`,
+    url: `/finance/profit-loss?from=${fullWeeks?.start ?? range.start}&to=${fullWeeks?.end ?? range.end}&business=${selected.label === "Mobile Grooming" ? "mobile-grooming" : "pet-resort"}`,
     excerpt: [
       `Reporting period: ${range.start} through ${range.end} (Q${range.quarter} ${range.year}${partial ? ` to date; quarter ends ${range.quarterEnd}` : ""}).`,
       `Currently selected app business: ${activeBusiness.label}.`,
