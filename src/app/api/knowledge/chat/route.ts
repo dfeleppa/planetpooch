@@ -59,7 +59,7 @@ export async function POST(request: Request) {
     });
   }
 
-  const exactReport = sources.find((source) => source.id.startsWith("record:profit-loss:") && source.answer);
+  const exactReport = sources.length === 1 && sources[0].answer ? sources[0] : null;
   if (exactReport) {
     return NextResponse.json({
       answer: exactReport.answer,

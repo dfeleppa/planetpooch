@@ -1,8 +1,8 @@
 import { prisma } from "@/lib/prisma";
 import { BUSINESSES } from "@/lib/business";
 import { formatEasternDate } from "@/lib/marketing/submission-date-range";
-import { REVENUE_ORDER_STATUSES } from "@/lib/moego/metrics";
 import { getActiveBusiness } from "@/lib/business-server";
+import { getProfitLossTotals } from "@/lib/moego/profit-loss-totals";
 import type { KnowledgeSource } from "@/lib/knowledge";
 
 export function quarterRevenueRange(question: string, now = new Date()) {
@@ -40,27 +40,20 @@ export async function findQuarterRevenueSource(question: string): Promise<Knowle
   const weekFrom = fullWeeks ? new Date(`${fullWeeks.start}T00:00:00.000Z`) : null;
   const weekTo = fullWeeks ? new Date(new Date(`${fullWeeks.end}T00:00:00.000Z`).getTime() + 86_400_000) : null;
   const [rows, sync, activeBusiness] = await Promise.all([
-    prisma.$queryRaw<Array<{ businessId: string | null; revenueCents: bigint; completeWeekCents: bigint }>>`
-      SELECT "businessId",
-        COALESCE(SUM("subTotalCents" - "discountCents"), 0)::bigint AS "revenueCents",
-        COALESCE(SUM(CASE WHEN ${weekFrom}::timestamptz IS NOT NULL
-          AND COALESCE("salesDatetime", "completedTime", "createdTime") >= ${weekFrom}::timestamptz
-          AND COALESCE("salesDatetime", "completedTime", "createdTime") < ${weekTo}::timestamptz
-          THEN "subTotalCents" - "discountCents" ELSE 0 END), 0)::bigint AS "completeWeekCents"
-      FROM "MoegoOrder"
-      WHERE COALESCE("salesDatetime", "completedTime", "createdTime") >= ${from}
-        AND COALESCE("salesDatetime", "completedTime", "createdTime") < ${to}
-        AND "status" = ANY(${[...REVENUE_ORDER_STATUSES]})
-      GROUP BY "businessId"
-    `,
+    Promise.all(BUSINESSES.map(async (business) => ({
+      businessId: business.moegoId,
+      revenueCents: (await getProfitLossTotals(business.moegoId, from, to)).revenueCents,
+      completeWeekCents: weekFrom && weekTo
+        ? (await getProfitLossTotals(business.moegoId, weekFrom, weekTo)).revenueCents : 0,
+    }))),
     prisma.moegoSyncState.findUnique({ where: { resource: "order" } }),
     getActiveBusiness(),
   ]);
   const money = (cents: number) => `$${(cents / 100).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
   const amounts = [...BUSINESSES].sort((a, b) => Number(b.moegoId === activeBusiness.moegoId) - Number(a.moegoId === activeBusiness.moegoId)).map((business) => ({
     label: business.label,
-    cents: Number(rows.find((row) => row.businessId === business.moegoId)?.revenueCents ?? 0),
-    completeWeekCents: Number(rows.find((row) => row.businessId === business.moegoId)?.completeWeekCents ?? 0),
+    cents: rows.find((row) => row.businessId === business.moegoId)?.revenueCents ?? 0,
+    completeWeekCents: rows.find((row) => row.businessId === business.moegoId)?.completeWeekCents ?? 0,
   }));
   const total = amounts.reduce((sum, amount) => sum + amount.cents, 0);
   const completeWeeksTotal = amounts.reduce((sum, amount) => sum + amount.completeWeekCents, 0);

@@ -41,7 +41,7 @@ export function kpiRequestedWeek(question: string, range: DateRange, now = new D
   return weekStartOf(new Date(`${range.start}T00:00:00.000Z`));
 }
 
-function requestedSegments(question: string) {
+export function requestedSegments(question: string) {
   const lower = question.toLowerCase();
   const keys = new Set<string>();
   if (/\bmobile[ -]?grooming\b/.test(lower)) keys.add("MOBILE_GROOMING");

@@ -7,6 +7,7 @@ import { findBroadAppDataSources } from "@/lib/knowledge-broad-data";
 import { isKnowledgeOwner } from "@/lib/knowledge-owner";
 import { isKpiQuestion } from "@/lib/knowledge-kpis";
 import { quarterRevenueRange } from "@/lib/knowledge-finance";
+import { findReportSources } from "@/lib/knowledge-reports";
 
 export type KnowledgeViewer = {
   id: string;
@@ -85,6 +86,8 @@ export async function findKnowledgeSources(
   question: string,
 ): Promise<KnowledgeSource[]> {
   if (!isKnowledgeOwner(viewer)) return [];
+  const reportSources = await findReportSources(question);
+  if (reportSources?.length) return reportSources.slice(0, 10);
   const terms = knowledgeTerms(question);
   if (terms.length === 0) return [];
   const tsquery = terms.join(" | ");

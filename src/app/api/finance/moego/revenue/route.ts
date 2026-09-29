@@ -4,6 +4,7 @@ import { getSession } from "@/lib/auth-helpers";
 import { prisma } from "@/lib/prisma";
 import { REVENUE_ORDER_STATUSES } from "@/lib/moego/metrics";
 import { profitBuckets, yearAgoBuckets, yearAgoPeriod, CHART_WEEKLY_EXPENSE_CENTS } from "@/lib/moego/chart-profit";
+import { getProfitLossTotals } from "@/lib/moego/profit-loss-totals";
 
 type Bucket = "day" | "week" | "month" | "quarter" | "year";
 
@@ -123,24 +124,13 @@ export async function GET(req: NextRequest) {
       ORDER BY 1 ASC
     `;
 
-    const totalRow = await prisma.$queryRaw<
-      { revenueCents: bigint; orders: bigint }[]
-    >`
-      SELECT
-        COALESCE(SUM("subTotalCents" - "discountCents"), 0)::bigint AS "revenueCents",
-        COUNT(*)::bigint AS orders
-      FROM "MoegoOrder"
-      WHERE COALESCE("salesDatetime", "completedTime", "createdTime") >= ${from}
-        AND COALESCE("salesDatetime", "completedTime", "createdTime") <  ${to}
-        AND "businessId" = ${business}
-        AND "status" = ANY(${[...REVENUE_ORDER_STATUSES]})
-    `;
+    const reportTotals = await getProfitLossTotals(business, from, to);
 
     const buckets = profitBuckets(from, to, bucket, rows.map(r => ({
       date: r.bucket, revenueCents: Number(r.revenueCents), orders: Number(r.orders),
     })));
-    const expenseCents = buckets.reduce((sum, b) => sum + b.expenseCents, 0);
-    const revenueCents = Number(totalRow[0]?.revenueCents ?? 0);
+    const expenseCents = reportTotals.expenseCents;
+    const revenueCents = reportTotals.revenueCents;
     const yearAgo = yearAgoPeriod(from, to);
     const yearAgoRows = await prisma.$queryRaw<{ revenueCents: bigint; orders: bigint }[]>`
       SELECT COALESCE(SUM("subTotalCents" - "discountCents"), 0)::bigint AS "revenueCents",
@@ -195,7 +185,7 @@ export async function GET(req: NextRequest) {
         revenueCents,
         expenseCents,
         profitCents: revenueCents - expenseCents,
-        orders: Number(totalRow[0]?.orders ?? 0),
+        orders: reportTotals.orders,
       },
     });
   } catch (err) {
