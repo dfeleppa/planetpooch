@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import type { WebsiteAttributionVisit } from "@/lib/marketing/website-attribution";
 import type { WebsiteFormSubmissionRow } from "@/lib/marketing/new-client-submissions";
 import { addCalendarDays, resolveSubmissionDateRange } from "@/lib/marketing/submission-date-range";
+import { SubmissionTable } from "./SubmissionTable";
 
 export const dynamic = "force-dynamic";
 
@@ -79,39 +80,7 @@ export default async function WebsiteAttributionPage({ searchParams }: PageProps
             </div>
           ))}
         </div>
-        <div className="overflow-x-auto rounded-xl border border-gray-200 bg-white">
-          <table className="w-full text-left text-sm">
-            <thead className="bg-gray-50"><tr>
-              {['Received', 'Customer', 'Contact', 'Pets / services', 'Consent', 'Status', 'MoeGo', 'Attempts', 'History / complete record'].map((label) => <th key={label} className="px-4 py-3 font-medium">{label}</th>)}
-            </tr></thead>
-            <tbody>
-              {submissions.map((submission) => (
-                <tr key={submission.id} className="border-t border-gray-100 align-top">
-                  <td className="whitespace-nowrap px-4 py-3">{formatTime(submission.receivedAt)}<div className="mt-1 text-xs text-gray-500">Updated {formatTime(submission.updatedAt)}</div></td>
-                  <td className="max-w-48 break-words px-4 py-3">{[submission.firstName, submission.lastName].filter(Boolean).join(' ') || 'Unvalidated'}<div className="mt-1 break-all text-xs text-gray-500">{submission.id}</div></td>
-                  <td className="max-w-52 break-all px-4 py-3">{submission.phone || '—'}<br />{submission.email || '—'}</td>
-                  <td className="max-w-64 break-words px-4 py-3">
-                    {submission.pets.length ? submission.pets.map((pet, index) => {
-                      const row = pet as { name?: string; breed?: string };
-                      return <div key={index}>{row.name || 'Unnamed'}{row.breed ? ` · ${row.breed}` : ''}</div>;
-                    }) : '—'}
-                    <div className="mt-1 text-xs text-gray-500">{submission.services.join(', ') || 'No service selected'}</div>
-                  </td>
-                  <td className="px-4 py-3">{submission.marketingConsent === null ? 'Unknown' : submission.marketingConsent ? 'Yes' : 'No'}</td>
-                  <td className="max-w-52 break-words px-4 py-3"><span className="font-medium">{submission.status}</span>{submission.lastHttpStatus && <div className="mt-1 text-xs text-gray-500">HTTP {submission.lastHttpStatus}</div>}{submission.lastError && <div className="mt-1 text-xs text-red-700">{submission.lastError}</div>}</td>
-                  <td className="max-w-48 break-all px-4 py-3">{submission.moegoLeadId || 'Not confirmed'}{submission.moegoSyncedAt && <div className="mt-1 text-xs text-gray-500">Synced {formatTime(submission.moegoSyncedAt)}</div>}</td>
-                  <td className="px-4 py-3 text-center">{submission.attemptCount}</td>
-                  <td className="min-w-64 max-w-96 px-4 py-3">
-                    <details><summary className="cursor-pointer font-medium">{submission.events.length} events</summary><ol className="mt-2 space-y-2 text-xs">{submission.events.map((event) => <li key={event.id}><span className="font-medium">{formatTime(event.createdAt)} · {event.status}</span>{event.httpStatus && ` · HTTP ${event.httpStatus}`}{event.message && <div>{event.message}</div>}</li>)}</ol></details>
-                    <details className="mt-2"><summary className="cursor-pointer text-xs font-medium">Full submitted payload</summary><pre className="mt-2 max-h-80 overflow-auto whitespace-pre-wrap break-all rounded bg-gray-50 p-2 text-xs">{JSON.stringify(submission.payload, null, 2)}</pre></details>
-                    <details className="mt-2"><summary className="cursor-pointer text-xs font-medium">Attribution and request metadata</summary><pre className="mt-2 max-h-80 overflow-auto whitespace-pre-wrap break-all rounded bg-gray-50 p-2 text-xs">{JSON.stringify({ attribution: submission.attribution, request: submission.requestMetadata }, null, 2)}</pre></details>
-                  </td>
-                </tr>
-              ))}
-              {submissions.length === 0 && <tr><td colSpan={9} className="px-4 py-8 text-center text-gray-500">No saved new-client submissions in the selected date range.</td></tr>}
-            </tbody>
-          </table>
-        </div>
+        <SubmissionTable submissions={submissions} total={Number(formTotal.submissions)} />
       </section>
 
       <section className="mt-10 border-t border-gray-200 pt-8">
