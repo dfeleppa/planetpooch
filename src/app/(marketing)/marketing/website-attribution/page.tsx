@@ -1,8 +1,10 @@
 import { requireMarketing } from "@/lib/auth-helpers";
 import { getActiveBusiness } from "@/lib/business-server";
 import { prisma } from "@/lib/prisma";
+import { Prisma } from "@prisma/client";
 import type { WebsiteAttributionVisit } from "@/lib/marketing/website-attribution";
 import type { WebsiteFormSubmissionRow } from "@/lib/marketing/new-client-submissions";
+import { classifyMoegoClientHistory, normalizedPhone, type MoegoClientProfile } from "@/lib/marketing/moego-client-history";
 import { addCalendarDays, resolveSubmissionDateRange } from "@/lib/marketing/submission-date-range";
 import { SubmissionTable } from "./SubmissionTable";
 
@@ -42,6 +44,33 @@ export default async function WebsiteAttributionPage({ searchParams }: PageProps
   ]);
   const total = totals[0];
   const formTotal = submissionTotals[0];
+  const phones = [...new Set(submissions.map((row) => normalizedPhone(row.phone)).filter((phone): phone is string => phone !== null))];
+  const [customerProfiles, customerSync] = await Promise.all([
+    phones.length ? prisma.$queryRaw<MoegoClientProfile[]>(Prisma.sql`
+      SELECT "moegoId", "name", "mainPhoneNumber", "createdTime"
+      FROM "MoegoCustomer"
+      WHERE RIGHT(REGEXP_REPLACE(COALESCE("mainPhoneNumber", ''), '[^0-9]', '', 'g'), 10)
+        IN (${Prisma.join(phones)})
+      ORDER BY "createdTime", "moegoId"
+    `) : Promise.resolve([]),
+    prisma.moegoCustomer.aggregate({ _max: { syncedAt: true } }),
+  ]);
+  const profilesByPhone = new Map<string, MoegoClientProfile[]>();
+  for (const customer of customerProfiles) {
+    const phone = normalizedPhone(customer.mainPhoneNumber);
+    if (!phone) continue;
+    const profiles = profilesByPhone.get(phone) ?? [];
+    profiles.push(customer);
+    profilesByPhone.set(phone, profiles);
+  }
+  const submissionsWithHistory = submissions.map((submission) => ({
+    ...submission,
+    clientHistory: customerSync._max.syncedAt ? classifyMoegoClientHistory(
+      submission.phone, submission.receivedAt,
+      profilesByPhone.get(normalizedPhone(submission.phone) ?? "") ?? [],
+    ) : { status: "unavailable" as const, profiles: [], oldestPriorProfile: null },
+  }));
+  const existingCount = submissionsWithHistory.filter((row) => row.clientHistory.status === "existing").length;
   const formatTime = (date: Date) => new Intl.DateTimeFormat("en-US", {
     timeZone: "America/New_York", dateStyle: "short", timeStyle: "short",
   }).format(date);
@@ -80,7 +109,13 @@ export default async function WebsiteAttributionPage({ searchParams }: PageProps
             </div>
           ))}
         </div>
-        <SubmissionTable submissions={submissions} total={Number(formTotal.submissions)} />
+        {customerSync._max.syncedAt ? <div className="mb-4 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-950">
+          <strong>{existingCount} of {submissionsWithHistory.length} shown submissions</strong> match a MoeGo client profile created more than 90 days before the form was received.
+          <div className="mt-1 text-amber-900">Matches use the last 10 phone digits and include duplicate MoeGo profiles. Customer records last synced {formatTime(customerSync._max.syncedAt)}. No match only means none was found in the synced records.</div>
+        </div> : <div className="mb-4 rounded-xl border border-gray-300 bg-gray-50 px-4 py-3 text-sm text-gray-800">
+          <strong>MoeGo client history unavailable.</strong> This app has no synced MoeGo customer records yet. Client-age attribution will appear after the customer sync is configured and run.
+        </div>}
+        <SubmissionTable submissions={submissionsWithHistory} total={Number(formTotal.submissions)} />
       </section>
 
       <section className="mt-10 border-t border-gray-200 pt-8">
