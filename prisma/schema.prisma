@@ -578,6 +578,28 @@ model GroomingVan {
   createdAt          DateTime @default(now())
   updatedAt          DateTime @updatedAt
   records            GroomingVanMaintenance[]
+  documents          GroomingVanDocument[]
+}
+
+model GroomingVanDocument {
+  id        String   @id @default(cuid())
+  vanId     String
+  category  String
+  title     String
+  issueDate DateTime? @db.Date
+  expiryDate DateTime? @db.Date
+  notes     String   @default("") @db.Text
+  fileName  String
+  mimeType  String
+  fileSize  Int
+  sha256    String
+  bytes     Bytes    @db.ByteA
+  createdAt DateTime @default(now())
+  van       GroomingVan @relation(fields: [vanId], references: [id], onDelete: Cascade)
+
+  @@unique([vanId, sha256])
+  @@index([vanId, category])
+  @@index([expiryDate])
 }
 
 model GroomingVanMaintenance {

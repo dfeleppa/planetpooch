@@ -40,3 +40,11 @@ export const vanRecordSchema = z.object({
 });
 
 export const dateOrNull = (value: string) => value ? new Date(`${value}T00:00:00Z`) : null;
+
+export const vanDocumentSchema = z.object({
+  category: z.enum(["Title", "Registration", "Insurance", "Inspection", "Other"]),
+  title: z.string().trim().min(1).max(200),
+  issueDate: optionalDate,
+  expiryDate: optionalDate,
+  notes: z.string().trim().max(2000),
+});
