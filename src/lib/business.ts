@@ -65,7 +65,7 @@ export function businessSwitchPath(href: string, company: BusinessCompany): stri
   if (/^\/admin\/employees\/.+/.test(path)) path = "/admin/employees";
   if (/^\/admin\/modules\/.+/.test(path)) path = "/admin/modules";
   if (/^\/modules\/.+/.test(path)) path = "/modules";
-  if (/^\/maintenance\/(inventory|schedules|tasks)\/.+/.test(path)) path = path.split("/").slice(0, 3).join("/");
+  if (/^\/maintenance\/(inventory|schedules|tasks|vans)\/.+/.test(path)) path = path.split("/").slice(0, 3).join("/");
   if (/^\/marketing\/(create|ideas|scripts)\/.+/.test(path)) path = "/marketing/create";
   if (path === "/finance/moego" || path.startsWith("/finance/moego/customers/")) path = "/finance/profit-loss";
   if (path.startsWith("/finance/payroll")) {
@@ -73,6 +73,7 @@ export function businessSwitchPath(href: string, company: BusinessCompany): stri
       : path.endsWith("/commissions") ? path : "/finance/payroll";
   }
   if (company === "GROOMING" && (path.startsWith("/operations/daycare") || path === "/maintenance/checklists" || path === "/career")) path = "/maintenance";
+  if (company === "RESORT" && path.startsWith("/maintenance/vans")) path = "/maintenance";
   const allowed = ["/admin", "/dashboard", "/modules", "/career", "/search", "/knowledge", "/maintenance", "/operations", "/finance", "/marketing"];
   if (!allowed.some((prefix) => path === prefix || path.startsWith(`${prefix}/`))) return "/dashboard";
   for (const key of ["company", "business", "segment", "jobTitle", "serviceLine", "page", "q"]) url.searchParams.delete(key);

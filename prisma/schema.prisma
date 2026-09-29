@@ -560,6 +560,45 @@ model MaintenanceSchedule {
   @@index([company])
 }
 
+/// Ten Mobile Grooming fleet slots. Identifying details are filled in by staff.
+model GroomingVan {
+  id                 String   @id @default(cuid())
+  number             Int      @unique
+  year               Int?
+  make               String?
+  model              String?
+  vin                String?
+  licensePlate       String?
+  mileage            Int?
+  status             String   @default("ACTIVE")
+  registrationExpiry DateTime? @db.Date
+  insuranceExpiry    DateTime? @db.Date
+  inspectionExpiry   DateTime? @db.Date
+  notes              String   @default("") @db.Text
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+  records            GroomingVanMaintenance[]
+}
+
+model GroomingVanMaintenance {
+  id             String   @id @default(cuid())
+  vanId          String
+  serviceDate    DateTime @db.Date
+  category       String
+  description    String   @db.Text
+  mileage        Int?
+  vendor         String?
+  cost           Decimal? @db.Decimal(10, 2)
+  nextDueDate    DateTime? @db.Date
+  nextDueMileage Int?
+  notes          String   @default("") @db.Text
+  createdAt      DateTime @default(now())
+  van            GroomingVan @relation(fields: [vanId], references: [id], onDelete: Restrict)
+
+  @@index([vanId, serviceDate(sort: Desc)])
+  @@index([nextDueDate])
+}
+
 model MaintenanceTask {
   id            String                @id @default(cuid())
   scheduleId    String?

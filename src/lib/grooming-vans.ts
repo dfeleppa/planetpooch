@@ -1,0 +1,35 @@
+import { z } from "zod";
+
+const optionalText = (max: number) => z.string().trim().max(max).transform(value => value || null);
+const optionalInteger = (max: number) => z.number().int().min(0).max(max).nullable();
+const optionalDate = z.string().refine(value => {
+  if (!value) return true;
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
+  const parsed = new Date(`${value}T00:00:00Z`);
+  return !Number.isNaN(parsed.getTime()) && parsed.toISOString().slice(0, 10) === value;
+}, "Enter a valid date");
+
+export const vanProfileSchema = z.object({
+  year: optionalInteger(2100).refine(value => value === null || value >= 1900),
+  make: optionalText(100), model: optionalText(100), vin: optionalText(17),
+  licensePlate: optionalText(30), mileage: optionalInteger(10_000_000),
+  status: z.enum(["ACTIVE", "IN_SERVICE", "OUT_OF_SERVICE"]),
+  registrationExpiry: optionalDate, insuranceExpiry: optionalDate, inspectionExpiry: optionalDate,
+  notes: z.string().trim().max(10000),
+});
+
+export const vanRecordSchema = z.object({
+  serviceDate: optionalDate.refine(Boolean, "Service date is required"),
+  category: z.enum(["Routine service", "Oil change", "Tires", "Brakes", "Inspection", "Repair", "Other"]),
+  description: z.string().trim().min(1).max(10000),
+  mileage: z.union([z.string(), z.number()]).transform(value => value === "" ? null : Number(value))
+    .refine(value => value === null || (Number.isInteger(value) && value >= 0 && value <= 10_000_000)),
+  vendor: optionalText(200),
+  cost: z.string().refine(value => value === "" || (/^\d{1,8}(\.\d{1,2})?$/.test(value) && Number(value) >= 0), "Enter a valid cost"),
+  nextDueDate: optionalDate,
+  nextDueMileage: z.union([z.string(), z.number()]).transform(value => value === "" ? null : Number(value))
+    .refine(value => value === null || (Number.isInteger(value) && value >= 0 && value <= 10_000_000)),
+  notes: z.string().trim().max(10000),
+});
+
+export const dateOrNull = (value: string) => value ? new Date(`${value}T00:00:00Z`) : null;

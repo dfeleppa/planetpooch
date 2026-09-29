@@ -2,19 +2,20 @@ import Link from "next/link";
 import { cn } from "@/lib/utils";
 import { Company } from "@prisma/client";
 
-type MaintenanceView = "dashboard" | "schedules" | "inventory";
+type MaintenanceView = "dashboard" | "schedules" | "inventory" | "vans";
 
 const views: { key: MaintenanceView; label: string; href: string }[] = [
   { key: "dashboard", label: "Dashboard", href: "/maintenance" },
   { key: "schedules", label: "Schedules", href: "/maintenance/schedules" },
   { key: "inventory", label: "Inventory", href: "/maintenance/inventory" },
+  { key: "vans", label: "Vans", href: "/maintenance/vans" },
 ];
 
 export function MaintenanceSubnav({ active, company }: { active: MaintenanceView; company: Company }) {
   return (
     <nav aria-label="Maintenance sections" className="mb-6 border-b border-gray-200">
       <div className="flex gap-5">
-        {views.map((view) => {
+        {views.filter((view) => view.key !== "vans" || company === "GROOMING").map((view) => {
           const isActive = view.key === active;
           return (
             <Link
