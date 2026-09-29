@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { parseVanInvoice } from "@/lib/van-invoice-parser";
 
 type Van = {
   year: number | null; make: string; model: string; vin: string; licensePlate: string;
@@ -14,10 +15,13 @@ type RecordRow = {
   id: string; serviceDate: string; category: string; description: string; mileage: number | null;
   vendor: string | null; cost: string | null; nextDueDate: string | null;
   nextDueMileage: number | null; notes: string;
+  invoiceNumber: string | null; workOrderNumber: string | null; subtotal: string | null;
+  tax: string | null; amountPaid: string | null; balanceDue: string | null; sourceFileName: string | null;
 };
 
 const fieldClass = "block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500";
 const dateLabel = (value: string | null) => value ? new Date(`${value}T00:00:00Z`).toLocaleDateString("en-US", { timeZone: "UTC" }) : "—";
+const emptyRecord = { serviceDate: "", category: "Routine service", description: "", mileage: "", vendor: "", cost: "", nextDueDate: "", nextDueMileage: "", notes: "", invoiceNumber: "", workOrderNumber: "", subtotal: "", tax: "", amountPaid: "", balanceDue: "" };
 
 export function VanEditor({ number, van, records, canEdit }: { number: number; van: Van; records: RecordRow[]; canEdit: boolean }) {
   const router = useRouter();
@@ -27,7 +31,36 @@ export function VanEditor({ number, van, records, canEdit }: { number: number; v
   const [editingId, setEditingId] = useState<string | null>(null);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
-  const [record, setRecord] = useState({ serviceDate: "", category: "Routine service", description: "", mileage: "", vendor: "", cost: "", nextDueDate: "", nextDueMileage: "", notes: "" });
+  const [record, setRecord] = useState(emptyRecord);
+  const [documentFile, setDocumentFile] = useState<File | null>(null);
+  const [ocrText, setOcrText] = useState("");
+  const [reading, setReading] = useState(false);
+  const [readProgress, setReadProgress] = useState("");
+  const [fileInputKey, setFileInputKey] = useState(0);
+
+  async function selectDocument(file: File | null) {
+    setDocumentFile(file); setOcrText(""); setError(""); setReadProgress("");
+    if (!file) return;
+    if (file.size > 4_000_000) { setDocumentFile(null); setError("Choose a file under 4 MB."); return; }
+    if (file.type === "application/pdf") { setReadProgress("PDF attached. Enter its details before saving; automatic reading is available for images."); return; }
+    if (!["image/jpeg", "image/png", "image/webp"].includes(file.type)) { setDocumentFile(null); setError("Choose a JPG, PNG, WebP, or PDF."); return; }
+    setReading(true);
+    try {
+      const { createWorker } = await import("tesseract.js");
+      const worker = await createWorker("eng", 1, {
+        workerPath: "/ocr/worker.min.js", corePath: "/ocr", langPath: "/ocr",
+        logger: event => { if (event.status === "recognizing text") setReadProgress(`Reading image… ${Math.round(event.progress * 100)}%`); },
+      });
+      try {
+        const result = await worker.recognize(file);
+        setOcrText(result.data.text);
+        const extracted = parseVanInvoice(result.data.text);
+        setRecord(current => ({ ...current, ...extracted }));
+        setReadProgress("Text extracted. Check every field against the document before saving.");
+      } finally { await worker.terminate(); }
+    } catch (cause) { setError(cause instanceof Error ? `Could not read image: ${cause.message}` : "Could not read image."); }
+    finally { setReading(false); }
+  }
 
   async function saveProfile(event: React.FormEvent) {
     event.preventDefault(); setError(""); setSuccess(""); setSaving(true);
@@ -43,10 +76,13 @@ export function VanEditor({ number, van, records, canEdit }: { number: number; v
   async function addRecord(event: React.FormEvent) {
     event.preventDefault(); setError(""); setSuccess(""); setAdding(true);
     try {
-      const response = await fetch(editingId ? `/api/maintenance/vans/${number}/records/${editingId}` : `/api/maintenance/vans/${number}/records`, { method: editingId ? "PATCH" : "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(record) });
+      if (editingId && documentFile) throw new Error("Document upload is available when adding a record. Save this edit, then add a new record for the document.");
+      const body = documentFile ? new FormData() : JSON.stringify(record);
+      if (body instanceof FormData) { body.set("record", JSON.stringify(record)); body.set("document", documentFile!); }
+      const response = await fetch(editingId ? `/api/maintenance/vans/${number}/records/${editingId}` : `/api/maintenance/vans/${number}/records`, { method: editingId ? "PATCH" : "POST", ...(body instanceof FormData ? {} : { headers: { "Content-Type": "application/json" } }), body });
       const data = await response.json();
       if (!response.ok) throw new Error(data.error || "Could not add maintenance record");
-      setRecord({ serviceDate: "", category: "Routine service", description: "", mileage: "", vendor: "", cost: "", nextDueDate: "", nextDueMileage: "", notes: "" });
+      setRecord(emptyRecord); setDocumentFile(null); setOcrText(""); setReadProgress(""); setFileInputKey(key => key + 1);
       setSuccess(editingId ? "Maintenance record updated." : "Maintenance record added."); setEditingId(null); router.refresh();
     } catch (cause) { setError(cause instanceof Error ? cause.message : "Could not add maintenance record"); }
     finally { setAdding(false); }
@@ -56,7 +92,10 @@ export function VanEditor({ number, van, records, canEdit }: { number: number; v
     setEditingId(row.id);
     setRecord({ serviceDate: row.serviceDate, category: row.category, description: row.description,
       mileage: row.mileage?.toString() ?? "", vendor: row.vendor ?? "", cost: row.cost ?? "",
-      nextDueDate: row.nextDueDate ?? "", nextDueMileage: row.nextDueMileage?.toString() ?? "", notes: row.notes });
+      nextDueDate: row.nextDueDate ?? "", nextDueMileage: row.nextDueMileage?.toString() ?? "", notes: row.notes,
+      invoiceNumber: row.invoiceNumber ?? "", workOrderNumber: row.workOrderNumber ?? "", subtotal: row.subtotal ?? "",
+      tax: row.tax ?? "", amountPaid: row.amountPaid ?? "", balanceDue: row.balanceDue ?? "" });
+    setDocumentFile(null); setOcrText(""); setReadProgress("");
     setError(""); setSuccess("");
     document.getElementById("maintenance-record-form")?.scrollIntoView({ behavior: "smooth" });
   }
@@ -95,13 +134,25 @@ export function VanEditor({ number, van, records, canEdit }: { number: number; v
           {row.cost && <div><dt className="inline font-medium">Cost: </dt><dd className="inline">${Number(row.cost).toFixed(2)}</dd></div>}
           {row.nextDueDate && <div><dt className="inline font-medium">Next due: </dt><dd className="inline">{dateLabel(row.nextDueDate)}</dd></div>}
           {row.nextDueMileage != null && <div><dt className="inline font-medium">Next due mileage: </dt><dd className="inline">{row.nextDueMileage.toLocaleString()}</dd></div>}
+          {row.invoiceNumber && <div><dt className="inline font-medium">Invoice: </dt><dd className="inline">{row.invoiceNumber}</dd></div>}
+          {row.workOrderNumber && <div><dt className="inline font-medium">Work order: </dt><dd className="inline">{row.workOrderNumber}</dd></div>}
+          {row.tax && <div><dt className="inline font-medium">Tax: </dt><dd className="inline">${Number(row.tax).toFixed(2)}</dd></div>}
+          {row.amountPaid && <div><dt className="inline font-medium">Paid: </dt><dd className="inline">${Number(row.amountPaid).toFixed(2)}</dd></div>}
+          {row.balanceDue && <div><dt className="inline font-medium">Balance: </dt><dd className="inline">${Number(row.balanceDue).toFixed(2)}</dd></div>}
         </dl>{row.notes && <p className="mt-2 text-sm text-gray-600">{row.notes}</p>}
+        {row.sourceFileName && <a className="mt-2 inline-block text-sm font-medium text-blue-600 hover:underline" href={`/api/maintenance/vans/${number}/records/${row.id}/document`} target="_blank" rel="noopener noreferrer">View document: {row.sourceFileName}</a>}
       </article>)}</div>}
     </section>
 
     {canEdit && <section id="maintenance-record-form" className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
       <h2 className="mb-4 text-lg font-semibold text-gray-900">{editingId ? "Edit maintenance record" : "Add maintenance record"}</h2>
       <form onSubmit={addRecord} className="space-y-4">
+        {!editingId && <div className="rounded-lg border border-blue-100 bg-blue-50 p-4">
+          <label className="block text-sm font-medium text-gray-800">Upload maintenance record (JPG, PNG, WebP, or PDF; up to 4 MB)<input key={fileInputKey} type="file" accept=".jpg,.jpeg,.png,.webp,.pdf,image/jpeg,image/png,image/webp,application/pdf" className="mt-2 block w-full text-sm" onChange={event => void selectDocument(event.target.files?.[0] ?? null)} /></label>
+          {documentFile && <p className="mt-2 text-sm text-gray-700">Attached: {documentFile.name}</p>}
+          {(reading || readProgress) && <p role="status" className="mt-2 text-sm text-gray-700">{reading && !readProgress ? "Reading image…" : readProgress}</p>}
+          {ocrText && <details className="mt-2 text-sm"><summary className="cursor-pointer text-blue-700">Show extracted text</summary><pre className="mt-2 max-h-48 overflow-auto whitespace-pre-wrap rounded bg-white p-3 text-xs">{ocrText}</pre></details>}
+        </div>}
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           <Input label="Service date" type="date" required value={record.serviceDate} onChange={e => setRecord({ ...record, serviceDate: e.target.value })} />
           <label className="block text-sm font-medium text-gray-700">Category<select className={`${fieldClass} mt-1`} value={record.category} onChange={e => setRecord({ ...record, category: e.target.value })}><option>Routine service</option><option>Oil change</option><option>Tires</option><option>Brakes</option><option>Inspection</option><option>Repair</option><option>Other</option></select></label>
@@ -110,10 +161,16 @@ export function VanEditor({ number, van, records, canEdit }: { number: number; v
           <Input label="Cost ($)" type="number" min="0" step="0.01" value={record.cost} onChange={e => setRecord({ ...record, cost: e.target.value })} />
           <Input label="Next due date" type="date" value={record.nextDueDate} onChange={e => setRecord({ ...record, nextDueDate: e.target.value })} />
           <Input label="Next due mileage" type="number" min="0" value={record.nextDueMileage} onChange={e => setRecord({ ...record, nextDueMileage: e.target.value })} />
+          <Input label="Invoice number" value={record.invoiceNumber} onChange={e => setRecord({ ...record, invoiceNumber: e.target.value })} />
+          <Input label="Work order number" value={record.workOrderNumber} onChange={e => setRecord({ ...record, workOrderNumber: e.target.value })} />
+          <Input label="Subtotal ($)" type="number" min="0" step="0.01" value={record.subtotal} onChange={e => setRecord({ ...record, subtotal: e.target.value })} />
+          <Input label="Tax ($)" type="number" min="0" step="0.01" value={record.tax} onChange={e => setRecord({ ...record, tax: e.target.value })} />
+          <Input label="Amount paid ($)" type="number" min="0" step="0.01" value={record.amountPaid} onChange={e => setRecord({ ...record, amountPaid: e.target.value })} />
+          <Input label="Balance due ($)" type="number" min="0" step="0.01" value={record.balanceDue} onChange={e => setRecord({ ...record, balanceDue: e.target.value })} />
         </div>
         <label className="block text-sm font-medium text-gray-700">Work performed<textarea className={`${fieldClass} mt-1`} required rows={3} value={record.description} onChange={e => setRecord({ ...record, description: e.target.value })} /></label>
         <label className="block text-sm font-medium text-gray-700">Notes<textarea className={`${fieldClass} mt-1`} rows={2} value={record.notes} onChange={e => setRecord({ ...record, notes: e.target.value })} /></label>
-        <div className="flex gap-3"><Button type="submit" disabled={adding}>{adding ? "Saving…" : editingId ? "Save record" : "Add maintenance record"}</Button>{editingId && <Button type="button" variant="secondary" onClick={() => { setEditingId(null); setRecord({ serviceDate: "", category: "Routine service", description: "", mileage: "", vendor: "", cost: "", nextDueDate: "", nextDueMileage: "", notes: "" }); }}>Cancel edit</Button>}</div>
+        <div className="flex gap-3"><Button type="submit" disabled={adding || reading}>{adding ? "Saving…" : editingId ? "Save record" : "Add maintenance record"}</Button>{editingId && <Button type="button" variant="secondary" onClick={() => { setEditingId(null); setRecord(emptyRecord); }}>Cancel edit</Button>}</div>
       </form>
     </section>}
   </div>;

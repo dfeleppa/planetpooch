@@ -44,6 +44,10 @@ export default async function VanPage({ params }: { params: Promise<{ number: st
           description: record.description, mileage: record.mileage, vendor: record.vendor,
           cost: record.cost?.toString() ?? null, nextDueDate: record.nextDueDate?.toISOString().slice(0, 10) ?? null,
           nextDueMileage: record.nextDueMileage, notes: record.notes,
+          invoiceNumber: record.invoiceNumber, workOrderNumber: record.workOrderNumber,
+          subtotal: record.subtotal?.toString() ?? null, tax: record.tax?.toString() ?? null,
+          amountPaid: record.amountPaid?.toString() ?? null, balanceDue: record.balanceDue?.toString() ?? null,
+          sourceFileName: record.sourceFileName,
         }))}
       />
     </div>

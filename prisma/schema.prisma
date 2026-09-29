@@ -589,14 +589,34 @@ model GroomingVanMaintenance {
   mileage        Int?
   vendor         String?
   cost           Decimal? @db.Decimal(10, 2)
+  invoiceNumber  String?
+  workOrderNumber String?
+  subtotal       Decimal? @db.Decimal(10, 2)
+  tax            Decimal? @db.Decimal(10, 2)
+  amountPaid     Decimal? @db.Decimal(10, 2)
+  balanceDue     Decimal? @db.Decimal(10, 2)
   nextDueDate    DateTime? @db.Date
   nextDueMileage Int?
   notes          String   @default("") @db.Text
+  sourceFileName String?
+  sourceMimeType String?
+  sourceFileSize Int?
+  sourceSha256   String?
   createdAt      DateTime @default(now())
   van            GroomingVan @relation(fields: [vanId], references: [id], onDelete: Restrict)
+  document       GroomingVanMaintenanceDocument?
 
   @@index([vanId, serviceDate(sort: Desc)])
   @@index([nextDueDate])
+  @@unique([vanId, sourceSha256])
+  @@index([vanId, invoiceNumber])
+}
+
+model GroomingVanMaintenanceDocument {
+  id            String @id @default(cuid())
+  maintenanceId String @unique
+  bytes         Bytes @db.ByteA
+  maintenance   GroomingVanMaintenance @relation(fields: [maintenanceId], references: [id], onDelete: Cascade)
 }
 
 model MaintenanceTask {
