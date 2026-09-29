@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import type { WebsiteFormSubmissionRow } from "@/lib/marketing/new-client-submissions";
+import type { SubmissionWithClientHistory } from "@/lib/marketing/moego-client-history";
 
 const columns = [
   { key: "received", label: "Received" },
@@ -11,6 +11,7 @@ const columns = [
   { key: "consent", label: "Consent" },
   { key: "status", label: "Status" },
   { key: "moego", label: "MoeGo" },
+  { key: "clientHistory", label: "MoeGo client history" },
   { key: "attempts", label: "Attempts" },
   { key: "history", label: "History / complete record" },
 ] as const;
@@ -27,7 +28,7 @@ function formatTime(date: Date) {
   return timeFormatter.format(date);
 }
 
-function sortValue(submission: WebsiteFormSubmissionRow, key: SortKey): string | number {
+function sortValue(submission: SubmissionWithClientHistory, key: SortKey): string | number {
   switch (key) {
     case "received": return submission.receivedAt.getTime();
     case "customer": return [submission.firstName, submission.lastName].filter(Boolean).join(" ") || "Unvalidated";
@@ -42,14 +43,47 @@ function sortValue(submission: WebsiteFormSubmissionRow, key: SortKey): string |
     case "consent": return submission.marketingConsent === null ? "Unknown" : submission.marketingConsent ? "Yes" : "No";
     case "status": return submission.status;
     case "moego": return submission.moegoLeadId || "Not confirmed";
+    case "clientHistory": return submission.clientHistory.status === "existing" ? 0 :
+      submission.clientHistory.status === "recent" ? 1 :
+      submission.clientHistory.status === "created_after" ? 2 :
+      submission.clientHistory.status === "no_match" ? 3 :
+      submission.clientHistory.status === "no_phone" ? 4 : 5;
     case "attempts": return submission.attemptCount;
     case "history": return submission.events.length;
   }
 }
 
-export function SubmissionTable({ submissions, total }: { submissions: WebsiteFormSubmissionRow[]; total: number }) {
+const dateFormatter = new Intl.DateTimeFormat("en-US", { timeZone: "America/New_York", dateStyle: "medium" });
+
+function ClientHistoryCell({ submission }: { submission: SubmissionWithClientHistory }) {
+  const { status, profiles, oldestPriorProfile } = submission.clientHistory;
+  const label = status === "existing" ? "Existing client · over 90 days" :
+    status === "recent" ? "Recent MoeGo client · within 90 days" :
+    status === "created_after" ? "MoeGo profile created after submission" :
+    status === "no_phone" ? "No valid phone to match" :
+    status === "unavailable" ? "MoeGo history unavailable" : "No match in synced records";
+
+  return <td className="min-w-56 max-w-72 px-4 py-3">
+    <span className={status === "existing" ? "font-semibold text-amber-800" : "text-gray-700"}>{label}</span>
+    {oldestPriorProfile && <div className="mt-1 text-xs text-gray-600">Oldest prior profile: {dateFormatter.format(oldestPriorProfile.createdTime)}</div>}
+    {profiles.length > 0 && <details className="mt-2 text-xs">
+      <summary className="cursor-pointer text-blue-700">{profiles.length} matching MoeGo {profiles.length === 1 ? "profile" : "profiles"}</summary>
+      <ul className="mt-1 space-y-1">
+        {profiles.map((profile) => <li key={profile.moegoId}>
+          <a className="hover:underline" href={`https://go.moego.pet/client/${encodeURIComponent(profile.moegoId)}/overview`} target="_blank" rel="noopener noreferrer">
+            {profile.name || profile.moegoId} · {dateFormatter.format(profile.createdTime)}
+          </a>
+        </li>)}
+      </ul>
+    </details>}
+  </td>;
+}
+
+export function SubmissionTable({ submissions, total }: { submissions: SubmissionWithClientHistory[]; total: number }) {
   const [sort, setSort] = useState<{ key: SortKey; direction: Direction }>({ key: "received", direction: "descending" });
-  const sorted = useMemo(() => [...submissions].sort((a, b) => {
+  const [onlyExisting, setOnlyExisting] = useState(false);
+  const historyAvailable = submissions.some((row) => row.clientHistory.status !== "unavailable");
+  const sorted = useMemo(() => submissions.filter((row) => !onlyExisting || row.clientHistory.status === "existing").sort((a, b) => {
     const aValue = sortValue(a, sort.key);
     const bValue = sortValue(b, sort.key);
     const comparison = typeof aValue === "number" && typeof bValue === "number"
@@ -57,11 +91,15 @@ export function SubmissionTable({ submissions, total }: { submissions: WebsiteFo
       : collator.compare(String(aValue), String(bValue));
     if (comparison !== 0) return sort.direction === "ascending" ? comparison : -comparison;
     return b.receivedAt.getTime() - a.receivedAt.getTime() || collator.compare(b.id, a.id);
-  }), [submissions, sort]);
+  }), [submissions, sort, onlyExisting]);
 
   return (
     <>
       {total > submissions.length && <p className="mb-2 text-sm text-gray-500">Showing the {submissions.length} most recent submissions of {total.toLocaleString()}. Sorting applies to the displayed rows.</p>}
+      <label className="mb-3 inline-flex items-center gap-2 text-sm text-gray-700">
+        <input type="checkbox" checked={onlyExisting} disabled={!historyAvailable} onChange={(event) => setOnlyExisting(event.target.checked)} />
+        Show only existing clients (over 90 days before submission)
+      </label>
       <div className="overflow-x-auto rounded-xl border border-gray-200 bg-white">
         <table className="w-full text-left text-sm">
           <thead className="bg-gray-50"><tr>
@@ -93,6 +131,7 @@ export function SubmissionTable({ submissions, total }: { submissions: WebsiteFo
                 <td className="px-4 py-3">{submission.marketingConsent === null ? "Unknown" : submission.marketingConsent ? "Yes" : "No"}</td>
                 <td className="max-w-52 break-words px-4 py-3"><span className="font-medium">{submission.status}</span>{submission.lastHttpStatus && <div className="mt-1 text-xs text-gray-500">HTTP {submission.lastHttpStatus}</div>}{submission.lastError && <div className="mt-1 text-xs text-red-700">{submission.lastError}</div>}</td>
                 <td className="max-w-48 break-all px-4 py-3">{submission.moegoLeadId || "Not confirmed"}{submission.moegoSyncedAt && <div className="mt-1 text-xs text-gray-500">Synced {formatTime(submission.moegoSyncedAt)}</div>}</td>
+                <ClientHistoryCell submission={submission} />
                 <td className="px-4 py-3 text-center">{submission.attemptCount}</td>
                 <td className="min-w-64 max-w-96 px-4 py-3">
                   <details><summary className="cursor-pointer font-medium">{submission.events.length} events</summary><ol className="mt-2 space-y-2 text-xs">{submission.events.map((event) => <li key={event.id}><span className="font-medium">{formatTime(event.createdAt)} · {event.status}</span>{event.httpStatus && ` · HTTP ${event.httpStatus}`}{event.message && <div>{event.message}</div>}</li>)}</ol></details>
@@ -101,7 +140,7 @@ export function SubmissionTable({ submissions, total }: { submissions: WebsiteFo
                 </td>
               </tr>
             ))}
-            {submissions.length === 0 && <tr><td colSpan={columns.length} className="px-4 py-8 text-center text-gray-500">No saved new-client submissions in the selected date range.</td></tr>}
+            {sorted.length === 0 && <tr><td colSpan={columns.length} className="px-4 py-8 text-center text-gray-500">{onlyExisting ? "No existing-client matches among the displayed submissions." : "No saved new-client submissions in the selected date range."}</td></tr>}
           </tbody>
         </table>
       </div>
