@@ -1,7 +1,6 @@
 import { createHash } from "node:crypto";
+import { MAX_VAN_DOCUMENT_BYTES } from "@/lib/van-document-size";
 
-// Vercel Functions accept at most 4.5 MB per request, including multipart overhead.
-export const MAX_VAN_DOCUMENT_BYTES = 4_000_000;
 
 export type VanDocument = { buffer: Buffer; mimeType: "image/jpeg" | "image/png" | "image/webp" | "application/pdf"; name: string; sha256: string };
 

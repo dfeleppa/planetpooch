@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { parseVanInvoice } from "@/lib/van-invoice-parser";
+import { combineVanImagePages } from "@/lib/van-document-pages";
 
 type Van = {
   year: number | null; make: string; model: string; vin: string; licensePlate: string;
@@ -22,6 +23,7 @@ type RecordRow = {
 const fieldClass = "block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500";
 const dateLabel = (value: string | null) => value ? new Date(`${value}T00:00:00Z`).toLocaleDateString("en-US", { timeZone: "UTC" }) : "—";
 const emptyRecord = { serviceDate: "", category: "Routine service", description: "", mileage: "", vendor: "", cost: "", nextDueDate: "", nextDueMileage: "", notes: "", invoiceNumber: "", workOrderNumber: "", subtotal: "", tax: "", amountPaid: "", balanceDue: "" };
+type DocumentPage = { file: File; text: string };
 
 export function VanEditor({ number, van, records, canEdit }: { number: number; van: Van; records: RecordRow[]; canEdit: boolean }) {
   const router = useRouter();
@@ -32,34 +34,52 @@ export function VanEditor({ number, van, records, canEdit }: { number: number; v
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [record, setRecord] = useState(emptyRecord);
-  const [documentFile, setDocumentFile] = useState<File | null>(null);
-  const [ocrText, setOcrText] = useState("");
+  const [documentPages, setDocumentPages] = useState<DocumentPage[]>([]);
   const [reading, setReading] = useState(false);
   const [readProgress, setReadProgress] = useState("");
   const [fileInputKey, setFileInputKey] = useState(0);
 
-  async function selectDocument(file: File | null) {
-    setDocumentFile(file); setOcrText(""); setError(""); setReadProgress("");
-    if (!file) return;
-    if (file.size > 4_000_000) { setDocumentFile(null); setError("Choose a file under 4 MB."); return; }
-    if (file.type === "application/pdf") { setReadProgress("PDF attached. Enter its details before saving; automatic reading is available for images."); return; }
-    if (!["image/jpeg", "image/png", "image/webp"].includes(file.type)) { setDocumentFile(null); setError("Choose a JPG, PNG, WebP, or PDF."); return; }
+  async function selectDocuments(files: File[]) {
+    setDocumentPages(files.map(file => ({ file, text: "" }))); setError(""); setReadProgress("");
+    if (!files.length) return;
+    if (files.length > 6) { setDocumentPages([]); setError("Choose up to six pages per record."); return; }
+    if (files.some(file => file.size > 4_000_000 || !file.size)) { setDocumentPages([]); setError("Each page must be under 4 MB."); return; }
+    if (files.some(file => !["application/pdf", "image/jpeg", "image/png", "image/webp"].includes(file.type))) { setDocumentPages([]); setError("Choose JPG, PNG, WebP, or PDF files."); return; }
+    if (files.some(file => file.type === "application/pdf")) {
+      if (files.length > 1) { setDocumentPages([]); setError("Choose one PDF, or choose multiple image pages."); return; }
+      setReadProgress("PDF attached. Enter its details before saving; automatic reading is available for images."); return;
+    }
     setReading(true);
     try {
       const { createWorker } = await import("tesseract.js");
       const worker = await createWorker("eng", 1, {
         workerPath: "/ocr/worker.min.js", corePath: "/ocr", langPath: "/ocr",
-        logger: event => { if (event.status === "recognizing text") setReadProgress(`Reading image… ${Math.round(event.progress * 100)}%`); },
+        logger: event => { if (event.status === "recognizing text") setReadProgress(`Reading pages… ${Math.round(event.progress * 100)}%`); },
       });
       try {
-        const result = await worker.recognize(file);
-        setOcrText(result.data.text);
-        const extracted = parseVanInvoice(result.data.text);
+        const pageTexts: string[] = [];
+        for (const [index, file] of files.entries()) {
+          setReadProgress(`Reading page ${index + 1} of ${files.length}…`);
+          const result = await worker.recognize(file);
+          pageTexts.push(result.data.text);
+          setDocumentPages(current => current.map((page, position) => position === index ? { ...page, text: result.data.text } : page));
+        }
+        const extracted = parseVanInvoice(pageTexts.join("\n\n"));
         setRecord(current => ({ ...current, ...extracted }));
         setReadProgress("Text extracted. Check every field against the document before saving.");
       } finally { await worker.terminate(); }
-    } catch (cause) { setError(cause instanceof Error ? `Could not read image: ${cause.message}` : "Could not read image."); }
+    } catch (cause) { setError(cause instanceof Error ? `Could not read pages: ${cause.message}` : "Could not read pages."); }
     finally { setReading(false); }
+  }
+
+  function moveDocumentPage(index: number, direction: -1 | 1) {
+    setDocumentPages(current => {
+      const next = [...current];
+      const other = index + direction;
+      if (other < 0 || other >= next.length) return current;
+      [next[index], next[other]] = [next[other], next[index]];
+      return next;
+    });
   }
 
   async function saveProfile(event: React.FormEvent) {
@@ -76,13 +96,16 @@ export function VanEditor({ number, van, records, canEdit }: { number: number; v
   async function addRecord(event: React.FormEvent) {
     event.preventDefault(); setError(""); setSuccess(""); setAdding(true);
     try {
-      if (editingId && documentFile) throw new Error("Document upload is available when adding a record. Save this edit, then add a new record for the document.");
-      const body = documentFile ? new FormData() : JSON.stringify(record);
-      if (body instanceof FormData) { body.set("record", JSON.stringify(record)); body.set("document", documentFile!); }
+      if (editingId && documentPages.length) throw new Error("Document upload is available when adding a record. Save this edit, then add a new record for the document.");
+      const upload = documentPages.length > 1
+        ? await combineVanImagePages(documentPages.map(page => page.file), `Van-${number}-${record.serviceDate || "maintenance"}.pdf`)
+        : documentPages[0]?.file;
+      const body = upload ? new FormData() : JSON.stringify(record);
+      if (body instanceof FormData) { body.set("record", JSON.stringify(record)); body.set("document", upload!); }
       const response = await fetch(editingId ? `/api/maintenance/vans/${number}/records/${editingId}` : `/api/maintenance/vans/${number}/records`, { method: editingId ? "PATCH" : "POST", ...(body instanceof FormData ? {} : { headers: { "Content-Type": "application/json" } }), body });
       const data = await response.json();
       if (!response.ok) throw new Error(data.error || "Could not add maintenance record");
-      setRecord(emptyRecord); setDocumentFile(null); setOcrText(""); setReadProgress(""); setFileInputKey(key => key + 1);
+      setRecord(emptyRecord); setDocumentPages([]); setReadProgress(""); setFileInputKey(key => key + 1);
       setSuccess(editingId ? "Maintenance record updated." : "Maintenance record added."); setEditingId(null); router.refresh();
     } catch (cause) { setError(cause instanceof Error ? cause.message : "Could not add maintenance record"); }
     finally { setAdding(false); }
@@ -95,7 +118,7 @@ export function VanEditor({ number, van, records, canEdit }: { number: number; v
       nextDueDate: row.nextDueDate ?? "", nextDueMileage: row.nextDueMileage?.toString() ?? "", notes: row.notes,
       invoiceNumber: row.invoiceNumber ?? "", workOrderNumber: row.workOrderNumber ?? "", subtotal: row.subtotal ?? "",
       tax: row.tax ?? "", amountPaid: row.amountPaid ?? "", balanceDue: row.balanceDue ?? "" });
-    setDocumentFile(null); setOcrText(""); setReadProgress("");
+    setDocumentPages([]); setReadProgress("");
     setError(""); setSuccess("");
     document.getElementById("maintenance-record-form")?.scrollIntoView({ behavior: "smooth" });
   }
@@ -148,10 +171,11 @@ export function VanEditor({ number, van, records, canEdit }: { number: number; v
       <h2 className="mb-4 text-lg font-semibold text-gray-900">{editingId ? "Edit maintenance record" : "Add maintenance record"}</h2>
       <form onSubmit={addRecord} className="space-y-4">
         {!editingId && <div className="rounded-lg border border-blue-100 bg-blue-50 p-4">
-          <label className="block text-sm font-medium text-gray-800">Upload maintenance record (JPG, PNG, WebP, or PDF; up to 4 MB)<input key={fileInputKey} type="file" accept=".jpg,.jpeg,.png,.webp,.pdf,image/jpeg,image/png,image/webp,application/pdf" className="mt-2 block w-full text-sm" onChange={event => void selectDocument(event.target.files?.[0] ?? null)} /></label>
-          {documentFile && <p className="mt-2 text-sm text-gray-700">Attached: {documentFile.name}</p>}
-          {(reading || readProgress) && <p role="status" className="mt-2 text-sm text-gray-700">{reading && !readProgress ? "Reading image…" : readProgress}</p>}
-          {ocrText && <details className="mt-2 text-sm"><summary className="cursor-pointer text-blue-700">Show extracted text</summary><pre className="mt-2 max-h-48 overflow-auto whitespace-pre-wrap rounded bg-white p-3 text-xs">{ocrText}</pre></details>}
+          <label className="block text-sm font-medium text-gray-800">Upload maintenance record (one PDF or up to six image pages; each file under 4 MB)<input key={fileInputKey} type="file" multiple accept=".jpg,.jpeg,.png,.webp,.pdf,image/jpeg,image/png,image/webp,application/pdf" className="mt-2 block w-full text-sm" onChange={event => void selectDocuments(Array.from(event.target.files ?? []))} /></label>
+          {documentPages.length > 0 && <ol className="mt-2 space-y-1 text-sm text-gray-700">{documentPages.map((page, index) => <li key={`${page.file.name}-${index}`} className="flex items-center gap-2"><span>Page {index + 1}: {page.file.name}</span>{documentPages.length > 1 && <><button type="button" disabled={reading || index === 0} onClick={() => moveDocumentPage(index, -1)} className="text-blue-700 disabled:text-gray-400">Move up</button><button type="button" disabled={reading || index === documentPages.length - 1} onClick={() => moveDocumentPage(index, 1)} className="text-blue-700 disabled:text-gray-400">Move down</button></>}</li>)}</ol>}
+          {documentPages.length > 1 && <p className="mt-2 text-xs text-gray-600">The pages will be saved together as one PDF in this order.</p>}
+          {(reading || readProgress) && <p role="status" className="mt-2 text-sm text-gray-700">{reading && !readProgress ? "Reading pages…" : readProgress}</p>}
+          {documentPages.some(page => page.text) && <details className="mt-2 text-sm"><summary className="cursor-pointer text-blue-700">Show extracted text</summary><pre className="mt-2 max-h-48 overflow-auto whitespace-pre-wrap rounded bg-white p-3 text-xs">{documentPages.map((page, index) => `Page ${index + 1}: ${page.file.name}\n${page.text}`).join("\n\n")}</pre></details>}
         </div>}
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           <Input label="Service date" type="date" required value={record.serviceDate} onChange={e => setRecord({ ...record, serviceDate: e.target.value })} />

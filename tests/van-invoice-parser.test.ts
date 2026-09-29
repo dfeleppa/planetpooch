@@ -20,3 +20,25 @@ Invoice Balance: $0.00`;
       description: "New Battery", category: "Repair", subtotal: "239.95", tax: "20.70",
       total: "260.65", paid: "260.65", balance: "0.00" });
 });
+
+test("extracts totals from the separate body repair bill's second page without inventing a service date or payment", () => {
+  const text = `Final Bill
+number: 3601
+FORD Transit Van T-350 HD EL 148" WB High Roof 3D VAN 6
+E01 REAR LAMPS
+E01 Remove/Replace RT Tail lamp assy dual rear wheels
+E01 REAR BUMPER
+Subtotal 9,055.16 |
+Sales Tax | 781.01 |
+Net Total | | ~ 9,836.17 |
+Balance due from Customer $: 9,836.17`;
+  const parsed = parseVanInvoice(text);
+  assert.equal(parsed.category, "Repair");
+  assert.equal(parsed.description, "Body and paint repair (see attached bill)");
+  assert.equal(parsed.subtotal, "9055.16");
+  assert.equal(parsed.tax, "781.01");
+  assert.equal(parsed.cost, "9836.17");
+  assert.equal(parsed.serviceDate, "");
+  assert.equal(parsed.amountPaid, "");
+  assert.equal(parsed.balanceDue, "");
+});

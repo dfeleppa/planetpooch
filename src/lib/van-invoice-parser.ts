@@ -7,9 +7,12 @@ export function parseVanInvoice(text: string) {
   const serviceDate = dateParts.length === 3
     ? `${dateParts[2]}-${dateParts[0].padStart(2, "0")}-${dateParts[1].padStart(2, "0")}` : "";
   const item = value(/^\s*\d+(?:\.\d+)?\s+(.+?)\s+\$?[\d,]+\.\d{2}\s+\$?[\d,]+\.\d{2}\s*$/m);
-  const description = item || value(/\b(New Battery|Oil Change|Tire Replacement|Brake Repair|Inspection)\b/i);
+  const description = /Final Bill/i.test(text) && /rear bumper|rear lamps|refinish/i.test(text)
+    ? "Body and paint repair (see attached bill)"
+    : item || value(/\b(New Battery|Oil Change|Tire Replacement|Brake Repair|Inspection)\b/i);
   const vendor = text.slice(0, 500).match(/([A-Z][a-z]+(?:\s+[A-Z][a-z]+){0,4}\s+(?:Service|Repair|Automotive|Garage))\b/)?.[1] || "";
-  const cost = money(/\b(?:Total|Totak)\s*[:$]?\s*\$?([\d,]+\.\d{2})/i)
+  const cost = money(/\b(?:Grand|Net)\s+Total\s*[|:$~\s]*([\d,]+\.\d{2})/i)
+    || money(/\b(?:Total|Totak)\s*[:$]?\s*\$?([\d,]+\.\d{2})/i)
     || money(/\bAmount\s*:\s*\$?([\d,]+\.\d{2})/i);
   return {
     serviceDate,
@@ -19,8 +22,8 @@ export function parseVanInvoice(text: string) {
     description,
     category: /battery|repair|replacement/i.test(description) ? "Repair" : /oil/i.test(description) ? "Oil change" : /tire/i.test(description) ? "Tires" : "Other",
     cost,
-    subtotal: money(/\bSubtotal\s*:\s*\$?([\d,]+\.\d{2})/i),
-    tax: money(/\b(?:Sales\s+Tax|Taxes\/Fees)\s*:\s*\$?([\d,]+\.\d{2})/i),
+    subtotal: money(/\bSubtotal\s*[:|]?\s*\$?([\d,]+\.\d{2})/i),
+    tax: money(/\b(?:Sales\s+Tax|Taxes\/Fees)\s*[:|]?\s*\$?([\d,]+\.\d{2})/i),
     amountPaid: money(/\bAmount\s*:\s*\$?([\d,]+\.\d{2})/i),
     balanceDue: money(/\bInvoice\s+Balance\s*:\s*\$?([\d,]+\.\d{2})/i),
   };
