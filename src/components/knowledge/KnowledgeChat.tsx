@@ -1,22 +1,30 @@
 "use client";
 
 import Link from "next/link";
-import { FormEvent, useState } from "react";
+import { FormEvent, useEffect, useRef, useState } from "react";
 
 type Source = { id: string; title: string; kind: "article" | "lesson" | "record"; url: string };
 type Message = { role: "user" | "assistant"; content: string; sources?: Source[] };
 
 const SUGGESTIONS = [
-  "How many customers are in the synced database?",
-  "What are the latest saved finance metrics?",
-  "What are the latest payroll hours?",
+  "What was Pet Resort net sales last week?",
+  "What was boarding occupancy last week?",
+  "How many daycare packages are expiring?",
 ];
 
-export function KnowledgeChat() {
+export function KnowledgeChat({ compact = false, onSourceNavigate }: { compact?: boolean; onSourceNavigate?: () => void }) {
+  const questionId = compact ? "knowledge-widget-question" : "knowledge-question";
   const [messages, setMessages] = useState<Message[]>([]);
   const [draft, setDraft] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  const messagesRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (compact && messagesRef.current) {
+      messagesRef.current.scrollTop = messagesRef.current.scrollHeight;
+    }
+  }, [compact, messages, busy]);
 
   async function ask(question: string) {
     const trimmed = question.trim();
@@ -48,8 +56,8 @@ export function KnowledgeChat() {
   }
 
   return (
-    <div className="mx-auto flex max-w-4xl flex-col gap-6 pb-8">
-      <header className="rounded-2xl border border-pp-line bg-white p-6 shadow-sm">
+    <div className={compact ? "flex h-full min-h-0 flex-col gap-3" : "mx-auto flex max-w-4xl flex-col gap-6 pb-8"}>
+      {!compact && <header className="rounded-2xl border border-pp-line bg-white p-6 shadow-sm">
         <div className="flex flex-wrap items-center gap-3">
           <h1 className="text-2xl font-semibold text-pp-ink">Ask Pooch</h1>
           <span className="rounded-full border border-pp-accent-line bg-pp-accent-soft px-2.5 py-1 text-xs font-medium text-pp-accent">Experimental</span>
@@ -58,9 +66,9 @@ export function KnowledgeChat() {
           Ask about Planet Pooch records and procedures. Answers use the app data and training sources available to this account.
           Check the linked sources before acting on sensitive or time critical details.
         </p>
-      </header>
+      </header>}
 
-      <div className="min-h-72 space-y-4" aria-live="polite">
+      <div ref={messagesRef} className={compact ? "min-h-0 flex-1 space-y-3 overflow-y-auto px-1 py-1" : "min-h-72 space-y-4"} aria-live="polite">
         {messages.length === 0 && (
           <div className="rounded-2xl border border-dashed border-pp-line bg-pp-surface-2 p-6">
             <p className="font-medium text-pp-ink">Try a question</p>
@@ -83,7 +91,7 @@ export function KnowledgeChat() {
                 <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-pp-ink-4">Sources</p>
                 <div className="flex flex-wrap gap-2">
                   {message.sources.map((source, sourceIndex) => (
-                    <Link key={source.id} href={source.url} className="rounded-md border border-pp-line px-3 py-1.5 text-xs text-pp-accent hover:bg-pp-accent-soft">
+                    <Link key={source.id} href={source.url} onClick={onSourceNavigate} className="rounded-md border border-pp-line px-3 py-1.5 text-xs text-pp-accent hover:bg-pp-accent-soft">
                       [{sourceIndex + 1}] {source.title}
                     </Link>
                   ))}
@@ -95,10 +103,10 @@ export function KnowledgeChat() {
         {busy && <p className="px-2 text-sm text-pp-ink-3" role="status">Looking through the knowledge library…</p>}
       </div>
 
-      <form onSubmit={onSubmit} className="sticky bottom-3 rounded-2xl border border-pp-line bg-white p-3 shadow-lg">
-        <label htmlFor="knowledge-question" className="sr-only">Your question</label>
+      <form onSubmit={onSubmit} className={compact ? "shrink-0 border-t border-pp-line bg-white pt-3" : "sticky bottom-3 rounded-2xl border border-pp-line bg-white p-3 shadow-lg"}>
+        <label htmlFor={questionId} className="sr-only">Your question</label>
         <div className="flex items-end gap-3">
-          <textarea id="knowledge-question" rows={2} maxLength={2000} value={draft} onChange={(event) => setDraft(event.target.value)}
+          <textarea id={questionId} rows={2} maxLength={2000} value={draft} onChange={(event) => setDraft(event.target.value)}
             onKeyDown={(event) => { if (event.key === "Enter" && !event.shiftKey) { event.preventDefault(); void ask(draft); } }}
             placeholder="Ask a Planet Pooch question…"
             className="min-h-16 flex-1 resize-y rounded-lg border border-pp-line px-3 py-2 text-sm text-pp-ink outline-none focus:border-pp-accent" />

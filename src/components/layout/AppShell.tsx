@@ -5,6 +5,8 @@ import { BusinessSelector } from "@/components/business/BusinessSelector";
 import { getActiveBusiness } from "@/lib/business-server";
 import { requireAuth } from "@/lib/auth-helpers";
 import { availableBusinesses } from "@/lib/business";
+import { isKnowledgeOwner } from "@/lib/knowledge-owner";
+import { AskPoochWidget } from "@/components/knowledge/AskPoochWidget";
 
 export async function AppShell({ children }: { children: React.ReactNode }) {
   const [session, business] = await Promise.all([requireAuth(), getActiveBusiness()]);
@@ -17,6 +19,7 @@ export async function AppShell({ children }: { children: React.ReactNode }) {
             <BusinessSelector options={availableBusinesses(session.user)} />
             {children}
           </main>
+          {isKnowledgeOwner(session.user) && <AskPoochWidget />}
         </div>
       </BusinessProvider>
     </Providers>
