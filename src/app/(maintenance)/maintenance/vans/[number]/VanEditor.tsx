@@ -24,6 +24,26 @@ const fieldClass = "block w-full rounded-lg border border-gray-300 px-3 py-2 tex
 const dateLabel = (value: string | null) => value ? new Date(`${value}T00:00:00Z`).toLocaleDateString("en-US", { timeZone: "UTC" }) : "—";
 const emptyRecord = { serviceDate: "", category: "Routine service", description: "", mileage: "", vendor: "", cost: "", nextDueDate: "", nextDueMileage: "", notes: "", invoiceNumber: "", workOrderNumber: "", subtotal: "", tax: "", amountPaid: "", balanceDue: "" };
 type DocumentPage = { file: File; text: string };
+type SortKey = "serviceDate" | "description" | "category" | "vendor" | "mileage" | "cost" | "nextDueDate" | "invoiceNumber" | "sourceFileName";
+type SortDirection = "asc" | "desc";
+
+const columns: { key: SortKey; label: string }[] = [
+  { key: "serviceDate", label: "Service date" },
+  { key: "description", label: "Maintenance completed" },
+  { key: "category", label: "Category" },
+  { key: "vendor", label: "Vendor" },
+  { key: "mileage", label: "Mileage" },
+  { key: "cost", label: "Cost" },
+  { key: "nextDueDate", label: "Next due" },
+  { key: "invoiceNumber", label: "Invoice" },
+  { key: "sourceFileName", label: "Document" },
+];
+
+function sortValue(row: RecordRow, key: SortKey): string | number | null {
+  if (key === "cost") return row.cost === null ? null : Number(row.cost);
+  const value = row[key];
+  return value === "" ? null : value;
+}
 
 export function VanEditor({ number, van, records, canEdit }: { number: number; van: Van; records: RecordRow[]; canEdit: boolean }) {
   const router = useRouter();
@@ -38,6 +58,21 @@ export function VanEditor({ number, van, records, canEdit }: { number: number; v
   const [reading, setReading] = useState(false);
   const [readProgress, setReadProgress] = useState("");
   const [fileInputKey, setFileInputKey] = useState(0);
+  const [sort, setSort] = useState<{ key: SortKey; direction: SortDirection }>({ key: "serviceDate", direction: "desc" });
+  const sortedRecords = [...records].sort((a, b) => {
+    const first = sortValue(a, sort.key);
+    const second = sortValue(b, sort.key);
+    if (first === null) return second === null ? b.serviceDate.localeCompare(a.serviceDate) || a.id.localeCompare(b.id) : 1;
+    if (second === null) return -1;
+    const comparison = typeof first === "number" && typeof second === "number"
+      ? first - second
+      : String(first).localeCompare(String(second), undefined, { sensitivity: "base", numeric: true });
+    return (sort.direction === "asc" ? comparison : -comparison) || b.serviceDate.localeCompare(a.serviceDate) || a.id.localeCompare(b.id);
+  });
+
+  function sortBy(key: SortKey) {
+    setSort(current => ({ key, direction: current.key === key && current.direction === "asc" ? "desc" : "asc" }));
+  }
 
   async function selectDocuments(files: File[]) {
     setDocumentPages(files.map(file => ({ file, text: "" }))); setError(""); setReadProgress("");
@@ -149,22 +184,42 @@ export function VanEditor({ number, van, records, canEdit }: { number: number; v
 
     <section className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
       <h2 className="text-lg font-semibold text-gray-900">Maintenance history</h2>
-      {records.length === 0 ? <p className="mt-3 text-sm text-gray-500">No maintenance records yet.</p> : <div className="mt-4 space-y-3">{records.map(row => <article key={row.id} className="rounded-lg border border-gray-200 p-4">
-        <div className="flex flex-wrap items-start justify-between gap-2"><div><h3 className="font-semibold text-gray-900">{row.category}</h3><p className="text-sm text-gray-700">{row.description}</p></div><div className="flex items-center gap-3"><time className="text-sm text-gray-500">{dateLabel(row.serviceDate)}</time>{canEdit && <button type="button" onClick={() => editRecord(row)} className="text-sm font-medium text-blue-600 hover:underline">Edit</button>}</div></div>
-        <dl className="mt-3 flex flex-wrap gap-x-5 gap-y-1 text-xs text-gray-600">
-          {row.mileage != null && <div><dt className="inline font-medium">Mileage: </dt><dd className="inline">{row.mileage.toLocaleString()}</dd></div>}
-          {row.vendor && <div><dt className="inline font-medium">Vendor: </dt><dd className="inline">{row.vendor}</dd></div>}
-          {row.cost && <div><dt className="inline font-medium">Cost: </dt><dd className="inline">${Number(row.cost).toFixed(2)}</dd></div>}
-          {row.nextDueDate && <div><dt className="inline font-medium">Next due: </dt><dd className="inline">{dateLabel(row.nextDueDate)}</dd></div>}
-          {row.nextDueMileage != null && <div><dt className="inline font-medium">Next due mileage: </dt><dd className="inline">{row.nextDueMileage.toLocaleString()}</dd></div>}
-          {row.invoiceNumber && <div><dt className="inline font-medium">Invoice: </dt><dd className="inline">{row.invoiceNumber}</dd></div>}
-          {row.workOrderNumber && <div><dt className="inline font-medium">Work order: </dt><dd className="inline">{row.workOrderNumber}</dd></div>}
-          {row.tax && <div><dt className="inline font-medium">Tax: </dt><dd className="inline">${Number(row.tax).toFixed(2)}</dd></div>}
-          {row.amountPaid && <div><dt className="inline font-medium">Paid: </dt><dd className="inline">${Number(row.amountPaid).toFixed(2)}</dd></div>}
-          {row.balanceDue && <div><dt className="inline font-medium">Balance: </dt><dd className="inline">${Number(row.balanceDue).toFixed(2)}</dd></div>}
-        </dl>{row.notes && <p className="mt-2 text-sm text-gray-600">{row.notes}</p>}
-        {row.sourceFileName && <a className="mt-2 inline-block text-sm font-medium text-blue-600 hover:underline" href={`/api/maintenance/vans/${number}/records/${row.id}/document`} target="_blank" rel="noopener noreferrer">View document: {row.sourceFileName}</a>}
-      </article>)}</div>}
+      {records.length === 0 ? <p className="mt-3 text-sm text-gray-500">No maintenance records yet.</p> : <div className="mt-4 overflow-x-auto rounded-lg border border-gray-200">
+        <table className="min-w-[1050px] w-full divide-y divide-gray-200 text-sm">
+          <thead className="bg-gray-50"><tr>
+            {columns.map(column => <th key={column.key} scope="col" aria-sort={sort.key === column.key ? (sort.direction === "asc" ? "ascending" : "descending") : "none"} className="px-3 py-3 text-left font-semibold text-gray-700">
+              <button type="button" onClick={() => sortBy(column.key)} className="inline-flex items-center gap-1 whitespace-nowrap hover:text-blue-700 focus-visible:rounded focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600" aria-label={`Sort by ${column.label}`}>
+                {column.label}<span aria-hidden="true" className="text-xs text-gray-500">{sort.key === column.key ? (sort.direction === "asc" ? "↑" : "↓") : "↕"}</span>
+              </button>
+            </th>)}
+          </tr></thead>
+          <tbody className="divide-y divide-gray-100 bg-white">{sortedRecords.map(row => <tr key={row.id} className="align-top hover:bg-blue-50/40">
+            <td className="whitespace-nowrap px-3 py-3 font-medium text-gray-900"><time dateTime={row.serviceDate}>{dateLabel(row.serviceDate)}</time></td>
+            <td className="min-w-64 max-w-sm px-3 py-3 text-gray-900">
+              <span>{row.description}</span>
+              {(row.notes || row.workOrderNumber || row.subtotal || row.tax || row.amountPaid || row.balanceDue || row.nextDueMileage != null) && <details className="mt-1 text-xs text-gray-600"><summary className="cursor-pointer text-blue-700">More details</summary><div className="mt-1 space-y-1">
+                {row.notes && <p>{row.notes}</p>}
+                {row.workOrderNumber && <p>Work order: {row.workOrderNumber}</p>}
+                {row.subtotal && <p>Subtotal: ${Number(row.subtotal).toFixed(2)}</p>}
+                {row.tax && <p>Tax: ${Number(row.tax).toFixed(2)}</p>}
+                {row.amountPaid && <p>Paid: ${Number(row.amountPaid).toFixed(2)}</p>}
+                {row.balanceDue && <p>Balance: ${Number(row.balanceDue).toFixed(2)}</p>}
+                {row.nextDueMileage != null && <p>Next due mileage: {row.nextDueMileage.toLocaleString()}</p>}
+              </div></details>}
+              {canEdit && <button type="button" onClick={() => editRecord(row)} className="mt-1 block text-xs font-medium text-blue-700 hover:underline">Edit record</button>}
+            </td>
+            <td className="whitespace-nowrap px-3 py-3 text-gray-700">{row.category}</td>
+            <td className="min-w-36 px-3 py-3 text-gray-700">{row.vendor || "—"}</td>
+            <td className="whitespace-nowrap px-3 py-3 text-gray-700">{row.mileage == null ? "—" : row.mileage.toLocaleString()}</td>
+            <td className="whitespace-nowrap px-3 py-3 text-gray-700">{row.cost === null ? "—" : `$${Number(row.cost).toFixed(2)}`}</td>
+            <td className="whitespace-nowrap px-3 py-3 text-gray-700">{dateLabel(row.nextDueDate)}</td>
+            <td className="whitespace-nowrap px-3 py-3 text-gray-700">{row.invoiceNumber || "—"}</td>
+            <td className="px-3 py-3 text-center">{row.sourceFileName ? <a href={`/api/maintenance/vans/${number}/records/${row.id}/document`} target="_blank" rel="noopener noreferrer" aria-label={`View document: ${row.sourceFileName}`} title={`View ${row.sourceFileName}`} className="inline-flex rounded p-1 text-blue-700 hover:bg-blue-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600">
+              <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className="h-5 w-5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M8 13h8M8 17h8"/></svg>
+            </a> : <span className="text-gray-400">—</span>}</td>
+          </tr>)}</tbody>
+        </table>
+      </div>}
     </section>
 
     {canEdit && <section id="maintenance-record-form" className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
