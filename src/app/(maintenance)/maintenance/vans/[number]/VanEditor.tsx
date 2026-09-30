@@ -196,8 +196,9 @@ export function VanEditor({ number, van, records, canEdit }: { number: number; v
           <tbody className="divide-y divide-gray-100 bg-white">{sortedRecords.map(row => <tr key={row.id} className="align-top hover:bg-blue-50/40">
             <td className="whitespace-nowrap px-3 py-3 font-medium text-gray-900"><time dateTime={row.serviceDate}>{dateLabel(row.serviceDate)}</time></td>
             <td className="min-w-64 max-w-sm px-3 py-3 text-gray-900">
-              <span>{row.description}</span>
-              {(row.notes || row.workOrderNumber || row.subtotal || row.tax || row.amountPaid || row.balanceDue || row.nextDueMileage != null) && <details className="mt-1 text-xs text-gray-600"><summary className="cursor-pointer text-blue-700">More details</summary><div className="mt-1 space-y-1">
+              <span className="line-clamp-2">{row.description}</span>
+              {(row.description.length > 55 || row.notes || row.workOrderNumber || row.subtotal || row.tax || row.amountPaid || row.balanceDue || row.nextDueMileage != null) && <details className="mt-1 text-xs text-gray-600"><summary className="cursor-pointer text-blue-700">More details</summary><div className="mt-1 space-y-1">
+                {row.description.length > 55 && <p className="whitespace-pre-wrap text-sm text-gray-900">{row.description}</p>}
                 {row.notes && <p>{row.notes}</p>}
                 {row.workOrderNumber && <p>Work order: {row.workOrderNumber}</p>}
                 {row.subtotal && <p>Subtotal: ${Number(row.subtotal).toFixed(2)}</p>}
