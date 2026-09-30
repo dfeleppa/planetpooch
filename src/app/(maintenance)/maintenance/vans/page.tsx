@@ -3,7 +3,6 @@ import { redirect } from "next/navigation";
 import { requireAuth } from "@/lib/auth-helpers";
 import { getActiveBusiness } from "@/lib/business-server";
 import { prisma } from "@/lib/prisma";
-import { MaintenanceSubnav } from "@/components/maintenance/MaintenanceSubnav";
 
 function dateLabel(date: Date | null) {
   return date ? date.toLocaleDateString("en-US", { timeZone: "UTC" }) : "—";
@@ -25,7 +24,6 @@ export default async function VansPage() {
         <h1 className="text-2xl font-bold text-gray-900">Vans</h1>
         <p className="mt-1 text-gray-500">Mobile Grooming vehicle details and maintenance history</p>
       </div>
-      <MaintenanceSubnav active="vans" company="GROOMING" />
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
         {vans.map((van) => (
           <Link key={van.id} href={`/maintenance/vans/${van.number}`} className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm transition-shadow hover:shadow-md">

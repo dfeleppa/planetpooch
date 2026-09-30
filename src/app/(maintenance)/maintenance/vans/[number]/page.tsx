@@ -5,7 +5,6 @@ import { authOptions } from "@/lib/auth";
 import { isManagerOrAbove, requireAuth } from "@/lib/auth-helpers";
 import { getActiveBusiness } from "@/lib/business-server";
 import { prisma } from "@/lib/prisma";
-import { MaintenanceSubnav } from "@/components/maintenance/MaintenanceSubnav";
 import { VanEditor } from "./VanEditor";
 import { VehicleDocuments } from "./VehicleDocuments";
 
@@ -30,7 +29,6 @@ export default async function VanPage({ params }: { params: Promise<{ number: st
         <h1 className="text-2xl font-bold text-gray-900">Van {number}</h1>
         <p className="mt-1 text-gray-500">Vehicle profile, documents, and maintenance records</p>
       </div>
-      <MaintenanceSubnav active="vans" company="GROOMING" />
       <VehicleDocuments number={number} canEdit={canEdit} documents={van.documents.map(document => ({
         ...document, issueDate: document.issueDate?.toISOString().slice(0, 10) ?? null,
         expiryDate: document.expiryDate?.toISOString().slice(0, 10) ?? null,
