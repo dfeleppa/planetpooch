@@ -71,7 +71,11 @@ export function VehicleDocuments({ number, canEdit, documents }: { number: numbe
         <Input label="Issue date" type="date" value={details.issueDate} onChange={event => setDetails({ ...details, issueDate: event.target.value })} />
         <Input label="Expiration date" type="date" value={details.expiryDate} onChange={event => setDetails({ ...details, expiryDate: event.target.value })} />
       </div>
-      <label className="block text-sm font-medium text-gray-700">File (JPG, PNG, WebP, or PDF; under 4 MB)<input key={inputKey} type="file" required accept=".jpg,.jpeg,.png,.webp,.pdf,image/jpeg,image/png,image/webp,application/pdf" className="mt-2 block w-full text-sm" onChange={event => setFile(event.target.files?.[0] ?? null)} /></label>
+      <div className="space-y-2">
+        <label className="block text-sm font-medium text-gray-700">Choose a file or existing photo (JPG, PNG, WebP, or PDF; under 4 MB)<input key={`file-${inputKey}`} type="file" accept=".jpg,.jpeg,.png,.webp,.pdf,image/jpeg,image/png,image/webp,application/pdf" className="mt-2 block w-full text-sm" onChange={event => setFile(event.target.files?.[0] ?? null)} /></label>
+        <label className="block text-sm font-medium text-gray-700">Take a photo with your phone<input key={`camera-${inputKey}`} type="file" accept="image/*" capture="environment" className="mt-2 block w-full text-sm" onChange={event => setFile(event.target.files?.[0] ?? null)} /></label>
+        {file && <p className="text-sm text-gray-600">Selected: {file.name}</p>}
+      </div>
       <label className="block text-sm font-medium text-gray-700">Notes<textarea className="mt-1 block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm" rows={2} maxLength={2000} value={details.notes} onChange={event => setDetails({ ...details, notes: event.target.value })} /></label>
       <Button type="submit" disabled={busy}>{busy ? "Saving…" : "Save document"}</Button>
     </form>}
