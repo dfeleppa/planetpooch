@@ -36,6 +36,7 @@ export default async function VanPage({ params }: { params: Promise<{ number: st
         expiryDate: document.expiryDate?.toISOString().slice(0, 10) ?? null,
       }))} />
       <VanEditor
+        key={`${van.updatedAt.toISOString()}-${van.year}-${van.make}-${van.model}-${van.vin}`}
         number={number}
         canEdit={canEdit}
         van={{
