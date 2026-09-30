@@ -27,6 +27,6 @@ export default async function VanInsurancePage() {
       carrier: van.insuranceCarrier ?? "", deductible: van.insuranceDeductible?.toString() ?? "",
       premium: van.insurancePremium?.toString() ?? "",
     }))} />
-    {vans.length !== 10 && <p className="mt-4 text-sm text-amber-700">Fleet records are incomplete. Expected 10 vans; found {vans.length}.</p>}
+    {vans.length < 10 && <p className="mt-4 text-sm text-amber-700">Fleet records are incomplete. Expected at least 10 vans; found {vans.length}.</p>}
   </div>;
 }

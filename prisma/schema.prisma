@@ -560,7 +560,7 @@ model MaintenanceSchedule {
   @@index([company])
 }
 
-/// Ten Mobile Grooming fleet slots. Identifying details are filled in by staff.
+/// Mobile Grooming fleet vehicles. Identifying details are filled in by staff.
 model GroomingVan {
   id                 String   @id @default(cuid())
   number             Int      @unique
