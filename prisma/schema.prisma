@@ -573,6 +573,9 @@ model GroomingVan {
   status             String   @default("ACTIVE")
   registrationExpiry DateTime? @db.Date
   insuranceExpiry    DateTime? @db.Date
+  insuranceCarrier   String?
+  insuranceDeductible Decimal? @db.Decimal(10, 2)
+  insurancePremium    Decimal? @db.Decimal(10, 2)
   inspectionExpiry   DateTime? @db.Date
   notes              String   @default("") @db.Text
   createdAt          DateTime @default(now())

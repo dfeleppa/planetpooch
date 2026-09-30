@@ -10,6 +10,7 @@ import { combineVanImagePages } from "@/lib/van-document-pages";
 type Van = {
   year: number | null; make: string; model: string; vin: string; licensePlate: string;
   mileage: number | null; status: string; registrationExpiry: string; insuranceExpiry: string;
+  insuranceCarrier: string; insuranceDeductible: string; insurancePremium: string;
   inspectionExpiry: string; notes: string;
 };
 type RecordRow = {
@@ -174,6 +175,9 @@ export function VanEditor({ number, van, records, canEdit }: { number: number; v
             <label className="block text-sm font-medium text-gray-700">Status<select className={`${fieldClass} mt-1`} value={profile.status} onChange={e => setProfile({ ...profile, status: e.target.value })}><option value="ACTIVE">Active</option><option value="IN_SERVICE">In service</option><option value="OUT_OF_SERVICE">Out of service</option></select></label>
             <Input label="Registration expires" type="date" value={profile.registrationExpiry} onChange={e => setProfile({ ...profile, registrationExpiry: e.target.value })} />
             <Input label="Insurance expires" type="date" value={profile.insuranceExpiry} onChange={e => setProfile({ ...profile, insuranceExpiry: e.target.value })} />
+            <Input label="Insurance carrier" value={profile.insuranceCarrier} onChange={e => setProfile({ ...profile, insuranceCarrier: e.target.value })} />
+            <Input label="Insurance deductible ($)" type="number" min="0" step="0.01" value={profile.insuranceDeductible} onChange={e => setProfile({ ...profile, insuranceDeductible: e.target.value })} />
+            <Input label="Insurance premium ($)" type="number" min="0" step="0.01" value={profile.insurancePremium} onChange={e => setProfile({ ...profile, insurancePremium: e.target.value })} />
             <Input label="Inspection expires" type="date" value={profile.inspectionExpiry} onChange={e => setProfile({ ...profile, inspectionExpiry: e.target.value })} />
           </div>
           <label className="block text-sm font-medium text-gray-700">Vehicle notes<textarea className={`${fieldClass} mt-1`} rows={3} value={profile.notes} onChange={e => setProfile({ ...profile, notes: e.target.value })} /></label>

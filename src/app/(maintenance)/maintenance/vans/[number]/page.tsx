@@ -29,6 +29,10 @@ export default async function VanPage({ params }: { params: Promise<{ number: st
         <h1 className="text-2xl font-bold text-gray-900">Van {number}</h1>
         <p className="mt-1 text-gray-500">Vehicle profile, documents, and maintenance records</p>
       </div>
+      <nav aria-label="Van pages" className="mb-5 flex gap-4 border-b border-gray-200 text-sm font-medium">
+        <Link href="/maintenance/vans?company=GROOMING" className="pb-3 text-gray-500 hover:text-gray-900">Fleet</Link>
+        <Link href="/maintenance/vans/insurance?company=GROOMING" className="pb-3 text-gray-500 hover:text-gray-900">Insurance</Link>
+      </nav>
       <VehicleDocuments number={number} canEdit={canEdit} documents={van.documents.map(document => ({
         ...document, issueDate: document.issueDate?.toISOString().slice(0, 10) ?? null,
         expiryDate: document.expiryDate?.toISOString().slice(0, 10) ?? null,
@@ -42,6 +46,9 @@ export default async function VanPage({ params }: { params: Promise<{ number: st
           licensePlate: van.licensePlate ?? "", mileage: van.mileage, status: van.status,
           registrationExpiry: van.registrationExpiry?.toISOString().slice(0, 10) ?? "",
           insuranceExpiry: van.insuranceExpiry?.toISOString().slice(0, 10) ?? "",
+          insuranceCarrier: van.insuranceCarrier ?? "",
+          insuranceDeductible: van.insuranceDeductible?.toString() ?? "",
+          insurancePremium: van.insurancePremium?.toString() ?? "",
           inspectionExpiry: van.inspectionExpiry?.toISOString().slice(0, 10) ?? "", notes: van.notes,
         }}
         records={van.records.map((record) => ({

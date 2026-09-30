@@ -16,7 +16,16 @@ export const vanProfileSchema = z.object({
   licensePlate: optionalText(30), mileage: optionalInteger(10_000_000),
   status: z.enum(["ACTIVE", "IN_SERVICE", "OUT_OF_SERVICE"]),
   registrationExpiry: optionalDate, insuranceExpiry: optionalDate, inspectionExpiry: optionalDate,
+  insuranceCarrier: optionalText(200),
+  insuranceDeductible: optionalMoney,
+  insurancePremium: optionalMoney,
   notes: z.string().trim().max(10000),
+});
+
+export const vanInsuranceSchema = z.object({
+  insuranceCarrier: optionalText(200),
+  insuranceDeductible: optionalMoney,
+  insurancePremium: optionalMoney,
 });
 
 export const vanRecordSchema = z.object({

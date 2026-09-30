@@ -24,6 +24,10 @@ export default async function VansPage() {
         <h1 className="text-2xl font-bold text-gray-900">Vans</h1>
         <p className="mt-1 text-gray-500">Mobile Grooming vehicle details and maintenance history</p>
       </div>
+      <nav aria-label="Van pages" className="mb-5 flex gap-4 border-b border-gray-200 text-sm font-medium">
+        <span aria-current="page" className="border-b-2 border-pp-accent pb-3 text-pp-accent">Fleet</span>
+        <Link href="/maintenance/vans/insurance?company=GROOMING" className="pb-3 text-gray-500 hover:text-gray-900">Insurance</Link>
+      </nav>
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
         {vans.map((van) => (
           <Link key={van.id} href={`/maintenance/vans/${van.number}`} className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm transition-shadow hover:shadow-md">
@@ -38,6 +42,7 @@ export default async function VansPage() {
             </div>
             <dl className="mt-5 grid grid-cols-2 gap-3 text-sm">
               <div><dt className="text-gray-500">Plate</dt><dd className="font-medium text-gray-900">{van.licensePlate || "—"}</dd></div>
+              <div><dt className="text-gray-500">VIN</dt><dd className="break-all font-medium text-gray-900">{van.vin || "—"}</dd></div>
               <div><dt className="text-gray-500">Mileage</dt><dd className="font-medium text-gray-900">{van.mileage == null ? "—" : van.mileage.toLocaleString()}</dd></div>
               <div><dt className="text-gray-500">Last service</dt><dd className="font-medium text-gray-900">{dateLabel(van.records[0]?.serviceDate ?? null)}</dd></div>
               <div><dt className="text-gray-500">Registration</dt><dd className="font-medium text-gray-900">{dateLabel(van.registrationExpiry)}</dd></div>
