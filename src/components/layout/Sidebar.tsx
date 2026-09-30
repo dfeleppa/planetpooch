@@ -43,6 +43,7 @@ const managerNav: NavItem[] = [
 const sharedNav: NavItem[] = [
   { href: "/maintenance/checklists", label: "Daily Checklists", icon: "✓" },
   { href: "/operations/daycare", label: "Daycare", icon: "☀" },
+  { href: "/maintenance/vans", label: "Vans", icon: "▣" },
   { href: "/maintenance", label: "Maintenance", icon: "⚙" },
 ];
 
@@ -82,7 +83,11 @@ const ROLE_LABELS: Record<string, string> = {
 
 export function Sidebar() {
   const business = useBusiness();
-  const operationsNav = sharedNav.filter((item) => business.company === "RESORT" || item.href === "/maintenance");
+  const operationsNav = sharedNav.filter((item) =>
+    business.company === "RESORT"
+      ? item.href !== "/maintenance/vans"
+      : item.href === "/maintenance/vans" || item.href === "/maintenance"
+  );
   const businessFinanceNav = financeNav.map((item) =>
     item.href === "/finance/payroll" && business.company === "GROOMING"
       ? { ...item, href: "/finance/payroll/mobile-grooming" }
