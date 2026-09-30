@@ -24,9 +24,12 @@ test("published knowledge is limited by role and company", () => {
   assert.equal(canReadKnowledgeArticle(article, { ...employee, role: "MANAGER", company: "GROOMING" }), false);
 });
 
-test("knowledge access belongs only to Daniel's active admin login", () => {
+test("knowledge access belongs to Daniel and Anderson's admin logins", () => {
   assert.equal(isKnowledgeOwner({ email: "dfeleppa@gmail.com", role: "SUPER_ADMIN" }), true);
+  assert.equal(isKnowledgeOwner({ email: "agonzaga91@gmail.com", role: "SUPER_ADMIN" }), true);
+  assert.equal(isKnowledgeOwner({ email: " AGonzaga91@gmail.com ", role: "SUPER_ADMIN" }), true);
   assert.equal(isKnowledgeOwner({ email: "dfeleppa@gmail.com", role: "EMPLOYEE" }), false);
+  assert.equal(isKnowledgeOwner({ email: "agonzaga91@gmail.com", role: "EMPLOYEE" }), false);
   assert.equal(isKnowledgeOwner({ email: "another@example.com", role: "SUPER_ADMIN" }), false);
 });
 
@@ -35,9 +38,10 @@ test("drafts are hidden, including from super admins on the employee page", () =
   assert.equal(canReadKnowledgeArticle(article, { ...employee, role: "SUPER_ADMIN" }), false);
 });
 
-test("Daniel can read drafts and all company articles", () => {
+test("authorized admins can read drafts and all company articles", () => {
   const article = { isPublished: false, company: "GROOMING" as const, allowedRoles: ["MARKETING" as const] };
   assert.equal(canReadKnowledgeArticle(article, { ...employee, email: "dfeleppa@gmail.com", role: "SUPER_ADMIN" }), true);
+  assert.equal(canReadKnowledgeArticle(article, { ...employee, email: "agonzaga91@gmail.com", role: "SUPER_ADMIN" }), true);
 });
 
 test("super admins can review published articles regardless of article roles", () => {

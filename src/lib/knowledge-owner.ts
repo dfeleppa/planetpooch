@@ -1,6 +1,9 @@
-export const KNOWLEDGE_OWNER_EMAIL = "dfeleppa@gmail.com";
+export const KNOWLEDGE_OWNER_EMAILS = new Set([
+  "dfeleppa@gmail.com",
+  "agonzaga91@gmail.com",
+]);
 
 export function isKnowledgeOwner(user: { email?: string | null; role?: string | null }): boolean {
-  return user.email?.trim().toLowerCase() === KNOWLEDGE_OWNER_EMAIL &&
+  return KNOWLEDGE_OWNER_EMAILS.has(user.email?.trim().toLowerCase() ?? "") &&
     (user.role === "SUPER_ADMIN" || user.role === "ADMIN");
 }
