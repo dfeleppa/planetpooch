@@ -10,7 +10,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ num
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   const { number: rawNumber, recordId } = await params;
   const number = Number(rawNumber);
-  if (!Number.isInteger(number) || number < 1 || number > 10) return NextResponse.json({ error: "Van not found" }, { status: 404 });
+  if (!Number.isSafeInteger(number) || number < 1) return NextResponse.json({ error: "Van not found" }, { status: 404 });
   const record = await prisma.groomingVanMaintenance.findFirst({
     where: { id: recordId, van: { number } },
     select: { sourceFileName: true, sourceMimeType: true, document: { select: { bytes: true } } },

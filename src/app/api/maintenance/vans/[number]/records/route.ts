@@ -12,7 +12,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
   if (!isManagerOrAbove(session.user.role) || (await getActiveBusiness()).company !== "GROOMING")
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   const number = Number((await params).number);
-  if (!Number.isInteger(number) || number < 1 || number > 10) return NextResponse.json({ error: "Van not found" }, { status: 404 });
+  if (!Number.isSafeInteger(number) || number < 1) return NextResponse.json({ error: "Van not found" }, { status: 404 });
   const isUpload = request.headers.get("content-type")?.startsWith("multipart/form-data") ?? false;
   if (isUpload && Number(request.headers.get("content-length") || 0) > 4_500_000)
     return NextResponse.json({ error: "Choose a file under 4 MB." }, { status: 413 });

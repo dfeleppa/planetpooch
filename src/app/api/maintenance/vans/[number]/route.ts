@@ -10,7 +10,7 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
   if (!isManagerOrAbove(session.user.role) || (await getActiveBusiness()).company !== "GROOMING")
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   const number = Number((await params).number);
-  if (!Number.isInteger(number) || number < 1 || number > 10) return NextResponse.json({ error: "Van not found" }, { status: 404 });
+  if (!Number.isSafeInteger(number) || number < 1) return NextResponse.json({ error: "Van not found" }, { status: 404 });
   const body = await request.json().catch(() => null);
   const insuranceOnly = body?.insuranceOnly === true;
   const insurance = insuranceOnly ? vanInsuranceSchema.safeParse(body) : null;

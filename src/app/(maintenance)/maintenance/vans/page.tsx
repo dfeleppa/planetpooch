@@ -42,7 +42,7 @@ export default async function VansPage() {
             </div>
             <dl className="mt-5 grid grid-cols-2 gap-3 text-sm">
               <div><dt className="text-gray-500">Plate</dt><dd className="font-medium text-gray-900">{van.licensePlate || "—"}</dd></div>
-              <div><dt className="text-gray-500">VIN</dt><dd className="break-all font-medium text-gray-900">{van.vin || "—"}</dd></div>
+              <div><dt className="text-gray-500">{van.vin?.length === 4 ? "VIN last 4" : "VIN"}</dt><dd className="break-all font-medium text-gray-900">{van.vin || "—"}</dd></div>
               <div><dt className="text-gray-500">Mileage</dt><dd className="font-medium text-gray-900">{van.mileage == null ? "—" : van.mileage.toLocaleString()}</dd></div>
               <div><dt className="text-gray-500">Last service</dt><dd className="font-medium text-gray-900">{dateLabel(van.records[0]?.serviceDate ?? null)}</dd></div>
               <div><dt className="text-gray-500">Registration</dt><dd className="font-medium text-gray-900">{dateLabel(van.registrationExpiry)}</dd></div>

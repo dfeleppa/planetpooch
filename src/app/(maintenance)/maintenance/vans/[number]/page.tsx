@@ -12,7 +12,7 @@ export default async function VanPage({ params }: { params: Promise<{ number: st
   await requireAuth();
   if ((await getActiveBusiness()).company !== "GROOMING") redirect("/maintenance");
   const number = Number((await params).number);
-  if (!Number.isInteger(number) || number < 1 || number > 10) notFound();
+  if (!Number.isSafeInteger(number) || number < 1) notFound();
   const van = await prisma.groomingVan.findUnique({
     where: { number },
     include: { records: { orderBy: [{ serviceDate: "desc" }, { createdAt: "desc" }] },

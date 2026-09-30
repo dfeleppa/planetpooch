@@ -13,7 +13,7 @@ async function authorize(context: Context, edit = false): Promise<Access> {
     return { ok: false, error: NextResponse.json({ error: "Forbidden" }, { status: 403 }) };
   const { number: rawNumber, documentId } = await context.params;
   const number = Number(rawNumber);
-  if (!Number.isInteger(number) || number < 1 || number > 10) return { ok: false, error: NextResponse.json({ error: "Van not found" }, { status: 404 }) };
+  if (!Number.isSafeInteger(number) || number < 1) return { ok: false, error: NextResponse.json({ error: "Van not found" }, { status: 404 }) };
   return { ok: true, number, documentId };
 }
 

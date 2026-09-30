@@ -11,7 +11,7 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   const { number: rawNumber, recordId } = await params;
   const number = Number(rawNumber);
-  if (!Number.isInteger(number) || number < 1 || number > 10) return NextResponse.json({ error: "Van not found" }, { status: 404 });
+  if (!Number.isSafeInteger(number) || number < 1) return NextResponse.json({ error: "Van not found" }, { status: 404 });
   const parsed = vanRecordSchema.safeParse(await request.json().catch(() => null));
   if (!parsed.success) return NextResponse.json({ error: parsed.error.issues[0]?.message || "Invalid maintenance record" }, { status: 400 });
   const { serviceDate, nextDueDate, cost, ...details } = parsed.data;
