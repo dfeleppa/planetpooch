@@ -23,7 +23,7 @@ export default async function VanInsurancePage() {
       <span aria-current="page" className="border-b-2 border-pp-accent pb-3 text-pp-accent">Insurance</span>
     </nav>
     <InsuranceTable canEdit={isManagerOrAbove(session?.user?.role)} vans={vans.map(van => ({
-      number: van.number, year: van.year, make: van.make ?? "", model: van.model ?? "",
+      number: van.number, year: van.year, make: van.make ?? "", model: van.model ?? "", vin: van.vin ?? "",
       carrier: van.insuranceCarrier ?? "", deductible: van.insuranceDeductible?.toString() ?? "",
       premium: van.insurancePremium?.toString() ?? "",
     }))} />

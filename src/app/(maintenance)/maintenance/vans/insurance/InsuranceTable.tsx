@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 
-type Row = { number: number; year: number | null; make: string; model: string; carrier: string; deductible: string; premium: string };
+type Row = { number: number; year: number | null; make: string; model: string; vin: string; carrier: string; deductible: string; premium: string };
 
 export function InsuranceTable({ vans, canEdit }: { vans: Row[]; canEdit: boolean }) {
   const router = useRouter();
@@ -30,16 +30,17 @@ export function InsuranceTable({ vans, canEdit }: { vans: Row[]; canEdit: boolea
   return <div>
     {message && <p role="status" className="mb-4 text-sm text-gray-700">{message}</p>}
     <div className="overflow-x-auto rounded-xl border border-gray-200 bg-white shadow-sm">
-      <table className="w-full min-w-[850px] divide-y divide-gray-200 text-sm">
+      <table className="w-full min-w-[1050px] divide-y divide-gray-200 text-sm">
         <thead className="bg-gray-50 text-left text-gray-700"><tr>
           <th scope="col" className="px-4 py-3">Van</th><th scope="col" className="px-4 py-3">Year</th>
-          <th scope="col" className="px-4 py-3">Make</th><th scope="col" className="px-4 py-3">Model</th>
+          <th scope="col" className="px-4 py-3">Make</th><th scope="col" className="px-4 py-3">Model</th><th scope="col" className="px-4 py-3">VIN</th>
           <th scope="col" className="px-4 py-3">Insurance carrier</th><th scope="col" className="px-4 py-3">Deductible ($)</th>
           <th scope="col" className="px-4 py-3">Premium ($)</th>{canEdit && <th scope="col" className="px-4 py-3">Action</th>}
         </tr></thead>
         <tbody className="divide-y divide-gray-100">{rows.map(row => <tr key={row.number}>
           <td className="whitespace-nowrap px-4 py-3 font-medium"><Link className="text-blue-700 hover:underline" href={`/maintenance/vans/${row.number}`}>Van {row.number}</Link></td>
           <td className="px-4 py-3">{row.year ?? "—"}</td><td className="px-4 py-3">{row.make || "—"}</td><td className="px-4 py-3">{row.model || "—"}</td>
+          <td className="whitespace-nowrap px-4 py-3 font-mono text-xs">{row.vin ? row.vin.length === 4 ? `Last 4: ${row.vin}` : row.vin : "—"}</td>
           {canEdit ? <>
             <td className="px-4 py-3"><input aria-label={`Van ${row.number} insurance carrier`} className="w-40 rounded border border-gray-300 px-2 py-1" value={row.carrier} onChange={event => update(row.number, "carrier", event.target.value)} /></td>
             <td className="px-4 py-3"><input aria-label={`Van ${row.number} deductible`} type="number" min="0" step="0.01" className="w-28 rounded border border-gray-300 px-2 py-1" value={row.deductible} onChange={event => update(row.number, "deductible", event.target.value)} /></td>
