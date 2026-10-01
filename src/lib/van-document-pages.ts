@@ -20,6 +20,18 @@ async function jpegBytes(file: File, maxDimension: number, quality: number): Pro
   } finally { bitmap.close(); }
 }
 
+/** Keep supported small images intact; resize large camera photos before upload. */
+export async function prepareVanDocumentImage(file: File): Promise<File> {
+  if (!file.type.startsWith("image/")) return file;
+  if (["image/jpeg", "image/png", "image/webp"].includes(file.type) && file.size <= MAX_VAN_DOCUMENT_BYTES) return file;
+  for (const compression of [{ maxDimension: 3000, quality: 0.88 }, { maxDimension: 2400, quality: 0.78 }]) {
+    const bytes = await jpegBytes(file, compression.maxDimension, compression.quality);
+    if (bytes.byteLength <= MAX_VAN_DOCUMENT_BYTES)
+      return new File([bytes], `${file.name.replace(/\.[^.]+$/, "")}.jpg`, { type: "image/jpeg" });
+  }
+  throw new Error("This photo is too large. Try a closer photo or choose a smaller image.");
+}
+
 /** Join image pages in their displayed order without sending them to another service. */
 export async function combineVanImagePages(files: File[], outputName: string): Promise<File> {
   const { PDFDocument } = await import("pdf-lib");
