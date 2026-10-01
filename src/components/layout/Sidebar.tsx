@@ -206,16 +206,18 @@ export function Sidebar() {
           )}
         >
           {!isCollapsed ? (
-            <Image
-              src="/planet-pooch-logo.png"
-              alt="Planet Pooch"
-              width={1250}
-              height={392}
-              priority
-              className="h-auto w-[160px] flex-shrink-0"
-            />
+            <Link href="/" aria-label="Go to home page">
+              <Image
+                src="/planet-pooch-logo.png"
+                alt="Planet Pooch"
+                width={1250}
+                height={392}
+                priority
+                className="h-auto w-[160px] flex-shrink-0"
+              />
+            </Link>
           ) : (
-            <div className="h-[36px] w-[36px] overflow-hidden flex-shrink-0" title="Planet Pooch">
+            <Link href="/" aria-label="Go to home page" className="h-[36px] w-[36px] overflow-hidden flex-shrink-0" title="Planet Pooch">
               <Image
                 src="/planet-pooch-logo.png"
                 alt="Planet Pooch"
@@ -224,7 +226,7 @@ export function Sidebar() {
                 priority
                 className="h-full w-auto max-w-none"
               />
-            </div>
+            </Link>
           )}
           {!isCollapsed && (
             <button
@@ -461,14 +463,16 @@ export function Sidebar() {
             <path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16M4 18h16" />
           </svg>
         </button>
-        <Image
-          src="/planet-pooch-logo.png"
-          alt="Planet Pooch"
-          width={1250}
-          height={392}
-          priority
-          className="h-6 w-auto"
-        />
+        <Link href="/" aria-label="Go to home page">
+          <Image
+            src="/planet-pooch-logo.png"
+            alt="Planet Pooch"
+            width={1250}
+            height={392}
+            priority
+            className="h-6 w-auto"
+          />
+        </Link>
         <div className="w-8" />
       </div>
 
