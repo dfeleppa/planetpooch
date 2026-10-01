@@ -9,6 +9,7 @@ import {
   GoogleCampaignReportTable,
 } from "./CampaignReportTables";
 import { GoogleLsaLeadReportTable } from "./GoogleLsaLeadReportTable";
+import { LeadAttributionDashboard } from "./LeadAttributionDashboard";
 
 const BUSINESSES = [
   { value: "", label: "All Businesses" },
@@ -359,6 +360,8 @@ export function AdReportingDashboard({
       </div>
 
       <AttributionSummary metric={metric} source={selectedSource} rangeLabel={rangeLabel} />
+
+      <LeadAttributionDashboard from={from} to={to} source={selectedSource} />
 
       {!is2026AttributionRange && (selectedSource === "all" || selectedSource === "meta") && (
         <FacebookCampaignReportTable business={business} from={from} to={to} />
