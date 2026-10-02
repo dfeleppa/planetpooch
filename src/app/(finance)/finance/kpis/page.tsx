@@ -202,8 +202,17 @@ async function getWeeklyHeadlineSummary(weekStart: Date): Promise<WeeklyHeadline
   // Resort payroll is paid on the Friday after its Sunday-Saturday pay period.
   const payrollCheckDate = new Date(weekStart);
   payrollCheckDate.setUTCDate(payrollCheckDate.getUTCDate() + 12);
-  const [headline, payrollRuns, resortNetSalesRows] = await Promise.all([
-    prisma.financeWeeklyKpiHeadline.findUnique({ where: { weekStart } }),
+  const [mobileRevenue, payrollRuns, resortNetSalesRows] = await Promise.all([
+    prisma.kpiWeeklyValue.findUnique({
+      where: {
+        segment_weekStart_metricKey: {
+          segment: KpiSegment.MOBILE_GROOMING,
+          weekStart,
+          metricKey: "total_revenue",
+        },
+      },
+      select: { value: true },
+    }),
     prisma.financePetResortPayrollRun.findMany({
       where: { checkDate: payrollCheckDate },
       select: { amount: true },
@@ -223,7 +232,7 @@ async function getWeeklyHeadlineSummary(weekStart: Date): Promise<WeeklyHeadline
   const resortNetSalesCents = Number(resortNetSalesRows[0]?.netSalesCents ?? 0);
 
   return {
-    mobileNetSalesCents: headline?.mobileNetSalesCents ?? null,
+    mobileNetSalesCents: mobileRevenue?.value ?? null,
     resortNetSalesCents,
     resortPayrollCents,
     resortPayrollPercent:
