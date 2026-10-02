@@ -8,6 +8,7 @@ import { isKnowledgeOwner } from "@/lib/knowledge-owner";
 import { isKpiQuestion } from "@/lib/knowledge-kpis";
 import { quarterRevenueRange } from "@/lib/knowledge-finance";
 import { findReportSources } from "@/lib/knowledge-reports";
+import { findVanOilChangeSource } from "@/lib/knowledge-van-maintenance";
 
 export type KnowledgeViewer = {
   id: string;
@@ -86,6 +87,8 @@ export async function findKnowledgeSources(
   question: string,
 ): Promise<KnowledgeSource[]> {
   if (!isKnowledgeOwner(viewer)) return [];
+  const vanOilChangeSource = await findVanOilChangeSource(question);
+  if (vanOilChangeSource) return vanOilChangeSource;
   const reportSources = await findReportSources(question);
   if (reportSources?.length) return reportSources.slice(0, 10);
   const terms = knowledgeTerms(question);

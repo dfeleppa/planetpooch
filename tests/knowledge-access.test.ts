@@ -5,6 +5,7 @@ import { canReadKnowledgeArticle, knowledgeTerms, rankKnowledgeLessons, type Kno
 import { isKnowledgeOwner } from "../src/lib/knowledge-owner";
 import { appDataAreas, knowledgeRetrievalQuestion, orderDateRange, payrollBusiness, payrollPayPeriod, personLookup } from "../src/lib/knowledge-app-data";
 import { broadDataCatalog, validateDataQuery } from "../src/lib/knowledge-broad-data";
+import { oilChangeVanNumber } from "../src/lib/knowledge-van-maintenance";
 import { isKpiQuestion, kpiRequestedWeek } from "../src/lib/knowledge-kpis";
 import { calculateBoardingDerivedMetricValues } from "../src/lib/kpis";
 import { completedWeeksWithin, quarterRevenueRange } from "../src/lib/knowledge-finance";
@@ -139,6 +140,12 @@ test("catalog queries accept saved KPI records but reject blocked fields and unk
   assert.equal(validateDataQuery(query), true);
   assert.equal(validateDataQuery({ ...query, model: "User", selectFields: ["passwordHash"] }), false);
   assert.equal(validateDataQuery({ ...query, model: "MadeUpTable" }), false);
+});
+
+test("van oil change questions use the displayed van number", () => {
+  assert.equal(oilChangeVanNumber("When is the last time van 10 got an oil change"), 10);
+  assert.equal(oilChangeVanNumber("Latest oil and filter service for Van #10?"), 10);
+  assert.equal(oilChangeVanNumber("When was van 10 inspected?"), null);
 });
 
 test("boarding week-ending questions use the finance KPI week and derived occupancy", () => {
