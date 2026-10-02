@@ -47,11 +47,22 @@ function fullSavedMonth(periodStart: Date, periodEnd: Date): boolean {
     Number(start.slice(5, 7)), 0)).toISOString().slice(0, 10);
 }
 
-function completeCpl(rows: CampaignRow[]): { leads: number; cpl: number } | null {
-  if (!rows.length || rows.some((row) => row.leads === null || row.costCents === null)) return null;
-  const leads = rows.reduce((sum, row) => sum + row.leads!, 0);
-  const costCents = rows.reduce((sum, row) => sum + row.costCents!, 0);
-  return leads > 0 ? { leads, cpl: Math.round(costCents / leads) } : null;
+export function savedCampaignCpl(rows: Pick<CampaignRow, "leads" | "costCents">[]): { leads: number | null; cpl: number | null } {
+  const leads = rows.length && rows.every((row) => row.leads !== null)
+    ? rows.reduce((sum, row) => sum + row.leads!, 0) : null;
+  const costCents = rows.length && rows.every((row) => row.costCents !== null)
+    ? rows.reduce((sum, row) => sum + row.costCents!, 0) : null;
+  return { leads, cpl: leads !== null && leads > 0 && costCents !== null
+    ? Math.round(costCents / leads) : null };
+}
+
+function platformCplSummary(platform: string, rows: CampaignRow[]): string {
+  if (!rows.length) return `${platform}: no saved report rows`;
+  const { leads, cpl } = savedCampaignCpl(rows);
+  if (leads === null) return `${platform}: lead counts are missing in one or more saved rows; CPL unavailable`;
+  if (leads === 0) return `${platform}: 0 saved leads; CPL undefined`;
+  if (cpl === null) return `${platform}: ${leads} saved leads; spend is missing in one or more rows, so CPL is unavailable`;
+  return `${platform}: ${money(cpl)} per lead from ${leads} saved leads`;
 }
 
 async function findAdPlatformCplComparison(business: string): Promise<KnowledgeSource[]> {
@@ -72,14 +83,14 @@ async function findAdPlatformCplComparison(business: string): Promise<KnowledgeS
     prisma.financeFacebookCampaignReportRow.findMany(query),
     prisma.financeGoogleCampaignReportRow.findMany(query),
   ]) : [[], []];
-  const meta = completeCpl(metaRows);
-  const google = completeCpl(googleRows);
+  const meta = savedCampaignCpl(metaRows);
+  const google = savedCampaignCpl(googleRows);
   const label = period ? `${date(period.start)}–${date(period.end)}` : "any latest saved full month";
   const answer = !period
     ? `I cannot compare Meta and Google Ads cost per lead for ${business}: neither platform has a latest saved full-month campaign report. Missing reports do not mean zero leads or zero spend. [1]`
-    : meta && google
-      ? `For ${business}, ${label}, ${meta.cpl < google.cpl ? "Meta" : google.cpl < meta.cpl ? "Google Ads" : "Meta and Google Ads tied"} had ${meta.cpl === google.cpl ? "the same" : "the lower"} cost per lead. Meta: ${money(meta.cpl)} per lead from ${meta.leads} leads; Google Ads: ${money(google.cpl)} per lead from ${google.leads} leads. These use saved imported campaign spend divided by saved leads. [1]`
-      : `I cannot compare Meta and Google Ads cost per lead for ${business}, ${label}. Meta: ${meta ? `${money(meta.cpl)} per lead from ${meta.leads} leads` : metaRows.length ? "spend or leads missing, or zero leads" : "no saved report rows"}; Google Ads: ${google ? `${money(google.cpl)} per lead from ${google.leads} leads` : googleRows.length ? "spend or leads missing, or zero leads" : "no saved report rows"}. Missing data is not zero. [1]`;
+    : meta.cpl !== null && google.cpl !== null
+      ? `For ${business}, ${label}, ${meta.cpl < google.cpl ? "Meta" : google.cpl < meta.cpl ? "Google Ads" : "Meta and Google Ads tied"} had ${meta.cpl === google.cpl ? "the same" : "the lower"} cost per lead. ${platformCplSummary("Meta", metaRows)}; ${platformCplSummary("Google Ads", googleRows)}. These use saved imported campaign spend divided by saved leads. [1]`
+      : `I cannot compare Meta and Google Ads cost per lead for ${business}, ${label}. ${platformCplSummary("Meta", metaRows)}; ${platformCplSummary("Google Ads", googleRows)}. Missing data is not zero. [1]`;
   const latestUpdate = [...metaRows, ...googleRows].reduce((at, row) => row.updatedAt > at ? row.updatedAt : at, new Date(0));
   return [{ id: `record:report:ads:cpl-comparison:${business}:${period ? date(period.start) : "none"}`,
     title: `Meta and Google Ads cost per lead: ${business}, ${label}`, kind: "record",

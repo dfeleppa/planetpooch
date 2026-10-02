@@ -6,7 +6,7 @@ import { aggregateMetric, boardingTrendWeekCount, daycareVisitCount, fullReportW
 import { isWeeklyProfitComparison, profitMarginPercent, profitMetric } from "../src/lib/knowledge-report-profit-loss";
 import { completedMobileGroomingWeek, isMobileGroomingSalesPerAppointmentQuestion } from "../src/lib/knowledge-report-mobile-sales";
 import { isPayrollSalesRatioQuestion } from "../src/lib/knowledge-report-payroll-ratio";
-import { adMetric, isAdPlatformCplComparisonQuestion } from "../src/lib/knowledge-report-ads";
+import { adMetric, isAdPlatformCplComparisonQuestion, savedCampaignCpl } from "../src/lib/knowledge-report-ads";
 import { KPI_SEGMENTS } from "../src/lib/kpis";
 import { estimatedExpenseCents } from "../src/lib/moego/profit-loss-totals";
 import { profitBuckets } from "../src/lib/moego/chart-profit";
@@ -64,6 +64,9 @@ test("report metrics use the named calculation", () => {
   assert.equal(profitMetric("What was our estimated expense total?"), "estimated expenses");
   assert.equal(adMetric("What was our ROAS?"), "roas");
   assert.equal(adMetric("What was cost per lead?"), "cpl");
+  assert.deepEqual(savedCampaignCpl([{ leads: 10, costCents: null }]), { leads: 10, cpl: null });
+  assert.deepEqual(savedCampaignCpl([{ leads: 0, costCents: 5000 }]), { leads: 0, cpl: null });
+  assert.deepEqual(savedCampaignCpl([{ leads: 2, costCents: 1000 }, { leads: 3, costCents: 1500 }]), { leads: 5, cpl: 500 });
   const boarding = KPI_SEGMENTS.find((segment) => segment.key === "BOARDING")!;
   assert.deepEqual(requestedKpiMetrics("boarding occupancy rate", boarding.metrics).map((metric) => metric.key), ["occupancy_rate"]);
   assert.deepEqual(requestedKpiMetrics("boarding revenue and nights", boarding.metrics).map((metric) => metric.key), ["revenue", "nights"]);
