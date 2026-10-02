@@ -1,9 +1,10 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { reportKind } from "../src/lib/knowledge-reports";
-import { reportPeriod, reportQuarter } from "../src/lib/knowledge-report-period";
-import { aggregateMetric, fullReportWeeks, requestedKpiMetrics } from "../src/lib/knowledge-report-kpis";
-import { profitMetric } from "../src/lib/knowledge-report-profit-loss";
+import { completedReportWeeks, reportPeriod, reportQuarter } from "../src/lib/knowledge-report-period";
+import { aggregateMetric, boardingTrendWeekCount, fullReportWeeks, requestedKpiMetrics } from "../src/lib/knowledge-report-kpis";
+import { isWeeklyProfitComparison, profitMetric } from "../src/lib/knowledge-report-profit-loss";
+import { isPayrollSalesRatioQuestion } from "../src/lib/knowledge-report-payroll-ratio";
 import { adMetric } from "../src/lib/knowledge-report-ads";
 import { KPI_SEGMENTS } from "../src/lib/kpis";
 import { estimatedExpenseCents } from "../src/lib/moego/profit-loss-totals";
@@ -17,6 +18,7 @@ test("report questions select the report rather than raw database search", () =>
   assert.equal(reportKind("How much did Google Ads cost last month?"), "ads");
   assert.equal(reportKind("How many expired daycare packages?"), "daycare");
   assert.equal(reportKind("What is Jane Smith's phone number?"), null);
+  assert.equal(reportKind("What was Pet Resort payroll as a percentage of net sales last completed week?"), "payroll");
 });
 
 test("report periods preserve a partial quarter and a completed week", () => {
@@ -32,6 +34,21 @@ test("report periods preserve a partial quarter and a completed week", () => {
   assert.deepEqual(reportPeriod("Q4 2026", now),
     { start: "2026-10-01", end: "2026-12-31", label: "Q4 2026 (upcoming)", kind: "quarter", quarterEnd: "2026-12-31" });
   assert.deepEqual(fullReportWeeks("2026-07-01", "2026-09-25").at(-1), "2026-09-13");
+  const october = new Date("2026-10-02T16:00:00Z");
+  assert.deepEqual(reportPeriod("last completed week", october),
+    { start: "2026-09-20", end: "2026-09-26", label: "week ending 2026-09-26", kind: "week" });
+  assert.deepEqual(reportPeriod("previous completed week", october),
+    { start: "2026-09-13", end: "2026-09-19", label: "week ending 2026-09-19", kind: "week" });
+  assert.deepEqual(completedReportWeeks(4, october).map((week) => week.start),
+    ["2026-09-20", "2026-09-13", "2026-09-06", "2026-08-30"]);
+});
+
+test("management comparisons select complete matched periods", () => {
+  assert.equal(isWeeklyProfitComparison("How did Pet Resort net profit change last completed week compared with the previous completed week?"), true);
+  assert.equal(isWeeklyProfitComparison("How did net profit change for week ending 9/5 versus the previous week?"), true);
+  assert.equal(boardingTrendWeekCount("Has boarding occupancy improved over the last four completed weeks?"), 4);
+  assert.equal(isPayrollSalesRatioQuestion("What was Pet Resort payroll as a percentage of net sales last completed week?"), true);
+  assert.equal(isPayrollSalesRatioQuestion("Was payroll more than 40% of net sales last week?"), true);
 });
 
 test("report metrics use the named calculation", () => {

@@ -2,7 +2,7 @@ import { BUSINESSES } from "@/lib/business";
 import { getActiveBusiness } from "@/lib/business-server";
 import type { KnowledgeSource } from "@/lib/knowledge";
 import { findQuarterRevenueSource, quarterRevenueRange } from "@/lib/knowledge-finance";
-import { defaultProfitPeriod, reportPeriod } from "@/lib/knowledge-report-period";
+import { completedReportWeeks, defaultProfitPeriod, reportPeriod } from "@/lib/knowledge-report-period";
 import { getProfitLossTotals } from "@/lib/moego/profit-loss-totals";
 import { prisma } from "@/lib/prisma";
 import { formatEasternDate } from "@/lib/marketing/submission-date-range";
@@ -21,9 +21,83 @@ const money = (cents: number) => (cents / 100).toLocaleString("en-US", {
   style: "currency", currency: "USD", minimumFractionDigits: 2, maximumFractionDigits: 2,
 });
 
+export function isWeeklyProfitComparison(question: string): boolean {
+  return (/\b(?:last|most recent) (?:completed )?week\b/i.test(question)
+      || /\b(?:week[\s-]*(?:ending|ended|end)|w\/e)\s*(?:on\s+)?\d{1,2}\/\d{1,2}/i.test(question))
+    && /\b(?:profit|earnings)\b/i.test(question)
+    && /\b(?:chang\w*|compar\w*|versus|vs\.?|prior|previous|improv\w*|trend)\b/i.test(question);
+}
+
+async function weeklyProfitComparison(question: string): Promise<KnowledgeSource[]> {
+  const current = /\b(?:last|most recent) (?:completed )?week\b/i.test(question)
+    ? completedReportWeeks(1)[0] : reportPeriod(question)!;
+  if (current.end >= formatEasternDate(new Date())) return [{
+    id: `record:report:profit-loss:comparison:incomplete:${current.start}`,
+    title: `Profit & Loss comparison: ${current.label}`,
+    kind: "record", url: "/finance/profit-loss",
+    excerpt: `${current.label} is not complete yet, so I cannot compare its full net profit with the prior week.`,
+    answer: `${current.label} is not complete yet, so I cannot compare its full net profit with the prior week. [1]`,
+    updatedAt: new Date().toISOString(), dateKind: "entry",
+  }];
+  const previousStart = new Date(`${current.start}T00:00:00.000Z`);
+  previousStart.setUTCDate(previousStart.getUTCDate() - 7);
+  const previousEnd = new Date(`${current.end}T00:00:00.000Z`);
+  previousEnd.setUTCDate(previousEnd.getUTCDate() - 7);
+  const previous = {
+    start: previousStart.toISOString().slice(0, 10), end: previousEnd.toISOString().slice(0, 10),
+    label: `week ending ${previousEnd.toISOString().slice(0, 10)}`, kind: "week" as const,
+  };
+  const active = await getActiveBusiness();
+  const explicit = /\bmobile[ -]?grooming\b/i.test(question) ? BUSINESSES[1]
+    : /\bpet[ -]?resort\b/i.test(question) ? BUSINESSES[0] : null;
+  const combined = /\b(?:both businesses|all businesses|combined|company[ -]?wide)\b/i.test(question);
+  const businesses = combined ? [...BUSINESSES] : [explicit ?? active];
+  const bounds = (period: typeof current) => ({
+    from: new Date(`${period.start}T00:00:00.000Z`),
+    to: new Date(new Date(`${period.end}T00:00:00.000Z`).getTime() + 86_400_000),
+  });
+  const [currentRows, previousRows, sync] = await Promise.all([
+    Promise.all(businesses.map((business) => {
+      const { from, to } = bounds(current);
+      return getProfitLossTotals(business.moegoId, from, to);
+    })),
+    Promise.all(businesses.map((business) => {
+      const { from, to } = bounds(previous);
+      return getProfitLossTotals(business.moegoId, from, to);
+    })),
+    prisma.moegoSyncState.findUnique({ where: { resource: "order" } }),
+  ]);
+  const sum = (rows: typeof currentRows) => rows.reduce((total, row) => ({
+    revenueCents: total.revenueCents + row.revenueCents,
+    expenseCents: total.expenseCents + row.expenseCents,
+    profitCents: total.profitCents + row.profitCents,
+    orders: total.orders + row.orders,
+  }), { revenueCents: 0, expenseCents: 0, profitCents: 0, orders: 0 });
+  const latest = sum(currentRows);
+  const prior = sum(previousRows);
+  const label = combined ? "Both businesses combined" : businesses[0].label;
+  const change = latest.profitCents - prior.profitCents;
+  const salesChange = latest.revenueCents - prior.revenueCents;
+  const expenseChange = latest.expenseCents - prior.expenseCents;
+  const direction = change > 0 ? "increased" : change < 0 ? "decreased" : "was unchanged";
+  const answer = sync?.lastSyncedAt && formatEasternDate(sync.lastSyncedAt) >= current.end
+    ? `${label} net profit ${direction} by ${money(Math.abs(change))}: ${money(prior.profitCents)} for ${previous.start}–${previous.end} versus ${money(latest.profitCents)} for ${current.start}–${current.end}. `
+      + `Net sales changed by ${money(salesChange)} (${money(prior.revenueCents)} to ${money(latest.revenueCents)}); estimated expenses changed by ${money(expenseChange)}. `
+      + `Order count changed from ${prior.orders} to ${latest.orders}. This explains the arithmetic change in the Profit & Loss report; the available totals do not establish why customer demand or costs changed. `
+      + `Latest order sync: ${sync.lastSyncedAt.toISOString().slice(0, 10)}. [1]`
+    : `I cannot verify the weekly net profit comparison because the recorded order sync does not cover the latest completed week. [1]`;
+  return [{
+    id: `record:report:profit-loss:comparison:${businesses.map((business) => business.key).join("+")}:${current.start}`,
+    title: `Profit & Loss comparison: ${label}, ${previous.label} vs ${current.label}`,
+    kind: "record", url: `/finance/profit-loss?from=${current.start}&to=${current.end}&business=${businesses[0].key}`,
+    excerpt: answer, answer, updatedAt: sync?.updatedAt.toISOString() ?? new Date().toISOString(), dateKind: "entry",
+  }];
+}
+
 export async function findProfitLossReport(question: string): Promise<KnowledgeSource[]> {
   const metric = profitMetric(question);
   if (!metric) return [];
+  if (isWeeklyProfitComparison(question)) return weeklyProfitComparison(question);
   const requestedMetrics = [
     /\b(?:net profit|profit|earnings)\b/i.test(question),
     /\b(?:estimated expenses?|expenses?|operating costs?|costs?)\b/i.test(question),

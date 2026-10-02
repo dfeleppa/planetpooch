@@ -10,6 +10,19 @@ export type ReportPeriod = {
   quarterEnd?: string;
 };
 
+/** Completed Sunday–Saturday weeks, most recent first, in Eastern calendar time. */
+export function completedReportWeeks(count: number, now = new Date()): ReportPeriod[] {
+  const latest = chartPresetRange("last-week", now);
+  const start = new Date(`${latest.from}T00:00:00.000Z`);
+  return Array.from({ length: count }, (_, index) => {
+    const sunday = new Date(start.getTime() - index * 7 * 86_400_000);
+    const saturday = new Date(sunday.getTime() + 6 * 86_400_000);
+    const from = sunday.toISOString().slice(0, 10);
+    const to = saturday.toISOString().slice(0, 10);
+    return { start: from, end: to, label: `week ending ${to}`, kind: "week" as const };
+  });
+}
+
 export function reportQuarter(question: string, now = new Date()): ReportPeriod | null {
   const match = question.match(/\b(?:q\s*([1-4])|quarter\s*([1-4])|(?:first|second|third|fourth)\s+quarter)\b/i);
   const relative = question.match(/\b(this|current|last|previous|prior) quarter\b/i);
@@ -36,6 +49,8 @@ export function reportQuarter(question: string, now = new Date()): ReportPeriod 
 export function reportPeriod(question: string, now = new Date()): ReportPeriod | null {
   const quarter = reportQuarter(question, now);
   if (quarter) return quarter;
+  if (/\b(?:previous|prior) completed week\b/i.test(question)) return completedReportWeeks(2, now)[1];
+  if (/\b(?:last|most recent) completed week\b/i.test(question)) return completedReportWeeks(1, now)[0];
   const ending = question.match(/\b(?:week[\s-]*(?:ending|ended|end)|w\/e)\s*(?:on\s+)?(\d{1,2})\/(\d{1,2})(?:\/(\d{2,4}))?\b/i);
   if (ending) {
     const today = formatEasternDate(now);

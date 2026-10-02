@@ -1,10 +1,12 @@
 import { prisma } from "@/lib/prisma";
 import type { KnowledgeSource } from "@/lib/knowledge";
 import { findKpiSources, requestedSegments } from "@/lib/knowledge-kpis";
-import { reportPeriod } from "@/lib/knowledge-report-period";
+import { completedReportWeeks, reportPeriod } from "@/lib/knowledge-report-period";
 import { KPI_SEGMENTS, BOARDING_OCCUPANCY_CAPACITY_NIGHTS,
+  BOARDING_NIGHTS_METRIC_KEY, BOARDING_OCCUPANCY_RATE_METRIC_KEY,
   calculateBoardingDerivedMetricValues, calculateDaycareDerivedMetricValues,
   DAYCARE_STAFF_HOURS_METRIC_KEY } from "@/lib/kpis";
+import { resolveStandingAmount } from "@/lib/kpi-standing";
 import { getResortStaffHoursByWeek } from "@/lib/payroll-kpis";
 import { formatKpiValue } from "@/lib/utils";
 import { toWeekParam } from "@/lib/week";
@@ -12,6 +14,59 @@ import { formatEasternDate } from "@/lib/marketing/submission-date-range";
 
 type Metric = (typeof KPI_SEGMENTS)[number]["metrics"][number];
 const dayMs = 86_400_000;
+
+export function boardingTrendWeekCount(question: string): number | null {
+  if (!/\bboarding\b/i.test(question) || !/\boccupancy\b/i.test(question)) return null;
+  const match = question.match(/\b(?:last|past|previous|prior)\s+(\d{1,2}|two|three|four|five|six|eight|twelve)\s+(?:completed\s+)?weeks\b/i);
+  if (!match) return null;
+  const words: Record<string, number> = { two: 2, three: 3, four: 4, five: 5, six: 6, eight: 8, twelve: 12 };
+  const count = words[match[1].toLowerCase()] ?? Number(match[1]);
+  return count >= 2 && count <= 12 ? count : null;
+}
+
+async function findBoardingOccupancyTrend(count: number): Promise<KnowledgeSource[]> {
+  const weeks = completedReportWeeks(count).reverse();
+  const starts = weeks.map((week) => new Date(`${week.start}T00:00:00.000Z`));
+  const [rows, standing] = await Promise.all([
+    prisma.kpiWeeklyValue.findMany({
+      where: { segment: "BOARDING", weekStart: { in: starts }, metricKey: BOARDING_NIGHTS_METRIC_KEY },
+      select: { weekStart: true, value: true, updatedAt: true },
+    }),
+    prisma.kpiStandingValue.findMany({
+      where: { segment: "BOARDING", metricKey: BOARDING_OCCUPANCY_RATE_METRIC_KEY,
+        field: "TARGET", effectiveWeekStart: { lte: starts.at(-1)! } },
+      select: { metricKey: true, field: true, amount: true, effectiveWeekStart: true },
+    }),
+  ]);
+  const points = weeks.map((week, index) => {
+    const nights = rows.find((row) => toWeekParam(row.weekStart) === week.start)?.value;
+    const actual = nights === undefined ? null
+      : calculateBoardingDerivedMetricValues({ [BOARDING_NIGHTS_METRIC_KEY]: nights })[BOARDING_OCCUPANCY_RATE_METRIC_KEY] ?? null;
+    const target = resolveStandingAmount(standing, BOARDING_OCCUPANCY_RATE_METRIC_KEY, "TARGET", starts[index]);
+    return { week, nights, actual, target };
+  });
+  const missing = points.filter((point) => point.actual === null).map((point) => point.week.end);
+  const first = points[0].actual;
+  const last = points.at(-1)!.actual;
+  const change = first === null || last === null ? null : (last - first) / 100;
+  const summary = missing.length
+    ? `I cannot establish the full ${count}-week trend because boarding nights are not saved for week${missing.length === 1 ? "" : "s"} ending ${missing.join(", ")}.`
+    : `Boarding occupancy ${change! > 0 ? "rose" : change! < 0 ? "fell" : "was unchanged"} by ${Math.abs(change!).toFixed(1)} percentage points from the first to the latest of the last ${count} completed weeks.`;
+  const details = points.map(({ week, nights, actual, target }) =>
+    `${week.start}–${week.end}: ${actual === null ? "not recorded" : formatKpiValue(actual, "percent")}`
+      + `${nights === undefined ? "" : ` (${formatKpiValue(nights, "number")} of ${BOARDING_OCCUPANCY_CAPACITY_NIGHTS} capacity nights)`}`
+      + `; target ${target === null ? "not recorded" : formatKpiValue(target, "percent")}${actual === null || target === null ? "" : ` (${((actual - target) / 100).toFixed(1)} percentage points versus target)`}.`
+  );
+  const answer = `${summary}\n${details.join("\n")} These are saved weekly KPI values; missing weeks are not zero. [1]`;
+  const latestUpdate = rows.reduce((at, row) => row.updatedAt > at ? row.updatedAt : at, new Date(0));
+  return [{
+    id: `record:report:kpi:boarding-trend:${weeks[0].start}:${weeks.at(-1)!.end}`,
+    kind: "record", title: `Boarding occupancy, ${count} completed weeks through ${weeks.at(-1)!.end}`,
+    url: `/finance/kpis?week=${weeks.at(-1)!.start}&segment=PET_RESORT`,
+    excerpt: answer, answer,
+    updatedAt: latestUpdate.getTime() ? latestUpdate.toISOString() : new Date().toISOString(), dateKind: "entry",
+  }];
+}
 
 export function requestedKpiMetrics(question: string, metrics: Metric[]): Metric[] {
   const lower = question.toLowerCase().replace(/[-_]/g, " ");
@@ -55,6 +110,8 @@ export function aggregateMetric(metric: Metric, values: number[], nights: number
 }
 
 export async function findKpiReport(question: string): Promise<KnowledgeSource[]> {
+  const boardingTrendWeeks = boardingTrendWeekCount(question);
+  if (boardingTrendWeeks) return findBoardingOccupancyTrend(boardingTrendWeeks);
   const period = reportPeriod(question);
   if (period && period.start > formatEasternDate(new Date())) return [{
     id: `record:report:kpi:future:${period.start}`, kind: "record", title: `KPIs for ${period.label}`,
