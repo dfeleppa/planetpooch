@@ -5,10 +5,12 @@ import { isBusinessSwitchOriginAllowed } from "@/lib/business";
 import { findKnowledgeSources, getKnowledgeViewer } from "@/lib/knowledge";
 import { isKnowledgeOwner } from "@/lib/knowledge-owner";
 import { knowledgeRetrievalQuestion } from "@/lib/knowledge-app-data";
+import { DEFAULT_KNOWLEDGE_CHAT_MODEL, KNOWLEDGE_CHAT_MODEL_CONFIG, KNOWLEDGE_CHAT_MODEL_IDS } from "@/lib/knowledge-chat-models";
 
 export const runtime = "nodejs";
 
 const requestSchema = z.object({
+  model: z.enum(KNOWLEDGE_CHAT_MODEL_IDS).default(DEFAULT_KNOWLEDGE_CHAT_MODEL),
   messages: z.array(z.object({
     role: z.enum(["user", "assistant"]),
     content: z.string().trim().min(1).max(2000),
@@ -43,6 +45,8 @@ export async function POST(request: Request) {
   if (!viewer) return NextResponse.json({ error: "Sign in required." }, { status: 401 });
   if (!isKnowledgeOwner(viewer)) return NextResponse.json({ error: "Forbidden." }, { status: 403 });
   const messages = parsed.data.messages;
+  const model = parsed.data.model;
+  const modelConfig = KNOWLEDGE_CHAT_MODEL_CONFIG[model];
   const question = messages[messages.length - 1].content;
   const retrievalQuestion = knowledgeRetrievalQuestion(messages);
   let sources: Awaited<ReturnType<typeof findKnowledgeSources>>;
@@ -79,10 +83,10 @@ export async function POST(request: Request) {
       method: "POST",
       headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
       body: JSON.stringify({
-        model: "gpt-6-luna",
+        model,
         store: false,
-        reasoning: { effort: "none" },
-        max_output_tokens: 700,
+        reasoning: { effort: modelConfig.reasoningEffort },
+        max_output_tokens: modelConfig.maxOutputTokens,
         instructions: [
           "You are the internal Planet Pooch employee assistant.",
           "Answer only from the numbered, authorized source passages in the latest user message.",
@@ -104,7 +108,7 @@ export async function POST(request: Request) {
         ],
       }),
       cache: "no-store",
-      signal: AbortSignal.timeout(25000),
+      signal: AbortSignal.timeout(model === "gpt-6.1-sol" ? 45000 : 25000),
     });
     if (!response.ok) {
       console.error("[knowledge.chat] OpenAI request failed", response.status);

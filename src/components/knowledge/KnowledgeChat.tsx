@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { FormEvent, useEffect, useRef, useState } from "react";
+import { DEFAULT_KNOWLEDGE_CHAT_MODEL, KNOWLEDGE_CHAT_MODEL_CONFIG, KNOWLEDGE_CHAT_MODEL_IDS, type KnowledgeChatModel } from "@/lib/knowledge-chat-models";
 
 type Source = { id: string; title: string; kind: "article" | "lesson" | "record"; url: string };
 type Message = { role: "user" | "assistant"; content: string; sources?: Source[] };
@@ -11,14 +12,40 @@ const SUGGESTIONS = [
   "What was boarding occupancy last week?",
   "How many daycare packages are expiring?",
 ];
+const MODEL_STORAGE_KEY = "ask-pooch-model";
+const MODEL_CHANGE_EVENT = "ask-pooch-model-change";
 
 export function KnowledgeChat({ compact = false, onSourceNavigate }: { compact?: boolean; onSourceNavigate?: () => void }) {
   const questionId = compact ? "knowledge-widget-question" : "knowledge-question";
+  const modelId = compact ? "knowledge-widget-model" : "knowledge-model";
   const [messages, setMessages] = useState<Message[]>([]);
+  const [model, setModel] = useState<KnowledgeChatModel>(DEFAULT_KNOWLEDGE_CHAT_MODEL);
   const [draft, setDraft] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const messagesRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const syncModel = () => {
+      const saved = window.localStorage.getItem(MODEL_STORAGE_KEY);
+      if (KNOWLEDGE_CHAT_MODEL_IDS.some((id) => id === saved)) {
+        setModel(saved as KnowledgeChatModel);
+      }
+    };
+    syncModel();
+    window.addEventListener("storage", syncModel);
+    window.addEventListener(MODEL_CHANGE_EVENT, syncModel);
+    return () => {
+      window.removeEventListener("storage", syncModel);
+      window.removeEventListener(MODEL_CHANGE_EVENT, syncModel);
+    };
+  }, []);
+
+  function selectModel(selected: KnowledgeChatModel) {
+    setModel(selected);
+    window.localStorage.setItem(MODEL_STORAGE_KEY, selected);
+    window.dispatchEvent(new Event(MODEL_CHANGE_EVENT));
+  }
 
   useEffect(() => {
     if (compact && messagesRef.current) {
@@ -38,7 +65,7 @@ export function KnowledgeChat({ compact = false, onSourceNavigate }: { compact?:
       const response = await fetch("/api/knowledge/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ messages: next.slice(-9).map(({ role, content }) => ({ role, content })) }),
+        body: JSON.stringify({ model, messages: next.slice(-9).map(({ role, content }) => ({ role, content })) }),
       });
       const data = await response.json();
       if (!response.ok) throw new Error(data.error || "The assistant is unavailable right now.");
@@ -104,6 +131,14 @@ export function KnowledgeChat({ compact = false, onSourceNavigate }: { compact?:
       </div>
 
       <form onSubmit={onSubmit} className={compact ? "shrink-0 border-t border-pp-line bg-white pt-3" : "sticky bottom-3 rounded-2xl border border-pp-line bg-white p-3 shadow-lg"}>
+        <div className="mb-2 flex items-center gap-2">
+          <label htmlFor={modelId} className="text-xs font-medium text-pp-ink-3">Model</label>
+          <select id={modelId} value={model} disabled={busy}
+            onChange={(event) => selectModel(event.target.value as KnowledgeChatModel)}
+            className="rounded-md border border-pp-line bg-white px-2 py-1 text-xs text-pp-ink outline-none focus:border-pp-accent disabled:opacity-50">
+            {KNOWLEDGE_CHAT_MODEL_IDS.map((id) => <option key={id} value={id}>{KNOWLEDGE_CHAT_MODEL_CONFIG[id].label}</option>)}
+          </select>
+        </div>
         <label htmlFor={questionId} className="sr-only">Your question</label>
         <div className="flex items-end gap-3">
           <textarea id={questionId} rows={2} maxLength={2000} value={draft} onChange={(event) => setDraft(event.target.value)}
