@@ -5,7 +5,7 @@ import { completedReportWeeks, reportPeriod } from "@/lib/knowledge-report-perio
 import { KPI_SEGMENTS, BOARDING_OCCUPANCY_CAPACITY_NIGHTS,
   BOARDING_NIGHTS_METRIC_KEY, BOARDING_OCCUPANCY_RATE_METRIC_KEY,
   calculateBoardingDerivedMetricValues, calculateDaycareDerivedMetricValues,
-  DAYCARE_STAFF_HOURS_METRIC_KEY } from "@/lib/kpis";
+  DAYCARE_STAFF_HOURS_METRIC_KEY, DAYCARE_VISIT_METRIC_KEYS } from "@/lib/kpis";
 import { resolveStandingAmount } from "@/lib/kpi-standing";
 import { getResortStaffHoursByWeek } from "@/lib/payroll-kpis";
 import { formatKpiValue } from "@/lib/utils";
@@ -14,6 +14,80 @@ import { formatEasternDate } from "@/lib/marketing/submission-date-range";
 
 type Metric = (typeof KPI_SEGMENTS)[number]["metrics"][number];
 const dayMs = 86_400_000;
+
+export function isDaycareVisitsPerStaffHourQuestion(question: string): boolean {
+  return /\bday[ -]?care\b/i.test(question) && /\bvisits?\s+per\s+staff\s+hour\b/i.test(question);
+}
+
+export function isServiceRevenueTargetQuestion(question: string): boolean {
+  return /\bpet[ -]?resort\b/i.test(question) && /\b(?:segment|service|line)\b/i.test(question)
+    && /\brevenue target\b/i.test(question) && /\b(?:miss\w*|shortfall|below)\b/i.test(question);
+}
+
+export function daycareVisitCount(values: Record<string, number | null | undefined>): number | null {
+  if (!DAYCARE_VISIT_METRIC_KEYS.every((key) => typeof values[key] === "number")) return null;
+  return DAYCARE_VISIT_METRIC_KEYS.reduce((sum, key) => sum + (values[key] ?? 0), 0) / 100;
+}
+
+async function findDaycareVisitsPerStaffHour(question: string): Promise<KnowledgeSource[]> {
+  const period = reportPeriod(question) ?? completedReportWeeks(1)[0];
+  const weekStart = new Date(`${period.start}T00:00:00.000Z`);
+  const [rows, hoursByWeek] = await Promise.all([
+    prisma.kpiWeeklyValue.findMany({
+      where: { segment: "DAYCARE", weekStart, metricKey: { in: [...DAYCARE_VISIT_METRIC_KEYS] } },
+      select: { metricKey: true, value: true, updatedAt: true },
+    }),
+    getResortStaffHoursByWeek([weekStart]),
+  ]);
+  const visits = daycareVisitCount(Object.fromEntries(rows.map((row) => [row.metricKey, row.value])));
+  const scaledHours = hoursByWeek.get(period.start);
+  const hours = scaledHours === undefined ? null : scaledHours / 100;
+  const explanation = `Daycare visits include full day, half day, and enrichment visits; evaluations are excluded. No visits-per-staff-hour target is configured in the KPI report.`;
+  const answer = visits === null
+    ? `I cannot calculate daycare visits per staff hour for ${period.start}–${period.end}: one or more visit categories are not saved. ${explanation} [1]`
+    : hours === null || hours <= 0
+      ? `I cannot calculate daycare visits per staff hour for ${period.start}–${period.end}: ${visits.toLocaleString("en-US")} visits are saved, but resort staff hours are ${hours === null ? "not recorded" : "zero"}. ${explanation} [1]`
+      : `Daycare had ${(visits / hours).toFixed(2)} visits per staff hour for ${period.start}–${period.end}: ${visits.toLocaleString("en-US")} visits divided by ${hours.toFixed(2)} resort staff hours. ${explanation} I cannot say whether it exceeded target. [1]`;
+  const latest = rows.reduce((at, row) => row.updatedAt > at ? row.updatedAt : at, new Date(0));
+  return [{ id: `record:report:kpi:daycare-visits-per-hour:${period.start}`, kind: "record",
+    title: `Daycare visits per staff hour, ${period.start}–${period.end}`,
+    url: `/finance/kpis?week=${period.start}&segment=PET_RESORT`, excerpt: answer, answer,
+    updatedAt: latest.getTime() ? latest.toISOString() : new Date().toISOString(), dateKind: "entry" }];
+}
+
+async function findServiceRevenueTarget(question: string): Promise<KnowledgeSource[]> {
+  const period = reportPeriod(question) ?? completedReportWeeks(1)[0];
+  const weekStart = new Date(`${period.start}T00:00:00.000Z`);
+  const revenueMetrics = [
+    { segment: "BOARDING", metricKey: "revenue", label: "Boarding" },
+    { segment: "TRAINING", metricKey: "group_revenue", label: "Training group" },
+    { segment: "TRAINING", metricKey: "one_on_one_revenue", label: "Training 1:1" },
+    { segment: "IN_HOUSE_GROOMING", metricKey: "revenue", label: "In-House Grooming" },
+  ] as const;
+  const [actuals, targets] = await Promise.all([
+    prisma.kpiWeeklyValue.findMany({
+      where: { weekStart, segment: { in: ["BOARDING", "TRAINING", "IN_HOUSE_GROOMING"] },
+        metricKey: { in: ["revenue", "group_revenue", "one_on_one_revenue"] } },
+      select: { segment: true, metricKey: true, value: true, updatedAt: true },
+    }),
+    prisma.kpiStandingValue.findMany({
+      where: { segment: { in: ["BOARDING", "TRAINING", "IN_HOUSE_GROOMING"] },
+        field: "TARGET", effectiveWeekStart: { lte: weekStart } },
+      select: { segment: true, metricKey: true, field: true, amount: true, effectiveWeekStart: true },
+    }),
+  ]);
+  const details = revenueMetrics.map((metric) => {
+    const actual = actuals.find((row) => row.segment === metric.segment && row.metricKey === metric.metricKey)?.value;
+    const target = resolveStandingAmount(targets.filter((row) => row.segment === metric.segment), metric.metricKey, "TARGET", weekStart);
+    return `${metric.label}: actual ${actual === undefined ? "not recorded" : formatKpiValue(actual, "currency")}; target ${target === null ? "not set" : formatKpiValue(target, "currency")}`;
+  });
+  const answer = `I cannot rank which Pet Resort service segment missed its revenue target most for ${period.start}–${period.end}: the KPI report has no daycare revenue metric, and a complete set of comparable revenue targets is not saved. Available revenue figures and targets: ${details.join("; ")}. Missing targets are not zero. [1]`;
+  const latest = actuals.reduce((at, row) => row.updatedAt > at ? row.updatedAt : at, new Date(0));
+  return [{ id: `record:report:kpi:revenue-targets:${period.start}`, kind: "record",
+    title: `Pet Resort service revenue targets, ${period.start}–${period.end}`,
+    url: `/finance/kpis?week=${period.start}&segment=PET_RESORT`, excerpt: answer, answer,
+    updatedAt: latest.getTime() ? latest.toISOString() : new Date().toISOString(), dateKind: "entry" }];
+}
 
 export function boardingTrendWeekCount(question: string): number | null {
   if (!/\bboarding\b/i.test(question) || !/\boccupancy\b/i.test(question)) return null;
@@ -110,6 +184,8 @@ export function aggregateMetric(metric: Metric, values: number[], nights: number
 }
 
 export async function findKpiReport(question: string): Promise<KnowledgeSource[]> {
+  if (isDaycareVisitsPerStaffHourQuestion(question)) return findDaycareVisitsPerStaffHour(question);
+  if (isServiceRevenueTargetQuestion(question)) return findServiceRevenueTarget(question);
   const boardingTrendWeeks = boardingTrendWeekCount(question);
   if (boardingTrendWeeks) return findBoardingOccupancyTrend(boardingTrendWeeks);
   const period = reportPeriod(question);

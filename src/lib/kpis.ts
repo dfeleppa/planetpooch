@@ -20,7 +20,7 @@ export interface KpiSegmentDef {
   metrics: KpiMetricDef[];
 }
 
-const DAYCARE_VISIT_METRIC_KEYS = [
+export const DAYCARE_VISIT_METRIC_KEYS = [
   "total_appointments",
   "half_day_daycare",
   "full_day_enrichment_activity",

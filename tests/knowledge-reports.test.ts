@@ -2,8 +2,9 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { reportKind } from "../src/lib/knowledge-reports";
 import { completedReportWeeks, reportPeriod, reportQuarter } from "../src/lib/knowledge-report-period";
-import { aggregateMetric, boardingTrendWeekCount, fullReportWeeks, requestedKpiMetrics } from "../src/lib/knowledge-report-kpis";
-import { isWeeklyProfitComparison, profitMetric } from "../src/lib/knowledge-report-profit-loss";
+import { aggregateMetric, boardingTrendWeekCount, daycareVisitCount, fullReportWeeks, isDaycareVisitsPerStaffHourQuestion, isServiceRevenueTargetQuestion, requestedKpiMetrics } from "../src/lib/knowledge-report-kpis";
+import { isWeeklyProfitComparison, profitMarginPercent, profitMetric } from "../src/lib/knowledge-report-profit-loss";
+import { completedMobileGroomingWeek, isMobileGroomingSalesPerAppointmentQuestion } from "../src/lib/knowledge-report-mobile-sales";
 import { isPayrollSalesRatioQuestion } from "../src/lib/knowledge-report-payroll-ratio";
 import { adMetric } from "../src/lib/knowledge-report-ads";
 import { KPI_SEGMENTS } from "../src/lib/kpis";
@@ -19,6 +20,9 @@ test("report questions select the report rather than raw database search", () =>
   assert.equal(reportKind("How many expired daycare packages?"), "daycare");
   assert.equal(reportKind("What is Jane Smith's phone number?"), null);
   assert.equal(reportKind("What was Pet Resort payroll as a percentage of net sales last completed week?"), "payroll");
+  assert.equal(reportKind("How many daycare visits per staff hour did we have last completed week, and was that above the target?"), "kpis");
+  assert.equal(reportKind("What was Mobile Grooming net sales per appointment in the last completed reporting week?"), "profit-loss");
+  assert.equal(reportKind("Which Pet Resort service segment missed its weekly revenue target by the most last completed week?"), "kpis");
 });
 
 test("report periods preserve a partial quarter and a completed week", () => {
@@ -41,6 +45,7 @@ test("report periods preserve a partial quarter and a completed week", () => {
     { start: "2026-09-13", end: "2026-09-19", label: "week ending 2026-09-19", kind: "week" });
   assert.deepEqual(completedReportWeeks(4, october).map((week) => week.start),
     ["2026-09-20", "2026-09-13", "2026-09-06", "2026-08-30"]);
+  assert.deepEqual(completedMobileGroomingWeek(october), { start: "2026-09-19", end: "2026-09-25" });
 });
 
 test("management comparisons select complete matched periods", () => {
@@ -49,6 +54,9 @@ test("management comparisons select complete matched periods", () => {
   assert.equal(boardingTrendWeekCount("Has boarding occupancy improved over the last four completed weeks?"), 4);
   assert.equal(isPayrollSalesRatioQuestion("What was Pet Resort payroll as a percentage of net sales last completed week?"), true);
   assert.equal(isPayrollSalesRatioQuestion("Was payroll more than 40% of net sales last week?"), true);
+  assert.equal(isDaycareVisitsPerStaffHourQuestion("daycare visits per staff hour"), true);
+  assert.equal(isServiceRevenueTargetQuestion("Which Pet Resort service segment missed its weekly revenue target?"), true);
+  assert.equal(isMobileGroomingSalesPerAppointmentQuestion("Mobile Grooming net sales per appointment last completed reporting week"), true);
 });
 
 test("report metrics use the named calculation", () => {
@@ -60,6 +68,12 @@ test("report metrics use the named calculation", () => {
   assert.deepEqual(requestedKpiMetrics("boarding revenue and nights", boarding.metrics).map((metric) => metric.key), ["revenue", "nights"]);
   const occupancy = boarding.metrics.find((metric) => metric.key === "occupancy_rate")!;
   assert.equal(aggregateMetric(occupancy, [3450, 5000], [8700, 12600]).value, 4226);
+  assert.equal(profitMarginPercent(-26055, 1623945)?.toFixed(1), "-1.6");
+  assert.equal(profitMarginPercent(658320, 2308320)?.toFixed(1), "28.5");
+  assert.equal(profitMarginPercent(0, 0), null);
+  assert.equal(daycareVisitCount({ total_appointments: 10600, half_day_daycare: 100,
+    full_day_enrichment_activity: 700, half_day_enrichment_activity: 0, evaluations: 700 }), 114);
+  assert.equal(daycareVisitCount({ total_appointments: 10600 }), null);
 });
 
 test("assistant expense total agrees with the Profit and Loss chart buckets", () => {

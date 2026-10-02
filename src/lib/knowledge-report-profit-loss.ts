@@ -28,6 +28,10 @@ export function isWeeklyProfitComparison(question: string): boolean {
     && /\b(?:chang\w*|compar\w*|versus|vs\.?|prior|previous|improv\w*|trend)\b/i.test(question);
 }
 
+export function profitMarginPercent(profitCents: number, revenueCents: number): number | null {
+  return revenueCents > 0 ? profitCents / revenueCents * 100 : null;
+}
+
 async function weeklyProfitComparison(question: string): Promise<KnowledgeSource[]> {
   const current = /\b(?:last|most recent) (?:completed )?week\b/i.test(question)
     ? completedReportWeeks(1)[0] : reportPeriod(question)!;
@@ -80,8 +84,14 @@ async function weeklyProfitComparison(question: string): Promise<KnowledgeSource
   const salesChange = latest.revenueCents - prior.revenueCents;
   const expenseChange = latest.expenseCents - prior.expenseCents;
   const direction = change > 0 ? "increased" : change < 0 ? "decreased" : "was unchanged";
+  const marginRequested = /\bmargin\b/i.test(question);
+  const latestMargin = profitMarginPercent(latest.profitCents, latest.revenueCents);
+  const priorMargin = profitMarginPercent(prior.profitCents, prior.revenueCents);
+  const marginAnswer = latestMargin === null || priorMargin === null
+    ? `I cannot compare net profit margins because net sales were zero in at least one week. [1]`
+    : `${label} net profit margin was ${latestMargin.toFixed(1)}% for ${current.start}–${current.end}, versus ${priorMargin.toFixed(1)}% for ${previous.start}–${previous.end}; it ${latestMargin < priorMargin ? "fell" : latestMargin > priorMargin ? "rose" : "was unchanged"} by ${Math.abs(latestMargin - priorMargin).toFixed(1)} percentage points. Net profit was ${money(latest.profitCents)} on ${money(latest.revenueCents)} net sales, versus ${money(prior.profitCents)} on ${money(prior.revenueCents)} net sales. Expenses in the Profit & Loss report are estimates. Latest order sync: ${sync?.lastSyncedAt?.toISOString().slice(0, 10)}. [1]`;
   const answer = sync?.lastSyncedAt && formatEasternDate(sync.lastSyncedAt) >= current.end
-    ? `${label} net profit ${direction} by ${money(Math.abs(change))}: ${money(prior.profitCents)} for ${previous.start}–${previous.end} versus ${money(latest.profitCents)} for ${current.start}–${current.end}. `
+    ? marginRequested ? marginAnswer : `${label} net profit ${direction} by ${money(Math.abs(change))}: ${money(prior.profitCents)} for ${previous.start}–${previous.end} versus ${money(latest.profitCents)} for ${current.start}–${current.end}. `
       + `Net sales changed by ${money(salesChange)} (${money(prior.revenueCents)} to ${money(latest.revenueCents)}); estimated expenses changed by ${money(expenseChange)}. `
       + `Order count changed from ${prior.orders} to ${latest.orders}. This explains the arithmetic change in the Profit & Loss report; the available totals do not establish why customer demand or costs changed. `
       + `Latest order sync: ${sync.lastSyncedAt.toISOString().slice(0, 10)}. [1]`

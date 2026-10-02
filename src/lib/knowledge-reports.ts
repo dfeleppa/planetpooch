@@ -5,6 +5,8 @@ import { findProfitLossReport, profitMetric } from "@/lib/knowledge-report-profi
 import { findKpiReport } from "@/lib/knowledge-report-kpis";
 import { findAdReport } from "@/lib/knowledge-report-ads";
 import { findPayrollSalesRatio, isPayrollSalesRatioQuestion } from "@/lib/knowledge-report-payroll-ratio";
+import { isMobileGroomingSalesPerAppointmentQuestion, findMobileGroomingSalesPerAppointment } from "@/lib/knowledge-report-mobile-sales";
+import { isDaycareVisitsPerStaffHourQuestion, isServiceRevenueTargetQuestion } from "@/lib/knowledge-report-kpis";
 
 export type ReportKind = "catalog" | "profit-loss" | "kpis" | "payroll" | "ads" | "daycare";
 
@@ -20,6 +22,8 @@ export const REPORT_CATALOG = [
 export function reportKind(question: string): ReportKind | null {
   if (/\b(?:what|which|list|show)\b.*\breports?\b|\breports? (?:can|available)\b/i.test(question)) return "catalog";
   if (isPayrollSalesRatioQuestion(question)) return "payroll";
+  if (isMobileGroomingSalesPerAppointmentQuestion(question)) return "profit-loss";
+  if (isDaycareVisitsPerStaffHourQuestion(question) || isServiceRevenueTargetQuestion(question)) return "kpis";
   if (/\b(?:not active|inactive)\b.*\b(?:daycare|clients?|customers?)\b|\bdaycare\b.*\b(?:not active|inactive)\b/i.test(question)
     || /\bexpir(?:ed|ing|e|ation)\b.*\b(?:daycare|packages?|credits?)\b/i.test(question)
     || /\b(?:daycare|packages?|credits?)\b.*\bexpir(?:ed|ing|e|ation)\b/i.test(question)) return "daycare";
@@ -43,7 +47,8 @@ export async function findReportSources(question: string): Promise<KnowledgeSour
       updatedAt: new Date().toISOString(), dateKind: "entry" as const,
     }));
   }
-  if (kind === "profit-loss") return findProfitLossReport(question);
+  if (kind === "profit-loss") return isMobileGroomingSalesPerAppointmentQuestion(question)
+    ? findMobileGroomingSalesPerAppointment(question) : findProfitLossReport(question);
   if (kind === "kpis") return findKpiReport(question);
   if (kind === "payroll") {
     if (isPayrollSalesRatioQuestion(question)) return findPayrollSalesRatio(question);
