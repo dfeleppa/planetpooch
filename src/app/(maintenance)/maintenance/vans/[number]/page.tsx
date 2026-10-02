@@ -6,7 +6,7 @@ import { isManagerOrAbove, requireAuth } from "@/lib/auth-helpers";
 import { getActiveBusiness } from "@/lib/business-server";
 import { prisma } from "@/lib/prisma";
 import { VanEditor } from "./VanEditor";
-import { VehicleDocuments } from "./VehicleDocuments";
+import { MaintenanceDocuments, VehicleDocuments } from "./VehicleDocuments";
 
 export default async function VanPage({ params }: { params: Promise<{ number: string }> }) {
   await requireAuth();
@@ -21,6 +21,10 @@ export default async function VanPage({ params }: { params: Promise<{ number: st
   if (!van) notFound();
   const session = await getServerSession(authOptions);
   const canEdit = isManagerOrAbove(session?.user?.role);
+  const documents = van.documents.map(document => ({
+    ...document, issueDate: document.issueDate?.toISOString().slice(0, 10) ?? null,
+    expiryDate: document.expiryDate?.toISOString().slice(0, 10) ?? null,
+  }));
 
   return (
     <div>
@@ -33,10 +37,7 @@ export default async function VanPage({ params }: { params: Promise<{ number: st
         <Link href="/maintenance/vans?company=GROOMING" className="pb-3 text-gray-500 hover:text-gray-900">Fleet</Link>
         <Link href="/maintenance/vans/insurance?company=GROOMING" className="pb-3 text-gray-500 hover:text-gray-900">Insurance</Link>
       </nav>
-      <VehicleDocuments number={number} canEdit={canEdit} documents={van.documents.map(document => ({
-        ...document, issueDate: document.issueDate?.toISOString().slice(0, 10) ?? null,
-        expiryDate: document.expiryDate?.toISOString().slice(0, 10) ?? null,
-      }))} />
+      <VehicleDocuments number={number} canEdit={canEdit} documents={documents} />
       <VanEditor
         key={`${van.updatedAt.toISOString()}-${van.year}-${van.make}-${van.model}-${van.vin}`}
         number={number}
@@ -62,6 +63,7 @@ export default async function VanPage({ params }: { params: Promise<{ number: st
           sourceFileName: record.sourceFileName,
         }))}
       />
+      <MaintenanceDocuments number={number} canEdit={canEdit} documents={documents} />
     </div>
   );
 }
