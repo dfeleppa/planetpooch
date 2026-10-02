@@ -23,6 +23,7 @@ import {
 } from "@/lib/kpis";
 import {
   MONTH_NAMES,
+  addWeeks,
   formatWeekLabel,
   formatWeekRange,
   fromWeekParam,
@@ -1097,7 +1098,7 @@ export function KpiView({
                       return (
                         <div key={section}>
                           <h3 className="text-xs font-semibold uppercase tracking-wider text-gray-500 mb-2">
-                            {sectionLabel(segDef.key, section)}
+                            {tableSectionLabel(section, week)}
                           </h3>
                           <Table>
                             <TableHead>
@@ -1228,7 +1229,7 @@ export function KpiView({
                 return (
                   <section key={section}>
                     <h2 className="text-xs font-semibold uppercase tracking-wider text-gray-500 mb-2">
-                      {sectionLabel(segment, section)}
+                      {tableSectionLabel(section, week)}
                     </h2>
                     <Table>
                       <TableHead>
@@ -1581,6 +1582,12 @@ function sectionLabel(segment: KpiSegment, section: KpiSection): string {
   return SECTION_LABELS[section];
 }
 
+function tableSectionLabel(section: KpiSection, week: string): string {
+  const weekStart = fromWeekParam(week);
+  const range = formatWeekRange(section === "FORECAST" ? addWeeks(weekStart, 1) : weekStart);
+  return `${range} — ${section === "ACTUALS" ? "Actuals" : "Forecast"}`;
+}
+
 function isNotWorkingSection(segment: KpiSegment, section: KpiSection): boolean {
   return section === "FORECAST" && (segment === "BOARDING" || segment === "DAYCARE");
 }
@@ -1643,7 +1650,7 @@ function WeekPicker({ week, onChange }: { week: string; onChange: (week: string)
   const years = useMemo(() => yearsRange(), []);
   const months = monthsForYear();
   const weeks = useMemo(() => weeksInMonth(year, month), [year, month]);
-  const weekInCascade = weeks.some((d) => toWeekParam(d) === week) ? week : "";
+  const weekInOptions = recentParams.includes(week) || weeks.some((d) => toWeekParam(d) === week);
 
   return (
     <div className="flex flex-col gap-2">
@@ -1653,20 +1660,32 @@ function WeekPicker({ week, onChange }: { week: string; onChange: (week: string)
       </div>
       <div className="flex flex-wrap items-center gap-2">
         <select
-          aria-label="Recent weeks"
+          aria-label="Select week"
           className={SELECT_CLS}
-          value={recentParams.includes(week) ? week : ""}
+          value={weekInOptions ? week : ""}
           onChange={(e) => e.target.value && onChange(e.target.value)}
         >
-          <option value="">Recent weeks…</option>
-          {recent.map((d, i) => (
-            <option key={recentParams[i]} value={recentParams[i]}>
-              {formatWeekLabel(d)}
-            </option>
-          ))}
+          <option value="">Select week…</option>
+          <optgroup label="Recent weeks">
+            {recent.map((d, i) => (
+              <option key={recentParams[i]} value={recentParams[i]}>
+                {formatWeekLabel(d)}
+              </option>
+            ))}
+          </optgroup>
+          <optgroup label={`${MONTH_NAMES[month]} ${year}`}>
+            {weeks.filter((d) => !recentParams.includes(toWeekParam(d))).map((d) => {
+              const param = toWeekParam(d);
+              return (
+                <option key={param} value={param}>
+                  {formatWeekRange(d)}
+                </option>
+              );
+            })}
+          </optgroup>
         </select>
 
-        <span className="text-xs text-gray-400">or jump to</span>
+        <span className="text-xs text-gray-400">browse more weeks by</span>
 
         <select
           aria-label="Year"
@@ -1691,22 +1710,6 @@ function WeekPicker({ week, onChange }: { week: string; onChange: (week: string)
               {MONTH_NAMES[m]}
             </option>
           ))}
-        </select>
-        <select
-          aria-label="Week"
-          className={SELECT_CLS}
-          value={weekInCascade}
-          onChange={(e) => e.target.value && onChange(e.target.value)}
-        >
-          <option value="">Week…</option>
-          {weeks.map((d) => {
-            const param = toWeekParam(d);
-            return (
-              <option key={param} value={param}>
-                {formatWeekRange(d)}
-              </option>
-            );
-          })}
         </select>
       </div>
     </div>
