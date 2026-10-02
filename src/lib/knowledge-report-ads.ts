@@ -35,6 +35,58 @@ export function adMetric(question: string): "spend" | "revenue" | "leads" | "cli
   return null;
 }
 
+export function isAdPlatformCplComparisonQuestion(question: string): boolean {
+  return /\b(?:meta|facebook)\b/i.test(question) && /\bgoogle(?: ads?)?\b/i.test(question)
+    && /\b(?:cpl|cost per lead)\b/i.test(question);
+}
+
+function fullSavedMonth(periodStart: Date, periodEnd: Date): boolean {
+  const start = date(periodStart);
+  const end = date(periodEnd);
+  return start.endsWith("-01") && end === new Date(Date.UTC(Number(start.slice(0, 4)),
+    Number(start.slice(5, 7)), 0)).toISOString().slice(0, 10);
+}
+
+function completeCpl(rows: CampaignRow[]): { leads: number; cpl: number } | null {
+  if (!rows.length || rows.some((row) => row.leads === null || row.costCents === null)) return null;
+  const leads = rows.reduce((sum, row) => sum + row.leads!, 0);
+  const costCents = rows.reduce((sum, row) => sum + row.costCents!, 0);
+  return leads > 0 ? { leads, cpl: Math.round(costCents / leads) } : null;
+}
+
+async function findAdPlatformCplComparison(business: string): Promise<KnowledgeSource[]> {
+  const selection = { campaign: true, periodStart: true, periodEnd: true, clicks: true,
+    costCents: true, revenueCents: true, leads: true, sales: true, impressions: true, updatedAt: true } as const;
+  const [metaPeriods, googlePeriods] = await Promise.all([
+    prisma.financeFacebookCampaignReportRow.findMany({ where: { business }, distinct: ["periodStart", "periodEnd"],
+      orderBy: { periodEnd: "desc" }, select: { periodStart: true, periodEnd: true } }),
+    prisma.financeGoogleCampaignReportRow.findMany({ where: { business }, distinct: ["periodStart", "periodEnd"],
+      orderBy: { periodEnd: "desc" }, select: { periodStart: true, periodEnd: true } }),
+  ]);
+  const latestMonth = [...metaPeriods, ...googlePeriods]
+    .filter((row) => fullSavedMonth(row.periodStart, row.periodEnd))
+    .sort((a, b) => date(b.periodEnd).localeCompare(date(a.periodEnd)))[0];
+  const period = latestMonth ? { start: latestMonth.periodStart, end: latestMonth.periodEnd } : null;
+  const query = period ? { where: { business, periodStart: period.start, periodEnd: period.end }, select: selection } : null;
+  const [metaRows, googleRows] = query ? await Promise.all([
+    prisma.financeFacebookCampaignReportRow.findMany(query),
+    prisma.financeGoogleCampaignReportRow.findMany(query),
+  ]) : [[], []];
+  const meta = completeCpl(metaRows);
+  const google = completeCpl(googleRows);
+  const label = period ? `${date(period.start)}–${date(period.end)}` : "any latest saved full month";
+  const answer = !period
+    ? `I cannot compare Meta and Google Ads cost per lead for ${business}: neither platform has a latest saved full-month campaign report. Missing reports do not mean zero leads or zero spend. [1]`
+    : meta && google
+      ? `For ${business}, ${label}, ${meta.cpl < google.cpl ? "Meta" : google.cpl < meta.cpl ? "Google Ads" : "Meta and Google Ads tied"} had ${meta.cpl === google.cpl ? "the same" : "the lower"} cost per lead. Meta: ${money(meta.cpl)} per lead from ${meta.leads} leads; Google Ads: ${money(google.cpl)} per lead from ${google.leads} leads. These use saved imported campaign spend divided by saved leads. [1]`
+      : `I cannot compare Meta and Google Ads cost per lead for ${business}, ${label}. Meta: ${meta ? `${money(meta.cpl)} per lead from ${meta.leads} leads` : metaRows.length ? "spend or leads missing, or zero leads" : "no saved report rows"}; Google Ads: ${google ? `${money(google.cpl)} per lead from ${google.leads} leads` : googleRows.length ? "spend or leads missing, or zero leads" : "no saved report rows"}. Missing data is not zero. [1]`;
+  const latestUpdate = [...metaRows, ...googleRows].reduce((at, row) => row.updatedAt > at ? row.updatedAt : at, new Date(0));
+  return [{ id: `record:report:ads:cpl-comparison:${business}:${period ? date(period.start) : "none"}`,
+    title: `Meta and Google Ads cost per lead: ${business}, ${label}`, kind: "record",
+    url: "/marketing/ad-reporting", excerpt: answer, answer,
+    updatedAt: latestUpdate.getTime() ? latestUpdate.toISOString() : new Date().toISOString(), dateKind: "entry" }];
+}
+
 function reportSource(platform: "Meta" | "Google Ads", rows: CampaignRow[], business: string,
   requested: ReturnType<typeof reportPeriod>, metric: ReturnType<typeof adMetric>): KnowledgeSource {
   const periods = [...new Map(rows.map((row) => [`${date(row.periodStart)}:${date(row.periodEnd)}`,
@@ -100,6 +152,7 @@ export async function findAdReport(question: string): Promise<KnowledgeSource[]>
   const active = await getActiveBusiness();
   const business = /\bmobile[ -]?grooming\b/i.test(question) ? "mobile-grooming"
     : /\bpet[ -]?resort\b/i.test(question) ? "pet-resort" : active.key;
+  if (isAdPlatformCplComparisonQuestion(question)) return findAdPlatformCplComparison(business);
   const period = reportPeriod(question);
   const sources = /\b(?:google ads?|google)\b/i.test(question) ? ["Google Ads"] as const
     : /\b(?:meta|facebook)\b/i.test(question) ? ["Meta"] as const

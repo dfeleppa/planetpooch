@@ -6,7 +6,7 @@ import { aggregateMetric, boardingTrendWeekCount, daycareVisitCount, fullReportW
 import { isWeeklyProfitComparison, profitMarginPercent, profitMetric } from "../src/lib/knowledge-report-profit-loss";
 import { completedMobileGroomingWeek, isMobileGroomingSalesPerAppointmentQuestion } from "../src/lib/knowledge-report-mobile-sales";
 import { isPayrollSalesRatioQuestion } from "../src/lib/knowledge-report-payroll-ratio";
-import { adMetric } from "../src/lib/knowledge-report-ads";
+import { adMetric, isAdPlatformCplComparisonQuestion } from "../src/lib/knowledge-report-ads";
 import { KPI_SEGMENTS } from "../src/lib/kpis";
 import { estimatedExpenseCents } from "../src/lib/moego/profit-loss-totals";
 import { profitBuckets } from "../src/lib/moego/chart-profit";
@@ -57,6 +57,7 @@ test("management comparisons select complete matched periods", () => {
   assert.equal(isDaycareVisitsPerStaffHourQuestion("daycare visits per staff hour"), true);
   assert.equal(isServiceRevenueTargetQuestion("Which Pet Resort service segment missed its weekly revenue target?"), true);
   assert.equal(isMobileGroomingSalesPerAppointmentQuestion("Mobile Grooming net sales per appointment last completed reporting week"), true);
+  assert.equal(isAdPlatformCplComparisonQuestion("For Pet Resort, which had the lower cost per lead in the latest saved reporting month, Meta or Google Ads, and how many leads did each generate?"), true);
 });
 
 test("report metrics use the named calculation", () => {
