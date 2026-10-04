@@ -64,6 +64,37 @@ test("simple report lookup still returns its verified answer without an API call
   assert.equal((await (await route.POST(request("What was Pet Resort net sales last week?"))).json()).answer, source.answer);
 });
 
+test("a detailed generated answer does not prevent the next user question", async () => {
+  const longAnswer = "Sourced facts and recommendations. ".repeat(100);
+  let payload;
+  const route = chatRoute(async (_url, options) => {
+    payload = JSON.parse(options.body);
+    return Response.json({ output: [{ type: "message", role: "assistant", content: [{ type: "output_text", text: "Follow-up analysis" }] }] });
+  });
+  const response = await route.POST(new Request("https://app.planet-pooch.com/api/knowledge/chat", {
+    method: "POST", body: JSON.stringify({ messages: [
+      { role: "user", content: questions[0] },
+      { role: "assistant", content: longAnswer },
+      { role: "user", content: questions[3] },
+    ] }),
+  }));
+  assert.equal(response.status, 200);
+  assert.equal((await response.json()).answer, "Follow-up analysis");
+  assert.equal(payload.input[1].content, longAnswer.trim());
+});
+
+test("question and history sizes remain bounded independently", async () => {
+  const route = chatRoute(async () => assert.fail("Invalid input must not reach model"));
+  assert.equal((await route.POST(request("x".repeat(2001)))).status, 400);
+  const response = await route.POST(new Request("https://app.planet-pooch.com/api/knowledge/chat", {
+    method: "POST", body: JSON.stringify({ messages: [
+      { role: "assistant", content: "x".repeat(16001) },
+      { role: "user", content: questions[0] },
+    ] }),
+  }));
+  assert.equal(response.status, 400);
+});
+
 function profitReport({ priorRevenue = 2000000, synced = true } = {}) {
   const queries = [];
   const current = { start: "2026-09-27", end: "2026-10-03", label: "week ending 2026-10-03", kind: "week" };

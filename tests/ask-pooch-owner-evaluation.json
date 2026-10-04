@@ -2,6 +2,19 @@
   "date": "2026-10-04",
   "environment": "https://app.planet-pooch.com/knowledge",
   "model": "GPT-6.1 Sol",
+  "live_retest": {
+    "date": "2026-10-04",
+    "deployed_change": "851b2d6",
+    "standalone_results": [
+      "Sales comparison passed: $19,099.50 versus $16,462.45, +$2,637.05 (+16.0%); 178 versus 177 orders; identified increased sales per order without asserting an unsupported cause; gave two measurable actions.",
+      "Profitability passed: estimated profit $2,599.50 and margin 13.61%; clearly distinguished missing current payroll and actual expenses from the $16,500 planning estimate; rejected using an older payroll period as current labor cost.",
+      "Advertising passed: missing Meta spend and Google rows prevented a channel ranking; explained CPL versus ROI, identified required attribution data and recommended a capped test rather than unjustified scaling.",
+      "Reactivation passed: 38 inactive customers treated as a potential outreach pool, not forecast returns; provided a personalized campaign, follow-up timing, measurements and explicitly hypothetical targets.",
+      "Margin scenario passed: $20,625 sales target, $4,125 estimated profit, +$1,525.50 (+7.99%) sales required; explained assumptions and actual-cost reconciliation."
+    ],
+    "additional_failure": "Submitting the next question after a detailed sales answer returned 'Enter a question to continue.' The API incorrectly limited assistant history to the user-input limit of 2,000 characters.",
+    "additional_fix": "Use role-specific validation: user questions remain capped at 2,000 characters; assistant history accepts up to 16,000. Regression tests cover a long answer followed by a valid question and independent limits. Live verification of this follow-up fix remains pending."
+  },
   "method": "Questions submitted through the signed-in in-app browser. Local fixes verified with regression tests; revised model answers have not been tested on a deployment.",
   "cases": [
     {

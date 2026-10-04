@@ -12,10 +12,11 @@ export const runtime = "nodejs";
 
 const requestSchema = z.object({
   model: z.enum(KNOWLEDGE_CHAT_MODEL_IDS).default(DEFAULT_KNOWLEDGE_CHAT_MODEL),
-  messages: z.array(z.object({
-    role: z.enum(["user", "assistant"]),
-    content: z.string().trim().min(1).max(2000),
-  })).min(1).max(9),
+  messages: z.array(z.discriminatedUnion("role", [
+    z.object({ role: z.literal("user"), content: z.string().trim().min(1).max(2000) }),
+    // Generated analyses are longer than the question box's input limit.
+    z.object({ role: z.literal("assistant"), content: z.string().trim().min(1).max(16000) }),
+  ])).min(1).max(9),
 });
 
 type OpenAIResponse = {
