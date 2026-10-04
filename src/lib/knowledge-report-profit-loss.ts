@@ -10,7 +10,7 @@ import { formatEasternDate } from "@/lib/marketing/submission-date-range";
 type ProfitMetric = "net sales" | "orders" | "estimated expenses" | "net profit";
 
 export function profitMetric(question: string): ProfitMetric | null {
-  if (/\b(?:net profit|profit|earnings)\b/i.test(question)) return "net profit";
+  if (/\b(?:net profit|profit(?:able|ability)?|margin|earnings)\b/i.test(question)) return "net profit";
   if (/\b(?:estimated expenses?|expenses?|operating costs?|costs?)\b/i.test(question)) return "estimated expenses";
   if (/\b(?:order count|number of orders|how many orders)\b/i.test(question)) return "orders";
   if (/\b(?:net sales|revenue|total sales|income)\b/i.test(question)) return "net sales";
@@ -24,8 +24,8 @@ const money = (cents: number) => (cents / 100).toLocaleString("en-US", {
 export function isWeeklyProfitComparison(question: string): boolean {
   return (/\b(?:last|most recent) (?:completed )?week\b/i.test(question)
       || /\b(?:week[\s-]*(?:ending|ended|end)|w\/e)\s*(?:on\s+)?\d{1,2}\/\d{1,2}/i.test(question))
-    && /\b(?:profit|earnings)\b/i.test(question)
-    && /\b(?:chang\w*|compar\w*|versus|vs\.?|prior|previous|improv\w*|trend)\b/i.test(question);
+    && /\b(?:profit|earnings|net sales|revenue|total sales|expenses?|orders?)\b/i.test(question)
+    && /\b(?:chang\w*|compar\w*|versus|vs\.?|prior|previous|trend)\b/i.test(question);
 }
 
 export function profitMarginPercent(profitCents: number, revenueCents: number): number | null {
@@ -83,6 +83,8 @@ async function weeklyProfitComparison(question: string): Promise<KnowledgeSource
   const change = latest.profitCents - prior.profitCents;
   const salesChange = latest.revenueCents - prior.revenueCents;
   const expenseChange = latest.expenseCents - prior.expenseCents;
+  const salesPercent = prior.revenueCents === 0 ? null : salesChange / Math.abs(prior.revenueCents) * 100;
+  const salesComparison = `Net sales: ${money(prior.revenueCents)} for ${previous.start}–${previous.end}, ${money(latest.revenueCents)} for ${current.start}–${current.end}; change ${money(salesChange)} (${salesPercent === null ? "percentage change undefined because prior sales were zero" : `${salesPercent.toFixed(1)}%`}).`;
   const direction = change > 0 ? "increased" : change < 0 ? "decreased" : "was unchanged";
   const marginRequested = /\bmargin\b/i.test(question);
   const latestMargin = profitMarginPercent(latest.profitCents, latest.revenueCents);
@@ -100,7 +102,11 @@ async function weeklyProfitComparison(question: string): Promise<KnowledgeSource
     id: `record:report:profit-loss:comparison:${businesses.map((business) => business.key).join("+")}:${current.start}`,
     title: `Profit & Loss comparison: ${label}, ${previous.label} vs ${current.label}`,
     kind: "record", url: `/finance/profit-loss?from=${current.start}&to=${current.end}&business=${businesses[0].key}`,
-    excerpt: answer, answer, updatedAt: sync?.updatedAt.toISOString() ?? new Date().toISOString(), dateKind: "entry",
+    excerpt: sync?.lastSyncedAt && formatEasternDate(sync.lastSyncedAt) >= current.end
+      ? `${answer}\n${salesComparison}\nEstimated expenses: ${money(prior.expenseCents)} to ${money(latest.expenseCents)}. These totals cannot identify service mix or the causes of demand changes.` : answer,
+    answer: profitMetric(question) === "net sales" && sync?.lastSyncedAt && formatEasternDate(sync.lastSyncedAt) >= current.end
+      ? `${salesComparison} Latest order sync: ${sync.lastSyncedAt.toISOString().slice(0, 10)}. [1]` : answer,
+    updatedAt: sync?.updatedAt.toISOString() ?? new Date().toISOString(), dateKind: "entry",
   }];
 }
 
@@ -162,6 +168,7 @@ export async function findProfitLossReport(question: string): Promise<KnowledgeS
       `Report: Profit & Loss. Business: ${label}. Period: ${period.start} through ${period.end}.`,
       ...totals.map(({ business, total }) => `${business.label}: net sales ${money(total.revenueCents)}; ${total.orders} orders; estimated expenses ${money(total.expenseCents)}; net profit ${money(total.profitCents)}.`),
       "Net sales are completed or processing order subtotals less discounts, before tax and tips. Expenses accrue at the rate used by the Profit & Loss chart.",
+      "Expenses are a fixed planning estimate, not itemized actual labor and other costs. Net profit and margin derived from these expenses are estimates, not verified accounting profit. Actual labor and other expenses cannot be inferred from this total.",
       `Stored order sync: ${sync?.lastSyncedAt.toISOString() ?? "not recorded"}. This is not a live MoeGo query.`,
     ].join("\n"),
     updatedAt: sync?.updatedAt.toISOString() ?? new Date().toISOString(),

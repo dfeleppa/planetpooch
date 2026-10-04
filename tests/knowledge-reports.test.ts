@@ -23,6 +23,10 @@ test("report questions select the report rather than raw database search", () =>
   assert.equal(reportKind("How many daycare visits per staff hour did we have last completed week, and was that above the target?"), "kpis");
   assert.equal(reportKind("What was Mobile Grooming net sales per appointment in the last completed reporting week?"), "profit-loss");
   assert.equal(reportKind("Which Pet Resort service segment missed its weekly revenue target by the most last completed week?"), "kpis");
+  assert.equal(reportKind("Was Pet Resort profitable last week? Show revenue, labor cost, other expenses, profit and margin."), "profit-loss");
+  assert.equal(reportKind("What was Pet Resort profitability last week?"), "profit-loss");
+  assert.equal(reportKind("Show Pet Resort revenue, payroll, and profit last week"), "profit-loss");
+  assert.equal(reportKind("Are our Google Ads campaigns profitable?"), "ads");
 });
 
 test("report periods preserve a partial quarter and a completed week", () => {
@@ -51,6 +55,8 @@ test("report periods preserve a partial quarter and a completed week", () => {
 test("management comparisons select complete matched periods", () => {
   assert.equal(isWeeklyProfitComparison("How did Pet Resort net profit change last completed week compared with the previous completed week?"), true);
   assert.equal(isWeeklyProfitComparison("How did net profit change for week ending 9/5 versus the previous week?"), true);
+  assert.equal(isWeeklyProfitComparison("How did Pet Resort net sales last week compare with the previous week? Give dollar and percentage changes, explain what drove the change, and recommend the top two actions for next week."), true);
+  assert.equal(isWeeklyProfitComparison("Was Pet Resort profitable last week? Show revenue, labor cost, other expenses, profit and margin. What is the biggest opportunity to improve margin?"), false);
   assert.equal(boardingTrendWeekCount("Has boarding occupancy improved over the last four completed weeks?"), 4);
   assert.equal(isPayrollSalesRatioQuestion("What was Pet Resort payroll as a percentage of net sales last completed week?"), true);
   assert.equal(isPayrollSalesRatioQuestion("Was payroll more than 40% of net sales last week?"), true);
@@ -62,6 +68,7 @@ test("management comparisons select complete matched periods", () => {
 
 test("report metrics use the named calculation", () => {
   assert.equal(profitMetric("What was our estimated expense total?"), "estimated expenses");
+  assert.equal(profitMetric("Was Pet Resort profitable last week?"), "net profit");
   assert.equal(adMetric("What was our ROAS?"), "roas");
   assert.equal(adMetric("What was cost per lead?"), "cpl");
   assert.deepEqual(savedCampaignCpl([{ leads: 10, costCents: null }]), { leads: 10, cpl: null });

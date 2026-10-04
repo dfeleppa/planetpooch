@@ -28,8 +28,9 @@ export function reportKind(question: string): ReportKind | null {
     || /\bexpir(?:ed|ing|e|ation)\b.*\b(?:daycare|packages?|credits?)\b/i.test(question)
     || /\b(?:daycare|packages?|credits?)\b.*\bexpir(?:ed|ing|e|ation)\b/i.test(question)) return "daycare";
   if (/\b(?:daycare staff hours?|kpi staff hours?)\b/i.test(question)) return "kpis";
-  if (/\b(?:payroll|paychecks?|timecards?|wages?|commissions?|staff hours?)\b/i.test(question)) return "payroll";
   if (/\b(?:ad spend|google ads?|facebook ads?|meta ads?|campaigns?|impressions?|clicks?|cpl|cpc|ctr|roas|cost per lead|advertising)\b/i.test(question)) return "ads";
+  if (/\b(?:profit(?:able|ability)?|margin|earnings)\b/i.test(question)) return "profit-loss";
+  if (/\b(?:payroll|paychecks?|timecards?|wages?|commissions?|staff hours?)\b/i.test(question)) return "payroll";
   if (/\b(?:profit\s*(?:&|and)\s*loss|p\s*&\s*l|net sales|net profit|estimated expenses)\b/i.test(question)) return "profit-loss";
   if (/\b(?:total|overall) revenue\b/i.test(question) && !/\b(?:boarding|daycare|training|in[ -]?house)\b/i.test(question)) return "profit-loss";
   if (isKpiQuestion(question)) return "kpis";
@@ -47,8 +48,15 @@ export async function findReportSources(question: string): Promise<KnowledgeSour
       updatedAt: new Date().toISOString(), dateKind: "entry" as const,
     }));
   }
-  if (kind === "profit-loss") return isMobileGroomingSalesPerAppointmentQuestion(question)
-    ? findMobileGroomingSalesPerAppointment(question) : findProfitLossReport(question);
+  if (kind === "profit-loss") {
+    const reports = await (isMobileGroomingSalesPerAppointmentQuestion(question)
+      ? findMobileGroomingSalesPerAppointment(question) : findProfitLossReport(question));
+    if (/\b(?:labor costs?|labour costs?|payroll|wages?)\b/i.test(question)) {
+      const payroll = await findAppDataSources(`${question} payroll`, []);
+      return [...reports, ...payroll.filter((source) => /record:(?:payroll|commission)/.test(source.id))];
+    }
+    return reports;
+  }
   if (kind === "kpis") return findKpiReport(question);
   if (kind === "payroll") {
     if (isPayrollSalesRatioQuestion(question)) return findPayrollSalesRatio(question);

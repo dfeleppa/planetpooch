@@ -1,0 +1,38 @@
+{
+  "date": "2026-10-04",
+  "environment": "https://app.planet-pooch.com/knowledge",
+  "model": "GPT-6.1 Sol",
+  "method": "Questions submitted through the signed-in in-app browser. Local fixes verified with regression tests; revised model answers have not been tested on a deployment.",
+  "cases": [
+    {
+      "question": "How did Pet Resort net sales last week compare with the previous week? Give dollar and percentage changes, explain what drove the change, and recommend the top two actions for next week.",
+      "observed": "Pet Resort net sales for 2026-09-27 to 2026-10-03 was $19,099.50. Latest order sync: 2026-10-04. [1]",
+      "evaluation": "Fail: omitted previous week, changes, drivers and actions.",
+      "fix": "Retrieve matched weeks for sales comparisons; include dollar and percent changes; route analysis requests through synthesis with explicit causation limits."
+    },
+    {
+      "question": "Was Pet Resort profitable last week? Show revenue, labor cost, other expenses, profit and margin. What is the biggest opportunity to improve margin?",
+      "observed": "Reported all requested values unavailable from empty Boarding, Training, Daycare and In-House Grooming KPI records and suggested asking a manager.",
+      "evaluation": "Fail: incorrect source selection. P&L evidence was available. Actual accounting profitability still cannot be established from fixed expense estimates.",
+      "fix": "Route profitability to P&L, supplement with payroll evidence when requested, and distinguish fixed estimates from actual labor and other costs."
+    },
+    {
+      "question": "For Pet Resort, which advertising channel should get more budget next month, Meta or Google Ads? Compare the latest saved month by spend, leads and cost per lead, and explain whether we have enough evidence to judge return on investment.",
+      "observed": "For September 2026, reported 25 Meta leads with missing spend and no Google Ads rows; could not compare CPL.",
+      "evaluation": "Partial: correctly identified missing data but omitted budget guidance, next steps and the distinction between CPL and ROI.",
+      "fix": "Allow labeled conditional recommendations, require all subquestions to be addressed, and explain why CPL alone does not establish ROI."
+    },
+    {
+      "question": "How many inactive daycare customers could we win back, and what practical reactivation campaign would you recommend? Separate the saved facts from your recommendations.",
+      "observed": "The Not Active daycare report contains 38 customers in its saved snapshot from 2026-10-04. [1]",
+      "evaluation": "Fail: count supplied but campaign request ignored.",
+      "fix": "Bypass canned count answers for strategy requests; distinguish the outreach pool from predicted returners and require measurable next steps."
+    },
+    {
+      "question": "What was Pet Resort net profit last week, and what net sales would we need next week to achieve a 20% profit margin if estimated expenses stay the same? Show your calculation and assumptions.",
+      "observed": "Reported estimated profit $2,599.50 on sales $19,099.50 less estimated expenses $16,500. Calculated $16,500 / 0.80 = $20,625 target sales, $4,125 target profit and $1,525.50 additional sales; stated the estimate and sync limitations.",
+      "evaluation": "Pass: correct calculation with assumptions and source citation.",
+      "fix": "Preserve this synthesis path and reinforce the distinction between estimated and actual profitability."
+    }
+  ]
+}
