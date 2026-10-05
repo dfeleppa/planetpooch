@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import Link from "next/link";
 import type { SubmissionWithClientHistory } from "@/lib/marketing/moego-client-history";
 
 const columns = [
@@ -79,7 +80,38 @@ function ClientHistoryCell({ submission }: { submission: SubmissionWithClientHis
   </td>;
 }
 
-export function SubmissionTable({ submissions, total }: { submissions: SubmissionWithClientHistory[]; total: number }) {
+type SubmissionTableProps = {
+  submissions: SubmissionWithClientHistory[];
+  total: number;
+  page: number;
+  pageCount: number;
+  pageSize: number;
+  startDate: string;
+  endDate: string;
+};
+
+function Pagination({ page, pageCount, startDate, endDate }: Pick<SubmissionTableProps, "page" | "pageCount" | "startDate" | "endDate">) {
+  const pageHref = (target: number) => `/marketing/website-attribution/new-form-submissions?${new URLSearchParams({
+    submissionStart: startDate, submissionEnd: endDate, page: String(target),
+  })}`;
+  const linkClass = "rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50";
+  const disabledClass = "rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-400";
+  const firstVisible = Math.max(1, Math.min(page - 2, pageCount - 4));
+  const visiblePages = Array.from({ length: Math.min(pageCount, 5) }, (_, index) => firstVisible + index);
+  const lastVisible = visiblePages[visiblePages.length - 1];
+
+  return <nav aria-label="Submission pages" className="flex flex-wrap items-center gap-3">
+    {page > 1 ? <Link className={linkClass} href={pageHref(page - 1)}>Previous</Link> : <span className={disabledClass}>Previous</span>}
+    {firstVisible > 1 && <><Link className={linkClass} href={pageHref(1)}>1</Link>{firstVisible > 2 && <span aria-hidden="true">…</span>}</>}
+    {visiblePages.map((number) => number === page
+      ? <span key={number} aria-current="page" className="rounded-lg bg-gray-900 px-3 py-2 text-sm font-medium text-white">{number}</span>
+      : <Link key={number} className={linkClass} href={pageHref(number)}>{number}</Link>)}
+    {lastVisible < pageCount && <>{lastVisible < pageCount - 1 && <span aria-hidden="true">…</span>}<Link className={linkClass} href={pageHref(pageCount)}>{pageCount}</Link></>}
+    {page < pageCount ? <Link className={linkClass} href={pageHref(page + 1)}>Next</Link> : <span className={disabledClass}>Next</span>}
+  </nav>;
+}
+
+export function SubmissionTable({ submissions, total, page, pageCount, pageSize, startDate, endDate }: SubmissionTableProps) {
   const [sort, setSort] = useState<{ key: SortKey; direction: Direction }>({ key: "received", direction: "descending" });
   const [onlyExisting, setOnlyExisting] = useState(false);
   const historyAvailable = submissions.some((row) => row.clientHistory.status !== "unavailable");
@@ -95,13 +127,17 @@ export function SubmissionTable({ submissions, total }: { submissions: Submissio
 
   return (
     <>
-      {total > submissions.length && <p className="mb-2 text-sm text-gray-500">Showing the {submissions.length} most recent submissions of {total.toLocaleString()}. Sorting applies to the displayed rows.</p>}
+      <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
+        <p className="text-sm text-gray-600">Showing {total ? ((page - 1) * pageSize + 1).toLocaleString() : 0}–{Math.min(page * pageSize, total).toLocaleString()} of {total.toLocaleString()} submissions · {pageSize} per page</p>
+        <Pagination page={page} pageCount={pageCount} startDate={startDate} endDate={endDate} />
+      </div>
       <label className="mb-3 inline-flex items-center gap-2 text-sm text-gray-700">
         <input type="checkbox" checked={onlyExisting} disabled={!historyAvailable} onChange={(event) => setOnlyExisting(event.target.checked)} />
-        Show only existing clients (over 90 days before submission)
+        Show only existing clients on this page (over 90 days before submission)
       </label>
-      <div className="overflow-x-auto rounded-xl border border-gray-200 bg-white">
-        <table className="w-full text-left text-sm">
+      <p className="mb-2 text-xs text-gray-500">Column sorting applies to this page.</p>
+      <div className="w-full max-w-full overflow-x-auto rounded-xl border border-gray-200 bg-white">
+        <table className="w-full min-w-[1600px] text-left text-sm">
           <thead className="bg-gray-50"><tr>
             {columns.map(({ key, label }) => {
               const active = sort.key === key;
@@ -140,10 +176,11 @@ export function SubmissionTable({ submissions, total }: { submissions: Submissio
                 </td>
               </tr>
             ))}
-            {sorted.length === 0 && <tr><td colSpan={columns.length} className="px-4 py-8 text-center text-gray-500">{onlyExisting ? "No existing-client matches among the displayed submissions." : "No saved new-client submissions in the selected date range."}</td></tr>}
+            {sorted.length === 0 && <tr><td colSpan={columns.length} className="px-4 py-8 text-center text-gray-500">{onlyExisting ? "No existing-client matches on this page." : "No saved new-client submissions in the selected date range."}</td></tr>}
           </tbody>
         </table>
       </div>
+      <div className="mt-3 flex justify-end"><Pagination page={page} pageCount={pageCount} startDate={startDate} endDate={endDate} /></div>
     </>
   );
 }

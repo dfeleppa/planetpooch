@@ -9,7 +9,8 @@ import { addCalendarDays, resolveSubmissionDateRange } from "@/lib/marketing/sub
 import { SubmissionTable } from "./SubmissionTable";
 import Link from "next/link";
 
-type PageProps = { searchParams: Promise<{ submissionStart?: string; submissionEnd?: string }> };
+type PageProps = { searchParams: Promise<{ submissionStart?: string; submissionEnd?: string; page?: string }> };
+const SUBMISSIONS_PER_PAGE = 50;
 
 export async function WebsiteAttributionReport({ searchParams, showVisits }: PageProps & { showVisits: boolean }) {
   await requireMarketing();
@@ -17,7 +18,7 @@ export async function WebsiteAttributionReport({ searchParams, showVisits }: Pag
   const since = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
   const params = await searchParams;
   const submissionRange = resolveSubmissionDateRange(params.submissionStart, params.submissionEnd);
-  const [totals, visits, submissionTotals, submissions] = await Promise.all([
+  const [totals, visits, submissionTotals] = await Promise.all([
     prisma.$queryRaw<{ visits: number; visitors: number; tagged: number }[]>`
       SELECT COUNT(*)::int AS visits, COUNT(DISTINCT "visitorId")::int AS visitors,
         COUNT(*) FILTER (WHERE "campaign" <> '{}'::jsonb OR "clickIds" <> '{}'::jsonb)::int AS tagged
@@ -35,14 +36,19 @@ export async function WebsiteAttributionReport({ searchParams, showVisits }: Pag
       WHERE "company" = ${business.company}::"Company"
         AND "receivedAt" >= ${submissionRange.startAt}
         AND "receivedAt" < ${submissionRange.endBefore}`,
-    prisma.websiteFormSubmission.findMany({
-      where: { company: business.company, receivedAt: { gte: submissionRange.startAt, lt: submissionRange.endBefore } },
-      orderBy: [{ receivedAt: "desc" }, { id: "desc" }], take: 250,
-      include: { events: { orderBy: { createdAt: "asc" } } },
-    }) as Promise<WebsiteFormSubmissionRow[]>,
   ]);
   const total = totals[0];
   const formTotal = submissionTotals[0];
+  const pageCount = Math.max(1, Math.ceil(Number(formTotal.submissions) / SUBMISSIONS_PER_PAGE));
+  const requestedPage = typeof params.page === "string" && /^\d+$/.test(params.page) ? Number(params.page) : 1;
+  const page = Number.isSafeInteger(requestedPage) ? Math.min(Math.max(requestedPage, 1), pageCount) : 1;
+  const submissions = showVisits ? [] : await prisma.websiteFormSubmission.findMany({
+    where: { company: business.company, receivedAt: { gte: submissionRange.startAt, lt: submissionRange.endBefore } },
+    orderBy: [{ receivedAt: "desc" }, { id: "desc" }],
+    skip: (page - 1) * SUBMISSIONS_PER_PAGE,
+    take: SUBMISSIONS_PER_PAGE,
+    include: { events: { orderBy: { createdAt: "asc" } } },
+  }) as WebsiteFormSubmissionRow[];
   const phones = [...new Set(submissions.map((row) => normalizedPhone(row.phone)).filter((phone): phone is string => phone !== null))];
   const [customerProfiles, customerSync] = await Promise.all([
     phones.length ? prisma.$queryRaw<MoegoClientProfile[]>(Prisma.sql`
@@ -75,13 +81,13 @@ export async function WebsiteAttributionReport({ searchParams, showVisits }: Pag
   }).format(date);
 
   return (
-    <div>
+    <div className="min-w-0">
       <h2 className="text-xl font-semibold text-gray-900">Website Attribution</h2>
       <nav aria-label="Website Attribution reports" className="mt-5 flex flex-wrap gap-2 border-b border-gray-200 pb-4">
         <Link href="/marketing/website-attribution/new-form-submissions" aria-current={!showVisits ? "page" : undefined} className={`rounded-lg px-4 py-2 text-sm font-medium ${!showVisits ? "bg-gray-900 text-white" : "bg-white text-gray-700 ring-1 ring-gray-200 hover:bg-gray-50"}`}>New Form Submissions</Link>
         <Link href="/marketing/website-attribution/anonymous-get-started-visits" aria-current={showVisits ? "page" : undefined} className={`rounded-lg px-4 py-2 text-sm font-medium ${showVisits ? "bg-gray-900 text-white" : "bg-white text-gray-700 ring-1 ring-gray-200 hover:bg-gray-50"}`}>Anonymous Get Started Visits</Link>
       </nav>
-      {!showVisits && <section className="mt-6">
+      {!showVisits && <section className="mt-6 min-w-0">
         <h3 className="text-lg font-semibold text-gray-900">New Client Form Submissions</h3>
         <p className="mt-2 text-sm text-gray-600">
           Durable copies received from /new-client/ before MoeGo is contacted. Every attempt and status transition is retained. Times are Eastern.
@@ -113,12 +119,12 @@ export async function WebsiteAttributionReport({ searchParams, showVisits }: Pag
           ))}
         </div>
         {customerSync._max.syncedAt ? <div className="mb-4 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-950">
-          <strong>{existingCount} of {submissionsWithHistory.length} shown submissions</strong> match a MoeGo client profile created more than 90 days before the form was received.
+          <strong>{existingCount} of {submissionsWithHistory.length} submissions on this page</strong> match a MoeGo client profile created more than 90 days before the form was received.
           <div className="mt-1 text-amber-900">Matches use the last 10 phone digits and include duplicate MoeGo profiles. Customer records last synced {formatTime(customerSync._max.syncedAt)}. No match only means none was found in the synced records.</div>
         </div> : <div className="mb-4 rounded-xl border border-gray-300 bg-gray-50 px-4 py-3 text-sm text-gray-800">
           <strong>MoeGo client history unavailable.</strong> This app has no synced MoeGo customer records yet. Client-age attribution will appear after the customer sync is configured and run.
         </div>}
-        <SubmissionTable submissions={submissionsWithHistory} total={Number(formTotal.submissions)} />
+        <SubmissionTable submissions={submissionsWithHistory} total={Number(formTotal.submissions)} page={page} pageCount={pageCount} pageSize={SUBMISSIONS_PER_PAGE} startDate={submissionRange.start} endDate={submissionRange.end} />
       </section>}
 
       {showVisits && <section className="mt-6">
