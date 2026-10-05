@@ -74,11 +74,12 @@ function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-async function moegoPost<T>(path: string, body: unknown): Promise<T> {
+async function moegoPost<T>(path: string, body: unknown, timeoutMs?: number): Promise<T> {
   const { apiKey } = getMoegoAuth();
   const res = await fetch(`${BASE_URL}${path}`, {
     method: "POST",
     cache: "no-store",
+    signal: timeoutMs ? AbortSignal.timeout(timeoutMs) : undefined,
     headers: {
       Authorization: `Basic ${apiKey}`,
       "Content-Type": "application/json",
@@ -130,7 +131,8 @@ export async function* listPages<TKey extends string, TRow>(
   path: string,
   rowKey: TKey,
   filter: Record<string, unknown> = {},
-  extraTop: Record<string, unknown> = {}
+  extraTop: Record<string, unknown> = {},
+  requestTimeoutMs?: number
 ): AsyncGenerator<TRow[]> {
   const { companyId } = getMoegoConfig();
   let pageToken = "1";
@@ -143,7 +145,7 @@ export async function* listPages<TKey extends string, TRow>(
       filter,
       pagination: { pageSize: PAGE_SIZE, pageToken },
     };
-    const res = await moegoPost<PaginatedResponse<TKey, TRow>>(path, body);
+    const res = await moegoPost<PaginatedResponse<TKey, TRow>>(path, body, requestTimeoutMs);
     const rows = res[rowKey] ?? [];
     yield rows;
     pages++;
@@ -570,7 +572,8 @@ export function streamAppointments(
     "/appointments:list",
     "appointments",
     filters,
-    { businessIds }
+    { businessIds },
+    60_000
   );
 }
 

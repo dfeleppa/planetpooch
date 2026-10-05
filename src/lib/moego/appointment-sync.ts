@@ -3,9 +3,9 @@ import { prisma } from "@/lib/prisma";
 import { listBusinesses, streamAppointments, type MoegoAppointmentRow } from "./client";
 
 const RESOURCE = "appointment";
-const CHUNK_MS = 14 * 24 * 60 * 60 * 1000;
+const CHUNK_MS = 24 * 60 * 60 * 1000;
 const OVERLAP_MS = 30 * 60 * 1000;
-const RUNTIME_BUDGET_MS = 240_000;
+const RUNTIME_BUDGET_MS = 180_000;
 
 function date(value: string | undefined): Date | null {
   if (!value) return null;
@@ -93,6 +93,10 @@ export async function syncLeadAppointments(): Promise<{
       chunkCount += page.length;
     }
     await advanceWatermark(end, chunkCount);
+    console.info("MoeGo appointment sync chunk complete", {
+      completedThrough: end.toISOString(),
+      fetched: chunkCount,
+    });
     cursor = end;
     fetched += chunkCount;
     chunks++;
