@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSession, hasMarketingAccess } from "@/lib/auth-helpers";
 import { prisma } from "@/lib/prisma";
+import { getMetaPeriodMetrics } from "@/lib/marketing/meta-reporting";
 import {
   fetchAllOpportunities,
   GhlApiError,
@@ -245,20 +246,20 @@ export async function GET(req: NextRequest) {
   const toExclusive = addDays(to, 1);
   const attributedRevenue = getAttributedRevenueCents(from, to);
   const fullAttributionPeriod = isAttributionPeriod(from, to);
+  const meta = await getMetaPeriodMetrics(business, from, toExclusive);
 
   if (fullAttributionPeriod) {
     return NextResponse.json({
       metric: {
-        totalRevenue: Object.values(attributedRevenue).reduce((sum, value) => sum + value, 0),
+        totalRevenue: null,
         totalProfit: null,
         totalCustomers: null,
-        totalAdSpend: Object.values(ATTRIBUTION_SPEND_CENTS).reduce(
-          (sum, value) => sum + value,
-          0,
-        ),
+        totalAdSpend: meta.spendCents === null ? null : meta.spendCents + ATTRIBUTION_SPEND_CENTS["google-ads"] + ATTRIBUTION_SPEND_CENTS["google-lsa"],
         totalConversions: null,
-        metaAdSpend: ATTRIBUTION_SPEND_CENTS.meta,
-        metaRevenue: attributedRevenue.meta,
+        metaAdSpend: meta.spendCents,
+        metaRevenue: meta.purchaseValueCents,
+        metaDataThrough: meta.through,
+        metaDataComplete: meta.complete,
         googleAdSpend: ATTRIBUTION_SPEND_CENTS["google-ads"],
         googleRevenue: attributedRevenue["google-ads"],
         googleLsaAdSpend: ATTRIBUTION_SPEND_CENTS["google-lsa"],
@@ -330,10 +331,12 @@ export async function GET(req: NextRequest) {
       totalRevenue: monthSummary.combinedRevenueCents,
       totalProfit: statement.netProfit,
       totalCustomers: monthSummary.combinedCustomers,
-      totalAdSpend: monthSummary.metaSpendCents,
+      totalAdSpend: meta.spendCents,
       totalConversions: monthSummary.totalConversions,
-      metaAdSpend: monthSummary.metaSpendCents,
-      metaRevenue: attributedRevenue.meta,
+      metaAdSpend: meta.spendCents,
+      metaRevenue: meta.purchaseValueCents,
+      metaDataThrough: meta.through,
+      metaDataComplete: meta.complete,
       googleAdSpend: null,
       googleRevenue: attributedRevenue["google-ads"],
       googleLsaAdSpend: null,

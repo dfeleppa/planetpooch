@@ -139,6 +139,7 @@ function CampaignReportTable({
   business,
   from,
   to,
+  readOnly = false,
 }: {
   title: string;
   apiPath: string;
@@ -146,6 +147,7 @@ function CampaignReportTable({
   business: string;
   from: string;
   to: string;
+  readOnly?: boolean;
 }) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [rows, setRows] = useState<CampaignReportRow[]>([]);
@@ -155,6 +157,7 @@ function CampaignReportTable({
   const [saved, setSaved] = useState(false);
   const [fileName, setFileName] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [coverage, setCoverage] = useState<{ complete: boolean; through: string | null } | null>(null);
   const [columnWidths, setColumnWidths] = useState(CAMPAIGN_COLUMN_WIDTHS);
 
   const businessKey = business || "all-businesses";
@@ -178,6 +181,8 @@ function CampaignReportTable({
       const json = (await res.json().catch(() => ({}))) as {
         rows?: ApiCampaignReportRow[];
         error?: string;
+        complete?: boolean;
+        through?: string | null;
       };
 
       if (!res.ok) {
@@ -185,9 +190,11 @@ function CampaignReportTable({
       }
 
       setRows(Array.isArray(json.rows) ? json.rows.map(normalizeApiRow) : []);
+      setCoverage(readOnly ? { complete: json.complete ?? false, through: json.through ?? null } : null);
       setPage(0);
     } catch (err) {
       setRows([]);
+      setCoverage(null);
       setError(err instanceof Error ? err.message : "Unable to load campaign rows.");
     } finally {
       setLoaded(true);
@@ -313,7 +320,7 @@ function CampaignReportTable({
     <Card className="mt-6 overflow-hidden rounded-lg shadow-none">
       <div className="flex flex-col gap-3 border-b border-gray-200 bg-white px-4 py-3 xl:flex-row xl:items-center xl:justify-between">
         <h2 className="text-base font-semibold text-gray-900">{title}</h2>
-        <div className="flex flex-wrap items-center gap-2">
+        {!readOnly && <div className="flex flex-wrap items-center gap-2">
           <label className="flex h-10 max-w-56 cursor-pointer items-center rounded-lg border border-gray-300 bg-white px-3 text-sm font-medium text-gray-700 shadow-sm transition-colors hover:bg-gray-50">
             <span className="truncate">{fileName || "Choose CSV"}</span>
             <input
@@ -333,8 +340,14 @@ function CampaignReportTable({
           >
             {importing ? "Importing..." : "Import CSV"}
           </button>
-        </div>
+        </div>}
       </div>
+
+      {readOnly && coverage && !coverage.complete && (
+        <p className="border-b border-amber-100 bg-amber-50 px-4 py-2 text-xs text-amber-800">
+          Meta API data covers only part of this period{coverage.through ? ` (latest synced day: ${coverage.through})` : ""}. Campaign rows are partial.
+        </p>
+      )}
 
       {(error || saved) && (
         <div
@@ -545,12 +558,13 @@ export function FacebookCampaignReportTable({
 }) {
   return (
     <CampaignReportTable
-      title="Facebook Campaign Report"
+      title="Meta Campaign Report · API synced"
       apiPath="/api/finance/facebook-campaign-report"
       csvLabel="Facebook"
       business={business}
       from={from}
       to={to}
+      readOnly
     />
   );
 }

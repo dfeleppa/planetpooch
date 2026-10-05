@@ -70,6 +70,8 @@ type MetricData = {
   googleLsaAdSpend: number | null;
   googleLsaRevenue: number | null;
   attributionThrough: string | null;
+  metaDataThrough: string | null;
+  metaDataComplete: boolean;
 };
 
 const EMPTY_METRIC: MetricData = {
@@ -85,6 +87,8 @@ const EMPTY_METRIC: MetricData = {
   googleLsaAdSpend: null,
   googleLsaRevenue: null,
   attributionThrough: null,
+  metaDataThrough: null,
+  metaDataComplete: false,
 };
 
 function cents(val: number | null) {
@@ -199,6 +203,8 @@ export function AdReportingDashboard({
             googleLsaAdSpend: m.googleLsaAdSpend,
             googleLsaRevenue: m.googleLsaRevenue,
             attributionThrough: m.attributionThrough,
+            metaDataThrough: m.metaDataThrough ?? null,
+            metaDataComplete: m.metaDataComplete ?? false,
           });
         } else {
           setMetric(EMPTY_METRIC);
@@ -390,25 +396,17 @@ function AttributionSummary({
   rangeLabel: string;
 }) {
   const rows = [
-    { key: "meta", label: "Meta Ads", spend: metric.metaAdSpend, revenue: metric.metaRevenue },
+    { key: "meta", label: "Meta Ads · platform reported", spend: metric.metaAdSpend, revenue: metric.metaRevenue },
     { key: "google-ads", label: "Google Ads", spend: metric.googleAdSpend, revenue: metric.googleRevenue },
     { key: "google-lsa", label: "Google LSA", spend: metric.googleLsaAdSpend, revenue: metric.googleLsaRevenue },
   ].filter((row) => source === "all" || row.key === source);
-  const totalSpend = rows.every((row) => row.spend !== null)
-    ? rows.reduce((sum, row) => sum + (row.spend ?? 0), 0)
-    : null;
-  const totalRevenue = rows.every((row) => row.revenue !== null)
-    ? rows.reduce((sum, row) => sum + (row.revenue ?? 0), 0)
-    : null;
-  const totalRoas = totalSpend && totalRevenue !== null ? totalRevenue / totalSpend : null;
-
   return (
     <Card className="mt-6 overflow-hidden">
       <CardContent className="p-0">
         <div className="border-b border-gray-200 px-5 py-4">
-          <h3 className="font-semibold text-gray-900">Attributed revenue by source</h3>
+          <h3 className="font-semibold text-gray-900">Revenue and ad spend by source</h3>
           <p className="mt-1 text-xs text-gray-500">
-            All businesses · Completed MoeGo service revenue by sale date · {rangeLabel}
+            Meta: platform-reported purchases and spend · Google: completed MoeGo service revenue by sale date · {rangeLabel}
           </p>
         </div>
         <div className="overflow-x-auto">
@@ -433,17 +431,14 @@ function AttributionSummary({
                   </tr>
                 );
               })}
-              {source === "all" && (
-                <tr className="bg-gray-50 font-semibold text-gray-900">
-                  <td className="px-5 py-3">Total</td>
-                  <td className="px-5 py-3 text-right">{formatDollars(cents(totalSpend))}</td>
-                  <td className="px-5 py-3 text-right">{formatDollars(cents(totalRevenue))}</td>
-                  <td className="px-5 py-3 text-right">{formatRatio(totalRoas)}</td>
-                </tr>
-              )}
             </tbody>
           </table>
         </div>
+        {!metric.metaDataComplete && (
+          <p className="border-t border-amber-100 bg-amber-50 px-5 py-3 text-xs text-amber-800">
+            Meta API insights do not cover this full period{metric.metaDataThrough ? ` (latest synced day: ${metric.metaDataThrough})` : ""}. Meta totals and ROAS are unavailable until the period is synced.
+          </p>
+        )}
         {metric.googleAdSpend === null && (
           <p className="border-t border-gray-100 px-5 py-3 text-xs text-amber-700">
             Source spend is available for the Jan 1 – Sep 5 report. Monthly revenue is dated, but the supplied spend was a period total.

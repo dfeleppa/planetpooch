@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSession, hasMarketingAccess } from "@/lib/auth-helpers";
 import { prisma } from "@/lib/prisma";
+import { getMetaPeriodMetrics, metaInsightWhere } from "@/lib/marketing/meta-reporting";
 
 const VALID_BUSINESSES = new Set([
   "all-businesses",
@@ -237,91 +238,50 @@ export async function GET(req: NextRequest) {
     );
   }
 
-  const rows = await prisma.financeFacebookCampaignReportRow.findMany({
-    where: { business, periodStart, periodEnd },
-    orderBy: { rowOrder: "asc" },
+  const insightRows = await prisma.metaAdInsight.findMany({
+    where: await metaInsightWhere(
+      business.replace(/-manual$/, "").replace("all-businesses", ""),
+      periodStart,
+      new Date(periodEnd.getTime() + 86_400_000),
+    ),
+    select: { campaignId: true, campaignName: true, spendCents: true, purchaseValueCents: true, purchases: true, leads: true, linkClicks: true, impressions: true },
   });
+  const grouped = new Map<string, { campaignId: string; campaign: string; costCents: number; revenueCents: number; sales: number; leads: number; clicks: number; impressions: number }>();
+  for (const row of insightRows) {
+    const id = row.campaignId ?? row.campaignName ?? "unknown";
+    const item = grouped.get(id) ?? { campaignId: id, campaign: row.campaignName ?? id, costCents: 0, revenueCents: 0, sales: 0, leads: 0, clicks: 0, impressions: 0 };
+    item.costCents += row.spendCents;
+    item.revenueCents += row.purchaseValueCents;
+    item.sales += row.purchases;
+    item.leads += row.leads;
+    item.clicks += row.linkClicks;
+    item.impressions += row.impressions;
+    grouped.set(id, item);
+  }
+  const rows = [...grouped.values()].map((row) => ({
+    ...row,
+    id: row.campaignId,
+    status: null,
+    roiPercent: row.costCents > 0 ? Math.round(row.revenueCents / row.costCents * 10000) : null,
+    cpcCents: row.clicks > 0 ? Math.round(row.costCents / row.clicks) : null,
+    ctrPercent: row.impressions > 0 ? Math.round(row.clicks / row.impressions * 10000) : null,
+    cpsCents: row.sales > 0 ? Math.round(row.costCents / row.sales) : null,
+    cplCents: row.leads > 0 ? Math.round(row.costCents / row.leads) : null,
+    averageRevenueCents: row.sales > 0 ? Math.round(row.revenueCents / row.sales) : null,
+  })).sort((a, b) => b.costCents - a.costCents);
 
-  return NextResponse.json({ rows });
+  const coverage = await getMetaPeriodMetrics(
+    business.replace(/-manual$/, "").replace("all-businesses", ""),
+    periodStart,
+    new Date(periodEnd.getTime() + 86_400_000),
+  );
+  return NextResponse.json({ rows, complete: coverage.complete, through: coverage.through });
 }
 
-export async function PUT(req: NextRequest) {
-  const session = await getSession();
-  if (
-    !canAccessAdReporting(
-      session?.user as { role?: string | null; jobTitle?: string | null } | undefined
-    )
-  ) {
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-  }
-
-  const body = (await req.json().catch(() => null)) as
-    | {
-        business?: string;
-        periodStart?: string;
-        periodEnd?: string;
-        rows?: CampaignInputRow[];
-      }
-    | null;
-
-  const business = cleanBusiness(body?.business);
-  const periodStart = dateFromParam(body?.periodStart);
-  const periodEnd = dateFromParam(body?.periodEnd);
-
-  if (!business || !periodStart || !periodEnd || !Array.isArray(body?.rows)) {
-    return NextResponse.json(
-      { error: "business, periodStart, periodEnd, and rows are required." },
-      { status: 400 }
-    );
-  }
-
-  const rows = await replaceRows({
-    business,
-    periodStart,
-    periodEnd,
-    rows: cleanRows(body.rows),
-  });
-
-  return NextResponse.json({ rows });
+export async function PUT() {
+  return NextResponse.json({ error: 'Meta campaign metrics are synced from the Meta API.' }, { status: 405 });
 }
 
-export async function POST(req: NextRequest) {
-  const session = await getSession();
-  if (
-    !canAccessAdReporting(
-      session?.user as { role?: string | null; jobTitle?: string | null } | undefined
-    )
-  ) {
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-  }
-
-  const form = await req.formData().catch(() => null);
-  const business = cleanBusiness(form?.get("business")?.toString());
-  const periodStart = dateFromParam(form?.get("periodStart")?.toString());
-  const periodEnd = dateFromParam(form?.get("periodEnd")?.toString());
-  const file = form?.get("file");
-
-  if (
-    !business ||
-    !periodStart ||
-    !periodEnd ||
-    !file ||
-    typeof file === "string" ||
-    typeof file.text !== "function"
-  ) {
-    return NextResponse.json(
-      { error: "business, periodStart, periodEnd, and CSV file are required." },
-      { status: 400 }
-    );
-  }
-
-  const csvText = await file.text();
-  const rows = await replaceRows({
-    business,
-    periodStart,
-    periodEnd,
-    rows: cleanRows(cleanRowsFromCsv(csvText)),
-  });
-
-  return NextResponse.json({ rows });
+export async function POST() {
+  return NextResponse.json({ error: 'Meta campaign metrics are synced from the Meta API.' }, { status: 405 });
 }
