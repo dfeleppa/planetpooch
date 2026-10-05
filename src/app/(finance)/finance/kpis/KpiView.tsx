@@ -147,6 +147,7 @@ const SECTION_ORDER: KpiSection[] = ["ACTUALS", "FORECAST"];
 
 const PET_RESORT_TAB = "PET_RESORT";
 const PET_RESORT_COPY_TAB = "PET_RESORT_COPY";
+const MOBILE_GROOMING_QUARTERLY_TAB = "MOBILE_GROOMING_QUARTERLY";
 const PET_RESORT_SEGMENTS = KPI_SEGMENTS.filter(
   (segmentDef) => segmentDef.key !== "MOBILE_GROOMING"
 );
@@ -491,6 +492,7 @@ export function KpiView({
   activeTab,
   allSegmentsData,
   quarterlySegmentsData,
+  quarterlyMobileData,
   quarterlyPayrollByWeek,
   quarterlyHeadlineSummary,
   headlineSummary,
@@ -501,6 +503,7 @@ export function KpiView({
   activeTab?: string;
   allSegmentsData?: Record<string, Record<string, KpiCell>>;
   quarterlySegmentsData?: Record<string, QuarterlyKpiWeek[]>;
+  quarterlyMobileData?: QuarterlyKpiWeek[];
   quarterlyPayrollByWeek?: Record<string, number>;
   quarterlyHeadlineSummary?: QuarterlyHeadlineSummary;
   headlineSummary: WeeklyHeadlineSummary;
@@ -513,6 +516,7 @@ export function KpiView({
   const petResortTab =
     activeTab === PET_RESORT_COPY_TAB ? PET_RESORT_COPY_TAB : PET_RESORT_TAB;
   const isPetResortCopy = activeTab === PET_RESORT_COPY_TAB;
+  const isMobileQuarterly = activeTab === MOBILE_GROOMING_QUARTERLY_TAB;
   const quarterSummary = getQuarterSummary(week);
   const dataWithDerivedValues = useMemo(
     () => withDerivedKpiCells(segment, data),
@@ -808,7 +812,7 @@ export function KpiView({
 
     document.title = `Planet Pooch ${
       isPetResort ? "Pet Resort" : "Mobile Grooming"
-    } KPI Report - ${week}`;
+    } ${isPetResortCopy || isMobileQuarterly ? "Quarterly" : "Weekly"} KPI Report - ${week}`;
     window.addEventListener("afterprint", restoreTitle, { once: true });
     window.print();
   }
@@ -819,7 +823,13 @@ export function KpiView({
   ];
 
   return (
-    <div className={isPetResortCopy ? "pp-kpi-quarterly-report" : undefined}>
+    <div className={isPetResortCopy || isMobileQuarterly ? "pp-kpi-quarterly-report" : undefined}>
+      {!isPetResort && <Tabs
+        tabs={[{ id: MOBILE_GROOMING_QUARTERLY_TAB, label: "Quarterly" }, { id: "MOBILE_GROOMING", label: "Weekly" }]}
+        activeTab={isMobileQuarterly ? MOBILE_GROOMING_QUARTERLY_TAB : "MOBILE_GROOMING"}
+        onChange={(id) => navigate(id, week)}
+        className="pp-kpi-screen-tabs mb-6"
+      />}
       {isPetResort && <Tabs
         tabs={tabs}
         activeTab={isPetResort ? petResortTab : "MOBILE_GROOMING"}
@@ -827,7 +837,7 @@ export function KpiView({
         className="pp-kpi-screen-tabs mb-6"
       />}
 
-      {isPetResortCopy && (
+      {(isPetResortCopy || isMobileQuarterly) && (
         <section className="pp-kpi-quarter-card mb-6 rounded-xl border border-gray-200 bg-white px-5 py-4 shadow-sm">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
             <div>
@@ -848,7 +858,7 @@ export function KpiView({
                   value={quarterSummary.year}
                   onChange={(event) =>
                     navigate(
-                      PET_RESORT_COPY_TAB,
+                      isMobileQuarterly ? MOBILE_GROOMING_QUARTERLY_TAB : PET_RESORT_COPY_TAB,
                       firstSundayInQuarter(Number(event.target.value), quarterSummary.quarter)
                     )
                   }
@@ -868,7 +878,7 @@ export function KpiView({
                   value={quarterSummary.quarter}
                   onChange={(event) =>
                     navigate(
-                      PET_RESORT_COPY_TAB,
+                      isMobileQuarterly ? MOBILE_GROOMING_QUARTERLY_TAB : PET_RESORT_COPY_TAB,
                       firstSundayInQuarter(quarterSummary.year, Number(event.target.value))
                     )
                   }
@@ -1152,6 +1162,38 @@ export function KpiView({
             })}
           </div>
           )}
+        </>
+      ) : isMobileQuarterly ? (
+        <>
+          <header className="pp-kpi-print-header">
+            <div><div className="pp-kpi-print-eyebrow">Planet Pooch</div><h1>Mobile Grooming Quarterly KPI Report</h1></div>
+            <div className="pp-kpi-print-period"><strong>{quarterSummary.label}</strong><span>{quarterSummary.dates}</span></div>
+          </header>
+          <div className="pp-kpi-report-controls mb-6 flex justify-end print:hidden">
+            <Button variant="secondary" onClick={printReport}>Print / PDF</Button>
+          </div>
+          <div className="pp-kpi-report-segments">
+            <Table className="pp-kpi-quarterly-table min-w-[900px] table-fixed text-[10px]">
+              <TableHead><tr>
+                <TableHeader className="w-12 text-center">Week</TableHeader>
+                <TableHeader className="w-28 text-center">Dates</TableHeader>
+                {segmentDef.metrics.filter((metric) => metric.section === "ACTUALS").map((metric) => (
+                  <TableHeader key={metric.key} className="whitespace-pre-line border-l border-gray-200 px-2 py-2 text-center text-[9px] normal-case">{metric.label}</TableHeader>
+                ))}
+              </tr></TableHead>
+              <TableBody>{quarterlyMobileData?.map((quarterWeek, index) => (
+                <TableRow key={quarterWeek.week}>
+                  <TableCell className="text-center font-semibold">{index + 1}</TableCell>
+                  <TableCell className="whitespace-nowrap text-center text-gray-500">{formatCompactWeekRange(quarterWeek.week)}</TableCell>
+                  {segmentDef.metrics.filter((metric) => metric.section === "ACTUALS").map((metric) => (
+                    <TableCell key={metric.key} className="whitespace-nowrap border-l border-gray-200 text-center tabular-nums">
+                      {formatQuarterKpiValue(quarterWeek.data[metric.key]?.value ?? null, metric.format)}
+                    </TableCell>
+                  ))}
+                </TableRow>
+              ))}</TableBody>
+            </Table>
+          </div>
         </>
       ) : (
         <>

@@ -24,6 +24,7 @@ import {
 
 const PET_RESORT_TAB = "PET_RESORT";
 const PET_RESORT_COPY_TAB = "PET_RESORT_COPY";
+const MOBILE_GROOMING_QUARTERLY_TAB = "MOBILE_GROOMING_QUARTERLY";
 const PET_RESORT_SEGMENTS = KPI_SEGMENTS.filter(
   (segmentDef) => segmentDef.key !== "MOBILE_GROOMING"
 );
@@ -304,12 +305,12 @@ export default async function KpisPage({
   const params = await searchParams;
 
   // Report source links can open the named business without changing the saved preference.
-  const business = params.segment === "MOBILE_GROOMING" ? { company: "GROOMING" as const }
+  const business = params.segment === "MOBILE_GROOMING" || params.segment === MOBILE_GROOMING_QUARTERLY_TAB ? { company: "GROOMING" as const }
     : params.segment === PET_RESORT_TAB || params.segment === PET_RESORT_COPY_TAB
       ? { company: "RESORT" as const } : await getActiveBusiness();
-  const activeTab = business.company === "GROOMING" ? "MOBILE_GROOMING"
+  const activeTab = business.company === "GROOMING" ? (params.segment === MOBILE_GROOMING_QUARTERLY_TAB ? MOBILE_GROOMING_QUARTERLY_TAB : "MOBILE_GROOMING")
     : params.segment === PET_RESORT_TAB ? PET_RESORT_TAB : PET_RESORT_COPY_TAB;
-  const showPetResort = activeTab !== "MOBILE_GROOMING";
+  const showPetResort = activeTab === PET_RESORT_TAB || activeTab === PET_RESORT_COPY_TAB;
   const segment: KpiSegment = "MOBILE_GROOMING";
 
   let weekStart: Date;
@@ -330,7 +331,7 @@ export default async function KpisPage({
   const previousWeekStart = addWeeks(weekStart, -1);
   const previousWeek = toWeekParam(previousWeekStart);
   const quarterWeekStarts =
-    activeTab === PET_RESORT_COPY_TAB ? getQuarterWeekStarts(weekStart) : [];
+    activeTab === PET_RESORT_COPY_TAB || activeTab === MOBILE_GROOMING_QUARTERLY_TAB ? getQuarterWeekStarts(weekStart) : [];
   const headlineSummaryPromise = getWeeklyHeadlineSummary(weekStart);
   const quarterlyHeadlineSummaryPromise =
     activeTab === PET_RESORT_COPY_TAB
@@ -506,6 +507,7 @@ export default async function KpisPage({
     standingRows,
     staffHoursByWeek,
     headlineSummary,
+    quarterlyValueRows,
   ] = await Promise.all([
     prisma.kpiWeeklyValue.findMany({
       where: { segment, weekStart },
@@ -521,6 +523,12 @@ export default async function KpisPage({
     }),
     staffHoursByWeekPromise,
     headlineSummaryPromise,
+    activeTab === MOBILE_GROOMING_QUARTERLY_TAB
+      ? prisma.kpiWeeklyValue.findMany({
+          where: { segment, weekStart: { in: quarterWeekStarts } },
+          select: { weekStart: true, metricKey: true, value: true },
+        })
+      : Promise.resolve([]),
   ]);
 
   const valueByKey = new Map(valueRows.map((r) => [r.metricKey, r.value]));
@@ -540,8 +548,26 @@ export default async function KpisPage({
   data = withPayrollStaffHours(segment, data, staffHoursByWeek, week, previousWeek);
   data = withDerivedKpiCells(segment, data);
 
+  const quarterlyMobileData: QuarterlyKpiWeek[] = quarterWeekStarts.map((quarterWeekStart) => {
+    const weeklyValues = new Map(
+      quarterlyValueRows
+        .filter((row) => row.weekStart.getTime() === quarterWeekStart.getTime())
+        .map((row) => [row.metricKey, row.value])
+    );
+    const cells: Record<string, KpiCell> = {};
+    for (const metric of getSegmentDef(segment).metrics) {
+      cells[metric.key] = {
+        value: weeklyValues.get(metric.key) ?? null,
+        previousValue: null,
+        average: null,
+        target: null,
+      };
+    }
+    return { week: toWeekParam(quarterWeekStart), data: withDerivedKpiCells(segment, cells) };
+  });
+
   return (
-    <div className="pp-kpi-print-page">
+    <div className={`pp-kpi-print-page ${activeTab === MOBILE_GROOMING_QUARTERLY_TAB ? "pp-kpi-quarterly-print-page" : ""}`}>
       <div className="pp-kpi-screen-heading mb-6">
         <h2 className="text-xl font-semibold text-gray-900">KPIs</h2>
         <p className="text-gray-500 mt-1">
@@ -553,7 +579,8 @@ export default async function KpisPage({
         segment={segment}
         week={week}
         data={data}
-        activeTab={segment}
+        activeTab={activeTab}
+        quarterlyMobileData={quarterlyMobileData}
         headlineSummary={headlineSummary}
       />
     </div>
