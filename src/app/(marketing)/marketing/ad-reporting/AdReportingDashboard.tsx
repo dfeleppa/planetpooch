@@ -233,9 +233,7 @@ export function AdReportingDashboard({
 
   const rangeLabel = is2026AttributionRange
     ? "January 1 – September 5, 2026"
-    : selectedYear === 2026 && selectedMonth === 9
-      ? "September 1–5, 2026"
-      : `${MONTHS[selectedMonth - 1].label} ${selectedYear}`;
+    : `${MONTHS[selectedMonth - 1].label} ${selectedYear}`;
   const businessLabel =
     BUSINESSES.find((b) => b.value === business)?.label ?? "All Businesses";
 
@@ -408,6 +406,9 @@ function AttributionSummary({
           <p className="mt-1 text-xs text-gray-500">
             Meta: platform-reported purchases and spend · Google: completed MoeGo service revenue by sale date · {rangeLabel}
           </p>
+          {!rangeLabel.includes("September 5, 2026") && (
+            <p className="mt-1 text-xs text-gray-500">Google attributed revenue is only available through September 5, 2026.</p>
+          )}
         </div>
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
