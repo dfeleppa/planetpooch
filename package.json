@@ -11,6 +11,7 @@
     "migrate": "prisma migrate deploy",
     "start": "next start",
     "lint": "eslint",
+    "eval:ask-pooch": "node scripts/evaluate-ask-pooch.cjs",
     "postinstall": "prisma generate"
   },
   "dependencies": {

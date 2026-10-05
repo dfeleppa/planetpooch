@@ -7,6 +7,7 @@ import { isWeeklyProfitComparison, profitMarginPercent, profitMetric } from "../
 import { completedMobileGroomingWeek, isMobileGroomingSalesPerAppointmentQuestion } from "../src/lib/knowledge-report-mobile-sales";
 import { isPayrollSalesRatioQuestion } from "../src/lib/knowledge-report-payroll-ratio";
 import { adMetric, isAdPlatformCplComparisonQuestion, savedCampaignCpl } from "../src/lib/knowledge-report-ads";
+import { isFormSubmissionCountQuestion } from "../src/lib/knowledge-report-forms";
 import { KPI_SEGMENTS } from "../src/lib/kpis";
 import { estimatedExpenseCents } from "../src/lib/moego/profit-loss-totals";
 import { profitBuckets } from "../src/lib/moego/chart-profit";
@@ -27,6 +28,21 @@ test("report questions select the report rather than raw database search", () =>
   assert.equal(reportKind("What was Pet Resort profitability last week?"), "profit-loss");
   assert.equal(reportKind("Show Pet Resort revenue, payroll, and profit last week"), "profit-loss");
   assert.equal(reportKind("Are our Google Ads campaigns profitable?"), "ads");
+  assert.equal(reportKind("How many new form submissions were submitted last week (Sunday through Saturday)?"), "forms");
+  assert.equal(reportKind("How many lead forms were submitted last week (Sunday through Saturday)?"), "forms");
+  assert.equal(reportKind("How many Google Ads leads last week?"), "ads");
+  assert.equal(reportKind("How many Google Ads lead forms were submitted last week?"), "ads");
+});
+
+test("lead forms and new form submissions use the same completed week", () => {
+  const first = "How many new form submissions were submitted last week (Sunday through Saturday)?";
+  const alias = "How many lead forms were submitted last week (Sunday through Saturday)?";
+  const now = new Date("2026-10-05T16:00:00Z");
+  assert.equal(isFormSubmissionCountQuestion(first), true);
+  assert.equal(isFormSubmissionCountQuestion(alias), true);
+  assert.deepEqual(reportPeriod(first, now), reportPeriod(alias, now));
+  assert.deepEqual(reportPeriod(alias, now),
+    { start: "2026-09-27", end: "2026-10-03", label: "2026-09-27 to 2026-10-03", kind: "week" });
 });
 
 test("report periods preserve a partial quarter and a completed week", () => {
@@ -35,6 +51,8 @@ test("report periods preserve a partial quarter and a completed week", () => {
     { start: "2026-07-01", end: "2026-09-25", label: "Q3 2026 to date", kind: "quarter", quarterEnd: "2026-09-30" });
   assert.deepEqual(reportPeriod("week ending 9/5", now),
     { start: "2026-08-30", end: "2026-09-05", label: "week ending 2026-09-05", kind: "week" });
+  assert.deepEqual(reportPeriod("October 2, 2026", new Date("2026-10-05T16:00:00Z")),
+    { start: "2026-10-02", end: "2026-10-02", label: "2026-10-02", kind: "day" });
   assert.deepEqual(reportPeriod("last quarter", now),
     { start: "2026-04-01", end: "2026-06-30", label: "Q2 2026", kind: "quarter", quarterEnd: "2026-06-30" });
   assert.deepEqual(reportPeriod("September 2026", now),

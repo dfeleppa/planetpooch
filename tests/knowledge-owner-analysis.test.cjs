@@ -16,6 +16,10 @@ function load(relative, dependencies = {}, extras = {}) {
 }
 
 const policy = load("src/lib/knowledge-answer-policy.ts");
+const answerRequest = load("src/lib/knowledge-answer-request.ts", {
+  "@/lib/knowledge-chat-models": load("src/lib/knowledge-chat-models.ts"),
+  "@/lib/knowledge-answer-policy": policy,
+});
 const questions = [
   "How did Pet Resort net sales last week compare with the previous week? Give dollar and percentage changes, explain what drove the change, and recommend the top two actions for next week.",
   "Was Pet Resort profitable last week? Show revenue, labor cost, other expenses, profit and margin. What is the biggest opportunity to improve margin?",
@@ -36,6 +40,7 @@ function chatRoute(fetch, sources = [source]) {
     "@/lib/knowledge-app-data": { knowledgeRetrievalQuestion: (messages) => messages.at(-1).content },
     "@/lib/knowledge-chat-models": load("src/lib/knowledge-chat-models.ts"),
     "@/lib/knowledge-answer-policy": policy,
+    "@/lib/knowledge-answer-request": answerRequest,
   }, { fetch });
 }
 const request = (question) => new Request("https://app.planet-pooch.com/api/knowledge/chat", {
@@ -62,6 +67,24 @@ for (const question of questions) {
 test("simple report lookup still returns its verified answer without an API call", async () => {
   const route = chatRoute(async () => assert.fail("Simple lookup should not call model"));
   assert.equal((await (await route.POST(request("What was Pet Resort net sales last week?"))).json()).answer, source.answer);
+});
+
+test("synthesis receives every metric from a multi-report plan", async () => {
+  let payload;
+  const reportPlan = { tasks: [
+    { metricIds: ["website.form_submissions"], report: "forms", question: "forms" },
+    { metricIds: ["finance.net_sales"], report: "profit-loss", question: "sales" },
+  ], needsAnalysis: true };
+  const route = chatRoute(async (_url, options) => {
+    payload = JSON.parse(options.body);
+    return Response.json({ output: [{ type: "message", role: "assistant", content: [{ type: "output_text", text: "Both facts [1] [2]" }] }] });
+  }, [{ ...source, answer: undefined, reportPlan, retrievalPath: "semantic-report" },
+    { ...source, id: "second", answer: undefined, reportPlan, retrievalPath: "semantic-report" }]);
+  const response = await route.POST(request("How many lead forms and how much net sales last week?"));
+  const result = await response.json();
+  assert.match(payload.input.at(-1).content, /website\.form_submissions, finance\.net_sales/);
+  assert.equal(result.retrievalPath, "semantic-report");
+  assert.equal(result.reportPlan.tasks.length, 2);
 });
 
 test("a detailed generated answer does not prevent the next user question", async () => {
@@ -158,6 +181,7 @@ test("profitability retrieval supplies both P&L and payroll evidence", async () 
     "@/lib/knowledge-report-ads": {},
     "@/lib/knowledge-report-payroll-ratio": { isPayrollSalesRatioQuestion: () => false },
     "@/lib/knowledge-report-mobile-sales": { isMobileGroomingSalesPerAppointmentQuestion: () => false },
+    "@/lib/knowledge-report-forms": { isFormSubmissionCountQuestion: () => false },
   });
   const results = await reports.findReportSources(questions[1]);
   assert.equal(results.length, 2);

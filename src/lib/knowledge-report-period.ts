@@ -64,6 +64,15 @@ export function reportPeriod(question: string, now = new Date()): ReportPeriod |
     startDate.setUTCDate(startDate.getUTCDate() - 6);
     return { start: startDate.toISOString().slice(0, 10), end: iso(), label: `week ending ${iso()}`, kind: "week" };
   }
+  const namedDay = question.match(/\b(january|february|march|april|may|june|july|august|september|october|november|december|jan|feb|mar|apr|jun|jul|aug|sep|sept|oct|nov|dec)\s+(\d{1,2})(?:st|nd|rd|th)?(?:,\s*|\s+)(20\d{2})\b/i);
+  if (namedDay) {
+    const month = ["jan", "feb", "mar", "apr", "may", "jun", "jul", "aug", "sep", "oct", "nov", "dec"]
+      .indexOf(namedDay[1].toLowerCase().slice(0, 3)) + 1;
+    const iso = `${namedDay[3]}-${String(month).padStart(2, "0")}-${namedDay[2].padStart(2, "0")}`;
+    const parsed = new Date(`${iso}T00:00:00.000Z`);
+    if (Number.isNaN(parsed.getTime()) || parsed.toISOString().slice(0, 10) !== iso) return null;
+    return { start: iso, end: iso, label: iso, kind: "day" };
+  }
   const monthMatch = question.match(/\b(january|february|march|april|may|june|july|august|september|october|november|december|jan|feb|mar|apr|jun|jul|aug|sep|sept|oct|nov|dec)\s*(20\d{2})?\b/i);
   if (monthMatch) {
     const monthName = monthMatch[1].toLowerCase().slice(0, 3);

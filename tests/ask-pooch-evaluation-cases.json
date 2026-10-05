@@ -1,0 +1,72 @@
+{
+  "asOf": "2026-10-05T16:00:00Z",
+  "planCases": [
+    { "id": "website-report-name", "question": "How many new form submissions were submitted last week?", "metrics": ["website.form_submissions"], "analysis": false },
+    { "id": "website-lead-forms", "question": "How many lead forms were submitted last week, Sunday through Saturday?", "metrics": ["website.form_submissions"], "analysis": false },
+    { "id": "website-paraphrase", "question": "How many new client inquiries came in through the website last week?", "metrics": ["website.form_submissions"], "analysis": false },
+    { "id": "website-specific-day", "question": "Count the new website forms received on October 2, 2026.", "metrics": ["website.form_submissions"], "analysis": false },
+    { "id": "google-leads", "question": "How many leads did Google Ads generate last month?", "metrics": ["ads.leads"], "analysis": false },
+    { "id": "meta-lead-forms", "question": "How many Meta lead forms did the ads generate last month?", "metrics": ["ads.leads"], "analysis": false },
+    { "id": "ambiguous-leads", "question": "How many leads did we get last week?", "metrics": [], "analysis": false },
+    { "id": "anonymous-visits-outside-catalog", "question": "How many anonymous Get Started visits did we have last week?", "metrics": [], "analysis": false },
+    { "id": "net-sales", "question": "What were Pet Resort net sales last completed week?", "metrics": ["finance.net_sales"], "analysis": false },
+    { "id": "sales-paraphrase", "question": "How much did the Pet Resort bring in last week?", "metrics": ["finance.net_sales"], "analysis": false },
+    { "id": "orders", "question": "How many Pet Resort orders were there last week?", "metrics": ["finance.order_count"], "analysis": false },
+    { "id": "estimated-profit", "question": "What was estimated Pet Resort profit last week?", "metrics": ["finance.estimated_profit"], "analysis": false },
+    { "id": "estimated-expenses", "question": "What were the estimated expenses in last week's Profit and Loss report?", "metrics": ["finance.estimated_expenses"], "analysis": false },
+    { "id": "boarding-occupancy", "question": "How full was boarding last completed week?", "metrics": ["kpi.boarding_occupancy"], "analysis": false },
+    { "id": "daycare-visits", "question": "How many daycare visits were recorded last completed week?", "metrics": ["kpi.daycare_visits"], "analysis": false },
+    { "id": "revenue-target", "question": "Which Pet Resort service segment missed its weekly revenue target by the most last completed week?", "metrics": ["kpi.targets"], "analysis": true },
+    { "id": "payroll-hours", "question": "How many Pet Resort payroll hours were saved last week?", "metrics": ["payroll.hours"], "analysis": false },
+    { "id": "payroll-ratio", "question": "What was Pet Resort payroll as a percentage of net sales last completed week?", "metrics": ["payroll.sales_ratio"], "analysis": false },
+    { "id": "ad-spend", "question": "How much did we spend on Google Ads last month?", "metrics": ["ads.spend"], "analysis": false },
+    { "id": "ad-cpl", "question": "What was Meta cost per lead in the latest saved reporting month?", "metrics": ["ads.cost_per_lead"], "analysis": false },
+    { "id": "expired-packages", "question": "How many expired daycare packages are in the saved report?", "metrics": ["daycare.expired_packages"], "analysis": false },
+    { "id": "expiring-packages", "question": "How many daycare packages are expiring soon?", "metrics": ["daycare.expiring_packages"], "analysis": false },
+    { "id": "inactive-daycare", "question": "How many inactive daycare customers are on the Not Active report?", "metrics": ["daycare.inactive_customers"], "analysis": false },
+    { "id": "forms-and-sales", "question": "How many lead forms came in last week, and what were Pet Resort net sales?", "metrics": ["website.form_submissions", "finance.net_sales"], "analysis": true },
+    { "id": "forms-and-sales-different-periods", "question": "How many Pet Resort lead forms came in last week, and what were Pet Resort net sales last month?", "metrics": ["website.form_submissions", "finance.net_sales"], "analysis": true },
+    { "id": "ads-and-sales", "question": "Compare Google Ads spend with Pet Resort net sales last month.", "metrics": ["ads.spend", "finance.net_sales"], "analysis": true },
+    { "id": "two-businesses", "question": "Compare Pet Resort net sales with Mobile Grooming net sales last week.", "metrics": ["finance.net_sales", "finance.net_sales"], "analysis": true },
+    { "id": "unsupported-service-form-filter", "question": "How many daycare lead forms did Pet Resort get last week?", "metrics": [], "analysis": false },
+    { "id": "sales-comparison", "question": "How did Pet Resort net sales last week compare with the previous week?", "metrics": ["finance.net_sales"], "analysis": true },
+    { "id": "inactive-strategy", "question": "How many inactive daycare customers could we contact, and what reactivation campaign would you recommend?", "metrics": ["daycare.inactive_customers"], "analysis": true },
+    { "id": "policy-not-a-report", "question": "How should the front desk handle a late daycare pickup?", "metrics": [], "analysis": false },
+    { "id": "person-not-a-report", "question": "What is Jane Smith's phone number?", "metrics": [], "analysis": false }
+  ],
+  "answerCases": [
+    {
+      "id": "forms-and-sales-answer",
+      "question": "How many lead forms came in last week, and what were Pet Resort net sales?",
+      "sources": [
+        { "id": "form-count", "title": "New form submissions: Pet Resort", "kind": "record", "url": "/marketing/website-attribution/new-form-submissions", "excerpt": "Pet Resort saved 7 new-client website form submissions received from 2026-09-27 through 2026-10-03, Eastern inclusive. This includes all submission statuses.", "updatedAt": "2026-10-05T16:00:00Z", "dateKind": "entry" },
+        { "id": "sales-total", "title": "Pet Resort Profit and Loss", "kind": "record", "url": "/finance/profit-loss", "excerpt": "Pet Resort net sales for 2026-09-27 through 2026-10-03 were $19,099.50 from synced revenue-bearing orders. Latest order sync was 2026-10-04.", "updatedAt": "2026-10-04T16:00:00Z", "dateKind": "entry" }
+      ],
+      "mustContain": ["7", "$19,099.50", "2026-09-27"], "mustNotContain": ["google ads leads"]
+    },
+    {
+      "id": "profit-estimate-answer",
+      "question": "Was Pet Resort profitable last week? Show sales and profit, and explain whether this proves actual accounting profit.",
+      "sources": [
+        { "id": "profit", "title": "Pet Resort Profit and Loss", "kind": "record", "url": "/finance/profit-loss", "excerpt": "For 2026-09-27 through 2026-10-03, saved Pet Resort net sales were $19,099.50. The report subtracts a fixed planning expense estimate of $16,500.00 and shows estimated net profit of $2,599.50. Current payroll and actual accounting expenses are not recorded for this period, so actual profit cannot be verified. Latest order sync: 2026-10-04.", "updatedAt": "2026-10-04T16:00:00Z", "dateKind": "entry" }
+      ],
+      "mustContain": ["$19,099.50", "$2,599.50", "actual"], "mustNotContain": ["actual profit was $2,599.50"]
+    },
+    {
+      "id": "ad-missing-data-answer",
+      "question": "Should we shift budget from Google Ads to Meta based on last month's cost per lead and return on investment?",
+      "sources": [
+        { "id": "ad-report", "title": "Saved advertising report", "kind": "record", "url": "/marketing/ad-reporting", "excerpt": "Latest saved month is September 2026. Meta has 25 saved leads, but spend is missing, so its cost per lead is unavailable. No Google Ads report rows are saved for this month. Booked customers, attributed revenue, and contribution costs are unavailable. Return on investment cannot be established from these reports.", "updatedAt": "2026-10-04T16:00:00Z", "dateKind": "entry" }
+      ],
+      "mustContain": ["25", "google", "cannot"], "mustNotContain": ["meta had a lower cost per lead", "google had a lower cost per lead"]
+    },
+    {
+      "id": "inactive-campaign-answer",
+      "question": "How many inactive daycare customers could we contact, and what reactivation campaign would you recommend?",
+      "sources": [
+        { "id": "inactive", "title": "Not Active daycare report", "kind": "record", "url": "/operations/daycare/not-active", "excerpt": "The saved Not Active daycare snapshot generated 2026-10-04 contains 38 customers. This is a potential outreach pool; no response rate, booking rate, or forecast return count is recorded.", "updatedAt": "2026-10-04T16:00:00Z", "dateKind": "source" }
+      ],
+      "mustContain": ["38", "campaign"], "mustNotContain": ["38 customers will return"]
+    }
+  ]
+}
