@@ -1,7 +1,8 @@
 import { getSession } from "@/lib/auth-helpers";
 import { getActiveBusiness } from "@/lib/business-server";
 import { prisma } from "@/lib/prisma";
-import { leadOutcomeWindow, matchingOutcomeCustomerIds, summarizeLeadOutcome, type OutcomeCustomerProfile } from "@/lib/marketing/lead-outcomes";
+import { assignLeadOutcomes, leadOutcomeWindow, matchingOutcomeCustomerIds, type OutcomeCustomerProfile } from "@/lib/marketing/lead-outcomes";
+import { attributionText, classifyLeadAttribution, type LeadAttributionSource, type SubmissionAttribution } from "@/lib/marketing/lead-attribution";
 import { normalizedPhone } from "@/lib/marketing/moego-client-history";
 import { Prisma } from "@prisma/client";
 import Link from "next/link";
@@ -10,6 +11,9 @@ import { SyncLeadOutcomesButton } from "./SyncLeadOutcomesButton";
 const DAYS = [7, 30, 90] as const;
 const money = (cents: number) => (cents / 100).toLocaleString("en-US", { style: "currency", currency: "USD" });
 const eastern = new Intl.DateTimeFormat("en-US", { timeZone: "America/New_York", dateStyle: "medium" });
+const SOURCE_LABELS: Record<LeadAttributionSource, string> = {
+  meta: "Meta", "google-ads": "Google Ads", "google-lsa": "Google LSA", unattributed: "Unattributed",
+};
 
 export async function LeadOutcomesReport({ days: requestedDays }: { days?: string }) {
   const days = DAYS.find((value) => value === Number(requestedDays)) ?? 30;
@@ -21,7 +25,7 @@ export async function LeadOutcomesReport({ days: requestedDays }: { days?: strin
       where: { company: business.company, status: "SYNCED", moegoCustomerId: { not: null }, receivedAt: { gte: since } },
       orderBy: [{ receivedAt: "desc" }, { id: "desc" }],
       take: 500,
-      select: { id: true, company: true, receivedAt: true, firstName: true, lastName: true, phone: true, email: true, moegoCustomerId: true, services: true },
+      select: { id: true, company: true, receivedAt: true, firstName: true, lastName: true, phone: true, email: true, moegoCustomerId: true, services: true, attribution: true },
     }),
     prisma.moegoSyncState.findUnique({ where: { resource: "appointment" } }),
     prisma.moegoSyncState.findUnique({ where: { resource: "order" } }),
@@ -55,41 +59,75 @@ export async function LeadOutcomesReport({ days: requestedDays }: { days?: strin
   const [appointments, orders] = await Promise.all([
     appointmentSync && customerIds.length ? prisma.moegoAppointment.findMany({
       where: { customerMoegoId: { in: customerIds }, createdTime: { gte: since } },
-      select: { customerMoegoId: true, createdTime: true, status: true, isDeleted: true, noShow: true },
+      select: { id: true, customerMoegoId: true, createdTime: true, status: true, isDeleted: true, noShow: true },
     }) : Promise.resolve([]),
     orderSync && customerIds.length ? prisma.moegoOrder.findMany({
       where: { customerMoegoId: { in: customerIds } },
-      select: { customerMoegoId: true, status: true, createdTime: true, salesDatetime: true, completedTime: true, paidCents: true, refundedCents: true },
+      select: { id: true, customerMoegoId: true, status: true, createdTime: true, salesDatetime: true, completedTime: true, paidCents: true, refundedCents: true },
     }) : Promise.resolve([]),
   ]);
-  const byCustomerAppointments = new Map<string, typeof appointments>();
-  const byCustomerOrders = new Map<string, typeof orders>();
-  for (const appointment of appointments) {
-    if (!appointment.customerMoegoId) continue;
-    const list = byCustomerAppointments.get(appointment.customerMoegoId) ?? [];
-    list.push(appointment);
-    byCustomerAppointments.set(appointment.customerMoegoId, list);
-  }
-  for (const order of orders) {
-    if (!order.customerMoegoId) continue;
-    const list = byCustomerOrders.get(order.customerMoegoId) ?? [];
-    list.push(order);
-    byCustomerOrders.set(order.customerMoegoId, list);
-  }
+  const assigned = assignLeadOutcomes(matchedRows.map(({ row, ids }) => ({
+    id: row.id, receivedAt: row.receivedAt, customerIds: ids,
+  })), appointments, orders);
   const outcomes = matchedRows.map(({ row, ids }) => ({
     ...row,
     profileCount: ids.size,
-    result: summarizeLeadOutcome(ids, row.receivedAt,
-      [...ids].flatMap((id) => byCustomerAppointments.get(id) ?? []),
-      [...ids].flatMap((id) => byCustomerOrders.get(id) ?? [])),
+    result: assigned.get(row.id)!,
   }));
   const uniqueOutcomes = new Map<string, typeof outcomes[number]>();
   for (const outcome of outcomes) {
     uniqueOutcomes.set(outcome.moegoCustomerId!, outcome);
   }
-  const totalBooked = [...uniqueOutcomes.values()].reduce((sum, row) => sum + row.result.booked, 0);
-  const totalNetPaidCents = [...uniqueOutcomes.values()].reduce((sum, row) => sum + row.result.netPaidCents, 0);
+  const totalBooked = outcomes.reduce((sum, row) => sum + row.result.booked, 0);
+  const totalNetPaidCents = outcomes.reduce((sum, row) => sum + row.result.netPaidCents, 0);
   const duplicateProfileLeads = outcomes.filter((row) => row.profileCount > 1).length;
+  const attributedOutcomes = outcomes.map((row) => {
+    const attribution = row.attribution && typeof row.attribution === "object" && !Array.isArray(row.attribution)
+      ? row.attribution as SubmissionAttribution : {};
+    const source = classifyLeadAttribution(attribution);
+    return { ...row, source, campaignId: source === "unattributed" ? null : attributionText(attribution, "utm_campaign") };
+  });
+  const metaCampaignIds = [...new Set(attributedOutcomes.filter((row) => row.source === "meta").flatMap((row) => row.campaignId ? [row.campaignId] : []))];
+  const googleCampaignIds = [...new Set(attributedOutcomes.filter((row) => row.source === "google-ads").flatMap((row) => row.campaignId ? [row.campaignId] : []))];
+  const [metaCampaigns, googleCampaigns] = await Promise.all([
+    metaCampaignIds.length ? prisma.metaAdInsight.findMany({
+      where: { campaignId: { in: metaCampaignIds } }, orderBy: { date: "desc" },
+      select: { campaignId: true, campaignName: true },
+    }) : Promise.resolve([]),
+    googleCampaignIds.length ? prisma.financeGoogleCampaignReportRow.findMany({
+      where: { campaignId: { in: googleCampaignIds }, business: { in: [business.key, `${business.key}-manual`, "all-businesses", "all-businesses-manual"] } },
+      orderBy: { updatedAt: "desc" }, select: { campaignId: true, campaign: true },
+    }) : Promise.resolve([]),
+  ]);
+  const campaignNames = new Map<string, string>();
+  for (const campaign of metaCampaigns) {
+    if (campaign.campaignId && campaign.campaignName && !campaignNames.has(`meta|${campaign.campaignId}`)) campaignNames.set(`meta|${campaign.campaignId}`, campaign.campaignName);
+  }
+  for (const campaign of googleCampaigns) {
+    if (campaign.campaignId && !campaignNames.has(`google-ads|${campaign.campaignId}`)) campaignNames.set(`google-ads|${campaign.campaignId}`, campaign.campaign);
+  }
+  type CampaignGroup = { source: LeadAttributionSource; campaignId: string | null; campaignName: string; leads: number; bookedLeads: number; appointments: number; netPaidCents: number };
+  const campaignGroups = new Map<string, CampaignGroup>();
+  for (const outcome of attributedOutcomes) {
+    const key = `${outcome.source}|${outcome.campaignId ?? ""}`;
+    let group = campaignGroups.get(key);
+    if (!group) {
+      group = {
+        source: outcome.source, campaignId: outcome.campaignId,
+        campaignName: outcome.source === "unattributed" ? "Unattributed" : outcome.campaignId
+          ? campaignNames.get(`${outcome.source}|${outcome.campaignId}`) ?? outcome.campaignId : "Campaign not supplied",
+        leads: 0, bookedLeads: 0, appointments: 0, netPaidCents: 0,
+      };
+      campaignGroups.set(key, group);
+    }
+    group.leads++;
+    if (outcome.result.booked > 0) group.bookedLeads++;
+    group.appointments += outcome.result.booked;
+    group.netPaidCents += outcome.result.netPaidCents;
+  }
+  const campaignRows = [...campaignGroups.values()].sort((a, b) =>
+    b.netPaidCents - a.netPaidCents || b.appointments - a.appointments || b.leads - a.leads || a.campaignName.localeCompare(b.campaignName));
+  const totalBookedLeads = outcomes.filter((row) => row.result.booked > 0).length;
   const isAdmin = ["SUPER_ADMIN", "ADMIN"].includes(session?.user?.role ?? "");
   // The general MoeGo sync can advance its order cursor when API permission is
   // denied, so a cursor alone cannot establish that paid totals are current.
@@ -121,14 +159,45 @@ export async function LeadOutcomesReport({ days: requestedDays }: { days?: strin
       {!orderDataAvailable && " Recent order data is unavailable; paid totals are hidden."}
       {incomplete && " Counts may be incomplete while a sync is behind."}
     </p>
-    <div className="overflow-x-auto rounded-xl border border-gray-200 bg-white">
-      <table className="w-full min-w-[820px] text-left text-sm">
+    <div className="mb-6 overflow-x-auto rounded-xl border border-gray-200 bg-white">
+      <div className="border-b border-gray-100 px-4 py-3">
+        <h4 className="font-semibold text-gray-900">Leads, appointments, and paid revenue by campaign</h4>
+        <p className="mt-1 text-xs text-gray-500">Successful MoeGo-linked forms received in the selected period. Outcomes after each form are assigned to its captured campaign; repeat forms receive each appointment or order once, at the latest prior submission. Unattributed leads remain visible.</p>
+      </div>
+      <table className="w-full min-w-[760px] text-left text-sm">
         <thead className="bg-gray-50 text-gray-700"><tr>
-          {["Submitted", "Customer", "Services", "MoeGo profiles", "Booked", "Pending", "First booked", "Net paid after form"].map((label) => <th key={label} className="px-4 py-3 font-medium">{label}</th>)}
+          {["Source", "Campaign", "Leads", "Booked leads", "Appointments", "Net paid after form"].map((label) => <th key={label} className="px-4 py-3 font-medium">{label}</th>)}
         </tr></thead>
-        <tbody>{outcomes.map((row) => <tr key={row.id} className="border-t border-gray-100 align-top">
+        <tbody>
+          {campaignRows.map((row) => <tr key={`${row.source}|${row.campaignId ?? ""}`} className="border-t border-gray-100">
+            <td className="px-4 py-3">{SOURCE_LABELS[row.source]}</td>
+            <td className="max-w-72 break-words px-4 py-3">{row.campaignName}{row.campaignId && row.campaignId !== row.campaignName && <div className="text-xs text-gray-500">ID: {row.campaignId}</div>}</td>
+            <td className="px-4 py-3 tabular-nums">{row.leads}</td>
+            <td className="px-4 py-3 tabular-nums">{appointmentSync ? row.bookedLeads : "—"}</td>
+            <td className="px-4 py-3 tabular-nums">{appointmentSync ? row.appointments : "—"}</td>
+            <td className="px-4 py-3 tabular-nums">{orderDataAvailable ? money(row.netPaidCents) : "—"}</td>
+          </tr>)}
+          {campaignRows.length === 0 && <tr><td colSpan={6} className="px-4 py-8 text-center text-gray-500">No linked website leads in this period.</td></tr>}
+          {campaignRows.length > 0 && <tr className="border-t border-gray-200 bg-gray-50 font-semibold text-gray-900">
+            <td className="px-4 py-3" colSpan={2}>Total</td>
+            <td className="px-4 py-3 tabular-nums">{outcomes.length}</td>
+            <td className="px-4 py-3 tabular-nums">{appointmentSync ? totalBookedLeads : "—"}</td>
+            <td className="px-4 py-3 tabular-nums">{appointmentSync ? totalBooked : "—"}</td>
+            <td className="px-4 py-3 tabular-nums">{orderDataAvailable ? money(totalNetPaidCents) : "—"}</td>
+          </tr>}
+        </tbody>
+      </table>
+    </div>
+    <div className="overflow-x-auto rounded-xl border border-gray-200 bg-white">
+      <table className="w-full min-w-[1000px] text-left text-sm">
+        <thead className="bg-gray-50 text-gray-700"><tr>
+          {["Submitted", "Customer", "Source", "Campaign", "Services", "MoeGo profiles", "Booked", "Pending", "First booked", "Net paid after form"].map((label) => <th key={label} className="px-4 py-3 font-medium">{label}</th>)}
+        </tr></thead>
+        <tbody>{attributedOutcomes.map((row) => <tr key={row.id} className="border-t border-gray-100 align-top">
           <td className="whitespace-nowrap px-4 py-3">{eastern.format(row.receivedAt)}</td>
           <td className="px-4 py-3">{[row.firstName, row.lastName].filter(Boolean).join(" ") || row.moegoCustomerId}</td>
+          <td className="px-4 py-3">{SOURCE_LABELS[row.source]}</td>
+          <td className="max-w-56 break-words px-4 py-3">{row.source === "unattributed" ? "—" : row.campaignId ? campaignNames.get(`${row.source}|${row.campaignId}`) ?? row.campaignId : "—"}</td>
           <td className="px-4 py-3">{row.services.join(", ") || "—"}</td>
           <td className="px-4 py-3 tabular-nums">{row.profileCount}</td>
           <td className="px-4 py-3 tabular-nums">{appointmentSync ? row.result.booked : "—"}</td>
@@ -136,7 +205,7 @@ export async function LeadOutcomesReport({ days: requestedDays }: { days?: strin
           <td className="whitespace-nowrap px-4 py-3">{appointmentSync && row.result.firstBookedAt ? eastern.format(row.result.firstBookedAt) : "—"}</td>
           <td className="whitespace-nowrap px-4 py-3 tabular-nums">{orderDataAvailable ? money(row.result.netPaidCents) : "—"}</td>
         </tr>)}
-        {outcomes.length === 0 && <tr><td colSpan={8} className="px-4 py-8 text-center text-gray-500">No linked website submissions in this range.</td></tr>}
+        {outcomes.length === 0 && <tr><td colSpan={10} className="px-4 py-8 text-center text-gray-500">No linked website submissions in this range.</td></tr>}
         </tbody>
       </table>
     </div>

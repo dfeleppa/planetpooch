@@ -33,6 +33,15 @@ export type OrderOutcome = {
   refundedCents: number;
 };
 
+export type OutcomeLead = {
+  id: string;
+  receivedAt: Date;
+  customerIds: ReadonlySet<string>;
+};
+
+export type RecordedAppointment = AppointmentOutcome & { id: string };
+export type RecordedOrder = OrderOutcome & { id: string };
+
 const BOOKED = new Set(["CONFIRMED", "CHECKED_IN", "READY", "FINISHED"]);
 const REVENUE = new Set(["PROCESSING", "COMPLETED"]);
 
@@ -98,4 +107,51 @@ export function summarizeLeadOutcome(
     refundedCents += order.refundedCents;
   }
   return { booked, pending, firstBookedAt, netPaidCents: paidCents - refundedCents };
+}
+
+/** Give each appointment and order to the latest qualifying form, once. */
+export function assignLeadOutcomes(
+  leads: OutcomeLead[],
+  appointments: RecordedAppointment[],
+  orders: RecordedOrder[],
+) {
+  const byCustomer = new Map<string, OutcomeLead[]>();
+  const allocations = new Map(leads.map((lead) => [lead.id, {
+    lead, appointments: [] as RecordedAppointment[], orders: [] as RecordedOrder[],
+  }]));
+  for (const lead of leads) {
+    for (const customerId of lead.customerIds) {
+      const candidates = byCustomer.get(customerId) ?? [];
+      candidates.push(lead);
+      byCustomer.set(customerId, candidates);
+    }
+  }
+  for (const candidates of byCustomer.values()) {
+    candidates.sort((a, b) => b.receivedAt.getTime() - a.receivedAt.getTime() || b.id.localeCompare(a.id));
+  }
+  const owner = (customerId: string | null, eventAt: Date | null) =>
+    customerId && eventAt
+      ? byCustomer.get(customerId)?.find((lead) => lead.receivedAt <= eventAt)
+      : undefined;
+  const seenAppointments = new Set<string>();
+  for (const appointment of appointments) {
+    if (seenAppointments.has(appointment.id)) continue;
+    seenAppointments.add(appointment.id);
+    const lead = owner(appointment.customerMoegoId, appointment.createdTime);
+    if (lead) allocations.get(lead.id)!.appointments.push(appointment);
+  }
+  const seenOrders = new Set<string>();
+  for (const order of orders) {
+    if (seenOrders.has(order.id)) continue;
+    seenOrders.add(order.id);
+    const saleAt = order.salesDatetime ?? order.completedTime ?? order.createdTime;
+    const lead = owner(order.customerMoegoId, saleAt);
+    if (lead) allocations.get(lead.id)!.orders.push(order);
+  }
+  return new Map([...allocations].map(([id, allocation]) => [id, summarizeLeadOutcome(
+    allocation.lead.customerIds,
+    allocation.lead.receivedAt,
+    allocation.appointments,
+    allocation.orders,
+  )]));
 }

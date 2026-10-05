@@ -16,6 +16,12 @@ test("classifies Google LSA before generic Google", () => {
   assert.equal(classifyLeadAttribution({ utm_source: "google", utm_campaign: "local-services-ads" }), "google-lsa");
 });
 
+test("explicit Google source wins over malformed or stale Meta click data", () => {
+  assert.equal(classifyLeadAttribution({ utm_source: "google", utm_campaign: "24260574436", fbclid: "Consent wording from a form field" }), "google-ads");
+  assert.equal(classifyLeadAttribution({ utm_source: "google", fbclid: "PAZXh0bgNhZW0BMQABp9" }), "google-ads");
+  assert.equal(classifyLeadAttribution({ fbclid: "Consent wording from a form field" }), "unattributed");
+});
+
 test("leaves historical and direct submissions unattributed", () => {
   assert.equal(classifyLeadAttribution({}), "unattributed");
   assert.equal(classifyLeadAttribution({ utm_source: "direct" }), "unattributed");

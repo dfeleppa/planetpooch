@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { matchingOutcomeCustomerIds, summarizeLeadOutcome, type AppointmentOutcome, type OrderOutcome } from "../src/lib/marketing/lead-outcomes";
+import { assignLeadOutcomes, matchingOutcomeCustomerIds, summarizeLeadOutcome, type AppointmentOutcome, type OrderOutcome } from "../src/lib/marketing/lead-outcomes";
 
 const receivedAt = new Date("2026-10-01T12:00:00Z");
 const appointment = (customerMoegoId: string, status: string, createdTime = "2026-10-02T12:00:00Z"): AppointmentOutcome => ({
@@ -53,4 +53,21 @@ test("can verify a renamed duplicate by matching email and phone", () => {
     firstName: "Julie", lastName: "Linzer", email: "julie@example.com",
   }, [{ moegoId: "renamed-profile", mainPhoneNumber: "15552223333", name: "Julie Smith", email: "JULIE@example.com" }]);
   assert.equal(ids.has("renamed-profile"), true);
+});
+
+test("assigns repeat-customer appointments and payments to one prior form each", () => {
+  const results = assignLeadOutcomes([
+    { id: "campaign-a", receivedAt, customerIds: new Set(["old-profile", "new-profile"]) },
+    { id: "campaign-b", receivedAt: new Date("2026-10-03T00:00:00Z"), customerIds: new Set(["new-profile"]) },
+  ], [
+    { ...appointment("new-profile", "CONFIRMED", "2026-10-02T12:00:00Z"), id: "appointment-a" },
+    { ...appointment("new-profile", "FINISHED", "2026-10-04T12:00:00Z"), id: "appointment-b" },
+    { ...appointment("new-profile", "FINISHED", "2026-10-04T12:00:00Z"), id: "appointment-b" },
+  ], [
+    { ...order("old-profile", 10000, 0, "2026-10-02T12:00:00Z"), id: "order-a" },
+    { ...order("new-profile", 20000, 1000, "2026-10-04T12:00:00Z"), id: "order-b" },
+    { ...order("new-profile", 20000, 1000, "2026-10-04T12:00:00Z"), id: "order-b" },
+  ]);
+  assert.deepEqual([results.get("campaign-a")?.booked, results.get("campaign-b")?.booked], [1, 1]);
+  assert.deepEqual([results.get("campaign-a")?.netPaidCents, results.get("campaign-b")?.netPaidCents], [10000, 19000]);
 });

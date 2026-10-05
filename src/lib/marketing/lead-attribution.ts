@@ -6,6 +6,10 @@ function text(value: unknown): string {
   return typeof value === "string" ? value.trim() : "";
 }
 
+function clickId(value: unknown): boolean {
+  return /^[A-Za-z0-9_-]{6,}$/.test(text(value));
+}
+
 export function classifyLeadAttribution(attribution: SubmissionAttribution): LeadAttributionSource {
   const source = text(attribution.utm_source).toLowerCase();
   const medium = text(attribution.utm_medium).toLowerCase();
@@ -13,14 +17,10 @@ export function classifyLeadAttribution(attribution: SubmissionAttribution): Lea
   const combined = `${source} ${medium} ${campaign}`;
 
   if (/\b(lsa|local[ _-]?services?)\b/.test(combined)) return "google-lsa";
-  if (
-    text(attribution.fbclid) ||
-    ["fb", "facebook", "meta", "instagram", "ig"].includes(source)
-  ) return "meta";
-  if (
-    text(attribution.gclid) || text(attribution.gbraid) || text(attribution.wbraid) ||
-    source === "google" || source === "google-ads" || source === "google_ads"
-  ) return "google-ads";
+  if (["fb", "facebook", "meta", "instagram", "ig"].includes(source)) return "meta";
+  if (["google", "google-ads", "google_ads"].includes(source)) return "google-ads";
+  if (clickId(attribution.gclid) || clickId(attribution.gbraid) || clickId(attribution.wbraid)) return "google-ads";
+  if (clickId(attribution.fbclid)) return "meta";
 
   return "unattributed";
 }
