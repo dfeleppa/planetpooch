@@ -7,6 +7,16 @@ import { isKnowledgeOwner } from "@/lib/knowledge-owner";
 export async function proxy(req: NextRequest) {
   const { pathname } = req.nextUrl;
 
+  // Retire ad brief, script, and asset editing endpoints while preserving
+  // historical database records and read-only campaign reporting.
+  if (/^\/api\/marketing\/(ideas|angles|scripts|ad-assets|voice)(?:\/|$)/.test(pathname)) {
+    return new NextResponse(null, { status: 410 });
+  }
+
+  if (/^\/marketing\/(create|ideas|scripts|voice)(?:\/|$)/.test(pathname)) {
+    return NextResponse.redirect(new URL("/marketing/ad-reporting", req.url));
+  }
+
   if (pathname === "/finance") {
     const target = req.nextUrl.clone();
     target.pathname = "/finance/profit-loss";
@@ -127,6 +137,11 @@ export const config = {
     "/maintenance/:path*",
     "/operations/:path*",
     "/marketing/:path*",
+    "/api/marketing/ideas/:path*",
+    "/api/marketing/angles/:path*",
+    "/api/marketing/scripts/:path*",
+    "/api/marketing/ad-assets/:path*",
+    "/api/marketing/voice/:path*",
     "/finance/:path*",
     "/change-password",
   ],

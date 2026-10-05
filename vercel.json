@@ -9,6 +9,10 @@
       "schedule": "30 7 * * *"
     },
     {
+      "path": "/api/marketing/lead-outcomes/cron",
+      "schedule": "0 8 * * *"
+    },
+    {
       "path": "/api/finance/moego/daycare-weekly/cron",
       "schedule": "0 12 * * 1"
     },

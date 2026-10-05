@@ -12,18 +12,15 @@ import {
   formatRoas,
   getAdAggregates,
   getCampaigns,
-  getLinkableScripts,
   type SortColumn,
   type SortDir,
 } from "@/lib/marketing/performance";
-import { AdLinkPicker } from "../performance/AdLinkPicker";
 import { PerformanceActions } from "../performance/PerformanceActions";
 import { PerformanceFilters } from "../performance/PerformanceFilters";
 
 type Query = {
   days?: string;
   campaign?: string;
-  link?: string;
   sort?: string;
   dir?: string;
 };
@@ -37,22 +34,15 @@ function parseSort(value: string | undefined): SortColumn {
   return (SORTABLE_COLUMNS as readonly string[]).includes(value ?? "") ? value as SortColumn : "spend";
 }
 
-function parseLink(value: string | undefined): "all" | "linked" | "unlinked" {
-  return value === "linked" || value === "unlinked" ? value : "all";
-}
-
 export async function MetaCreativePerformance({ searchParams }: { searchParams: Query }) {
   const days = parseDays(searchParams.days);
   const campaign = searchParams.campaign?.trim() ?? "";
-  const link = parseLink(searchParams.link);
   const sort = parseSort(searchParams.sort);
   const dir: SortDir = searchParams.dir === "asc" ? "asc" : "desc";
 
-  const [ads, campaigns, scripts, unlinked, assignments] = await Promise.all([
-    getAdAggregates({ days, campaign, linked: link, sort, dir }),
+  const [ads, campaigns, assignments] = await Promise.all([
+    getAdAggregates({ days, campaign, sort, dir }),
     getCampaigns(days),
-    getLinkableScripts(),
-    getAdAggregates({ days, linked: "unlinked" }),
     getCampaignBusinessAssignments(),
   ]);
   const totals = ads.reduce((acc, ad) => ({
@@ -82,21 +72,11 @@ export async function MetaCreativePerformance({ searchParams }: { searchParams: 
         <Metric label="ROAS" value={formatRoas(totals.revenue, totals.spend)} />
       </div>
 
-      <div className="mb-5 grid gap-3 lg:grid-cols-3">
-        <DecisionCard eyebrow="Scale" title={best?.adName ?? "No proven winner yet"} detail={best ? `${best.leads} leads · ${formatCpl(best.spendCents, best.leads)} CPL` : "A creative appears here after at least 3 leads."} tone="good" />
-        <DecisionCard eyebrow="Review" title={needsAttention?.adName ?? "No obvious spend leak"} detail={needsAttention ? `${formatCents(needsAttention.spendCents)} spent with no leads` : "No active creative has spend without results."} tone="warn" />
-        <DecisionCard eyebrow="Diagnostics" title={`${unlinked.length} unlinked creative${unlinked.length === 1 ? "" : "s"}`} detail="Connect ads to content briefs so winners can produce new variants." tone="neutral" />
+      <div className="mb-5 grid gap-3 lg:grid-cols-2">
+        <DecisionCard eyebrow="Low reported CPL" title={best?.adName ?? "No eligible creative yet"} detail={best ? `${best.leads} platform-reported leads · ${formatCpl(best.spendCents, best.leads)} CPL` : "A creative appears here after at least 3 reported leads."} tone="good" />
+        <DecisionCard eyebrow="Check attribution" title={needsAttention?.adName ?? "No spend without reported leads"} detail={needsAttention ? `${formatCents(needsAttention.spendCents)} spent with no platform-reported leads; verify MoeGo inquiries before changing the ad.` : "All spending creatives have platform-reported results."} tone="warn" />
       </div>
-
-      <div className="mb-3 flex flex-wrap gap-1">
-        {([ ["all", "All creatives"], ["linked", "Linked content"], ["unlinked", "Needs linking"] ] as const).map(([value, label]) => {
-          const params = new URLSearchParams({ view: "creatives" });
-          if (days !== 30) params.set("days", String(days));
-          if (campaign) params.set("campaign", campaign);
-          if (value !== "all") params.set("link", value);
-          return <Link key={value} href={`/marketing/evaluate?${params}`} className={`rounded-full px-3 py-1.5 text-xs font-medium ${link === value ? "bg-gray-900 text-white" : "bg-gray-100 text-gray-600 hover:bg-gray-200"}`}>{label}</Link>;
-        })}
-      </div>
+      <p className="mb-4 text-xs text-gray-500">Platform-reported leads may not match MoeGo inquiries or bookings. Use the MoeGo lead outcomes view before changing budgets.</p>
 
       <Card>
         <CardHeader><h3 className="text-base font-semibold text-gray-900">Meta creatives ({ads.length})</h3></CardHeader>
@@ -120,8 +100,6 @@ export async function MetaCreativePerformance({ searchParams }: { searchParams: 
                       <p className="truncate font-medium text-gray-900">{ad.adName}</p>
                       <div className="mt-0.5 flex items-center gap-2 text-xs text-gray-500">
                         {ad.campaignName && <span className="truncate">{ad.campaignName}</span>}
-                        <AdLinkPicker adId={ad.adId} adName={ad.adName} currentScriptId={ad.scriptId} currentScriptIdeaTitle={ad.scriptIdeaTitle} scripts={scripts} />
-                        {ad.scriptId && <Link href={`/marketing/scripts/${ad.scriptId}`} className="text-blue-700 hover:underline">open</Link>}
                       </div>
                     </td>
                     <NumberCell>{formatCents(ad.spendCents)}</NumberCell>
@@ -159,10 +137,9 @@ function SortHeader({ label, column, sort, dir, query }: { label: string; column
   const params = new URLSearchParams({ view: "creatives" });
   if (query.days) params.set("days", query.days);
   if (query.campaign) params.set("campaign", query.campaign);
-  if (query.link) params.set("link", query.link);
   params.set("sort", column);
   const nextDirection = sort === column && dir === "desc" ? "asc" : "desc";
   if (nextDirection === "asc") params.set("dir", "asc");
   const arrow = sort === column ? (dir === "desc" ? "↓" : "↑") : "";
-  return <th className="px-2 py-2 text-right font-medium"><Link href={`/marketing/evaluate?${params}`} scroll={false} className="hover:text-gray-900">{label} {arrow}</Link></th>;
+  return <th className="px-2 py-2 text-right font-medium"><Link href={`/marketing/ad-reporting?${params}`} scroll={false} className="hover:text-gray-900">{label} {arrow}</Link></th>;
 }

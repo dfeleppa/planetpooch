@@ -1570,6 +1570,26 @@ model MoegoOrder {
   @@index([businessId])
 }
 
+/// Minimal appointment projection for matching a saved website submission to
+/// bookings without relying on a phone number or a campaign-side conversion.
+model MoegoAppointment {
+  id              String    @id @default(cuid())
+  moegoId         String    @unique
+  customerMoegoId String?
+  orderMoegoId    String?
+  businessId      String?
+  status          String?
+  isDeleted       Boolean   @default(false)
+  noShow          Boolean   @default(false)
+  createdTime     DateTime?
+  startTime       DateTime?
+  lastUpdatedTime DateTime?
+  syncedAt        DateTime  @default(now())
+
+  @@index([customerMoegoId, createdTime])
+  @@index([orderMoegoId])
+}
+
 model MoegoLead {
   id              String    @id @default(cuid())
   moegoId         String    @unique

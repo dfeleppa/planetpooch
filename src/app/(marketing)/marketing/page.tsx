@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
 
 export default function MarketingPage() {
-  redirect("/marketing/evaluate");
+  redirect("/marketing/ad-reporting");
 }
