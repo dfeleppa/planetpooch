@@ -12,6 +12,8 @@ type SearchParams = {
   source?: string;
   view?: string;
   days?: string;
+  from?: string;
+  to?: string;
   campaign?: string;
   sort?: string;
   dir?: string;

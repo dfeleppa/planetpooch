@@ -41,6 +41,8 @@ export { DAY_PRESETS, type DayPreset } from "./performance-options";
 
 export type AggregateOptions = {
   days?: number;
+  from?: string;
+  to?: string;
   /** Filter to a single campaign name; undefined/empty = all campaigns. */
   campaign?: string;
   /** Filter to ads linked to this scriptId. */
@@ -56,6 +58,12 @@ function windowStart(days: number): Date {
   since.setUTCHours(0, 0, 0, 0);
   since.setUTCDate(since.getUTCDate() - (days - 1));
   return since;
+}
+
+function insightDateFilter(options: { days?: number; from?: string; to?: string }) {
+  return options.from && options.to
+    ? { gte: new Date(`${options.from}T00:00:00.000Z`), lte: new Date(`${options.to}T00:00:00.000Z`) }
+    : { gte: windowStart(options.days ?? 30) };
 }
 
 /** Shape that any sortable row needs. Both AdAggregate and ScriptLeaderboardRow satisfy this. */
@@ -130,7 +138,6 @@ function compareMetricRows(
 export async function getAdAggregates(
   options: AggregateOptions = {}
 ): Promise<AdAggregate[]> {
-  const days = options.days ?? 30;
   const sort = options.sort ?? "spend";
   const dir = options.dir ?? "desc";
   const campaign = options.campaign?.trim() || undefined;
@@ -142,7 +149,7 @@ export async function getAdAggregates(
   const rows = await prisma.metaAdInsight.findMany({
     where: {
       ...await metaBusinessWhere(),
-      date: { gte: windowStart(days) },
+      date: insightDateFilter(options),
       ...(campaign ? { campaignName: campaign } : {}),
       ...(scriptId ? { scriptId } : {}),
       ...(linked === "linked"
@@ -376,11 +383,11 @@ export async function getLinkableScripts(
 }
 
 /** Distinct campaign names seen in the trailing-N-day window, sorted alphabetically. */
-export async function getCampaigns(days = 30): Promise<string[]> {
+export async function getCampaigns(days = 30, from?: string, to?: string): Promise<string[]> {
   const rows = await prisma.metaAdInsight.findMany({
     where: {
       ...await metaBusinessWhere(),
-      date: { gte: windowStart(days) },
+      date: insightDateFilter({ days, from, to }),
       campaignName: { not: null },
     },
     select: { campaignName: true },

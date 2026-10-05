@@ -20,6 +20,8 @@ import { PerformanceFilters } from "../performance/PerformanceFilters";
 
 type Query = {
   days?: string;
+  from?: string;
+  to?: string;
   campaign?: string;
   sort?: string;
   dir?: string;
@@ -36,13 +38,16 @@ function parseSort(value: string | undefined): SortColumn {
 
 export async function MetaCreativePerformance({ searchParams }: { searchParams: Query }) {
   const days = parseDays(searchParams.days);
+  const validDate = (value?: string) => !!value && /^\d{4}-\d{2}-\d{2}$/.test(value) && !Number.isNaN(Date.parse(`${value}T00:00:00Z`)) && new Date(`${value}T00:00:00Z`).toISOString().slice(0, 10) === value;
+  const from = validDate(searchParams.from) && validDate(searchParams.to) && searchParams.from! <= searchParams.to! ? searchParams.from : undefined;
+  const to = from ? searchParams.to : undefined;
   const campaign = searchParams.campaign?.trim() ?? "";
   const sort = parseSort(searchParams.sort);
   const dir: SortDir = searchParams.dir === "asc" ? "asc" : "desc";
 
   const [ads, campaigns, assignments] = await Promise.all([
-    getAdAggregates({ days, campaign, sort, dir }),
-    getCampaigns(days),
+    getAdAggregates({ days, from, to, campaign, sort, dir }),
+    getCampaigns(days, from, to),
     getCampaignBusinessAssignments(),
   ]);
   const totals = ads.reduce((acc, ad) => ({
@@ -60,12 +65,12 @@ export async function MetaCreativePerformance({ searchParams }: { searchParams: 
     <div>
       <CampaignBusinessAssignments campaigns={assignments} />
       <div className="mb-4 flex flex-col gap-3 rounded-xl border border-gray-200 bg-white p-4 lg:flex-row lg:items-center lg:justify-between">
-        <PerformanceFilters days={days} campaign={campaign} campaigns={campaigns} />
+        <PerformanceFilters days={days} from={from} to={to} campaign={campaign} campaigns={campaigns} />
         <PerformanceActions />
       </div>
 
       <div className="mb-5 grid grid-cols-2 gap-3 lg:grid-cols-5">
-        <Metric label={`Spend · ${days}d`} value={formatCents(totals.spend)} />
+        <Metric label={from && to ? `Spend · ${from} to ${to}` : `Spend · ${days}d`} value={formatCents(totals.spend)} />
         <Metric label="Leads" value={totals.leads.toLocaleString()} />
         <Metric label="CPL" value={formatCpl(totals.spend, totals.leads)} />
         <Metric label="Purchases" value={totals.purchases.toLocaleString()} />
@@ -136,6 +141,7 @@ function NumberCell({ children }: { children: React.ReactNode }) {
 function SortHeader({ label, column, sort, dir, query }: { label: string; column: SortColumn; sort: SortColumn; dir: SortDir; query: Query }) {
   const params = new URLSearchParams({ view: "creatives" });
   if (query.days) params.set("days", query.days);
+  if (query.from && query.to) { params.set("from", query.from); params.set("to", query.to); }
   if (query.campaign) params.set("campaign", query.campaign);
   params.set("sort", column);
   const nextDirection = sort === column && dir === "desc" ? "asc" : "desc";

@@ -1,16 +1,20 @@
 "use client";
 
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { useTransition } from "react";
+import { useState, useTransition } from "react";
 import { cn } from "@/lib/utils";
 import { DAY_PRESETS } from "@/lib/marketing/performance-options";
 
 export function PerformanceFilters({
   days,
+  from,
+  to,
   campaign,
   campaigns,
 }: {
   days: number;
+  from?: string;
+  to?: string;
   campaign: string;
   campaigns: string[];
 }) {
@@ -18,6 +22,8 @@ export function PerformanceFilters({
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const [isPending, startTransition] = useTransition();
+  const [startDate, setStartDate] = useState(from ?? "");
+  const [endDate, setEndDate] = useState(to ?? "");
 
   function update(patch: Record<string, string | undefined>) {
     const next = new URLSearchParams(searchParams.toString());
@@ -45,19 +51,28 @@ export function PerformanceFilters({
           <button
             key={d}
             type="button"
-            onClick={() => update({ days: d === 30 ? undefined : String(d) })}
+            onClick={() => { setStartDate(""); setEndDate(""); update({ days: d === 30 ? undefined : String(d), from: undefined, to: undefined }); }}
             className={cn(
               "px-3 py-1 text-sm rounded-md transition-colors",
-              d === days
+              !from && d === days
                 ? "bg-blue-600 text-white"
                 : "text-gray-600 hover:bg-gray-100"
             )}
-            aria-pressed={d === days}
+            aria-pressed={!from && d === days}
           >
             {d}d
           </button>
         ))}
       </div>
+
+      <form className="flex flex-wrap items-center gap-2" onSubmit={(event) => {
+        event.preventDefault();
+        if (startDate && endDate && startDate <= endDate) update({ from: startDate, to: endDate, days: undefined });
+      }}>
+        <label className="text-xs text-gray-600">From <input type="date" value={startDate} onChange={(event) => setStartDate(event.target.value)} className="rounded-lg border border-gray-300 px-2 py-1.5 text-sm text-gray-900" required /></label>
+        <label className="text-xs text-gray-600">To <input type="date" value={endDate} min={startDate || undefined} onChange={(event) => setEndDate(event.target.value)} className="rounded-lg border border-gray-300 px-2 py-1.5 text-sm text-gray-900" required /></label>
+        <button type="submit" disabled={isPending || !startDate || !endDate || startDate > endDate} className="rounded-lg bg-blue-600 px-3 py-1.5 text-sm text-white disabled:opacity-50">Apply</button>
+      </form>
 
       <select
         value={campaign}
@@ -79,10 +94,10 @@ export function PerformanceFilters({
         ))}
       </select>
 
-      {(campaign || days !== 30) && (
+      {(campaign || days !== 30 || from) && (
         <button
           type="button"
-          onClick={() => update({ days: undefined, campaign: undefined })}
+          onClick={() => { setStartDate(""); setEndDate(""); update({ days: undefined, from: undefined, to: undefined, campaign: undefined }); }}
           className="text-xs text-gray-500 hover:text-gray-700 underline"
         >
           Clear
