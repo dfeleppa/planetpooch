@@ -11,6 +11,10 @@ export function InsuranceTable({ vans, canEdit }: { vans: Row[]; canEdit: boolea
   const [rows, setRows] = useState(vans);
   const [saving, setSaving] = useState<number | null>(null);
   const [message, setMessage] = useState("");
+  const totalPremium = rows.reduce((total, row) => {
+    const premium = Number(row.premium);
+    return row.premium.trim() && Number.isFinite(premium) ? total + Math.round(premium * 100) : total;
+  }, 0) / 100;
   function update(number: number, key: "carrier" | "deductible" | "premium", value: string) {
     setRows(current => current.map(row => row.number === number ? { ...row, [key]: value } : row));
   }
@@ -48,6 +52,13 @@ export function InsuranceTable({ vans, canEdit }: { vans: Row[]; canEdit: boolea
             <td className="px-4 py-3"><button type="button" disabled={saving !== null} onClick={() => void save(row)} className="rounded bg-pp-accent px-3 py-1 font-medium text-white disabled:opacity-50">{saving === row.number ? "Saving…" : "Save"}</button></td>
           </> : <><td className="px-4 py-3">{row.carrier || "—"}</td><td className="px-4 py-3">{row.deductible ? `$${Number(row.deductible).toFixed(2)}` : "—"}</td><td className="px-4 py-3">{row.premium ? `$${Number(row.premium).toFixed(2)}` : "—"}</td></>}
         </tr>)}</tbody>
+        <tfoot className="border-t-2 border-gray-200 bg-gray-50 font-semibold text-gray-900">
+          <tr>
+            <th scope="row" colSpan={7} className="px-4 py-3 text-right">Total premiums</th>
+            <td className="whitespace-nowrap px-4 py-3">{totalPremium.toLocaleString("en-US", { style: "currency", currency: "USD" })}</td>
+            {canEdit && <td />}
+          </tr>
+        </tfoot>
       </table>
     </div>
   </div>;
