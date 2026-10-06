@@ -81,7 +81,7 @@ export async function MetaCreativePerformance({ searchParams }: { searchParams: 
         <DecisionCard eyebrow="Low reported CPL" title={best?.adName ?? "No eligible creative yet"} detail={best ? `${best.leads} platform-reported leads · ${formatCpl(best.spendCents, best.leads)} CPL` : "A creative appears here after at least 3 reported leads."} tone="good" />
         <DecisionCard eyebrow="Check attribution" title={needsAttention?.adName ?? "No spend without reported leads"} detail={needsAttention ? `${formatCents(needsAttention.spendCents)} spent with no platform-reported leads; verify MoeGo inquiries before changing the ad.` : "All spending creatives have platform-reported results."} tone="warn" />
       </div>
-      <p className="mb-4 text-xs text-gray-500">Platform-reported leads may not match MoeGo inquiries or bookings. Use the MoeGo lead outcomes view before changing budgets.</p>
+      <p className="mb-4 text-xs text-gray-500">Platform-reported leads may not match MoeGo inquiries or bookings. Check MoeGo outcomes in Campaign results before changing budgets.</p>
 
       <Card>
         <CardHeader><h3 className="text-base font-semibold text-gray-900">Meta creatives ({ads.length})</h3></CardHeader>
