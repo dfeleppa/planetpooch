@@ -28,27 +28,41 @@ export default async function VansPage() {
         <span aria-current="page" className="border-b-2 border-pp-accent pb-3 text-pp-accent">Fleet</span>
         <Link href="/maintenance/vans/insurance?company=GROOMING" className="pb-3 text-gray-500 hover:text-gray-900">Insurance</Link>
       </nav>
-      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-        {vans.map((van) => (
-          <Link key={van.id} href={`/maintenance/vans/${van.number}`} className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm transition-shadow hover:shadow-md">
-            <div className="flex items-start justify-between gap-3">
-              <div>
-                <h2 className="text-lg font-semibold text-gray-900">Van {van.number}</h2>
-                <p className="text-sm text-gray-500">{[van.year, van.make, van.model].filter(Boolean).join(" ") || "Vehicle details needed"}</p>
-              </div>
-              <span className={`rounded-full px-2 py-1 text-xs font-medium ${van.status === "ACTIVE" ? "bg-green-100 text-green-800" : "bg-gray-100 text-gray-700"}`}>
-                {van.status === "ACTIVE" ? "Active" : van.status === "IN_SERVICE" ? "In service" : "Out of service"}
-              </span>
-            </div>
-            <dl className="mt-5 grid grid-cols-2 gap-3 text-sm">
-              <div><dt className="text-gray-500">Plate</dt><dd className="font-medium text-gray-900">{van.licensePlate || "—"}</dd></div>
-              <div><dt className="text-gray-500">{van.vin?.length === 4 ? "VIN last 4" : "VIN"}</dt><dd className="break-all font-medium text-gray-900">{van.vin || "—"}</dd></div>
-              <div><dt className="text-gray-500">Mileage</dt><dd className="font-medium text-gray-900">{van.mileage == null ? "—" : van.mileage.toLocaleString()}</dd></div>
-              <div><dt className="text-gray-500">Last service</dt><dd className="font-medium text-gray-900">{dateLabel(van.records[0]?.serviceDate ?? null)}</dd></div>
-              <div><dt className="text-gray-500">Registration</dt><dd className="font-medium text-gray-900">{dateLabel(van.registrationExpiry)}</dd></div>
-            </dl>
-          </Link>
-        ))}
+      <div className="overflow-x-auto rounded-xl border border-gray-200 bg-white shadow-sm">
+        <table className="w-full min-w-[1000px] divide-y divide-gray-200 text-sm">
+          <thead className="bg-gray-50 text-left text-gray-700">
+            <tr>
+              <th scope="col" className="px-4 py-3">Van</th>
+              <th scope="col" className="px-4 py-3">Vehicle</th>
+              <th scope="col" className="px-4 py-3">Status</th>
+              <th scope="col" className="px-4 py-3">Plate</th>
+              <th scope="col" className="px-4 py-3">VIN</th>
+              <th scope="col" className="px-4 py-3">Mileage</th>
+              <th scope="col" className="px-4 py-3">Last service</th>
+              <th scope="col" className="px-4 py-3">Registration</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-gray-100">
+            {vans.map((van) => (
+              <tr key={van.id} className="hover:bg-gray-50">
+                <th scope="row" className="whitespace-nowrap px-4 py-3 text-left font-semibold">
+                  <Link href={`/maintenance/vans/${van.number}`} className="text-blue-700 hover:underline">Van {van.number}</Link>
+                </th>
+                <td className="px-4 py-3 text-gray-900">{[van.year, van.make, van.model].filter(Boolean).join(" ") || "Vehicle details needed"}<div className="text-xs text-gray-500">Engine {van.engine || "—"}</div></td>
+                <td className="whitespace-nowrap px-4 py-3">
+                  <span className={`rounded-full px-2 py-1 text-xs font-medium ${van.status === "ACTIVE" ? "bg-green-100 text-green-800" : "bg-gray-100 text-gray-700"}`}>
+                    {van.status === "ACTIVE" ? "Active" : van.status === "IN_SERVICE" ? "In service" : "Out of service"}
+                  </span>
+                </td>
+                <td className="whitespace-nowrap px-4 py-3 text-gray-900">{van.licensePlate || "—"}</td>
+                <td className="whitespace-nowrap px-4 py-3 font-mono text-xs text-gray-900">{van.vin ? van.vin.length === 4 ? `Last 4: ${van.vin}` : van.vin : "—"}</td>
+                <td className="whitespace-nowrap px-4 py-3 text-gray-900">{van.mileage == null ? "—" : van.mileage.toLocaleString()}</td>
+                <td className="whitespace-nowrap px-4 py-3 text-gray-900">{dateLabel(van.records[0]?.serviceDate ?? null)}</td>
+                <td className="whitespace-nowrap px-4 py-3 text-gray-900">{dateLabel(van.registrationExpiry)}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
       </div>
       {vans.length < 10 && <p className="mt-4 text-sm text-amber-700">Fleet records are incomplete. Expected at least 10 vans; found {vans.length}.</p>}
     </div>
