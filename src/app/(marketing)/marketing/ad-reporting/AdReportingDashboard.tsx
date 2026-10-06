@@ -24,6 +24,7 @@ type MetricData = {
   moegoSyncedAt: string | null;
   moegoCursorThrough: string | null;
   moegoDataAvailable: boolean;
+  leadsLimited: boolean;
   googleImportedAt: string | null;
   googleLsaImportedAt: string | null;
 };
@@ -43,6 +44,7 @@ const EMPTY_METRIC: MetricData = {
   moegoSyncedAt: null,
   moegoCursorThrough: null,
   moegoDataAvailable: false,
+  leadsLimited: false,
   googleImportedAt: null,
   googleLsaImportedAt: null,
 };
@@ -84,11 +86,11 @@ export function AdReportingDashboard({
   const [loadError, setLoadError] = useState(false);
 
   const [loadedFor, setLoadedFor] = useState("");
-  const metricKey = `${business}|${from}|${to}`;
+  const metricKey = `${business}|${from}|${to}|${source}`;
 
   useEffect(() => {
     let cancelled = false;
-    fetch(`/api/marketing/live-report?from=${from}&to=${to}`, { cache: "no-store" })
+    fetch(`/api/marketing/live-report?from=${from}&to=${to}&source=${source}`, { cache: "no-store" })
       .then((res) => { if (!res.ok) throw new Error("Report unavailable"); return res.json(); })
       .then((json) => {
         if (cancelled) return;
@@ -109,6 +111,7 @@ export function AdReportingDashboard({
             moegoSyncedAt: m.moegoSyncedAt ?? null,
             moegoCursorThrough: m.moegoCursorThrough ?? null,
             moegoDataAvailable: m.moegoDataAvailable ?? false,
+            leadsLimited: m.leadsLimited ?? false,
             googleImportedAt: m.googleImportedAt ?? null,
             googleLsaImportedAt: m.googleLsaImportedAt ?? null,
           });
@@ -127,7 +130,7 @@ export function AdReportingDashboard({
     return () => {
       cancelled = true;
     };
-  }, [business, from, to, metricKey]);
+  }, [business, from, to, source, metricKey]);
 
   return (
     <>
@@ -172,7 +175,7 @@ function AttributionSummary({
         <div className="border-b border-gray-200 px-5 py-4">
           <h3 className="font-semibold text-gray-900">Observed MoeGo revenue and ad spend by source</h3>
           <p className="mt-1 text-xs text-gray-500">
-            Net paid orders sold in {rangeLabel}. A source is assigned only when the customer has an earlier, linked website form with that source. This is observed revenue after a form, not proof the ad caused the purchase.
+            Net paid after MoeGo-linked website forms submitted in {rangeLabel}, using the same leads and outcomes as section 3. Each order goes to the latest prior form. This is observed revenue after a form, not proof the ad caused the purchase.
           </p>
         </div>
         <div className="overflow-x-auto">
@@ -198,7 +201,7 @@ function AttributionSummary({
                 );
               })}
               {source === "all" && <tr className="bg-gray-50">
-                <td className="px-5 py-3 font-medium text-gray-900">Unattributed MoeGo revenue</td>
+                <td className="px-5 py-3 font-medium text-gray-900">Unattributed linked lead revenue</td>
                 <td className="px-5 py-3 text-right">—</td>
                 <td className="px-5 py-3 text-right">{formatDollars(cents(metric.unattributedRevenue))}</td>
                 <td className="px-5 py-3 text-right">—</td>
@@ -207,7 +210,8 @@ function AttributionSummary({
           </table>
         </div>
         <p className="border-t border-gray-100 px-5 py-3 text-xs text-gray-600">
-          MoeGo net paid for Pet Resort and Mobile Grooming: {formatDollars(cents(metric.totalMoegoRevenue))}.
+          Net paid after linked website forms: {formatDollars(cents(metric.totalMoegoRevenue))}.
+          {metric.leadsLimited ? " Only the first 500 linked submissions are included, matching section 3." : ""}
           {metric.moegoSyncedAt ? ` Orders last updated ${new Date(metric.moegoSyncedAt).toLocaleString()}.` : " No order rows have been synced."}
           {metric.moegoCursorThrough ? ` Order sync cursor: ${new Date(metric.moegoCursorThrough).toLocaleString()}.` : ""}
           {metric.metaSyncedAt ? ` Meta last synced ${new Date(metric.metaSyncedAt).toLocaleString()}.` : ""}
@@ -216,7 +220,7 @@ function AttributionSummary({
         </p>
         {!metric.moegoDataAvailable && (
           <p className="border-t border-amber-100 bg-amber-50 px-5 py-3 text-xs text-amber-800">
-            MoeGo order sync has not been verified within the last 48 hours. Revenue and observed return are hidden until current order data is available.
+            Recent MoeGo order data is unavailable. Revenue and observed return are hidden until current order data is available.
           </p>
         )}
         {!metric.metaDataComplete && (source === "all" || source === "meta") && (
