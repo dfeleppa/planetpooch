@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { assignLeadOutcomes, leadOutcomeWindow, matchingOutcomeCustomerIds, type OutcomeCustomerProfile } from "@/lib/marketing/lead-outcomes";
 import { attributionText, classifyLeadAttribution, type LeadAttributionSource, type SubmissionAttribution } from "@/lib/marketing/lead-attribution";
 import { normalizedPhone } from "@/lib/marketing/moego-client-history";
+import { addCalendarDays, parseEasternDateStart } from "@/lib/marketing/submission-date-range";
 import { Prisma } from "@prisma/client";
 import Link from "next/link";
 import { SyncLeadOutcomesButton } from "./SyncLeadOutcomesButton";
@@ -15,14 +16,22 @@ const SOURCE_LABELS: Record<LeadAttributionSource, string> = {
   meta: "Meta", "google-ads": "Google Ads", "google-lsa": "Google LSA", unattributed: "Unattributed",
 };
 
-export async function LeadOutcomesReport({ days: requestedDays }: { days?: string }) {
+export async function LeadOutcomesReport({ days: requestedDays, from, to }: { days?: string; from?: string; to?: string }) {
   const days = DAYS.find((value) => value === Number(requestedDays)) ?? 30;
-  const { since, staleBefore } = leadOutcomeWindow(days);
+  const fromStart = parseEasternDateStart(from ?? "");
+  const toStart = parseEasternDateStart(to ?? "");
+  const customRange = from && to && from <= to && fromStart && toStart
+    ? { from, to, since: fromStart, before: parseEasternDateStart(addCalendarDays(to, 1)!)! }
+    : null;
+  const invalidRange = Boolean((from || to) && !customRange);
+  const { since: presetSince, staleBefore } = leadOutcomeWindow(days);
+  const since = customRange?.since ?? presetSince;
+  const periodLabel = customRange ? `${customRange.from} through ${customRange.to}` : `the last ${days} days`;
   const business = await getActiveBusiness();
   const [session, submissions, appointmentSync, orderSync, latestOrder, latestCustomer] = await Promise.all([
     getSession(),
     prisma.websiteFormSubmission.findMany({
-      where: { company: business.company, status: "SYNCED", moegoCustomerId: { not: null }, receivedAt: { gte: since } },
+      where: { company: business.company, status: "SYNCED", moegoCustomerId: { not: null }, receivedAt: { gte: since, ...(customRange ? { lt: customRange.before } : {}) } },
       orderBy: [{ receivedAt: "desc" }, { id: "desc" }],
       take: 500,
       select: { id: true, company: true, receivedAt: true, firstName: true, lastName: true, phone: true, email: true, moegoCustomerId: true, services: true, attribution: true },
@@ -145,8 +154,20 @@ export async function LeadOutcomesReport({ days: requestedDays }: { days?: strin
       {isAdmin && <SyncLeadOutcomesButton />}
     </div>
     <div className="mb-4 flex flex-wrap gap-2">
-      {DAYS.map((value) => <Link key={value} href={`/marketing/ad-reporting?view=outcomes&days=${value}`} className={`rounded-lg px-3 py-1.5 text-sm ${value === days ? "bg-gray-900 text-white" : "bg-gray-100 text-gray-700 hover:bg-gray-200"}`}>{value} days</Link>)}
+      {DAYS.map((value) => <Link key={value} href={`/marketing/ad-reporting?view=outcomes&days=${value}`} className={`rounded-lg px-3 py-1.5 text-sm ${!customRange && value === days ? "bg-gray-900 text-white" : "bg-gray-100 text-gray-700 hover:bg-gray-200"}`}>{value} days</Link>)}
     </div>
+    <form method="get" className="mb-4 flex flex-wrap items-end gap-3">
+      <input type="hidden" name="view" value="outcomes" />
+      <label className="text-sm font-medium text-gray-700">Start date
+        <input type="date" name="from" required defaultValue={from ?? ""} className="mt-1 block rounded-lg border border-gray-300 bg-white px-3 py-2 font-normal text-gray-900" />
+      </label>
+      <label className="text-sm font-medium text-gray-700">End date
+        <input type="date" name="to" required defaultValue={to ?? ""} className="mt-1 block rounded-lg border border-gray-300 bg-white px-3 py-2 font-normal text-gray-900" />
+      </label>
+      <button type="submit" className="rounded-lg bg-gray-900 px-4 py-2 text-sm font-medium text-white hover:bg-gray-700">Apply dates</button>
+    </form>
+    {invalidRange && <p role="alert" className="mb-4 text-sm text-red-700">Choose valid dates with the start on or before the end. Showing the last {days} days.</p>}
+    <p className="mb-4 text-sm text-gray-600">Showing forms received in {periodLabel}{customRange ? " (Eastern dates, inclusive)" : ""}. Appointments and payments after those forms are included through the latest sync.</p>
     <div className="mb-4 grid gap-3 sm:grid-cols-3">
       <div className="rounded-xl border border-gray-200 bg-white p-4"><p className="text-xs text-gray-500">Linked customers</p><p className="mt-1 text-2xl font-semibold">{uniqueOutcomes.size}</p></div>
       <div className="rounded-xl border border-gray-200 bg-white p-4"><p className="text-xs text-gray-500">Confirmed bookings</p><p className="mt-1 text-2xl font-semibold">{appointmentSync ? totalBooked : "—"}</p></div>

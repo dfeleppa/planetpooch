@@ -38,7 +38,7 @@ export default async function AdReportingPage({ searchParams }: { searchParams: 
         <Link href="/marketing/ad-reporting?view=outcomes" className={`pp-tab ${outcomes ? "is-on" : ""}`} aria-current={outcomes ? "page" : undefined}>MoeGo lead outcomes</Link>
       </nav>
       {outcomes ? (
-        <LeadOutcomesReport days={query.days} />
+        <LeadOutcomesReport days={query.days} from={query.from} to={query.to} />
       ) : creatives ? (
         <MetaCreativePerformance searchParams={query} />
       ) : (
