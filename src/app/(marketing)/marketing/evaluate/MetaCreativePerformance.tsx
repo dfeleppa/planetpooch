@@ -147,5 +147,5 @@ function SortHeader({ label, column, sort, dir, query }: { label: string; column
   const nextDirection = sort === column && dir === "desc" ? "asc" : "desc";
   if (nextDirection === "asc") params.set("dir", "asc");
   const arrow = sort === column ? (dir === "desc" ? "↓" : "↑") : "";
-  return <th className="px-2 py-2 text-right font-medium"><Link href={`/marketing/ad-reporting?${params}`} scroll={false} className="hover:text-gray-900">{label} {arrow}</Link></th>;
+  return <th className="px-2 py-2 text-right font-medium"><Link href={`/marketing?${params}`} scroll={false} className="hover:text-gray-900">{label} {arrow}</Link></th>;
 }
