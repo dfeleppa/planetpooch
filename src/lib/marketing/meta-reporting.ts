@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma";
+import { coversMetaPeriod } from "./meta-coverage";
 
 export async function metaInsightWhere(business: string, from: Date, toExclusive: Date) {
   const company = business === "pet-resort" ? "RESORT" : business === "mobile-grooming" ? "GROOMING" : null;
@@ -13,19 +14,25 @@ export async function metaInsightWhere(business: string, from: Date, toExclusive
 
 export async function getMetaPeriodMetrics(business: string, from: Date, toExclusive: Date) {
   const where = await metaInsightWhere(business, from, toExclusive);
-  const [totals, bounds] = await Promise.all([
+  const [totals, windows] = await Promise.all([
     prisma.metaAdInsight.aggregate({ where, _sum: { spendCents: true, purchaseValueCents: true }, _count: { _all: true } }),
-    prisma.metaAdInsight.aggregate({ where, _min: { date: true }, _max: { date: true } }),
+    prisma.metaInsightSyncWindow.findMany({
+      where: { since: { lt: toExclusive }, until: { gte: from } },
+      orderBy: { since: "asc" },
+      select: { since: true, until: true, syncedAt: true },
+    }),
   ]);
-  const end = new Date(Math.min(toExclusive.getTime() - 86_400_000, Date.now()));
-  const through = bounds._max.date?.toISOString().slice(0, 10) ?? null;
-  const complete = Boolean(
-    bounds._min.date && bounds._min.date <= from && bounds._max.date && bounds._max.date >= new Date(end.toISOString().slice(0, 10)),
-  );
+  const latestWindow = windows.reduce<Date | null>((latest, window) =>
+    !latest || window.until > latest ? window.until : latest, null);
+  const latestSync = windows.reduce<Date | null>((latest, window) =>
+    !latest || window.syncedAt > latest ? window.syncedAt : latest, null);
+  const through = latestWindow?.toISOString().slice(0, 10) ?? null;
+  const complete = coversMetaPeriod(from, toExclusive, windows);
   return {
     spendCents: complete ? totals._sum.spendCents ?? 0 : null,
     purchaseValueCents: complete ? totals._sum.purchaseValueCents ?? 0 : null,
     complete,
     through,
+    syncedAt: latestSync,
   };
 }

@@ -1145,6 +1145,17 @@ model MetaAdInsight {
   @@index([scriptId])
 }
 
+/// A successful Meta insights fetch covers every day in this inclusive range,
+/// including days when the API returned zero ad rows.
+model MetaInsightSyncWindow {
+  id       String   @id @default(cuid())
+  since    DateTime @db.Date
+  until    DateTime @db.Date
+  syncedAt DateTime @default(now())
+
+  @@index([since, until])
+}
+
 /// Business attribution for a shared Meta account. Existing insight rows stay intact.
 model MetaCampaignBusiness {
   campaignId String    @id

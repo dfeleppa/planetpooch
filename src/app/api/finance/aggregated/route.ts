@@ -7,11 +7,6 @@ import {
   GhlApiError,
   GhlConfigError,
 } from "@/lib/ghl/client";
-import {
-  ATTRIBUTION_SPEND_CENTS,
-  getAttributedRevenueCents,
-  isAttributionPeriod,
-} from "@/lib/marketing/attribution-2026";
 
 export const maxDuration = 120;
 
@@ -244,30 +239,7 @@ export async function GET(req: NextRequest) {
   const from = parseDate(sp.get("from")) ?? defaultFrom;
   const to = parseDate(sp.get("to")) ?? now;
   const toExclusive = addDays(to, 1);
-  const attributedRevenue = getAttributedRevenueCents(from, to);
-  const fullAttributionPeriod = isAttributionPeriod(from, to);
   const meta = await getMetaPeriodMetrics(business, from, toExclusive);
-
-  if (fullAttributionPeriod) {
-    return NextResponse.json({
-      metric: {
-        totalRevenue: null,
-        totalProfit: null,
-        totalCustomers: null,
-        totalAdSpend: meta.spendCents === null ? null : meta.spendCents + ATTRIBUTION_SPEND_CENTS["google-ads"] + ATTRIBUTION_SPEND_CENTS["google-lsa"],
-        totalConversions: null,
-        metaAdSpend: meta.spendCents,
-        metaRevenue: meta.purchaseValueCents,
-        metaDataThrough: meta.through,
-        metaDataComplete: meta.complete,
-        googleAdSpend: ATTRIBUTION_SPEND_CENTS["google-ads"],
-        googleRevenue: attributedRevenue["google-ads"],
-        googleLsaAdSpend: ATTRIBUTION_SPEND_CENTS["google-lsa"],
-        googleLsaRevenue: attributedRevenue["google-lsa"],
-        attributionThrough: "2026-09-05",
-      },
-    });
-  }
 
   let agg: AggData;
   try {
@@ -338,10 +310,9 @@ export async function GET(req: NextRequest) {
       metaDataThrough: meta.through,
       metaDataComplete: meta.complete,
       googleAdSpend: null,
-      googleRevenue: attributedRevenue["google-ads"],
+      googleRevenue: null,
       googleLsaAdSpend: null,
-      googleLsaRevenue: attributedRevenue["google-lsa"],
-      attributionThrough: "2026-09-05",
+      googleLsaRevenue: null,
       statement: {
         ...statement,
         ytdRevenue: ytdStatement.income,

@@ -32,8 +32,11 @@ function ymd(d: Date): string {
 export async function syncRecentInsights(days = 7): Promise<SyncResult> {
   const until = new Date();
   const since = new Date(until.getTime() - (days - 1) * 24 * 60 * 60 * 1000);
-  const windowSince = ymd(since);
-  const windowUntil = ymd(until);
+  return syncInsightsWindow(ymd(since), ymd(until));
+}
+
+/** Sync a bounded historical window; callers validate the requested dates. */
+export async function syncInsightsWindow(windowSince: string, windowUntil: string): Promise<SyncResult> {
 
   const rows = await fetchInsights({ since: windowSince, until: windowUntil });
 
@@ -72,6 +75,13 @@ export async function syncRecentInsights(days = 7): Promise<SyncResult> {
     if (scriptId) linked += 1;
     await upsertOne(row, scriptId);
   }
+
+  await prisma.metaInsightSyncWindow.create({
+    data: {
+      since: new Date(`${windowSince}T00:00:00Z`),
+      until: new Date(`${windowUntil}T00:00:00Z`),
+    },
+  });
 
   return {
     rowsFetched: rows.length,

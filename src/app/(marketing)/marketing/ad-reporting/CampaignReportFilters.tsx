@@ -68,6 +68,6 @@ export function CampaignReportFilters({ from, to, source, days }: {
         </select>
       </label>
     </div>
-    <p className="mt-3 text-xs text-gray-500">All campaign sections use this lead submission date range. Bookings and payments can occur after a submission.</p>
+    <p className="mt-3 text-xs text-gray-500">Spend and paid orders use the selected dates. Lead and outcome sections use form submission dates; their bookings and payments can occur later.</p>
   </div>;
 }

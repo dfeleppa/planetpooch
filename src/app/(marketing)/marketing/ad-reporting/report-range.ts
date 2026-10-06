@@ -16,19 +16,16 @@ export function reportingRange(query: { days?: string; from?: string; to?: strin
   if (validDate(query.from) && validDate(query.to) && query.from <= query.to) {
     return { from: query.from, to: query.to, source, days: null, label: `${query.from} to ${query.to}` };
   }
-  if (query.range === "2026-through-sep-5") {
-    return { from: "2026-01-01", to: "2026-09-05", source, days: null, label: "Jan 1 – Sep 5, 2026" };
-  }
   const month = Number(query.month);
   const year = Number(query.year);
   if (Number.isInteger(month) && month >= 1 && month <= 12 && Number.isInteger(year) && year >= 2020 && year <= 2100) {
     const from = `${year}-${String(month).padStart(2, "0")}-01`;
     const end = new Date(Date.UTC(year, month, 0));
-    const to = year === 2026 && month === 9 ? "2026-09-05" : end.toISOString().slice(0, 10);
+    const to = end.toISOString().slice(0, 10);
     const monthLabel = new Intl.DateTimeFormat("en-US", { month: "long", year: "numeric", timeZone: "UTC" }).format(end);
-    return { from, to, source, days: null, label: year === 2026 && month === 9 ? "Sep 1–5, 2026" : monthLabel };
+    return { from, to, source, days: null, label: monthLabel };
   }
   const days = query.days === "7" || query.days === "90" ? Number(query.days) : 30;
-  const today = formatEasternDate(new Date());
-  return { from: addCalendarDays(today, 1 - days)!, to: today, source, days, label: `Last ${days} calendar days` };
+  const yesterday = addCalendarDays(formatEasternDate(new Date()), -1)!;
+  return { from: addCalendarDays(yesterday, 1 - days)!, to: yesterday, source, days, label: `Last ${days} completed days` };
 }
