@@ -13,10 +13,14 @@ type FinanceSection = {
 
 const baseFinanceSections: FinanceSection[] = [
   {
+    href: "/finance/dashboard",
+    label: "Dashboard",
+    isActive: (pathname) => pathname === "/finance/dashboard" || pathname === "/finance",
+  },
+  {
     href: "/finance/profit-loss",
     label: "Profit & Loss",
     isActive: (pathname) =>
-      pathname === "/finance" ||
       pathname.startsWith("/finance/profit-loss") ||
       pathname.startsWith("/finance/moego"),
   },

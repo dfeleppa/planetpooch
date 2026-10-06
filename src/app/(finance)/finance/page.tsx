@@ -12,5 +12,5 @@ export default async function FinanceRedirectPage({
   if (params.week) next.set("week", params.week);
 
   const query = next.toString();
-  redirect(query ? `/finance/profit-loss?${query}` : "/finance/profit-loss");
+  redirect(query ? `/finance/dashboard?${query}` : "/finance/dashboard");
 }
