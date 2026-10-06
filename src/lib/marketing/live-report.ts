@@ -1,4 +1,6 @@
 import { classifyLeadAttribution, type LeadAttributionSource, type SubmissionAttribution } from "./lead-attribution";
+import { matchingOutcomeCustomerIds, type OutcomeCustomerProfile } from "./lead-outcomes";
+import { normalizedPhone } from "./moego-client-history";
 
 export type PaidOrder = {
   customerMoegoId: string | null;
@@ -14,6 +16,45 @@ export type LinkedSubmission = {
   receivedAt: Date;
   attribution: unknown;
 };
+
+export type IdentifiedSubmission = LinkedSubmission & {
+  firstName: string | null;
+  lastName: string | null;
+  phone: string | null;
+  email: string | null;
+};
+
+/** Include only MoeGo profiles verified by phone plus exact name or email. */
+export function expandVerifiedSubmissionProfiles(
+  submissions: IdentifiedSubmission[],
+  profiles: OutcomeCustomerProfile[],
+  orderCustomerIds: ReadonlySet<string>,
+): LinkedSubmission[] {
+  const profilesByPhone = new Map<string, OutcomeCustomerProfile[]>();
+  for (const profile of profiles) {
+    const phone = normalizedPhone(profile.mainPhoneNumber);
+    if (!phone) continue;
+    const group = profilesByPhone.get(phone) ?? [];
+    group.push(profile);
+    profilesByPhone.set(phone, group);
+  }
+  return submissions.flatMap((submission) => {
+    if (!submission.moegoCustomerId) return [];
+    const phone = normalizedPhone(submission.phone);
+    const ids = matchingOutcomeCustomerIds({
+      moegoCustomerId: submission.moegoCustomerId,
+      phone: submission.phone,
+      firstName: submission.firstName,
+      lastName: submission.lastName,
+      email: submission.email,
+    }, profilesByPhone.get(phone ?? "") ?? []);
+    return [...ids].filter((id) => orderCustomerIds.has(id)).map((id) => ({
+      moegoCustomerId: id,
+      receivedAt: submission.receivedAt,
+      attribution: submission.attribution,
+    }));
+  });
+}
 
 export function orderSaleDate(order: PaidOrder): Date {
   return order.salesDatetime ?? order.completedTime ?? order.createdTime;

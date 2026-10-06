@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { allocatePaidOrders, type PaidOrder } from "../src/lib/marketing/live-report";
+import { allocatePaidOrders, expandVerifiedSubmissionProfiles, type PaidOrder } from "../src/lib/marketing/live-report";
 
 function order(customerMoegoId: string | null, sale: string, paidCents: number, refundedCents = 0): PaidOrder {
   return {
@@ -25,4 +25,20 @@ test("assigns each sale to the latest prior linked form and keeps unsupported sa
     { moegoCustomerId: "customer-2", receivedAt: new Date("2026-10-04T12:00:00Z"), attribution: { utm_source: "facebook" } },
   ]);
   assert.deepEqual(result, { meta: 5000, "google-ads": 9000, "google-lsa": 0, unattributed: 3500 });
+});
+
+test("assigns revenue on a verified duplicate MoeGo profile without matching phone alone", () => {
+  const submissions = expandVerifiedSubmissionProfiles([{
+    moegoCustomerId: "original", receivedAt: new Date("2026-09-24T12:00:00Z"),
+    attribution: { gclid: "click-id" }, firstName: "Jordan", lastName: "Taylor",
+    phone: "516-555-0100", email: "jordan@example.com",
+  }], [
+    { moegoId: "duplicate", name: "Jordan Taylor", email: null, mainPhoneNumber: "516-555-0100" },
+    { moegoId: "other-person", name: "Alex Taylor", email: null, mainPhoneNumber: "516-555-0100" },
+  ], new Set(["duplicate", "other-person"]));
+  const result = allocatePaidOrders([
+    order("duplicate", "2026-09-25T12:00:00Z", 41439),
+    order("other-person", "2026-09-25T12:00:00Z", 10000),
+  ], submissions);
+  assert.deepEqual(result, { meta: 0, "google-ads": 41439, "google-lsa": 0, unattributed: 10000 });
 });

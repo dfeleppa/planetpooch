@@ -3,8 +3,11 @@ import { getSession, hasMarketingAccess } from "@/lib/auth-helpers";
 import { getActiveBusiness } from "@/lib/business-server";
 import { prisma } from "@/lib/prisma";
 import { getMetaPeriodMetrics } from "@/lib/marketing/meta-reporting";
-import { allocatePaidOrders } from "@/lib/marketing/live-report";
+import { allocatePaidOrders, expandVerifiedSubmissionProfiles } from "@/lib/marketing/live-report";
+import { normalizedPhone } from "@/lib/marketing/moego-client-history";
+import type { OutcomeCustomerProfile } from "@/lib/marketing/lead-outcomes";
 import { MOBILE_GROOMING_BUSINESS_ID, PET_RESORT_BUSINESS_ID } from "@/lib/moego/businesses";
+import { Prisma } from "@prisma/client";
 
 const DAY_MS = 86_400_000;
 const FRESH_MS = 48 * 60 * 60 * 1000;
@@ -64,17 +67,26 @@ export async function GET(req: NextRequest) {
     orderCursor.lastSyncedAt.getTime() >= freshBefore && latestOrder._max.syncedAt.getTime() >= freshBefore);
   let revenue: ReturnType<typeof allocatePaidOrders> | null = null;
   if (orderDataAvailable) {
-    const customerIds = [...new Set(orders.flatMap((order) => order.customerMoegoId ? [order.customerMoegoId] : []))];
-    const submissions = customerIds.length ? await prisma.websiteFormSubmission.findMany({
+    const orderCustomerIds = new Set(orders.flatMap((order) => order.customerMoegoId ? [order.customerMoegoId] : []));
+    const submissions = orderCustomerIds.size ? await prisma.websiteFormSubmission.findMany({
       where: {
         company: business.company,
         status: "SYNCED",
-        moegoCustomerId: { in: customerIds },
+        moegoCustomerId: { not: null },
         receivedAt: { lt: toExclusive },
       },
-      select: { moegoCustomerId: true, receivedAt: true, attribution: true },
+      select: { moegoCustomerId: true, receivedAt: true, attribution: true,
+        firstName: true, lastName: true, phone: true, email: true },
     }) : [];
-    revenue = allocatePaidOrders(orders, submissions);
+    const phones = [...new Set(submissions.map((submission) => normalizedPhone(submission.phone))
+      .filter((phone): phone is string => phone !== null))];
+    const profiles = phones.length ? await prisma.$queryRaw<OutcomeCustomerProfile[]>(Prisma.sql`
+      SELECT "moegoId", "name", "email", "mainPhoneNumber"
+      FROM "MoegoCustomer"
+      WHERE RIGHT(REGEXP_REPLACE(COALESCE("mainPhoneNumber", ''), '[^0-9]', '', 'g'), 10)
+        IN (${Prisma.join(phones)})
+    `) : [];
+    revenue = allocatePaidOrders(orders, expandVerifiedSubmissionProfiles(submissions, profiles, orderCustomerIds));
   }
 
   return NextResponse.json({
