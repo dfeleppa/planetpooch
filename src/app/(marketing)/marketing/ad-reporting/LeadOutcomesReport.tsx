@@ -4,34 +4,25 @@ import { prisma } from "@/lib/prisma";
 import { assignLeadOutcomes, leadOutcomeWindow, matchingOutcomeCustomerIds, type OutcomeCustomerProfile } from "@/lib/marketing/lead-outcomes";
 import { attributionText, classifyLeadAttribution, type LeadAttributionSource, type SubmissionAttribution } from "@/lib/marketing/lead-attribution";
 import { normalizedPhone } from "@/lib/marketing/moego-client-history";
-import { addCalendarDays, parseEasternDateStart } from "@/lib/marketing/submission-date-range";
 import { Prisma } from "@prisma/client";
-import Link from "next/link";
 import { SyncLeadOutcomesButton } from "./SyncLeadOutcomesButton";
+import type { ReportSource } from "./report-range";
+import { resolveSubmissionDateRange } from "@/lib/marketing/submission-date-range";
 
-const DAYS = [7, 30, 90] as const;
 const money = (cents: number) => (cents / 100).toLocaleString("en-US", { style: "currency", currency: "USD" });
 const eastern = new Intl.DateTimeFormat("en-US", { timeZone: "America/New_York", dateStyle: "medium" });
 const SOURCE_LABELS: Record<LeadAttributionSource, string> = {
   meta: "Meta", "google-ads": "Google Ads", "google-lsa": "Google LSA", unattributed: "Unattributed",
 };
 
-export async function LeadOutcomesReport({ days: requestedDays, from, to }: { days?: string; from?: string; to?: string }) {
-  const days = DAYS.find((value) => value === Number(requestedDays)) ?? 30;
-  const fromStart = parseEasternDateStart(from ?? "");
-  const toStart = parseEasternDateStart(to ?? "");
-  const customRange = from && to && from <= to && fromStart && toStart
-    ? { from, to, since: fromStart, before: parseEasternDateStart(addCalendarDays(to, 1)!)! }
-    : null;
-  const invalidRange = Boolean((from || to) && !customRange);
-  const { since: presetSince, staleBefore } = leadOutcomeWindow(days);
-  const since = customRange?.since ?? presetSince;
-  const periodLabel = customRange ? `${customRange.from} through ${customRange.to}` : `the last ${days} days`;
+export async function LeadOutcomesReport({ from, to, source }: { from: string; to: string; source: ReportSource }) {
+  const { startAt: since, endBefore: until } = resolveSubmissionDateRange(from, to);
+  const { staleBefore } = leadOutcomeWindow(1);
   const business = await getActiveBusiness();
   const [session, submissions, appointmentSync, orderSync, latestOrder, latestCustomer] = await Promise.all([
     getSession(),
     prisma.websiteFormSubmission.findMany({
-      where: { company: business.company, status: "SYNCED", moegoCustomerId: { not: null }, receivedAt: { gte: since, ...(customRange ? { lt: customRange.before } : {}) } },
+      where: { company: business.company, status: "SYNCED", moegoCustomerId: { not: null }, receivedAt: { gte: since, lt: until } },
       orderBy: [{ receivedAt: "desc" }, { id: "desc" }],
       take: 500,
       select: { id: true, company: true, receivedAt: true, firstName: true, lastName: true, phone: true, email: true, moegoCustomerId: true, services: true, attribution: true },
@@ -41,7 +32,11 @@ export async function LeadOutcomesReport({ days: requestedDays, from, to }: { da
     prisma.moegoOrder.aggregate({ _max: { syncedAt: true } }),
     prisma.moegoCustomer.aggregate({ _max: { syncedAt: true } }),
   ]);
-  const rows = submissions;
+  const rows = source === "all" ? submissions : submissions.filter((row) => {
+    const attribution = row.attribution && typeof row.attribution === "object" && !Array.isArray(row.attribution)
+      ? row.attribution as SubmissionAttribution : {};
+    return classifyLeadAttribution(attribution) === source;
+  });
   const phones = [...new Set(rows.map((row) => normalizedPhone(row.phone)).filter((phone): phone is string => phone !== null))];
   const profiles = phones.length ? await prisma.$queryRaw<OutcomeCustomerProfile[]>(Prisma.sql`
     SELECT "moegoId", "name", "email", "mainPhoneNumber"
@@ -148,26 +143,10 @@ export async function LeadOutcomesReport({ days: requestedDays, from, to }: { da
   return <div>
     <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
       <div>
-        <h3 className="text-lg font-semibold text-gray-900">Lead outcomes in MoeGo</h3>
-        <p className="mt-1 text-sm text-gray-600">Successful website submissions are matched to their MoeGo customer ID and duplicate profiles with the same phone plus exact name or email. Bookings are confirmed or later appointments created after the form. Net paid is paid amount less refunds on orders recorded after the form for those profiles.</p>
+        <p className="text-sm text-gray-600">Only website submissions linked to a MoeGo customer appear here. Confirmed bookings and net paid are observed after each form; they are not proof that an ad caused the purchase.</p>
       </div>
       {isAdmin && <SyncLeadOutcomesButton />}
     </div>
-    <div className="mb-4 flex flex-wrap gap-2">
-      {DAYS.map((value) => <Link key={value} href={`/marketing/ad-reporting?view=outcomes&days=${value}`} className={`rounded-lg px-3 py-1.5 text-sm ${!customRange && value === days ? "bg-gray-900 text-white" : "bg-gray-100 text-gray-700 hover:bg-gray-200"}`}>{value} days</Link>)}
-    </div>
-    <form method="get" className="mb-4 flex flex-wrap items-end gap-3">
-      <input type="hidden" name="view" value="outcomes" />
-      <label className="text-sm font-medium text-gray-700">Start date
-        <input type="date" name="from" required defaultValue={from ?? ""} className="mt-1 block rounded-lg border border-gray-300 bg-white px-3 py-2 font-normal text-gray-900" />
-      </label>
-      <label className="text-sm font-medium text-gray-700">End date
-        <input type="date" name="to" required defaultValue={to ?? ""} className="mt-1 block rounded-lg border border-gray-300 bg-white px-3 py-2 font-normal text-gray-900" />
-      </label>
-      <button type="submit" className="rounded-lg bg-gray-900 px-4 py-2 text-sm font-medium text-white hover:bg-gray-700">Apply dates</button>
-    </form>
-    {invalidRange && <p role="alert" className="mb-4 text-sm text-red-700">Choose valid dates with the start on or before the end. Showing the last {days} days.</p>}
-    <p className="mb-4 text-sm text-gray-600">Showing forms received in {periodLabel}{customRange ? " (Eastern dates, inclusive)" : ""}. Appointments and payments after those forms are included through the latest sync.</p>
     <div className="mb-4 grid gap-3 sm:grid-cols-3">
       <div className="rounded-xl border border-gray-200 bg-white p-4"><p className="text-xs text-gray-500">Linked customers</p><p className="mt-1 text-2xl font-semibold">{uniqueOutcomes.size}</p></div>
       <div className="rounded-xl border border-gray-200 bg-white p-4"><p className="text-xs text-gray-500">Confirmed bookings</p><p className="mt-1 text-2xl font-semibold">{appointmentSync ? totalBooked : "—"}</p></div>
@@ -209,7 +188,9 @@ export async function LeadOutcomesReport({ days: requestedDays, from, to }: { da
         </tbody>
       </table>
     </div>
-    <div className="overflow-x-auto rounded-xl border border-gray-200 bg-white">
+    <details className="rounded-xl border border-gray-200 bg-white">
+      <summary className="cursor-pointer px-4 py-3 text-sm font-medium text-gray-800">Show individual linked leads ({outcomes.length})</summary>
+      <div className="overflow-x-auto border-t border-gray-100">
       <table className="w-full min-w-[1000px] text-left text-sm">
         <thead className="bg-gray-50 text-gray-700"><tr>
           {["Submitted", "Customer", "Source", "Campaign", "Services", "MoeGo profiles", "Booked", "Pending", "First booked", "Net paid after form"].map((label) => <th key={label} className="px-4 py-3 font-medium">{label}</th>)}
@@ -229,7 +210,8 @@ export async function LeadOutcomesReport({ days: requestedDays, from, to }: { da
         {outcomes.length === 0 && <tr><td colSpan={10} className="px-4 py-8 text-center text-gray-500">No linked website submissions in this range.</td></tr>}
         </tbody>
       </table>
-    </div>
+      </div>
+    </details>
     <p className="mt-3 text-xs text-gray-500">Duplicate profiles require the same phone and exact name or email; a shared phone alone is excluded. These are observed customer outcomes, not proof that an ad caused them. Unconfirmed appointments appear under Pending. Canceled, deleted, and no-show appointments are excluded.</p>
   </div>;
 }

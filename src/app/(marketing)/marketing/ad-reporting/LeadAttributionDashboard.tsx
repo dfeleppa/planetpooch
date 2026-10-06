@@ -71,11 +71,7 @@ export function LeadAttributionDashboard({ from, to, source }: { from: string; t
       ];
 
   return (
-    <section className="mt-6 space-y-4">
-      <div>
-        <h3 className="font-semibold text-gray-900">{title}</h3>
-        <p className="mt-1 text-xs text-gray-500">Submitted website leads, connected directly to captured campaign and click data.</p>
-      </div>
+    <section className="mt-4 space-y-4" aria-label={title}>
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-5">
         {cards.map(([label, value]) => (
           <Card key={label}><CardContent className="py-4">
@@ -114,7 +110,8 @@ export function LeadAttributionDashboard({ from, to, source }: { from: string; t
 
       <Card className="overflow-hidden">
         <CardContent className="p-0">
-          <div className="border-b border-gray-200 px-5 py-4"><h4 className="font-medium text-gray-900">Recent submitted leads</h4></div>
+          <details>
+          <summary className="cursor-pointer px-5 py-4 text-sm font-medium text-gray-800">Show recent submitted leads ({data.leads.length})</summary>
           <div className="overflow-x-auto">
             <table className="w-full text-left text-sm">
               <thead className="bg-gray-50 text-xs uppercase tracking-wide text-gray-500"><tr>
@@ -137,6 +134,7 @@ export function LeadAttributionDashboard({ from, to, source }: { from: string; t
               </tbody>
             </table>
           </div>
+          </details>
         </CardContent>
       </Card>
     </section>
