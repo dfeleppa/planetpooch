@@ -15,7 +15,7 @@ export function MarketingSubnav() {
   const pathname = usePathname();
   const searchParams = useSearchParams();
 
-  if (!pathname.startsWith("/marketing/ad-reporting") || ["creatives", "outcomes"].includes(searchParams.get("view") ?? "")) return null;
+  if (pathname !== "/marketing" || ["creatives", "outcomes", "submissions"].includes(searchParams.get("view") ?? "")) return null;
 
   const sourceParam = searchParams.get("source") ?? "";
   const selectedSource = leadSources.some((source) => source.value === sourceParam)

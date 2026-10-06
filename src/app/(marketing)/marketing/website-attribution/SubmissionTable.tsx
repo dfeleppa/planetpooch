@@ -91,7 +91,8 @@ type SubmissionTableProps = {
 };
 
 function Pagination({ page, pageCount, startDate, endDate }: Pick<SubmissionTableProps, "page" | "pageCount" | "startDate" | "endDate">) {
-  const pageHref = (target: number) => `/marketing/website-attribution/new-form-submissions?${new URLSearchParams({
+  const pageHref = (target: number) => `/marketing?${new URLSearchParams({
+    view: "submissions",
     submissionStart: startDate, submissionEnd: endDate, page: String(target),
   })}`;
   const linkClass = "rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50";

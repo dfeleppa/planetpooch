@@ -48,8 +48,7 @@ const sharedNav: NavItem[] = [
 ];
 
 const marketingNav: NavItem[] = [
-  { href: "/marketing/website-attribution", label: "Website Attribution", icon: "↗" },
-  { href: "/marketing/ad-reporting", label: "Reporting", icon: "▤" },
+  { href: "/marketing", label: "Marketing", icon: "▤" },
 ];
 
 const financeNav: NavItem[] = [
@@ -272,7 +271,7 @@ export function Sidebar() {
                 <div className="mx-1.5 h-px bg-pp-line" />
               )}
               <div className="-mt-2 flex flex-col gap-px">
-                {[{ href: "/admin/dashboard", label: "Dashboard", icon: "▣" }, ...businessFinanceNav, ...(isKnowledgeAccount ? [{ href: "/admin/knowledge", label: "Knowledge library", icon: "✦" }] : [])].map((item) => {
+                {[{ href: "/admin/dashboard", label: "Dashboard", icon: "▣" }, ...businessFinanceNav, { href: "/marketing", label: "Marketing", icon: "▤" }, ...(isKnowledgeAccount ? [{ href: "/admin/knowledge", label: "Knowledge library", icon: "✦" }] : [])].map((item) => {
                   const active = item.href === "/admin/dashboard"
                     ? pathname === item.href
                     : isActive(item.href);
@@ -290,7 +289,7 @@ export function Sidebar() {
             </>
           )}
           {/* Marketing section — visible to MARKETING role and SUPER_ADMIN */}
-          {hasMarketingAccess && (
+          {hasMarketingAccess && !isSuperAdmin && (
             <>
               {!isCollapsed ? (
                 <div className="px-2.5 pt-1 text-[10px] font-medium uppercase tracking-[0.08em] text-pp-ink-4">

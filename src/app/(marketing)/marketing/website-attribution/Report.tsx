@@ -2,32 +2,20 @@ import { requireMarketing } from "@/lib/auth-helpers";
 import { getActiveBusiness } from "@/lib/business-server";
 import { prisma } from "@/lib/prisma";
 import { Prisma } from "@prisma/client";
-import type { WebsiteAttributionVisit } from "@/lib/marketing/website-attribution";
 import type { WebsiteFormSubmissionRow } from "@/lib/marketing/new-client-submissions";
 import { classifyMoegoClientHistory, normalizedPhone, type MoegoClientProfile } from "@/lib/marketing/moego-client-history";
 import { addCalendarDays, resolveSubmissionDateRange } from "@/lib/marketing/submission-date-range";
 import { SubmissionTable } from "./SubmissionTable";
-import Link from "next/link";
 
 type PageProps = { searchParams: Promise<{ submissionStart?: string; submissionEnd?: string; page?: string }> };
 const SUBMISSIONS_PER_PAGE = 50;
 
-export async function WebsiteAttributionReport({ searchParams, showVisits }: PageProps & { showVisits: boolean }) {
+export async function WebsiteAttributionReport({ searchParams }: PageProps) {
   await requireMarketing();
   const business = await getActiveBusiness();
-  const since = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
   const params = await searchParams;
   const submissionRange = resolveSubmissionDateRange(params.submissionStart, params.submissionEnd);
-  const [totals, visits, submissionTotals] = await Promise.all([
-    prisma.$queryRaw<{ visits: number; visitors: number; tagged: number }[]>`
-      SELECT COUNT(*)::int AS visits, COUNT(DISTINCT "visitorId")::int AS visitors,
-        COUNT(*) FILTER (WHERE "campaign" <> '{}'::jsonb OR "clickIds" <> '{}'::jsonb)::int AS tagged
-      FROM "WebsiteAttributionVisit" WHERE "company" = ${business.company}::"Company" AND "createdAt" >= ${since}`,
-    prisma.$queryRaw<WebsiteAttributionVisit[]>`
-      SELECT "id", "visitorId", "createdAt", "landingPage", "referrerOrigin", "campaign", "clickIds"
-      FROM "WebsiteAttributionVisit" WHERE "company" = ${business.company}::"Company" AND "createdAt" >= ${since}
-      ORDER BY "createdAt" DESC, "id" DESC LIMIT 100`,
-    prisma.$queryRaw<{ submissions: number; synced: number; attention: number; conflicts: number }[]>`
+  const submissionTotals = await prisma.$queryRaw<{ submissions: number; synced: number; attention: number; conflicts: number }[]>`
       SELECT COUNT(*)::int AS submissions,
         COUNT(*) FILTER (WHERE "status" = 'SYNCED')::int AS synced,
         COUNT(*) FILTER (WHERE "status" NOT IN ('SYNCED', 'MOEGO_DUPLICATE_CONFLICT'))::int AS attention,
@@ -35,14 +23,12 @@ export async function WebsiteAttributionReport({ searchParams, showVisits }: Pag
       FROM "WebsiteFormSubmission"
       WHERE "company" = ${business.company}::"Company"
         AND "receivedAt" >= ${submissionRange.startAt}
-        AND "receivedAt" < ${submissionRange.endBefore}`,
-  ]);
-  const total = totals[0];
+        AND "receivedAt" < ${submissionRange.endBefore}`;
   const formTotal = submissionTotals[0];
   const pageCount = Math.max(1, Math.ceil(Number(formTotal.submissions) / SUBMISSIONS_PER_PAGE));
   const requestedPage = typeof params.page === "string" && /^\d+$/.test(params.page) ? Number(params.page) : 1;
   const page = Number.isSafeInteger(requestedPage) ? Math.min(Math.max(requestedPage, 1), pageCount) : 1;
-  const submissions = showVisits ? [] : await prisma.websiteFormSubmission.findMany({
+  const submissions = await prisma.websiteFormSubmission.findMany({
     where: { company: business.company, receivedAt: { gte: submissionRange.startAt, lt: submissionRange.endBefore } },
     orderBy: [{ receivedAt: "desc" }, { id: "desc" }],
     skip: (page - 1) * SUBMISSIONS_PER_PAGE,
@@ -82,17 +68,14 @@ export async function WebsiteAttributionReport({ searchParams, showVisits }: Pag
 
   return (
     <div className="min-w-0">
-      <h2 className="text-xl font-semibold text-gray-900">Website Attribution</h2>
-      <nav aria-label="Website Attribution reports" className="mt-5 flex flex-wrap gap-2 border-b border-gray-200 pb-4">
-        <Link href="/marketing/website-attribution/new-form-submissions" aria-current={!showVisits ? "page" : undefined} className={`rounded-lg px-4 py-2 text-sm font-medium ${!showVisits ? "bg-gray-900 text-white" : "bg-white text-gray-700 ring-1 ring-gray-200 hover:bg-gray-50"}`}>New Form Submissions</Link>
-        <Link href="/marketing/website-attribution/anonymous-get-started-visits" aria-current={showVisits ? "page" : undefined} className={`rounded-lg px-4 py-2 text-sm font-medium ${showVisits ? "bg-gray-900 text-white" : "bg-white text-gray-700 ring-1 ring-gray-200 hover:bg-gray-50"}`}>Anonymous Get Started Visits</Link>
-      </nav>
-      {!showVisits && <section className="mt-6 min-w-0">
+      <h2 className="text-lg font-semibold text-gray-900">Form Submissions</h2>
+      <section className="mt-6 min-w-0">
         <h3 className="text-lg font-semibold text-gray-900">New Client Form Submissions</h3>
         <p className="mt-2 text-sm text-gray-600">
           Durable copies received from /new-client/ before MoeGo is contacted. Every attempt and status transition is retained. Times are Eastern.
         </p>
         <form className="mt-5 flex flex-wrap items-end gap-3" method="get">
+          <input type="hidden" name="view" value="submissions" />
           <label className="text-sm font-medium text-gray-700">
             Start date
             <input className="mt-1 block rounded-lg border border-gray-300 bg-white px-3 py-2 font-normal text-gray-900" type="date" name="submissionStart" defaultValue={submissionRange.start} />
@@ -105,7 +88,7 @@ export async function WebsiteAttributionReport({ searchParams, showVisits }: Pag
           <div className="flex items-center gap-2 pb-2 text-sm">
             {[7, 30, 90].map((days) => {
               const start = addCalendarDays(submissionRange.end, -(days - 1));
-              return <a key={days} className="text-blue-700 hover:underline" href={`?submissionStart=${start}&submissionEnd=${submissionRange.end}`}>{days} days</a>;
+              return <a key={days} className="text-blue-700 hover:underline" href={`?view=submissions&submissionStart=${start}&submissionEnd=${submissionRange.end}`}>{days} days</a>;
             })}
           </div>
         </form>
@@ -125,47 +108,8 @@ export async function WebsiteAttributionReport({ searchParams, showVisits }: Pag
           <strong>MoeGo client history unavailable.</strong> This app has no synced MoeGo customer records yet. Client-age attribution will appear after the customer sync is configured and run.
         </div>}
         <SubmissionTable submissions={submissionsWithHistory} total={Number(formTotal.submissions)} page={page} pageCount={pageCount} pageSize={SUBMISSIONS_PER_PAGE} startDate={submissionRange.start} endDate={submissionRange.end} />
-      </section>}
+      </section>
 
-      {showVisits && <section className="mt-6">
-      <h3 className="text-lg font-semibold text-gray-900">Anonymous Get Started Visits</h3>
-      <p className="mt-2 text-sm text-gray-600">
-        {business.label} · Last 30 days · Visits to /get-started/. These are anonymous
-        visits, not submitted forms, leads, bookings, or revenue. Visitor counts are
-        browser-based estimates; blocked tracking and cleared storage affect totals.
-      </p>
-      <div className="my-6 grid gap-4 sm:grid-cols-3">
-        {[["Recorded visits", total.visits], ["Unique browsers", total.visitors], ["Campaign / ad-tagged visits", total.tagged]].map(([label, value]) => (
-          <div key={label} className="rounded-xl border border-gray-200 bg-white p-5">
-            <p className="text-sm text-gray-600">{label}</p>
-            <p className="mt-2 text-3xl font-semibold">{Number(value).toLocaleString()}</p>
-          </div>
-        ))}
-      </div>
-      <h3 className="mb-3 font-semibold">Latest visits</h3>
-      <p className="mb-3 text-sm text-gray-500">Showing up to 100 visits. Times are Eastern. Each row shows the source captured on that visit.</p>
-      <div className="overflow-x-auto rounded-xl border border-gray-200 bg-white">
-        <table className="w-full text-left text-sm">
-          <thead className="bg-gray-50"><tr>
-            {["Time", "Source / medium", "Campaign", "Content / term", "Ad click IDs", "Referrer", "Landing page"].map((label) => <th key={label} className="px-4 py-3 font-medium">{label}</th>)}
-          </tr></thead>
-          <tbody>
-            {visits.map((visit) => (
-              <tr key={visit.id} className="border-t border-gray-100 align-top">
-                <td className="whitespace-nowrap px-4 py-3">{formatTime(visit.createdAt)}</td>
-                <td className="max-w-48 break-words px-4 py-3">{visit.campaign.utm_source || "Untagged"} / {visit.campaign.utm_medium || "—"}</td>
-                <td className="max-w-48 break-words px-4 py-3">{visit.campaign.utm_campaign || "—"}</td>
-                <td className="max-w-48 break-words px-4 py-3">{visit.campaign.utm_content || "—"} / {visit.campaign.utm_term || "—"}</td>
-                <td className="max-w-56 break-all px-4 py-3">{Object.entries(visit.clickIds).map(([key, value]) => <details key={key}><summary className="cursor-pointer">{key}</summary><span>{value}</span></details>)}{Object.keys(visit.clickIds).length === 0 && "—"}</td>
-                <td className="max-w-48 break-all px-4 py-3">{visit.referrerOrigin || "None recorded"}</td>
-                <td className="max-w-48 break-all px-4 py-3">{visit.landingPage}</td>
-              </tr>
-            ))}
-            {visits.length === 0 && <tr><td colSpan={7} className="px-4 py-8 text-center text-gray-500">No recorded visits for this business in the last 30 days.</td></tr>}
-          </tbody>
-        </table>
-      </div>
-      </section>}
     </div>
   );
 }

@@ -7,5 +7,6 @@ export default async function WebsiteAttributionPage({ searchParams }: PageProps
   const query = new URLSearchParams();
   if (params.submissionStart) query.set("submissionStart", params.submissionStart);
   if (params.submissionEnd) query.set("submissionEnd", params.submissionEnd);
-  redirect(`/marketing/website-attribution/new-form-submissions${query.size ? `?${query}` : ""}`);
+  query.set("view", "submissions");
+  redirect(`/marketing?${query}`);
 }

@@ -1,7 +1,7 @@
-import { WebsiteAttributionReport } from "../Report";
+import { redirect } from "next/navigation";
 
 export const dynamic = "force-dynamic";
 
-export default async function AnonymousGetStartedVisitsPage() {
-  return <WebsiteAttributionReport searchParams={Promise.resolve({})} showVisits />;
+export default function AnonymousGetStartedVisitsPage() {
+  redirect("/marketing?view=submissions");
 }
