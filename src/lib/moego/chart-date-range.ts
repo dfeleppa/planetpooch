@@ -82,13 +82,15 @@ export function chartPresetRange(preset: ChartRangePreset, now = new Date()) {
     return { from: ymd(from), to: ymd(to) };
   }
 
-  const rollingDays = {
+  const rollingDays: Partial<Record<ChartRangePreset, number>> = {
     "7-days": 7,
     "30-days": 30,
     "90-days": 90,
     "1-year": 365,
     "2-years": 730,
     all: 3650,
-  }[preset];
-  return { from: ymd(addDays(today, -(rollingDays - 1))), to: ymd(today) };
+  };
+  const days = rollingDays[preset];
+  if (days === undefined) throw new Error(`Unknown chart range preset: ${preset}`);
+  return { from: ymd(addDays(today, -(days - 1))), to: ymd(today) };
 }
