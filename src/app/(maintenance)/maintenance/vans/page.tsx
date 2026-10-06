@@ -48,7 +48,7 @@ export default async function VansPage() {
                 <th scope="row" className="whitespace-nowrap px-4 py-3 text-left font-semibold">
                   <Link href={`/maintenance/vans/${van.number}`} className="text-blue-700 hover:underline">Van {van.number}</Link>
                 </th>
-                <td className="px-4 py-3 text-gray-900">{[van.year, van.make, van.model].filter(Boolean).join(" ") || "Vehicle details needed"}<div className="text-xs text-gray-500">Engine {van.engine || "—"}</div></td>
+                <td className="px-4 py-3 text-gray-900">{[van.year, van.make, van.model].filter(Boolean).join(" ") || "Vehicle details needed"}</td>
                 <td className="whitespace-nowrap px-4 py-3">
                   <span className={`rounded-full px-2 py-1 text-xs font-medium ${van.status === "ACTIVE" ? "bg-green-100 text-green-800" : "bg-gray-100 text-gray-700"}`}>
                     {van.status === "ACTIVE" ? "Active" : van.status === "IN_SERVICE" ? "In service" : "Out of service"}
