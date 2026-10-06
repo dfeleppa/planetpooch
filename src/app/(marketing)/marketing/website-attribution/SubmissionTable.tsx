@@ -7,6 +7,7 @@ import type { SubmissionWithClientHistory } from "@/lib/marketing/moego-client-h
 const columns = [
   { key: "received", label: "Received" },
   { key: "customer", label: "Customer" },
+  { key: "business", label: "Business" },
   { key: "contact", label: "Contact" },
   { key: "pets", label: "Pets / services" },
   { key: "consent", label: "Consent" },
@@ -33,6 +34,7 @@ function sortValue(submission: SubmissionWithClientHistory, key: SortKey): strin
   switch (key) {
     case "received": return submission.receivedAt.getTime();
     case "customer": return [submission.firstName, submission.lastName].filter(Boolean).join(" ") || "Unvalidated";
+    case "business": return submission.company === "RESORT" ? "Pet Resort" : "Mobile Grooming";
     case "contact": return submission.phone || submission.email || "";
     case "pets": return [
       ...submission.pets.map((pet) => {
@@ -157,6 +159,7 @@ export function SubmissionTable({ submissions, total, page, pageCount, pageSize,
               <tr key={submission.id} className="border-t border-gray-100 align-top">
                 <td className="whitespace-nowrap px-4 py-3">{formatTime(submission.receivedAt)}<div className="mt-1 text-xs text-gray-500">Updated {formatTime(submission.updatedAt)}</div></td>
                 <td className="max-w-48 break-words px-4 py-3">{[submission.firstName, submission.lastName].filter(Boolean).join(" ") || "Unvalidated"}<div className="mt-1 break-all text-xs text-gray-500">{submission.id}</div></td>
+                <td className="whitespace-nowrap px-4 py-3">{submission.company === "RESORT" ? "Pet Resort" : "Mobile Grooming"}</td>
                 <td className="max-w-52 break-all px-4 py-3">{submission.phone || "—"}<br />{submission.email || "—"}</td>
                 <td className="max-w-64 break-words px-4 py-3">
                   {submission.pets.length ? submission.pets.map((pet, index) => {

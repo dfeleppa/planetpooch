@@ -32,7 +32,7 @@ export const NewClientLedgerRequest = z.discriminatedUnion("action", [
 ]);
 
 export type WebsiteFormSubmissionRow = {
-  id: string; receivedAt: Date; updatedAt: Date; payload: Record<string, unknown>;
+  id: string; company: "RESORT" | "GROOMING" | "CORPORATE"; receivedAt: Date; updatedAt: Date; payload: Record<string, unknown>;
   requestMetadata: Record<string, unknown>; firstName: string | null; lastName: string | null;
   phone: string | null; email: string | null; pets: unknown[]; services: string[];
   marketingConsent: boolean | null; attribution: Record<string, string>; status: string;

@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSession, hasMarketingAccess } from "@/lib/auth-helpers";
-import { getActiveBusiness } from "@/lib/business-server";
 import { prisma } from "@/lib/prisma";
 import { getMetaPeriodMetrics } from "@/lib/marketing/meta-reporting";
 import { allocatePaidOrders, expandVerifiedSubmissionProfiles } from "@/lib/marketing/live-report";
@@ -31,24 +30,26 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: "Valid from and to dates are required." }, { status: 400 });
   }
   const toExclusive = new Date(to.getTime() + DAY_MS);
-  const business = await getActiveBusiness();
-  const businessId = business.key === "pet-resort" ? PET_RESORT_BUSINESS_ID : MOBILE_GROOMING_BUSINESS_ID;
+  const businesses = [
+    { company: "RESORT" as const, businessId: PET_RESORT_BUSINESS_ID },
+    { company: "GROOMING" as const, businessId: MOBILE_GROOMING_BUSINESS_ID },
+  ];
 
   const [meta, orderCursor, latestOrder, google, lsa, orders] = await Promise.all([
-    getMetaPeriodMetrics(business.key, from, toExclusive),
+    getMetaPeriodMetrics("", from, toExclusive),
     prisma.moegoSyncState.findUnique({ where: { resource: "order" }, select: { lastSyncedAt: true } }),
     prisma.moegoOrder.aggregate({ _max: { syncedAt: true } }),
     prisma.financeGoogleCampaignReportRow.aggregate({
-      where: { business: business.key, periodStart: from, periodEnd: to },
+      where: { business: { in: ["pet-resort", "mobile-grooming"] }, periodStart: from, periodEnd: to },
       _sum: { costCents: true }, _count: { _all: true }, _max: { updatedAt: true },
     }),
     prisma.financeGoogleLsaLeadReportRow.aggregate({
-      where: { business: business.key, periodStart: from, periodEnd: to },
+      where: { business: { in: ["pet-resort", "mobile-grooming"] }, periodStart: from, periodEnd: to },
       _sum: { totalPaidCents: true }, _count: { _all: true }, _max: { updatedAt: true },
     }),
     prisma.moegoOrder.findMany({
       where: {
-        businessId,
+        businessId: { in: businesses.map((business) => business.businessId) },
         status: { in: PAID_STATUSES },
         OR: [
           { salesDatetime: { gte: from, lt: toExclusive } },
@@ -56,7 +57,7 @@ export async function GET(req: NextRequest) {
           { salesDatetime: null, completedTime: null, createdTime: { gte: from, lt: toExclusive } },
         ],
       },
-      select: { customerMoegoId: true, createdTime: true, salesDatetime: true, completedTime: true, paidCents: true, refundedCents: true },
+      select: { businessId: true, customerMoegoId: true, createdTime: true, salesDatetime: true, completedTime: true, paidCents: true, refundedCents: true },
     }),
   ]);
 
@@ -67,26 +68,31 @@ export async function GET(req: NextRequest) {
     orderCursor.lastSyncedAt.getTime() >= freshBefore && latestOrder._max.syncedAt.getTime() >= freshBefore);
   let revenue: ReturnType<typeof allocatePaidOrders> | null = null;
   if (orderDataAvailable) {
-    const orderCustomerIds = new Set(orders.flatMap((order) => order.customerMoegoId ? [order.customerMoegoId] : []));
-    const submissions = orderCustomerIds.size ? await prisma.websiteFormSubmission.findMany({
-      where: {
-        company: business.company,
-        status: "SYNCED",
-        moegoCustomerId: { not: null },
-        receivedAt: { lt: toExclusive },
-      },
-      select: { moegoCustomerId: true, receivedAt: true, attribution: true,
-        firstName: true, lastName: true, phone: true, email: true },
-    }) : [];
-    const phones = [...new Set(submissions.map((submission) => normalizedPhone(submission.phone))
-      .filter((phone): phone is string => phone !== null))];
-    const profiles = phones.length ? await prisma.$queryRaw<OutcomeCustomerProfile[]>(Prisma.sql`
-      SELECT "moegoId", "name", "email", "mainPhoneNumber"
-      FROM "MoegoCustomer"
-      WHERE RIGHT(REGEXP_REPLACE(COALESCE("mainPhoneNumber", ''), '[^0-9]', '', 'g'), 10)
-        IN (${Prisma.join(phones)})
-    `) : [];
-    revenue = allocatePaidOrders(orders, expandVerifiedSubmissionProfiles(submissions, profiles, orderCustomerIds));
+    revenue = { meta: 0, "google-ads": 0, "google-lsa": 0, unattributed: 0 };
+    for (const business of businesses) {
+      const businessOrders = orders.filter((order) => order.businessId === business.businessId);
+      const orderCustomerIds = new Set(businessOrders.flatMap((order) => order.customerMoegoId ? [order.customerMoegoId] : []));
+      const submissions = orderCustomerIds.size ? await prisma.websiteFormSubmission.findMany({
+        where: {
+          company: business.company,
+          status: "SYNCED",
+          moegoCustomerId: { not: null },
+          receivedAt: { lt: toExclusive },
+        },
+        select: { moegoCustomerId: true, receivedAt: true, attribution: true,
+          firstName: true, lastName: true, phone: true, email: true },
+      }) : [];
+      const phones = [...new Set(submissions.map((submission) => normalizedPhone(submission.phone))
+        .filter((phone): phone is string => phone !== null))];
+      const profiles = phones.length ? await prisma.$queryRaw<OutcomeCustomerProfile[]>(Prisma.sql`
+        SELECT "moegoId", "name", "email", "mainPhoneNumber"
+        FROM "MoegoCustomer"
+        WHERE RIGHT(REGEXP_REPLACE(COALESCE("mainPhoneNumber", ''), '[^0-9]', '', 'g'), 10)
+          IN (${Prisma.join(phones)})
+      `) : [];
+      const allocated = allocatePaidOrders(businessOrders, expandVerifiedSubmissionProfiles(submissions, profiles, orderCustomerIds));
+      for (const source of Object.keys(revenue) as Array<keyof typeof revenue>) revenue[source] += allocated[source];
+    }
   }
 
   return NextResponse.json({

@@ -1,5 +1,4 @@
 import { requireMarketing } from "@/lib/auth-helpers";
-import { getActiveBusiness } from "@/lib/business-server";
 import { prisma } from "@/lib/prisma";
 import { Prisma } from "@prisma/client";
 import type { WebsiteFormSubmissionRow } from "@/lib/marketing/new-client-submissions";
@@ -12,7 +11,6 @@ const SUBMISSIONS_PER_PAGE = 50;
 
 export async function WebsiteAttributionReport({ searchParams }: PageProps) {
   await requireMarketing();
-  const business = await getActiveBusiness();
   const params = await searchParams;
   const submissionRange = resolveSubmissionDateRange(params.submissionStart, params.submissionEnd);
   const submissionTotals = await prisma.$queryRaw<{ submissions: number; synced: number; attention: number; conflicts: number }[]>`
@@ -21,7 +19,7 @@ export async function WebsiteAttributionReport({ searchParams }: PageProps) {
         COUNT(*) FILTER (WHERE "status" NOT IN ('SYNCED', 'MOEGO_DUPLICATE_CONFLICT'))::int AS attention,
         COUNT(*) FILTER (WHERE "status" = 'MOEGO_DUPLICATE_CONFLICT')::int AS conflicts
       FROM "WebsiteFormSubmission"
-      WHERE "company" = ${business.company}::"Company"
+      WHERE "company" IN ('RESORT'::"Company", 'GROOMING'::"Company")
         AND "receivedAt" >= ${submissionRange.startAt}
         AND "receivedAt" < ${submissionRange.endBefore}`;
   const formTotal = submissionTotals[0];
@@ -29,7 +27,7 @@ export async function WebsiteAttributionReport({ searchParams }: PageProps) {
   const requestedPage = typeof params.page === "string" && /^\d+$/.test(params.page) ? Number(params.page) : 1;
   const page = Number.isSafeInteger(requestedPage) ? Math.min(Math.max(requestedPage, 1), pageCount) : 1;
   const submissions = await prisma.websiteFormSubmission.findMany({
-    where: { company: business.company, receivedAt: { gte: submissionRange.startAt, lt: submissionRange.endBefore } },
+    where: { company: { in: ["RESORT", "GROOMING"] }, receivedAt: { gte: submissionRange.startAt, lt: submissionRange.endBefore } },
     orderBy: [{ receivedAt: "desc" }, { id: "desc" }],
     skip: (page - 1) * SUBMISSIONS_PER_PAGE,
     take: SUBMISSIONS_PER_PAGE,
@@ -72,7 +70,7 @@ export async function WebsiteAttributionReport({ searchParams }: PageProps) {
       <section className="mt-6 min-w-0">
         <h3 className="text-lg font-semibold text-gray-900">New Client Form Submissions</h3>
         <p className="mt-2 text-sm text-gray-600">
-          Durable copies received from /new-client/ before MoeGo is contacted. Every attempt and status transition is retained. Times are Eastern.
+          Pet Resort and Mobile Grooming copies received from /new-client/ before MoeGo is contacted. Every attempt and status transition is retained. Times are Eastern.
         </p>
         <form className="mt-5 flex flex-wrap items-end gap-3" method="get">
           <input type="hidden" name="view" value="submissions" />

@@ -17,7 +17,7 @@ type Data = {
     adsetId: string | null; adsetName: string | null; adId: string | null; adName: string | null; leads: number;
   }>;
   leads: Array<{
-    id: string; receivedAt: string; customer: string; services: string[]; source: string;
+    id: string; receivedAt: string; customer: string; business: string; services: string[]; source: string;
     campaignName: string | null; adsetName: string | null; adName: string | null; syncedToMoego: boolean;
   }>;
 };
@@ -115,7 +115,7 @@ export function LeadAttributionDashboard({ from, to, source }: { from: string; t
           <div className="overflow-x-auto">
             <table className="w-full text-left text-sm">
               <thead className="bg-gray-50 text-xs uppercase tracking-wide text-gray-500"><tr>
-                <th className="px-5 py-3 font-medium">Received</th><th className="px-5 py-3 font-medium">Customer</th>
+                <th className="px-5 py-3 font-medium">Received</th><th className="px-5 py-3 font-medium">Customer</th><th className="px-5 py-3 font-medium">Business</th>
                 <th className="px-5 py-3 font-medium">Source</th><th className="px-5 py-3 font-medium">Campaign</th>
                 <th className="px-5 py-3 font-medium">Services</th><th className="px-5 py-3 font-medium">MoeGo</th>
               </tr></thead>
@@ -124,13 +124,14 @@ export function LeadAttributionDashboard({ from, to, source }: { from: string; t
                   <tr key={lead.id}>
                     <td className="whitespace-nowrap px-5 py-3">{formatTime(lead.receivedAt)}</td>
                     <td className="px-5 py-3 font-medium text-gray-900">{lead.customer}</td>
+                    <td className="whitespace-nowrap px-5 py-3">{lead.business}</td>
                     <td className="px-5 py-3">{SOURCE_LABELS[lead.source] || lead.source}</td>
                     <td className="max-w-64 px-5 py-3">{lead.campaignName || "—"}{lead.adName && <div className="mt-1 text-xs text-gray-500">{lead.adName}</div>}</td>
                     <td className="px-5 py-3">{lead.services.join(", ") || "—"}</td>
                     <td className="px-5 py-3">{lead.syncedToMoego ? "Synced" : "Not confirmed"}</td>
                   </tr>
                 ))}
-                {data.leads.length === 0 && <tr><td colSpan={6} className="px-5 py-8 text-center text-gray-500">No submitted leads for this source and date range.</td></tr>}
+                {data.leads.length === 0 && <tr><td colSpan={7} className="px-5 py-8 text-center text-gray-500">No submitted leads for this source and date range.</td></tr>}
               </tbody>
             </table>
           </div>

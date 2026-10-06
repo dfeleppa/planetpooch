@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSession, hasMarketingAccess } from "@/lib/auth-helpers";
-import { getActiveBusiness } from "@/lib/business-server";
 import { prisma } from "@/lib/prisma";
 import {
   attributionText,
@@ -30,15 +29,15 @@ export async function GET(request: NextRequest) {
   const from = request.nextUrl.searchParams.get("from") || undefined;
   const to = request.nextUrl.searchParams.get("to") || undefined;
   const range = resolveSubmissionDateRange(from, to);
-  const business = await getActiveBusiness();
   const submissions = await prisma.websiteFormSubmission.findMany({
     where: {
-      company: business.company,
+      company: { in: ["RESORT", "GROOMING"] },
       receivedAt: { gte: range.startAt, lt: range.endBefore },
     },
     orderBy: [{ receivedAt: "desc" }, { id: "desc" }],
     select: {
       id: true,
+      company: true,
       receivedAt: true,
       firstName: true,
       lastName: true,
@@ -87,7 +86,7 @@ export async function GET(request: NextRequest) {
       ? prisma.financeGoogleCampaignReportRow.findMany({
           where: {
             campaignId: { in: googleCampaignIds },
-            business: { in: [business.key, `${business.key}-manual`, "all-businesses", "all-businesses-manual"] },
+            business: { in: ["pet-resort", "pet-resort-manual", "mobile-grooming", "mobile-grooming-manual", "all-businesses", "all-businesses-manual"] },
           },
           orderBy: { updatedAt: "desc" },
           select: { campaignId: true, campaign: true },
@@ -161,6 +160,7 @@ export async function GET(request: NextRequest) {
     campaigns: [...campaignGroups.values()].sort((a, b) => b.leads - a.leads || a.campaignName.localeCompare(b.campaignName)),
     leads: selected.slice(0, 50).map((row) => ({
       id: row.id,
+      business: row.company === "RESORT" ? "Pet Resort" : "Mobile Grooming",
       receivedAt: row.receivedAt,
       customer: [row.firstName, row.lastName].filter(Boolean).join(" ") || "Unvalidated",
       services: row.services,

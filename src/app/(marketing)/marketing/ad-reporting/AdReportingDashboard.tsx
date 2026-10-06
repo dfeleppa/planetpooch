@@ -141,9 +141,12 @@ export function AdReportingDashboard({
       <details className="mt-6 rounded-xl border border-gray-200 bg-white">
         <summary className="cursor-pointer px-5 py-4 text-sm font-medium text-gray-800">Show detailed platform campaign reports</summary>
         <div className="space-y-5 border-t border-gray-100 p-4">
-          {(source === "all" || source === "meta") && <FacebookCampaignReportTable business={business} from={from} to={to} />}
-          {(source === "all" || source === "google-ads") && <GoogleCampaignReportTable business={business} from={from} to={to} />}
-          {(source === "all" || source === "google-lsa") && <GoogleLsaLeadReportTable business={business} from={from} to={to} />}
+          {([{"key":"pet-resort","label":"Pet Resort"},{"key":"mobile-grooming","label":"Mobile Grooming"}] as const).map((division) => <section key={division.key} className="space-y-5">
+            <h4 className="font-semibold text-gray-900">{division.label}</h4>
+            {(source === "all" || source === "meta") && <FacebookCampaignReportTable business={division.key} from={from} to={to} />}
+            {(source === "all" || source === "google-ads") && <GoogleCampaignReportTable business={division.key} from={from} to={to} />}
+            {(source === "all" || source === "google-lsa") && <GoogleLsaLeadReportTable business={division.key} from={from} to={to} />}
+          </section>)}
         </div>
       </details>
     </>
@@ -204,7 +207,7 @@ function AttributionSummary({
           </table>
         </div>
         <p className="border-t border-gray-100 px-5 py-3 text-xs text-gray-600">
-          MoeGo net paid for this business: {formatDollars(cents(metric.totalMoegoRevenue))}.
+          MoeGo net paid for Pet Resort and Mobile Grooming: {formatDollars(cents(metric.totalMoegoRevenue))}.
           {metric.moegoSyncedAt ? ` Orders last updated ${new Date(metric.moegoSyncedAt).toLocaleString()}.` : " No order rows have been synced."}
           {metric.moegoCursorThrough ? ` Order sync cursor: ${new Date(metric.moegoCursorThrough).toLocaleString()}.` : ""}
           {metric.metaSyncedAt ? ` Meta last synced ${new Date(metric.metaSyncedAt).toLocaleString()}.` : ""}

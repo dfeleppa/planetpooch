@@ -1,5 +1,4 @@
 import { getSession } from "@/lib/auth-helpers";
-import { getActiveBusiness } from "@/lib/business-server";
 import { prisma } from "@/lib/prisma";
 import { assignLeadOutcomes, leadOutcomeWindow, matchingOutcomeCustomerIds, type OutcomeCustomerProfile } from "@/lib/marketing/lead-outcomes";
 import { attributionText, classifyLeadAttribution, type LeadAttributionSource, type SubmissionAttribution } from "@/lib/marketing/lead-attribution";
@@ -18,11 +17,10 @@ const SOURCE_LABELS: Record<LeadAttributionSource, string> = {
 export async function LeadOutcomesReport({ from, to, source }: { from: string; to: string; source: ReportSource }) {
   const { startAt: since, endBefore: until } = resolveSubmissionDateRange(from, to);
   const { staleBefore } = leadOutcomeWindow(1);
-  const business = await getActiveBusiness();
   const [session, submissions, appointmentSync, orderSync, latestOrder, latestCustomer] = await Promise.all([
     getSession(),
     prisma.websiteFormSubmission.findMany({
-      where: { company: business.company, status: "SYNCED", moegoCustomerId: { not: null }, receivedAt: { gte: since, lt: until } },
+      where: { company: { in: ["RESORT", "GROOMING"] }, status: "SYNCED", moegoCustomerId: { not: null }, receivedAt: { gte: since, lt: until } },
       orderBy: [{ receivedAt: "desc" }, { id: "desc" }],
       take: 500,
       select: { id: true, company: true, receivedAt: true, firstName: true, lastName: true, phone: true, email: true, moegoCustomerId: true, services: true, attribution: true },
@@ -99,7 +97,7 @@ export async function LeadOutcomesReport({ from, to, source }: { from: string; t
       select: { campaignId: true, campaignName: true },
     }) : Promise.resolve([]),
     googleCampaignIds.length ? prisma.financeGoogleCampaignReportRow.findMany({
-      where: { campaignId: { in: googleCampaignIds }, business: { in: [business.key, `${business.key}-manual`, "all-businesses", "all-businesses-manual"] } },
+      where: { campaignId: { in: googleCampaignIds }, business: { in: ["pet-resort", "pet-resort-manual", "mobile-grooming", "mobile-grooming-manual", "all-businesses", "all-businesses-manual"] } },
       orderBy: { updatedAt: "desc" }, select: { campaignId: true, campaign: true },
     }) : Promise.resolve([]),
   ]);
@@ -143,7 +141,7 @@ export async function LeadOutcomesReport({ from, to, source }: { from: string; t
   return <div>
     <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
       <div>
-        <p className="text-sm text-gray-600">Only website submissions linked to a MoeGo customer appear here. Confirmed bookings and net paid are observed after each form; they are not proof that an ad caused the purchase.</p>
+        <p className="text-sm text-gray-600">Pet Resort and Mobile Grooming website submissions linked to a MoeGo customer appear here. Confirmed bookings and net paid are observed after each form; they are not proof that an ad caused the purchase.</p>
       </div>
       {isAdmin && <SyncLeadOutcomesButton />}
     </div>
@@ -193,11 +191,12 @@ export async function LeadOutcomesReport({ from, to, source }: { from: string; t
       <div className="overflow-x-auto border-t border-gray-100">
       <table className="w-full min-w-[1000px] text-left text-sm">
         <thead className="bg-gray-50 text-gray-700"><tr>
-          {["Submitted", "Customer", "Source", "Campaign", "Services", "MoeGo profiles", "Booked", "Pending", "First booked", "Net paid after form"].map((label) => <th key={label} className="px-4 py-3 font-medium">{label}</th>)}
+          {["Submitted", "Customer", "Business", "Source", "Campaign", "Services", "MoeGo profiles", "Booked", "Pending", "First booked", "Net paid after form"].map((label) => <th key={label} className="px-4 py-3 font-medium">{label}</th>)}
         </tr></thead>
         <tbody>{attributedOutcomes.map((row) => <tr key={row.id} className="border-t border-gray-100 align-top">
           <td className="whitespace-nowrap px-4 py-3">{eastern.format(row.receivedAt)}</td>
           <td className="px-4 py-3">{[row.firstName, row.lastName].filter(Boolean).join(" ") || row.moegoCustomerId}</td>
+          <td className="whitespace-nowrap px-4 py-3">{row.company === "RESORT" ? "Pet Resort" : "Mobile Grooming"}</td>
           <td className="px-4 py-3">{SOURCE_LABELS[row.source]}</td>
           <td className="max-w-56 break-words px-4 py-3">{row.source === "unattributed" ? "—" : row.campaignId ? campaignNames.get(`${row.source}|${row.campaignId}`) ?? row.campaignId : "—"}</td>
           <td className="px-4 py-3">{row.services.join(", ") || "—"}</td>
@@ -207,7 +206,7 @@ export async function LeadOutcomesReport({ from, to, source }: { from: string; t
           <td className="whitespace-nowrap px-4 py-3">{appointmentSync && row.result.firstBookedAt ? eastern.format(row.result.firstBookedAt) : "—"}</td>
           <td className="whitespace-nowrap px-4 py-3 tabular-nums">{orderDataAvailable ? money(row.result.netPaidCents) : "—"}</td>
         </tr>)}
-        {outcomes.length === 0 && <tr><td colSpan={10} className="px-4 py-8 text-center text-gray-500">No linked website submissions in this range.</td></tr>}
+        {outcomes.length === 0 && <tr><td colSpan={11} className="px-4 py-8 text-center text-gray-500">No linked website submissions in this range.</td></tr>}
         </tbody>
       </table>
       </div>

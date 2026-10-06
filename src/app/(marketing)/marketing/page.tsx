@@ -1,5 +1,4 @@
 import Link from "next/link";
-import { getActiveBusiness } from "@/lib/business-server";
 import { requireMarketing } from "@/lib/auth-helpers";
 import { AdReportingDashboard } from "./ad-reporting/AdReportingDashboard";
 import { MetaCreativePerformance } from "./evaluate/MetaCreativePerformance";
@@ -17,7 +16,6 @@ export default async function MarketingPage({ searchParams }: { searchParams: Pr
   const query = await searchParams;
   const submissions = query.view === "submissions";
   const creatives = query.view === "creatives";
-  const business = await getActiveBusiness();
   const report = reportingRange(query);
   return <div>
     <nav aria-label="Marketing views" className="mb-6 flex flex-wrap items-center gap-3 border-b border-gray-200 pb-4">
@@ -28,17 +26,17 @@ export default async function MarketingPage({ searchParams }: { searchParams: Pr
       </div>
     </nav>
     {submissions ? <WebsiteAttributionReport searchParams={searchParams} /> : creatives ? <MetaCreativePerformance searchParams={query} /> : <>
-      <p className="mb-5 text-sm text-gray-600">Follow ad spend through website leads and MoeGo outcomes. Use Creative performance to compare individual Meta ads.
+      <p className="mb-5 text-sm text-gray-600">Follow Pet Resort and Mobile Grooming ad spend through website leads and MoeGo outcomes. Use Creative performance to compare individual Meta ads.
         {session.user.role === "SUPER_ADMIN" && <> <Link href="/finance/moego" className="font-medium text-blue-700 underline">Refresh MoeGo orders in Finance</Link>.</>}
       </p>
       <Suspense fallback={<p className="mb-6 text-sm text-gray-500">Loading filters…</p>}>
         <CampaignReportFilters from={report.from} to={report.to} source={report.source} days={report.days} />
       </Suspense>
-      <p className="mb-5 text-sm text-gray-600">Showing <strong>{business.key === "pet-resort" ? "Planet Pooch Pet Resort" : "Planet Pooch Mobile Grooming"}</strong> · {report.label}</p>
+      <p className="mb-5 text-sm text-gray-600">Showing <strong>Pet Resort and Mobile Grooming</strong> · {report.label}</p>
       <section aria-labelledby="spend-heading">
         <h2 id="spend-heading" className="text-lg font-semibold text-gray-900">1. Spend and observed MoeGo revenue</h2>
         <p className="mt-1 text-sm text-gray-600">Meta spend is synced from Ads Manager. MoeGo revenue is assigned only to a recorded, linked website lead; Google spend comes from date-matched CSV imports.</p>
-        <AdReportingDashboard business={business.key} from={report.from} to={report.to} source={report.source} rangeLabel={report.label} />
+        <AdReportingDashboard business="" from={report.from} to={report.to} source={report.source} rangeLabel={report.label} />
       </section>
       <section aria-labelledby="website-leads-heading" className="mt-8 border-t border-gray-200 pt-7">
         <h2 id="website-leads-heading" className="text-lg font-semibold text-gray-900">2. Submitted website leads</h2>
