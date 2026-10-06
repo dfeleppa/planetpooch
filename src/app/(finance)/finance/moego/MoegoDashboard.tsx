@@ -6,6 +6,7 @@ import { Tabs } from "@/components/ui/Tabs";
 import { RevenueChart } from "./RevenueChart";
 import {
   chartPresetRange,
+  recentQuarterPresets,
   type ChartRangePreset,
 } from "@/lib/moego/chart-date-range";
 
@@ -24,6 +25,7 @@ const QUICK_RANGES = [
   { value: "last-week", label: "Last week" },
   { value: "last-month", label: "Last month" },
   { value: "last-year", label: "Last year" },
+  ...recentQuarterPresets(),
   { value: "7-days", label: "Last 7 days" },
   { value: "30-days", label: "Last 30 days" },
   { value: "90-days", label: "Last 90 days" },

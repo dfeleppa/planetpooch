@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { chartPresetRange, yearToDateRange } from "../src/lib/moego/chart-date-range";
+import { chartPresetRange, recentQuarterPresets, yearToDateRange } from "../src/lib/moego/chart-date-range";
 
 test("YTD selects January 1 through today in Eastern time", () => {
   assert.deepEqual(yearToDateRange(new Date("2026-09-16T16:00:00Z")), {
@@ -39,4 +39,14 @@ test("rolling presets include today without adding an extra day", () => {
     from: "2026-09-15",
     to: "2026-09-21",
   });
+});
+
+test("recent quarters use Eastern dates and cross the year boundary", () => {
+  const now = new Date("2026-01-01T02:00:00Z"); // Still December 31 in New York.
+  assert.deepEqual(recentQuarterPresets(now).map((preset) => preset.label), [
+    "Q4 2025 (to date)", "Q3 2025", "Q2 2025", "Q1 2025", "Q4 2024",
+  ]);
+  assert.deepEqual(chartPresetRange("quarter-0", now), { from: "2025-10-01", to: "2025-12-31" });
+  assert.deepEqual(chartPresetRange("quarter-1", now), { from: "2025-07-01", to: "2025-09-30" });
+  assert.deepEqual(chartPresetRange("quarter-4", now), { from: "2024-10-01", to: "2024-12-31" });
 });

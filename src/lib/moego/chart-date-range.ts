@@ -11,6 +11,11 @@ export type ChartRangePreset =
   | "last-week"
   | "last-month"
   | "last-year"
+  | "quarter-0"
+  | "quarter-1"
+  | "quarter-2"
+  | "quarter-3"
+  | "quarter-4"
   | "7-days"
   | "30-days"
   | "90-days"
@@ -40,6 +45,18 @@ function addDays(date: Date, days: number): Date {
   return new Date(date.getTime() + days * MS_PER_DAY);
 }
 
+export function recentQuarterPresets(now = new Date()): { value: ChartRangePreset; label: string }[] {
+  const today = easternDate(now);
+  const currentQuarterMonth = Math.floor(today.getUTCMonth() / 3) * 3;
+  return ([0, 1, 2, 3, 4] as const).map((offset) => {
+    const start = new Date(Date.UTC(today.getUTCFullYear(), currentQuarterMonth - offset * 3, 1));
+    return {
+      value: `quarter-${offset}` as ChartRangePreset,
+      label: `Q${Math.floor(start.getUTCMonth() / 3) + 1} ${start.getUTCFullYear()}${offset === 0 ? " (to date)" : ""}`,
+    };
+  });
+}
+
 export function chartPresetRange(preset: ChartRangePreset, now = new Date()) {
   const today = easternDate(now);
 
@@ -56,6 +73,13 @@ export function chartPresetRange(preset: ChartRangePreset, now = new Date()) {
   if (preset === "last-year") {
     const year = today.getUTCFullYear() - 1;
     return { from: `${year}-01-01`, to: `${year}-12-31` };
+  }
+  if (preset.startsWith("quarter-")) {
+    const offset = Number(preset.slice("quarter-".length));
+    const currentQuarterMonth = Math.floor(today.getUTCMonth() / 3) * 3;
+    const from = new Date(Date.UTC(today.getUTCFullYear(), currentQuarterMonth - offset * 3, 1));
+    const to = offset === 0 ? today : new Date(Date.UTC(from.getUTCFullYear(), from.getUTCMonth() + 3, 0));
+    return { from: ymd(from), to: ymd(to) };
   }
 
   const rollingDays = {
