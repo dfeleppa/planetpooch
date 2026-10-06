@@ -164,6 +164,9 @@ export async function findAdReport(question: string): Promise<KnowledgeSource[]>
   const business = /\bmobile[ -]?grooming\b/i.test(question) ? "mobile-grooming"
     : /\bpet[ -]?resort\b/i.test(question) ? "pet-resort" : active.key;
   if (isAdPlatformCplComparisonQuestion(question)) return findAdPlatformCplComparison(business);
+  if (/\b(?:meta|facebook)\b/i.test(question) && !/\bgoogle(?: ads?)?\b/i.test(question)) {
+    return findMetaInsightReport(question, business);
+  }
   const period = reportPeriod(question);
   const sources = /\b(?:google ads?|google)\b/i.test(question) ? ["Google Ads"] as const
     : /\b(?:meta|facebook)\b/i.test(question) ? ["Meta"] as const
@@ -199,4 +202,76 @@ export async function findAdReport(question: string): Promise<KnowledgeSource[]>
     updatedAt: new Date().toISOString(), dateKind: "entry",
     answer: `I cannot verify that from the imported campaign reports because no rows are saved for ${business}, ${period?.label ?? "the latest period"}. [1]`,
   }];
+}
+
+/** Daily synced Meta insights are the source behind Marketing Performance. */
+async function findMetaInsightReport(question: string, business: string): Promise<KnowledgeSource[]> {
+  const period = reportPeriod(question);
+  const today = (await import("@/lib/marketing/submission-date-range")).formatEasternDate(new Date());
+  const start = period?.start ?? new Date(Date.parse(`${today}T00:00:00.000Z`) - 29 * 86_400_000).toISOString().slice(0, 10);
+  const end = period?.end ?? today;
+  const company = business === "mobile-grooming" ? "GROOMING" : "RESORT";
+  const assignments = await prisma.metaCampaignBusiness.findMany({
+    where: { companies: { has: company } }, select: { campaignId: true },
+  });
+  const rows = await prisma.metaAdInsight.findMany({
+    where: { campaignId: { in: assignments.map((row) => row.campaignId) },
+      date: { gte: new Date(`${start}T00:00:00.000Z`), lte: new Date(`${end}T00:00:00.000Z`) } },
+    select: { campaignId: true, campaignName: true, date: true, spendCents: true,
+      impressions: true, reach: true, linkClicks: true, leads: true, purchases: true,
+      purchaseValueCents: true, syncedAt: true },
+    orderBy: [{ date: "desc" }, { campaignId: "asc" }],
+  });
+  const url = `/marketing/evaluate?view=creatives&from=${start}&to=${end}`;
+  if (!rows.length) return [{
+    id: `record:report:meta-insights:missing:${business}:${start}:${end}`,
+    title: `Meta campaign insights: ${business}, ${start} to ${end}`, kind: "record", url,
+    excerpt: `No synced Meta daily insight rows are available for ${business} from ${start} through ${end}. The imported campaign report is a separate source. Missing insights do not mean zero spend or leads.`,
+    updatedAt: new Date().toISOString(), dateKind: "entry",
+  }];
+  type Campaign = { id: string; name: string; spend: number; impressions: number; clicks: number;
+    leads: number; purchases: number; purchaseValue: number; first: string; last: string };
+  const campaigns = new Map<string, Campaign>();
+  let latestSync = new Date(0);
+  const coveredDays = new Set<string>();
+  for (const row of rows) {
+    const day = date(row.date);
+    coveredDays.add(day);
+    if (row.syncedAt > latestSync) latestSync = row.syncedAt;
+    const id = row.campaignId ?? `unnamed:${row.campaignName ?? "unknown"}`;
+    let campaign = campaigns.get(id);
+    if (!campaign) {
+      campaign = { id, name: row.campaignName ?? id, spend: 0, impressions: 0,
+        clicks: 0, leads: 0, purchases: 0, purchaseValue: 0, first: day, last: day };
+      campaigns.set(id, campaign);
+    }
+    campaign.spend += row.spendCents;
+    campaign.impressions += row.impressions;
+    campaign.clicks += row.linkClicks;
+    campaign.leads += row.leads;
+    campaign.purchases += row.purchases;
+    campaign.purchaseValue += row.purchaseValueCents;
+    if (day < campaign.first) campaign.first = day;
+    if (day > campaign.last) campaign.last = day;
+  }
+  const ordered = [...campaigns.values()].sort((a, b) => b.spend - a.spend);
+  const campaignLines = ordered.map((campaign) =>
+    `${campaign.name} (ID ${campaign.id}): ${money(campaign.spend)} spend; ${campaign.leads} Meta-reported leads; ` +
+    `${campaign.leads ? `${money(Math.round(campaign.spend / campaign.leads))} cost per lead` : "cost per lead undefined (zero reported leads)"}; ` +
+    `${campaign.impressions} impressions; ${campaign.clicks} link clicks; ${campaign.purchases} Meta-reported purchases; ` +
+    `${money(campaign.purchaseValue)} Meta-reported purchase value; observed dates ${campaign.first} to ${campaign.last}.`);
+  const first = [...coveredDays].sort()[0];
+  const last = [...coveredDays].sort().at(-1)!;
+  const excerpt = [
+    `Synced Meta daily insights for ${business}, requested ${start} through ${end}. ` +
+      `${rows.length} ad-day rows, ${ordered.length} campaigns; observed dates ${first} through ${last}; ` +
+      `${coveredDays.size} distinct calendar days with data. Last sync ${latestSync.toISOString()}.`,
+    `Campaign metrics are summed from synced ad-day insights. Dates without rows are not verified zero activity. ` +
+      `Lead and purchase counts are Meta-reported actions; bookings, completed appointments, and contribution return are not established here. ` +
+      `Reach is excluded because ad-level reach cannot safely be summed into unique campaign reach.`,
+    ...campaignLines,
+  ].join("\n");
+  return [{ id: `record:report:meta-insights:${business}:${start}:${end}`,
+    title: `Meta campaign insights: ${business}, ${start} to ${end}`, kind: "record", url,
+    excerpt, updatedAt: latestSync.toISOString(), dateKind: "entry" }];
 }

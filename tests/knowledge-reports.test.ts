@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { reportKind } from "../src/lib/knowledge-reports";
+import { orderDateRange } from "../src/lib/knowledge-app-data";
 import { completedReportWeeks, reportPeriod, reportQuarter } from "../src/lib/knowledge-report-period";
 import { aggregateMetric, boardingTrendWeekCount, daycareVisitCount, fullReportWeeks, isDaycareVisitsPerStaffHourQuestion, isServiceRevenueTargetQuestion, requestedKpiMetrics } from "../src/lib/knowledge-report-kpis";
 import { isWeeklyProfitComparison, profitMarginPercent, profitMetric } from "../src/lib/knowledge-report-profit-loss";
@@ -43,6 +44,14 @@ test("lead forms and new form submissions use the same completed week", () => {
   assert.deepEqual(reportPeriod(first, now), reportPeriod(alias, now));
   assert.deepEqual(reportPeriod(alias, now),
     { start: "2026-09-27", end: "2026-10-03", label: "2026-09-27 to 2026-10-03", kind: "week" });
+});
+
+test("short numeric dates through today preserve the full requested range", () => {
+  const now = new Date("2026-10-06T16:00:00Z");
+  assert.deepEqual(orderDateRange("Look at Meta leads for 9/18/26 to today", now),
+    { start: "2026-09-18", end: "2026-10-06" });
+  assert.deepEqual(reportPeriod("Look at Meta leads for 9/18/26 to today", now),
+    { start: "2026-09-18", end: "2026-10-06", label: "2026-09-18 to 2026-10-06", kind: "range" });
 });
 
 test("report periods preserve a partial quarter and a completed week", () => {

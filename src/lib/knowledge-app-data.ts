@@ -58,16 +58,16 @@ export function personLookup(question: string): string | null {
 export function orderDateRange(question: string, now = new Date()): { start: string; end: string } | null {
   const lower = question.toLowerCase();
   const today = formatEasternDate(now);
-  const explicitDates = [...question.matchAll(/\b(?:\d{4}-\d{2}-\d{2}|\d{1,2}\/\d{1,2}\/\d{4})\b/g)]
+  const explicitDates = [...question.matchAll(/\b(?:\d{4}-\d{2}-\d{2}|\d{1,2}\/\d{1,2}\/\d{2,4})\b/g)]
     .map(([value]) => {
       const parts = value.includes("/") ? value.split("/").map(Number) : null;
       const iso = parts
-        ? `${parts[2]}-${String(parts[0]).padStart(2, "0")}-${String(parts[1]).padStart(2, "0")}`
+        ? `${parts[2] < 100 ? 2000 + parts[2] : parts[2]}-${String(parts[0]).padStart(2, "0")}-${String(parts[1]).padStart(2, "0")}`
         : value;
       const parsed = new Date(`${iso}T00:00:00.000Z`);
       return !Number.isNaN(parsed.getTime()) && parsed.toISOString().slice(0, 10) === iso ? iso : null;
     }).filter((value): value is string => value !== null);
-  if (explicitDates.length) return { start: explicitDates[0], end: explicitDates[1] ?? explicitDates[0] };
+  if (explicitDates.length) return { start: explicitDates[0], end: explicitDates[1] ?? (/\b(?:to|through|until|thru)\s+today\b/i.test(question) ? today : explicitDates[0]) };
   if (/\blast week\b/.test(lower)) {
     const range = chartPresetRange("last-week", now);
     return { start: range.from, end: range.to };
