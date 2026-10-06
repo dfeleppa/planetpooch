@@ -43,7 +43,7 @@ export default async function VanPage({ params }: { params: Promise<{ number: st
         number={number}
         canEdit={canEdit}
         van={{
-          year: van.year, make: van.make ?? "", model: van.model ?? "", vin: van.vin ?? "",
+          year: van.year, make: van.make ?? "", model: van.model ?? "", engine: van.engine ?? "", vin: van.vin ?? "",
           licensePlate: van.licensePlate ?? "", mileage: van.mileage, status: van.status,
           registrationExpiry: van.registrationExpiry?.toISOString().slice(0, 10) ?? "",
           insuranceExpiry: van.insuranceExpiry?.toISOString().slice(0, 10) ?? "",

@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 
 type Van = {
-  year: number | null; make: string; model: string; vin: string; licensePlate: string;
+  year: number | null; make: string; model: string; engine: string; vin: string; licensePlate: string;
   mileage: number | null; status: string; registrationExpiry: string; insuranceExpiry: string;
   insuranceCarrier: string; insuranceDeductible: string; insurancePremium: string;
   inspectionExpiry: string; notes: string;
@@ -115,6 +115,7 @@ export function VanEditor({ number, van, records, canEdit }: { number: number; v
             <Input label="Year" type="number" min="1900" max="2100" value={profile.year ?? ""} onChange={e => setProfile({ ...profile, year: e.target.value ? Number(e.target.value) : null })} />
             <Input label="Make" value={profile.make} onChange={e => setProfile({ ...profile, make: e.target.value })} />
             <Input label="Model" value={profile.model} onChange={e => setProfile({ ...profile, model: e.target.value })} />
+            <Input label="Engine" value={profile.engine} onChange={e => setProfile({ ...profile, engine: e.target.value })} />
             <Input label="VIN (full or last 4)" maxLength={17} value={profile.vin} onChange={e => setProfile({ ...profile, vin: e.target.value.toUpperCase() })} />
             <Input label="License plate" value={profile.licensePlate} onChange={e => setProfile({ ...profile, licensePlate: e.target.value })} />
             <Input label="Current mileage" type="number" min="0" value={profile.mileage ?? ""} onChange={e => setProfile({ ...profile, mileage: e.target.value ? Number(e.target.value) : null })} />

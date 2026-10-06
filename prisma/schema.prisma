@@ -567,6 +567,7 @@ model GroomingVan {
   year               Int?
   make               String?
   model              String?
+  engine             String?
   vin                String?
   licensePlate       String?
   mileage            Int?

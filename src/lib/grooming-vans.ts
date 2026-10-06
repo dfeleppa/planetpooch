@@ -12,7 +12,7 @@ const optionalDate = z.string().refine(value => {
 
 export const vanProfileSchema = z.object({
   year: optionalInteger(2100).refine(value => value === null || value >= 1900),
-  make: optionalText(100), model: optionalText(100), vin: optionalText(17),
+  make: optionalText(100), model: optionalText(100), engine: optionalText(100), vin: optionalText(17),
   licensePlate: optionalText(30), mileage: optionalInteger(10_000_000),
   status: z.enum(["ACTIVE", "IN_SERVICE", "OUT_OF_SERVICE"]),
   registrationExpiry: optionalDate, insuranceExpiry: optionalDate, inspectionExpiry: optionalDate,
