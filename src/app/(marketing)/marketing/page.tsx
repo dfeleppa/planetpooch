@@ -35,7 +35,7 @@ export default async function MarketingPage({ searchParams }: { searchParams: Pr
       <p className="mb-5 text-sm text-gray-600">Showing <strong>Pet Resort and Mobile Grooming</strong> · {report.label}</p>
       <section aria-labelledby="spend-heading">
         <h2 id="spend-heading" className="text-lg font-semibold text-gray-900">1. Spend and net paid after new lead forms</h2>
-        <p className="mt-1 text-sm text-gray-600">Revenue uses the linked form submissions and post-form MoeGo outcomes in section 3. Meta spend is synced from Ads Manager; Google spend comes from date-matched CSV imports.</p>
+        <p className="mt-1 text-sm text-gray-600">Revenue uses the linked form submissions and post-form MoeGo outcomes in section 3. Meta spend is synced from Ads Manager; Google spend comes from date-matched CSV imports or manual entries.</p>
         <AdReportingDashboard business="" from={report.from} to={report.to} source={report.source} rangeLabel={report.label} />
       </section>
       <section aria-labelledby="website-leads-heading" className="mt-8 border-t border-gray-200 pt-7">

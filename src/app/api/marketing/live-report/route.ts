@@ -30,7 +30,7 @@ export async function GET(req: NextRequest) {
   const source: LeadAttributionSource | "all" = sourceParam === "meta" || sourceParam === "google-ads" || sourceParam === "google-lsa"
     ? sourceParam : "all";
 
-  const [meta, orderCursor, latestOrder, google, lsa] = await Promise.all([
+  const [meta, orderCursor, latestOrder, google, lsa, manualSpend] = await Promise.all([
     getMetaPeriodMetrics("", from, toExclusive),
     prisma.moegoSyncState.findUnique({ where: { resource: "order" }, select: { lastSyncedAt: true } }),
     prisma.moegoOrder.aggregate({ _max: { syncedAt: true } }),
@@ -42,7 +42,13 @@ export async function GET(req: NextRequest) {
       where: { business: { in: ["pet-resort", "mobile-grooming"] }, periodStart: from, periodEnd: to },
       _sum: { totalPaidCents: true }, _count: { _all: true }, _max: { updatedAt: true },
     }),
+    prisma.marketingManualSpend.findMany({
+      where: { business: "combined", periodStart: from, periodEnd: to },
+      select: { source: true, amountCents: true, updatedAt: true },
+    }),
   ]);
+  const manualGoogle = manualSpend.find((item) => item.source === "google-ads");
+  const manualLsa = manualSpend.find((item) => item.source === "google-lsa");
 
   const { staleBefore } = leadOutcomeWindow(1);
   const orderDataAvailable = Boolean(orderCursor && latestOrder._max.syncedAt && latestOrder._max.syncedAt >= staleBefore);
@@ -54,8 +60,10 @@ export async function GET(req: NextRequest) {
   return NextResponse.json({
     metric: {
       metaAdSpend: meta.spendCents,
-      googleAdSpend: google._count._all ? google._sum.costCents : null,
-      googleLsaAdSpend: lsa._count._all ? lsa._sum.totalPaidCents : null,
+      googleAdSpend: manualGoogle?.amountCents ?? (google._count._all ? google._sum.costCents : null),
+      googleLsaAdSpend: manualLsa?.amountCents ?? (lsa._count._all ? lsa._sum.totalPaidCents : null),
+      googleSpendOrigin: manualGoogle ? "manual" : google._count._all ? "csv" : null,
+      googleLsaSpendOrigin: manualLsa ? "manual" : lsa._count._all ? "csv" : null,
       metaRevenue: revenue?.totals.meta ?? null,
       googleRevenue: revenue?.totals["google-ads"] ?? null,
       googleLsaRevenue: revenue?.totals["google-lsa"] ?? null,

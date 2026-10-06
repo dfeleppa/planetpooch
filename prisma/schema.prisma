@@ -1305,6 +1305,20 @@ model FinanceGoogleLsaLeadReportRow {
   @@index([customer], map: "FinanceGoogleLsaLeadReport_customer_idx")
 }
 
+/// A manually entered total for one exact reporting period and Google source.
+model MarketingManualSpend {
+  id          String   @id @default(cuid())
+  business    String
+  source      String
+  periodStart DateTime @db.Date
+  periodEnd   DateTime @db.Date
+  amountCents Int
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@unique([business, source, periodStart, periodEnd])
+}
+
 enum PayrollCategory {
   TRAINING
   GROOMING

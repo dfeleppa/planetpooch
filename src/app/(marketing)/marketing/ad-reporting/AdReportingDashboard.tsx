@@ -27,6 +27,8 @@ type MetricData = {
   leadsLimited: boolean;
   googleImportedAt: string | null;
   googleLsaImportedAt: string | null;
+  googleSpendOrigin: "manual" | "csv" | null;
+  googleLsaSpendOrigin: "manual" | "csv" | null;
 };
 
 const EMPTY_METRIC: MetricData = {
@@ -47,6 +49,8 @@ const EMPTY_METRIC: MetricData = {
   leadsLimited: false,
   googleImportedAt: null,
   googleLsaImportedAt: null,
+  googleSpendOrigin: null,
+  googleLsaSpendOrigin: null,
 };
 
 function cents(val: number | null) {
@@ -84,6 +88,11 @@ export function AdReportingDashboard({
 }) {
   const [metric, setMetric] = useState<MetricData>(EMPTY_METRIC);
   const [loadError, setLoadError] = useState(false);
+  const [refresh, setRefresh] = useState(0);
+  const [editing, setEditing] = useState<"google-ads" | "google-lsa" | null>(null);
+  const [amount, setAmount] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState("");
 
   const [loadedFor, setLoadedFor] = useState("");
   const metricKey = `${business}|${from}|${to}|${source}`;
@@ -114,6 +123,8 @@ export function AdReportingDashboard({
             leadsLimited: m.leadsLimited ?? false,
             googleImportedAt: m.googleImportedAt ?? null,
             googleLsaImportedAt: m.googleLsaImportedAt ?? null,
+            googleSpendOrigin: m.googleSpendOrigin ?? null,
+            googleLsaSpendOrigin: m.googleLsaSpendOrigin ?? null,
           });
           setLoadError(false);
           setLoadedFor(metricKey);
@@ -130,13 +141,35 @@ export function AdReportingDashboard({
     return () => {
       cancelled = true;
     };
-  }, [business, from, to, source, metricKey]);
+  }, [business, from, to, source, metricKey, refresh]);
+
+  async function saveSpend(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!editing) return;
+    setSaving(true);
+    setSaveError("");
+    try {
+      const response = await fetch("/api/marketing/manual-spend", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ from, to, source: editing, amount }),
+      });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error || "Could not save spend.");
+      setEditing(null);
+      setRefresh((value) => value + 1);
+    } catch (error) {
+      setSaveError(error instanceof Error ? error.message : "Could not save spend.");
+    } finally {
+      setSaving(false);
+    }
+  }
 
   return (
     <>
       {loadedFor === metricKey ? loadError
         ? <Card className="mt-4"><CardContent className="py-6 text-sm text-red-700">Spend and revenue could not be loaded for this range.</CardContent></Card>
-        : <AttributionSummary metric={metric} source={source} rangeLabel={rangeLabel} /> :
+        : <AttributionSummary metric={metric} source={source} rangeLabel={rangeLabel} editing={editing} amount={amount} saving={saving} saveError={saveError} onAmount={setAmount} onSave={saveSpend} onCancel={() => { setEditing(null); setSaveError(""); }} onEdit={(key) => { setEditing(key); setAmount((((key === "google-ads" ? metric.googleAdSpend : metric.googleLsaAdSpend) ?? 0) / 100).toFixed(2)); setSaveError(""); }} /> :
         <Card className="mt-4"><CardContent className="py-6 text-sm text-gray-500">Loading spend and revenue…</CardContent></Card>}
 
       {(source === "all" || source === "meta") && <MetaSyncRangeButton from={from} to={to} />}
@@ -159,15 +192,24 @@ function AttributionSummary({
   metric,
   source,
   rangeLabel,
+  editing, amount, saving, saveError, onAmount, onSave, onCancel, onEdit,
 }: {
   metric: MetricData;
   source: "all" | "meta" | "google-ads" | "google-lsa";
   rangeLabel: string;
+  editing: "google-ads" | "google-lsa" | null;
+  amount: string;
+  saving: boolean;
+  saveError: string;
+  onAmount: (value: string) => void;
+  onSave: (event: React.FormEvent<HTMLFormElement>) => void;
+  onCancel: () => void;
+  onEdit: (key: "google-ads" | "google-lsa") => void;
 }) {
   const rows = [
     { key: "meta", label: "Meta Ads · connected", spend: metric.metaAdSpend, revenue: metric.metaRevenue },
-    { key: "google-ads", label: "Google Ads · CSV import", spend: metric.googleAdSpend, revenue: metric.googleRevenue },
-    { key: "google-lsa", label: "Google LSA · CSV import", spend: metric.googleLsaAdSpend, revenue: metric.googleLsaRevenue },
+    { key: "google-ads", label: `Google Ads · ${metric.googleSpendOrigin === "manual" ? "manual" : "CSV import"}`, spend: metric.googleAdSpend, revenue: metric.googleRevenue },
+    { key: "google-lsa", label: `Google LSA · ${metric.googleLsaSpendOrigin === "manual" ? "manual" : "CSV import"}`, spend: metric.googleLsaAdSpend, revenue: metric.googleLsaRevenue },
   ].filter((row) => source === "all" || row.key === source);
   return (
     <Card className="mt-6 overflow-hidden">
@@ -194,7 +236,13 @@ function AttributionSummary({
                 return (
                   <tr key={row.key}>
                     <td className="px-5 py-3 font-medium text-gray-900">{row.label}</td>
-                    <td className="px-5 py-3 text-right">{formatDollars(cents(row.spend))}</td>
+                    <td className="px-5 py-3 text-right">
+                      {editing === row.key ? <form onSubmit={onSave} className="flex items-center justify-end gap-2">
+                        <span>$</span><input aria-label={`${row.label} spend in dollars`} type="number" min="0" max="21474836.47" step="0.01" required value={amount} onChange={(event) => onAmount(event.target.value)} className="w-28 rounded border border-gray-300 px-2 py-1 text-right" />
+                        <button type="submit" disabled={saving} className="text-blue-700 underline disabled:opacity-50">{saving ? "Saving…" : "Save"}</button>
+                        <button type="button" onClick={onCancel} className="text-gray-600 underline">Cancel</button>
+                      </form> : <span>{formatDollars(cents(row.spend))}{row.key !== "meta" && <button type="button" onClick={() => onEdit(row.key as "google-ads" | "google-lsa")} className="ml-2 text-xs text-blue-700 underline">Edit</button>}</span>}
+                    </td>
                     <td className="px-5 py-3 text-right">{formatDollars(cents(row.revenue))}</td>
                     <td className="px-5 py-3 text-right font-medium">{formatRatio(roas)}</td>
                   </tr>
@@ -209,6 +257,8 @@ function AttributionSummary({
             </tbody>
           </table>
         </div>
+        {saveError && <p role="alert" className="px-5 py-2 text-xs text-red-700">{saveError}</p>}
+        <p className="px-5 py-2 text-xs text-gray-500">Manual Google spend is the combined Pet Resort and Mobile Grooming total for this exact date range. A manual total takes priority over CSV totals for the same range.</p>
         <p className="border-t border-gray-100 px-5 py-3 text-xs text-gray-600">
           Net paid after linked website forms: {formatDollars(cents(metric.totalMoegoRevenue))}.
           {metric.leadsLimited ? " Only the first 500 linked submissions are included, matching section 3." : ""}
@@ -230,12 +280,12 @@ function AttributionSummary({
         )}
         {metric.googleAdSpend === null && (source === "all" || source === "google-ads") && (
           <p className="border-t border-gray-100 px-5 py-3 text-xs text-amber-700">
-            Google Ads spend needs a CSV import for this exact date range. A previously imported period total is not reused for different dates.
+            Enter Google Ads spend manually or import a CSV for this exact date range. A previous period total is not reused.
           </p>
         )}
         {metric.googleLsaAdSpend === null && (source === "all" || source === "google-lsa") && (
           <p className="border-t border-gray-100 px-5 py-3 text-xs text-amber-700">
-            Google LSA spend needs a lead CSV import for this exact date range.
+            Enter Google LSA spend manually or import a lead CSV for this exact date range.
           </p>
         )}
       </CardContent>
