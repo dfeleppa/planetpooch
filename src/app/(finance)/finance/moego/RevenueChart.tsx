@@ -7,6 +7,7 @@ import { metricTrend } from "@/lib/moego/chart-profit";
 type Bucket = "day" | "week" | "month" | "quarter" | "year";
 type BucketChoice = Bucket | "auto";
 const CURRENT_COLOR = "#2563eb";
+const NEGATIVE_COLOR = "#dc2626";
 const COMPARISON_COLOR = "#ffd43b";
 
 type BucketRow = {
@@ -88,7 +89,8 @@ function bucketLabel(iso: string, bucket: Bucket): string {
       timeZone: "UTC",
     });
   }
-  // day / week
+  if (bucket === "week") return `${d.getUTCMonth() + 1}/${d.getUTCDate()}`;
+  // day
   return d.toLocaleDateString("en-US", {
     month: "short",
     day: "numeric",
@@ -176,6 +178,7 @@ export function RevenueChart({
   const barW = barCount > 0 ? innerW / barCount : 0;
   const seriesCount = comparison ? 2 : 1;
   const renderedBarWidth = barW / seriesCount;
+  const chartWidth = Math.max(W, barCount * (comparison ? 64 : 46) + PAD.left + PAD.right);
   const showBarValues = chartType === "bar" && barCount <= (comparison ? 6 : 12) && renderedBarWidth >= 42;
 
   const yTicks =
@@ -183,17 +186,7 @@ export function RevenueChart({
       ? Array.from(new Set([0, ...[0, 0.25, 0.5, 0.75, 1].map((f) => Math.round(min + span * f))])).sort((a, b) => a - b)
       : [0];
 
-  /// X-axis labels: aim for ~6–10 labels regardless of bar count.
-  /// Always include the first and last, plus evenly spaced middles.
-  /// Rotate when bars are narrow so labels don't overlap.
-  const labelStep = barCount > 0 ? Math.max(1, Math.ceil(barCount / 8)) : 1;
-  const labelIndices = (() => {
-    if (barCount === 0) return [] as number[];
-    const out: number[] = [];
-    for (let i = 0; i < barCount; i += labelStep) out.push(i);
-    if (out[out.length - 1] !== barCount - 1) out.push(barCount - 1);
-    return out;
-  })();
+  const labelIndices = data?.buckets.map((_, i) => i) ?? [];
   const rotateLabels = barCount > 0 && innerW / barCount < 60;
 
   return (
@@ -299,7 +292,8 @@ export function RevenueChart({
           <div className="w-full overflow-x-auto">
             <svg
               viewBox={`0 0 ${W} ${H}`}
-              className="w-full h-auto"
+              className="h-auto"
+              style={{ width: chartWidth, maxWidth: "none" }}
               preserveAspectRatio="none"
               role="img"
               aria-label={`${title} ${chartType} graph${comparison ? " with last year comparison" : ""}`}
@@ -358,10 +352,10 @@ export function RevenueChart({
                           y={y}
                           width={Math.max(0.5, renderedBarWidth - 2)}
                           height={height}
-                          fill={series === 1 ? COMPARISON_COLOR : CURRENT_COLOR}
+                          fill={metric === "profit" && amount < 0 ? NEGATIVE_COLOR : series === 1 ? COMPARISON_COLOR : CURRENT_COLOR}
                           rx={1}
                         >
-                          <title>{`Sales: ${dollars(b.revenueCents)}\nExpenses: ${dollars(b.expenseCents)}\nProfit: ${dollars(b.profitCents)}`}</title>
+                          <title>{`${data.bucket === "week" ? "Week of " : "Date: "}${formatDate(b.date)}\nSales: ${dollars(b.revenueCents)}\nExpenses: ${dollars(b.expenseCents)}\nProfit: ${dollars(b.profitCents)}`}</title>
                         </rect>
                         {showBarValues && amount !== 0 && (
                           <text
@@ -383,16 +377,16 @@ export function RevenueChart({
                       cx={PAD.left + i * barW + barW / 2}
                       cy={yPosition(value(b))}
                       r={barCount > 60 ? 2 : 3.5}
-                      fill={series === 1 ? COMPARISON_COLOR : CURRENT_COLOR}
+                      fill={metric === "profit" && value(b) < 0 ? NEGATIVE_COLOR : series === 1 ? COMPARISON_COLOR : CURRENT_COLOR}
                       stroke="white" strokeWidth={1}>
                       <title>
-                        {`Sales: ${dollars(b.revenueCents)}\nExpenses: ${dollars(b.expenseCents)}\nProfit: ${dollars(b.profitCents)}`}
+                        {`${data.bucket === "week" ? "Week of " : "Date: "}${formatDate(b.date)}\nSales: ${dollars(b.revenueCents)}\nExpenses: ${dollars(b.expenseCents)}\nProfit: ${dollars(b.profitCents)}`}
                       </title>
                     </circle>
                   ))}
                 </g>
               ))}
-              {/* X-axis labels: evenly spaced, rotated when crowded */}
+              {/* Label every bucket; the chart scrolls horizontally for long ranges. */}
               {labelIndices.map((i) => {
                 const b = data.buckets[i];
                 if (!b) return null;
