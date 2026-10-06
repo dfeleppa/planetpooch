@@ -20,12 +20,16 @@ export default async function MarketingPage({ searchParams }: { searchParams: Pr
   const business = await getActiveBusiness();
   const report = reportingRange(query);
   return <div>
-    <nav aria-label="Marketing views" className="mb-6 flex flex-wrap gap-2 border-b border-gray-200 pb-4">
-      <Link href="/marketing" aria-current={!submissions && !creatives ? "page" : undefined} className={`rounded-lg px-4 py-2 text-sm font-medium ${!submissions && !creatives ? "bg-gray-900 text-white" : "bg-white text-gray-700 ring-1 ring-gray-200 hover:bg-gray-50"}`}>Campaign results</Link>
-      <Link href="/marketing?view=creatives" aria-current={creatives ? "page" : undefined} className={`rounded-lg px-4 py-2 text-sm font-medium ${creatives ? "bg-gray-900 text-white" : "bg-white text-gray-700 ring-1 ring-gray-200 hover:bg-gray-50"}`}>Creative performance</Link>
-      <Link href="/marketing?view=submissions" aria-current={submissions ? "page" : undefined} className={`rounded-lg px-4 py-2 text-sm font-medium ${submissions ? "bg-gray-900 text-white" : "bg-white text-gray-700 ring-1 ring-gray-200 hover:bg-gray-50"}`}>Form Submissions</Link>
-      <Link href="/marketing/evaluate" className="rounded-lg bg-white px-4 py-2 text-sm font-medium text-gray-700 ring-1 ring-gray-200 hover:bg-gray-50">Evaluate Ads</Link>
-      <Link href="/marketing/create" className="rounded-lg bg-white px-4 py-2 text-sm font-medium text-gray-700 ring-1 ring-gray-200 hover:bg-gray-50">Create Ads</Link>
+    <nav aria-label="Marketing views" className="mb-6 flex flex-wrap items-center gap-3 border-b border-gray-200 pb-4">
+      <div className="flex flex-wrap gap-2">
+        <Link href="/marketing" aria-current={!submissions && !creatives ? "page" : undefined} className={`rounded-lg px-4 py-2 text-sm font-medium ${!submissions && !creatives ? "bg-gray-900 text-white" : "bg-white text-gray-700 ring-1 ring-gray-200 hover:bg-gray-50"}`}>Campaign results</Link>
+        <Link href="/marketing?view=creatives" aria-current={creatives ? "page" : undefined} className={`rounded-lg px-4 py-2 text-sm font-medium ${creatives ? "bg-gray-900 text-white" : "bg-white text-gray-700 ring-1 ring-gray-200 hover:bg-gray-50"}`}>Creative performance</Link>
+        <Link href="/marketing?view=submissions" aria-current={submissions ? "page" : undefined} className={`rounded-lg px-4 py-2 text-sm font-medium ${submissions ? "bg-gray-900 text-white" : "bg-white text-gray-700 ring-1 ring-gray-200 hover:bg-gray-50"}`}>Form Submissions</Link>
+      </div>
+      <div className="ml-auto flex items-center gap-4 text-sm font-medium text-blue-700">
+        <Link href="/marketing/evaluate" className="whitespace-nowrap hover:underline">Evaluate Ads</Link>
+        <Link href="/marketing/create" className="whitespace-nowrap hover:underline">Create Ads</Link>
+      </div>
     </nav>
     {submissions ? <WebsiteAttributionReport searchParams={searchParams} /> : creatives ? <MetaCreativePerformance searchParams={query} /> : <>
       <p className="mb-5 text-sm text-gray-600">Follow ad spend through website leads and MoeGo outcomes. Use Creative performance to compare individual Meta ads.</p>

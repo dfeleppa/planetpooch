@@ -172,10 +172,10 @@ function AttributionSummary({
         </div>
         {!metric.metaDataComplete && (
           <p className="border-t border-amber-100 bg-amber-50 px-5 py-3 text-xs text-amber-800">
-            Meta API insights do not cover this full period{metric.metaDataThrough ? ` (latest synced day: ${metric.metaDataThrough})` : ""}. Meta totals and ROAS are unavailable until the period is synced.
+            Meta platform data does not cover every day in this period{metric.metaDataThrough ? ` (latest synced day: ${metric.metaDataThrough})` : ""}. Complete spend, revenue, and ROAS are hidden here; Creative performance may still show available ad-level results.
           </p>
         )}
-        {metric.googleAdSpend === null && (
+        {metric.googleAdSpend === null && (source === "all" || source === "google-ads") && (
           <p className="border-t border-gray-100 px-5 py-3 text-xs text-amber-700">
             Source spend is available for the Jan 1 – Sep 5 report. Monthly revenue is dated, but the supplied spend was a period total.
           </p>
