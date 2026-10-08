@@ -1345,7 +1345,7 @@ model FinancePetResortPayrollRun {
 model FinanceResortTipRun {
   id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   payDate     DateTime @db.Date
-  periodStart DateTime @db.Date
+  periodStart DateTime @unique @db.Date
   periodEnd   DateTime @db.Date
   totalCents  Int
   createdAt   DateTime @default(now())

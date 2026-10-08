@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { Company } from "@prisma/client";
+import { Company, Prisma } from "@prisma/client";
 import { requireSuperAdmin } from "@/lib/auth-helpers";
 import { getActiveBusiness } from "@/lib/business-server";
 import { prisma } from "@/lib/prisma";
@@ -9,8 +9,8 @@ import { allocateTipCents } from "@/lib/resort-tips";
 
 type Input = {
   payDate: string;
-  periodStart: string;
-  periodEnd: string;
+  year: string;
+  month: string;
   totalTips: string;
   hours: { employeeId: string; hours: string }[];
 };
@@ -26,11 +26,14 @@ export async function saveResortTips(input: Input): Promise<{ ok: true } | { ok:
   if ((await getActiveBusiness()).company !== "RESORT") return { ok: false, error: "Select Resort to save tips." };
 
   const payDate = dateOnly(input.payDate);
-  const periodStart = dateOnly(input.periodStart);
-  const periodEnd = dateOnly(input.periodEnd);
-  if (!payDate || !periodStart || !periodEnd || periodStart > periodEnd) {
-    return { ok: false, error: "Enter a valid pay date and pay period." };
+  if (!payDate || !/^\d{4}$/.test(input.year) || !/^(0[1-9]|1[0-2])$/.test(input.month)) {
+    return { ok: false, error: "Enter a valid pay date, year, and month." };
   }
+  const year = Number(input.year);
+  if (year < 2010 || year > new Date().getUTCFullYear() + 1) return { ok: false, error: "Select a valid year." };
+  const month = Number(input.month);
+  const periodStart = new Date(Date.UTC(year, month - 1, 1));
+  const periodEnd = new Date(Date.UTC(year, month, 0));
   if (!/^\d+(\.\d{1,2})?$/.test(input.totalTips)) return { ok: false, error: "Enter a valid total tips amount." };
   const totalCents = Math.round(Number(input.totalTips) * 100);
   if (!Number.isSafeInteger(totalCents) || totalCents <= 0 || totalCents > 2_147_483_647) return { ok: false, error: "Enter a valid tip total greater than zero." };
@@ -64,6 +67,9 @@ export async function saveResortTips(input: Input): Promise<{ ok: true } | { ok:
       },
     });
   } catch (error) {
+    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
+      return { ok: false, error: "A tip entry already exists for this month." };
+    }
     console.error("Failed to save Resort tips", error);
     return { ok: false, error: "Could not save the tip record. Please try again." };
   }
