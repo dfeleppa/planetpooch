@@ -208,6 +208,30 @@ const quarterCurrencyFormatter = new Intl.NumberFormat("en-US", {
   maximumFractionDigits: 0,
 });
 
+const compactQuarterCurrencyFormatter = new Intl.NumberFormat("en-US", {
+  style: "currency",
+  currency: "USD",
+  notation: "compact",
+  maximumFractionDigits: 1,
+});
+
+function quarterAggregate(values: Array<number | null>, kind: "average" | "total"): number | null {
+  const available = values.filter((value): value is number => value !== null && Number.isFinite(value));
+  if (available.length === 0) return null;
+  const sum = available.reduce((result, value) => result + value, 0);
+  return kind === "average" ? sum / available.length : sum;
+}
+
+function formatCompactQuarterCurrency(cents: number): string {
+  return compactQuarterCurrencyFormatter.format(cents / 100).replace(/([KM])$/, (suffix) => suffix.toLowerCase());
+}
+
+function isAdditiveQuarterMetric(segment: KpiSegment, key: string, format: KpiFormat): boolean {
+  return format !== "percent" && !(
+    (segment === "DAYCARE" && ["avg_daily_occupancy", "avg_visits", "unique_clients"].includes(key))
+  );
+}
+
 function formatQuarterKpiValue(value: number | null, format: KpiFormat): string {
   if (value === null) return "—";
   const displayValue = value / 100;
@@ -393,12 +417,14 @@ function QuarterlyHeadlineMetric({
               comparisonKey as keyof QuarterlyHeadlineRollup["lastYearChange"]
             ];
             return (
-            <div key={name}>
+            <div key={name} className="min-w-0">
               <p className="text-[10px] font-medium uppercase tracking-wide text-gray-400">
                 {name}
               </p>
-              <p className="mt-0.5 text-base font-semibold tabular-nums text-gray-900">
-                {formatValue(value)}
+              <p className="mt-0.5 text-base font-semibold tabular-nums text-gray-900" title={formatValue(value)}>
+                {format === "currency" && value !== null ? (
+                  <><span className="xl:hidden print:inline">{formatCompactQuarterCurrency(value)}</span><span className="hidden xl:inline print:hidden">{formatValue(value)}</span></>
+                ) : formatValue(value)}
               </p>
               <p
                 className={`mt-0.5 text-[10px] font-medium ${
@@ -442,7 +468,7 @@ function QuarterlyHeadline({
         </div>
         <p className="text-xs text-gray-500">{dates}</p>
       </div>
-      <div className="grid gap-3 lg:grid-cols-3">
+      <div className="grid gap-3 lg:grid-cols-3 [&>*]:min-w-0">
         <QuarterlyHeadlineMetric label="Pet Resort net sales" rollup={summary.netSales} format="currency" />
         <QuarterlyHeadlineMetric label="Pet Resort payroll" rollup={summary.payroll} format="currency" />
         <QuarterlyHeadlineMetric label="Payroll % of net sales" rollup={summary.payrollPercent} format="percent" />
@@ -1087,6 +1113,44 @@ export function KpiView({
                       </TableRow>
                     )
                   )}
+                  {(["average", "total"] as const).map((kind) => (
+                    <TableRow key={kind} className="bg-slate-100 font-semibold hover:bg-slate-100">
+                      <TableCell className="px-1 py-2 text-center text-[9px] font-bold uppercase" colSpan={2}>
+                        {kind}
+                      </TableCell>
+                      <TableCell className="whitespace-nowrap border-l border-gray-200 px-1 py-2 text-center text-[9px] font-bold tabular-nums">
+                        {(() => {
+                          const value = quarterAggregate(
+                            (quarterlySegmentsData[PET_RESORT_SEGMENTS[0].key] ?? []).map(
+                              (week) => quarterlyPayrollByWeek?.[week.week] ?? null
+                            ),
+                            kind
+                          );
+                          return value === null ? "—" : quarterCurrencyFormatter.format(value / 100);
+                        })()}
+                      </TableCell>
+                      {PET_RESORT_SEGMENTS.flatMap((segDef) =>
+                        quarterMetricsForSegment(segDef, showSecondaryKpis).map((metric) => {
+                          const value = kind === "total" && !isAdditiveQuarterMetric(segDef.key, metric.key, metric.format)
+                            ? null
+                            : quarterAggregate(
+                                (quarterlySegmentsData[segDef.key] ?? []).map(
+                                  (week) => week.data[metric.key]?.value ?? null
+                                ),
+                                kind
+                              );
+                          return (
+                            <TableCell
+                              key={`${segDef.key}-${metric.key}`}
+                              className="whitespace-nowrap border-l border-gray-200 px-1 py-2 text-center text-[9px] font-bold tabular-nums"
+                            >
+                              {formatQuarterKpiValue(value, metric.format)}
+                            </TableCell>
+                          );
+                        })
+                      )}
+                    </TableRow>
+                  ))}
                 </TableBody>
               </Table>
             </div>
