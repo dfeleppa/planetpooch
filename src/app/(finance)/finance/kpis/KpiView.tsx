@@ -421,7 +421,7 @@ function QuarterlyHeadlineMetric({
               <p className="text-[10px] font-medium uppercase tracking-wide text-gray-400">
                 {name}
               </p>
-              <p className="mt-0.5 text-base font-semibold tabular-nums text-gray-900" title={formatValue(value)}>
+              <p className="mt-0.5 text-sm font-semibold tabular-nums text-gray-900 xl:text-base" title={formatValue(value)}>
                 {format === "currency" && value !== null ? (
                   <><span className="xl:hidden print:inline">{formatCompactQuarterCurrency(value)}</span><span className="hidden xl:inline print:hidden">{formatValue(value)}</span></>
                 ) : formatValue(value)}
