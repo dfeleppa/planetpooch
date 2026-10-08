@@ -1341,6 +1341,31 @@ model FinancePetResortPayrollRun {
   @@index([payRunAt])
 }
 
+/// A paid Resort tip pool and its employee allocation at the time of payment.
+model FinanceResortTipRun {
+  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  payDate     DateTime @db.Date
+  periodStart DateTime @db.Date
+  periodEnd   DateTime @db.Date
+  totalCents  Int
+  createdAt   DateTime @default(now())
+  allocations FinanceResortTipAllocation[]
+
+  @@index([payDate])
+}
+
+model FinanceResortTipAllocation {
+  id         String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tipRunId   String @db.Uuid
+  employeeId String
+  employeeName String
+  hoursHundredths Int
+  amountCents Int
+  tipRun FinanceResortTipRun @relation(fields: [tipRunId], references: [id], onDelete: Cascade)
+
+  @@unique([tipRunId, employeeId])
+}
+
 /// Manually entered headline totals shown at the top of each weekly KPI report.
 /// Pet Resort net sales come directly from synced MoeGo orders; its legacy
 /// column remains nullable so existing headline rows stay compatible.
