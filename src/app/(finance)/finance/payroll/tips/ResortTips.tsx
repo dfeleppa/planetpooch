@@ -18,8 +18,8 @@ export function ResortTips({ employees, runs }: { employees: Employee[]; runs: R
   const router = useRouter();
   const [totalTips, setTotalTips] = useState("");
   const [payDate, setPayDate] = useState("");
-  const [periodStart, setPeriodStart] = useState("");
-  const [periodEnd, setPeriodEnd] = useState("");
+  const [periodStartMonth, setPeriodStartMonth] = useState("");
+  const [periodEndMonth, setPeriodEndMonth] = useState("");
   const [hours, setHours] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
@@ -38,10 +38,13 @@ export function ResortTips({ employees, runs }: { employees: Employee[]; runs: R
     setError("");
     setSaving(true);
     try {
+      const periodStart = `${periodStartMonth}-01`;
+      const [endYear, endMonth] = periodEndMonth.split("-").map(Number);
+      const periodEnd = new Date(Date.UTC(endYear, endMonth, 0)).toISOString().slice(0, 10);
       const result = await saveResortTips({ payDate, periodStart, periodEnd, totalTips,
         hours: employees.map((employee) => ({ employeeId: employee.id, hours: hours[employee.id] || "0" })) });
       if (!result.ok) { setError(result.error); return; }
-      setTotalTips(""); setPayDate(""); setPeriodStart(""); setPeriodEnd(""); setHours({});
+      setTotalTips(""); setPayDate(""); setPeriodStartMonth(""); setPeriodEndMonth(""); setHours({});
       router.refresh();
     } catch { setError("Could not save the tip record. Please try again."); }
     finally { setSaving(false); }
@@ -68,8 +71,8 @@ export function ResortTips({ employees, runs }: { employees: Employee[]; runs: R
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
           <label className="text-sm font-medium">Total tips ($)<input className={`${inputClass} mt-1`} type="number" min="0.01" step="0.01" required value={totalTips} onChange={(event) => setTotalTips(event.target.value)} /></label>
           <label className="text-sm font-medium">Pay date<input className={`${inputClass} mt-1`} type="date" required value={payDate} onChange={(event) => setPayDate(event.target.value)} /></label>
-          <label className="text-sm font-medium">Period start<input className={`${inputClass} mt-1`} type="date" required value={periodStart} onChange={(event) => setPeriodStart(event.target.value)} /></label>
-          <label className="text-sm font-medium">Period end<input className={`${inputClass} mt-1`} type="date" required min={periodStart || undefined} value={periodEnd} onChange={(event) => setPeriodEnd(event.target.value)} /></label>
+          <label className="text-sm font-medium">Period start month<input className={`${inputClass} mt-1`} type="month" required value={periodStartMonth} onChange={(event) => setPeriodStartMonth(event.target.value)} /></label>
+          <label className="text-sm font-medium">Period end month<input className={`${inputClass} mt-1`} type="month" required min={periodStartMonth || undefined} value={periodEndMonth} onChange={(event) => setPeriodEndMonth(event.target.value)} /></label>
         </div>
         {employees.length === 0 ? <p className="text-sm text-gray-500">No active Resort employees are available.</p> : <div className="overflow-x-auto"><table className="w-full text-left text-sm">
           <thead><tr className="border-b text-gray-600"><th className="py-2">Resort employee</th><th className="py-2">Hours worked</th><th className="py-2 text-right">Share of tips</th></tr></thead>
