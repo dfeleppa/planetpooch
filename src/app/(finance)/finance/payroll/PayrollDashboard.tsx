@@ -684,6 +684,16 @@ export function PayrollDashboard({
         });
       }
     }
+    if (business === "mobile-grooming") {
+      const currentWeekStart = addDaysParam(lastCompletedWeekStart(business), 7);
+      if (!byStart.has(currentWeekStart)) {
+        byStart.set(currentWeekStart, {
+          weekStart: currentWeekStart,
+          weekEnd: addDaysParam(currentWeekStart, 6),
+          stored: false,
+        });
+      }
+    }
     if (!byStart.has(weekStart)) {
       byStart.set(weekStart, {
         weekStart,
@@ -2031,6 +2041,9 @@ export function PayrollDashboard({
                         <option key={option.weekStart} value={option.weekStart}>
                           {formatWeekRange(option.weekStart, option.weekEnd)}
                           {mobilePayrollView === "summary" && option.stored ? ` (saved)` : ""}
+                          {option.weekStart === addDaysParam(lastCompletedWeekStart("mobile-grooming"), 7)
+                            ? " (in progress)"
+                            : ""}
                         </option>
                       ))}
                     </Select>
