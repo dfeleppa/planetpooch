@@ -1,7 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { FormEvent, useEffect, useState } from "react";
+import MarkdownIt from "markdown-it";
+import { FormEvent, useEffect, useMemo, useState } from "react";
+import styles from "./KnowledgeEditor.module.css";
 
 type Role = "SUPER_ADMIN" | "ADMIN" | "MANAGER" | "EMPLOYEE" | "MARKETING";
 type Company = "RESORT" | "GROOMING" | "CORPORATE";
@@ -34,10 +36,12 @@ const roleOptions: { role: Role; label: string }[] = [
 export function KnowledgeEditor() {
   const [articles, setArticles] = useState<ArticleSummary[]>([]);
   const [editing, setEditing] = useState<Omit<Article, "updatedAt"> | null>(null);
+  const [isEditing, setIsEditing] = useState(false);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
+  const markdown = useMemo(() => new MarkdownIt({ html: false, linkify: true, breaks: true }), []);
 
   async function loadArticles() {
     const response = await fetch("/api/knowledge/articles");
@@ -65,6 +69,7 @@ export function KnowledgeEditor() {
       const response = await fetch(`/api/knowledge/articles?id=${encodeURIComponent(id)}`);
       if (!response.ok) throw new Error("Could not open this article.");
       setEditing(await response.json());
+      setIsEditing(false);
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "Could not open this article.");
     }
@@ -118,6 +123,7 @@ export function KnowledgeEditor() {
       if (!response.ok) throw new Error(data.error || "Could not save the article.");
       await loadArticles();
       setEditing(data);
+      setIsEditing(false);
       setSuccess(data.isPublished ? "Published and available to selected roles." : "Draft saved. It is not available in chat yet.");
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "Could not save the article.");
@@ -134,7 +140,7 @@ export function KnowledgeEditor() {
           <h1 className="mt-1 text-2xl font-semibold text-pp-ink">Knowledge library</h1>
           <p className="mt-1 text-sm text-pp-ink-3">Add verified Planet Pooch information for <Link href="/knowledge" className="text-pp-accent underline">Ask Pooch</Link>.</p>
         </div>
-        <button type="button" onClick={() => { setEditing({ ...emptyArticle }); setError(""); setSuccess(""); }}
+        <button type="button" onClick={() => { setEditing({ ...emptyArticle }); setIsEditing(true); setError(""); setSuccess(""); }}
           className="rounded-lg bg-pp-accent px-4 py-2 text-sm font-medium text-white hover:bg-pp-accent-2">New article</button>
       </header>
 
@@ -157,9 +163,28 @@ export function KnowledgeEditor() {
         </section>
 
         <section className="rounded-xl border border-pp-line bg-white p-5">
-          {!editing ? <p className="text-sm text-pp-ink-3">Select an article or create a new one.</p> : (
+          {!editing ? <p className="text-sm text-pp-ink-3">Select an article or create a new one.</p> : !isEditing && editing.id ? (
+            <article className="space-y-5">
+              <div className="flex flex-wrap items-start justify-between gap-3">
+                <div>
+                  <h2 className="text-xl font-semibold text-pp-ink">{editing.title}</h2>
+                  <p className="mt-1 text-sm text-pp-ink-3">{editing.category} · {editing.company ?? "Both businesses"} · {editing.isPublished ? "Published" : "Draft"}</p>
+                </div>
+                <button type="button" onClick={() => { setIsEditing(true); setError(""); setSuccess(""); }}
+                  className="rounded-lg border border-pp-line px-4 py-2 text-sm font-medium text-pp-ink hover:bg-pp-accent-soft">Edit</button>
+              </div>
+              {success && <p className="text-sm text-pp-ok" role="status">{success}</p>}
+              <div className={styles.markdown} dangerouslySetInnerHTML={{ __html: markdown.render(editing.content) }} />
+              {(editing.sourceLabel || editing.sourceUrl) && <p className="border-t border-pp-line pt-4 text-sm text-pp-ink-3">
+                Source: {editing.sourceUrl ? <a href={editing.sourceUrl} className="text-pp-accent underline" target="_blank" rel="noopener noreferrer">{editing.sourceLabel || editing.sourceUrl}</a> : editing.sourceLabel}
+              </p>}
+            </article>
+          ) : (
             <form onSubmit={save} className="space-y-4">
-              <h2 className="text-lg font-semibold text-pp-ink">{editing.id ? "Edit article" : "New article"}</h2>
+              <div className="flex items-center justify-between gap-3">
+                <h2 className="text-lg font-semibold text-pp-ink">{editing.id ? "Edit article" : "New article"}</h2>
+                {editing.id && <button type="button" onClick={() => void editArticle(editing.id)} className="text-sm text-pp-accent underline">Cancel</button>}
+              </div>
               <label className="block text-sm font-medium text-pp-ink-2">Title
                 <input required minLength={3} maxLength={180} value={editing.title} onChange={(event) => update("title", event.target.value)}
                   className="mt-1 w-full rounded-lg border border-pp-line px-3 py-2 text-sm" />
