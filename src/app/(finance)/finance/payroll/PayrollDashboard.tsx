@@ -133,6 +133,14 @@ type MobileGroomingPullResponse = {
   error?: string;
 };
 
+type DailyReconciliation = {
+  serviceDate: string;
+  employeeName: string;
+  expectedCashCents: number;
+  countedCashCents: number;
+  reconciledAt: string;
+};
+
 type EditableRow = {
   localId: string;
   employeeName: string;
@@ -623,7 +631,11 @@ export function PayrollDashboard({
   const [savingWeeklyTotals, setSavingWeeklyTotals] = useState(false);
   const [selectedMobileEmployee, setSelectedMobileEmployee] = useState("");
   const [reconciliationEmployee, setReconciliationEmployee] = useState("");
-  const [reconciliationDay, setReconciliationDay] = useState("");
+  const [reconciliations, setReconciliations] = useState<DailyReconciliation[]>([]);
+  const [openReconciliationDay, setOpenReconciliationDay] = useState<string | null>(null);
+  const [countedCashDraft, setCountedCashDraft] = useState("");
+  const [savingReconciliation, setSavingReconciliation] = useState(false);
+  const [loadingReconciliations, setLoadingReconciliations] = useState(false);
   const [mobileStopsOpen, setMobileStopsOpen] = useState(true);
   const [weeklyCashOpen, setWeeklyCashOpen] = useState(false);
   const [pullingMoego, setPullingMoego] = useState(false);
@@ -762,13 +774,15 @@ export function PayrollDashboard({
         mobileViewEmployeeKey
     );
   }, [mobileEntries, mobilePayrollView, mobileViewEmployeeKey]);
-  const reconciliationEntries = mobileEntries.filter(
-    (entry) =>
-      reconciliationDay === entry.serviceDate &&
-      normalizeEmployeeName(entry.employeeName).toLocaleLowerCase() ===
-        normalizeEmployeeName(reconciliationEmployee).toLocaleLowerCase()
-  );
-  const reconciliationTotals = mobileTotalsForEntries(reconciliationEntries);
+  const reconciliationDays = weekDays.map((day) => ({
+    ...day,
+    entries: mobileEntries.filter(
+      (entry) =>
+        day.value === entry.serviceDate &&
+        normalizeEmployeeName(entry.employeeName).toLocaleLowerCase() ===
+          normalizeEmployeeName(reconciliationEmployee).toLocaleLowerCase()
+    ),
+  })).filter((day) => day.entries.length > 0);
 
   const selectedWeekMobileTotals = useMemo(
     () => mobileTotalsForEntries(visibleMobileEntries),
@@ -939,6 +953,72 @@ export function PayrollDashboard({
     void loadWeek(lastCompletedWeekStart(initialBusiness), initialBusiness);
   }, [initialBusiness, loadWeek]);
 
+  useEffect(() => {
+    if (mobilePayrollView !== "reconciliation") return;
+    const controller = new AbortController();
+    setReconciliations([]);
+    setLoadingReconciliations(true);
+    void fetch(`/api/finance/payroll/mobile-grooming/reconciliation?weekStart=${weekStart}`, {
+      signal: controller.signal,
+    })
+      .then(async (response) => {
+        const data = (await response.json()) as { reconciliations?: DailyReconciliation[]; error?: string };
+        if (!response.ok) throw new Error(data.error || "Could not load reconciliations.");
+        setReconciliations(data.reconciliations ?? []);
+      })
+      .catch((error: unknown) => {
+        if (!controller.signal.aborted) {
+          setError(error instanceof Error ? error.message : "Could not load reconciliations.");
+        }
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) setLoadingReconciliations(false);
+      });
+    return () => controller.abort();
+  }, [mobilePayrollView, weekStart]);
+
+  async function saveDailyReconciliation(serviceDate: string) {
+    const normalizedCountedCash = countedCashDraft.trim();
+    const countedCash = Number(normalizedCountedCash);
+    if (!/^\d+(?:\.\d{1,2})?$/.test(normalizedCountedCash) ||
+        !Number.isSafeInteger(Math.round(countedCash * 100)) ||
+        Math.round(countedCash * 100) > 2_147_483_647) {
+      setError("Enter a counted cash amount with no more than two decimal places.");
+      return;
+    }
+    setSavingReconciliation(true);
+    setError(null);
+    try {
+      const response = await fetch("/api/finance/payroll/mobile-grooming/reconciliation", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          weekStart,
+          serviceDate,
+          employeeName: reconciliationEmployee,
+          countedCashCents: Math.round(countedCash * 100),
+        }),
+      });
+      const data = (await response.json()) as { reconciliation?: DailyReconciliation; error?: string };
+      if (!response.ok || !data.reconciliation) {
+        throw new Error(data.error || "Could not save the reconciliation.");
+      }
+      setReconciliations((current) => [
+        ...current.filter((record) =>
+          record.serviceDate !== serviceDate ||
+          record.employeeName.toLocaleLowerCase() !== reconciliationEmployee.toLocaleLowerCase()
+        ),
+        data.reconciliation!,
+      ]);
+      setOpenReconciliationDay(null);
+      setMessage("Daily reconciliation saved.");
+    } catch (error) {
+      setError(error instanceof Error ? error.message : "Could not save the reconciliation.");
+    } finally {
+      setSavingReconciliation(false);
+    }
+  }
+
   function updateRow(localId: string, patch: Partial<EditableRow>) {
     setRows((current) =>
       current.map((row) => (row.localId === localId ? { ...row, ...patch } : row))
@@ -962,7 +1042,7 @@ export function PayrollDashboard({
     setWeeklyTotalsEdit(null);
     if (view === "reconciliation") {
       setReconciliationEmployee("");
-      setReconciliationDay("");
+      setOpenReconciliationDay(null);
       void loadWeek(currentMobileWeekStart, "mobile-grooming");
       return;
     }
@@ -1992,14 +2072,14 @@ export function PayrollDashboard({
       {isMobileGrooming && mobilePayrollView === "reconciliation" && (
         <Card>
           <CardContent className="space-y-5">
-            <div className="grid gap-3 md:grid-cols-3">
+            <div className="grid gap-3 md:grid-cols-2">
               <Select
                 id="reconciliation-week"
                 label="Week"
                 value={weekStart}
                 onChange={(event) => {
                   setReconciliationEmployee("");
-                  setReconciliationDay("");
+                  setOpenReconciliationDay(null);
                   void loadWeek(event.target.value, "mobile-grooming");
                 }}
                 disabled={loading}
@@ -2016,7 +2096,7 @@ export function PayrollDashboard({
                 value={reconciliationEmployee}
                 onChange={(event) => {
                   setReconciliationEmployee(event.target.value);
-                  setReconciliationDay("");
+                  setOpenReconciliationDay(null);
                 }}
                 disabled={loading || !weekStart}
               >
@@ -2027,30 +2107,88 @@ export function PayrollDashboard({
                   </option>
                 ))}
               </Select>
-              <Select
-                id="reconciliation-day"
-                label="Day"
-                value={reconciliationDay}
-                onChange={(event) => setReconciliationDay(event.target.value)}
-                disabled={loading || !reconciliationEmployee}
-              >
-                <option value="">Select day</option>
-                {weekDays.map((day) => (
-                  <option key={day.value} value={day.value}>{day.label}</option>
-                ))}
-              </Select>
             </div>
-            {!reconciliationEmployee || !reconciliationDay ? (
-              <p className="text-sm text-gray-500">Choose a week, employee, and day to view appointments.</p>
+            {!reconciliationEmployee ? (
+              <p className="text-sm text-gray-500">Choose a week and employee to view days worked.</p>
+            ) : loading || loadingReconciliations ? (
+              <p className="text-sm text-gray-500">Loading days worked...</p>
+            ) : reconciliationDays.length === 0 ? (
+              <p className="text-sm text-gray-500">No saved appointments for this employee and week.</p>
             ) : (
-              <>
-                <p className="text-sm text-gray-600">
-                  {reconciliationTotals.stops} appointments · {reconciliationTotals.dogs} pets ·{" "}
-                  {formatMoney(reconciliationTotals.pricing)} revenue ·{" "}
-                  {formatMoney(reconciliationTotals.cash)} cash
-                </p>
-                <MobileGroomingDailyTable entries={reconciliationEntries} />
-              </>
+              <div className="space-y-3">
+                {reconciliationDays.map((day) => {
+                  const totals = mobileTotalsForEntries(day.entries);
+                  const record = reconciliations.find(
+                    (item) => item.serviceDate === day.value &&
+                      item.employeeName.toLocaleLowerCase() === reconciliationEmployee.toLocaleLowerCase()
+                  );
+                  const isOpen = openReconciliationDay === day.value;
+                  const differenceCents = record ? record.countedCashCents - record.expectedCashCents : 0;
+                  return (
+                    <div key={day.value} className="overflow-hidden rounded-lg border border-gray-200">
+                      <div className="flex flex-wrap items-center justify-between gap-3 bg-gray-50 px-4 py-3">
+                        <div>
+                          <h3 className="font-semibold text-gray-900">{day.label}</h3>
+                          <p className="text-sm text-gray-600">
+                            {totals.stops} appointments · {totals.dogs} pets ·{" "}
+                            {formatMoney(totals.cash)} expected cash
+                          </p>
+                          {record && !isOpen && (
+                            <>
+                              <p className="mt-1 text-sm text-gray-700">
+                                Reconciled {new Date(record.reconciledAt).toLocaleString("en-US", {
+                                  timeZone: "America/New_York", month: "short", day: "numeric",
+                                  year: "numeric", hour: "numeric", minute: "2-digit",
+                                })} · {differenceCents === 0 ? "Even" :
+                                  `${formatMoney(Math.abs(differenceCents) / 100)} ${differenceCents > 0 ? "over" : "short"}`}
+                              </p>
+                              {record.expectedCashCents !== Math.round(totals.cash * 100) && (
+                                <p className="text-sm text-amber-700">Cash total changed since reconciliation. Edit to refresh it.</p>
+                              )}
+                            </>
+                          )}
+                        </div>
+                        <Button
+                          type="button"
+                          variant="secondary"
+                          onClick={() => {
+                            setOpenReconciliationDay(isOpen ? null : day.value);
+                            setCountedCashDraft(record ? (record.countedCashCents / 100).toFixed(2) : "");
+                          }}
+                        >
+                          {isOpen ? "Collapse" : record ? "Edit" : "Reconcile"}
+                        </Button>
+                      </div>
+                      {isOpen && (
+                        <div className="space-y-4 px-4 py-4">
+                          <MobileGroomingDailyTable entries={day.entries} />
+                          <div className="flex flex-wrap items-end gap-3">
+                            <div className="w-48">
+                              <Input
+                                label="Counted cash"
+                                type="number"
+                                min="0"
+                                step="0.01"
+                                value={countedCashDraft}
+                                onChange={(event) => setCountedCashDraft(event.target.value)}
+                                disabled={savingReconciliation}
+                              />
+                            </div>
+                            <p className="pb-2 text-sm text-gray-600">Expected: {formatMoney(totals.cash)}</p>
+                            <Button
+                              type="button"
+                              onClick={() => void saveDailyReconciliation(day.value)}
+                              disabled={savingReconciliation}
+                            >
+                              {savingReconciliation ? "Saving..." : "Save reconciliation"}
+                            </Button>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
             )}
           </CardContent>
         </Card>

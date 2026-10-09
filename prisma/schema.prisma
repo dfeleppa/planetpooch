@@ -1394,6 +1394,7 @@ model FinancePayrollWeek {
 
   rows                         FinancePayrollEmployeeHours[]
   mobileGroomingEntries        FinanceMobileGroomingPayrollEntry[]
+  mobileGroomingReconciliations FinanceMobileGroomingDailyReconciliation[]
   mobileGroomingWeeklyOverride FinanceMobileGroomingWeeklyOverride?
 
   @@unique([business, weekStart])
@@ -1438,6 +1439,22 @@ model FinanceMobileGroomingPayrollEntry {
 
   @@index([payrollWeekId, serviceDate])
   @@index([employeeName])
+}
+
+model FinanceMobileGroomingDailyReconciliation {
+  id                String   @id @default(cuid())
+  payrollWeekId     String
+  serviceDate       DateTime @db.Date
+  employeeName      String
+  expectedCashCents Int
+  countedCashCents  Int
+  reconciledAt      DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  payrollWeek FinancePayrollWeek @relation(fields: [payrollWeekId], references: [id], onDelete: Cascade)
+
+  @@unique([payrollWeekId, employeeName, serviceDate])
+  @@index([payrollWeekId, serviceDate])
 }
 
 model FinanceMobileGroomingWeeklyOverride {
