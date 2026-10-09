@@ -551,6 +551,12 @@ function formatMoney(value: number): string {
   });
 }
 
+function formatCashDifference(cents: number): string {
+  return cents === 0
+    ? "Even"
+    : `${formatMoney(Math.abs(cents) / 100)} ${cents > 0 ? "over" : "short"}`;
+}
+
 function rowShifts(row: EditableRow): number {
   const parsed = Number(row.shifts);
   return Number.isFinite(parsed) && parsed > 0 ? Math.round(parsed) : 0;
@@ -783,6 +789,26 @@ export function PayrollDashboard({
           normalizeEmployeeName(reconciliationEmployee).toLocaleLowerCase()
     ),
   })).filter((day) => day.entries.length > 0);
+
+  const reconciliationWeeklyExpectedCash = reconciliationDays.reduce(
+    (sum, day) => sum + mobileTotalsForEntries(day.entries).cash,
+    0
+  );
+  const workedDayDates = new Set(reconciliationDays.map((day) => day.value));
+  const reconciliationWeeklyRecords = reconciliations.filter(
+    (record) =>
+      workedDayDates.has(record.serviceDate) &&
+      normalizeEmployeeName(record.employeeName).toLocaleLowerCase() ===
+        normalizeEmployeeName(reconciliationEmployee).toLocaleLowerCase()
+  );
+  const reconciliationWeeklyCountedCashCents = reconciliationWeeklyRecords.reduce(
+    (sum, record) => sum + record.countedCashCents,
+    0
+  );
+  const reconciliationWeeklyDifferenceCents = reconciliationWeeklyRecords.reduce(
+    (sum, record) => sum + record.countedCashCents - record.expectedCashCents,
+    0
+  );
 
   const selectedWeekMobileTotals = useMemo(
     () => mobileTotalsForEntries(visibleMobileEntries),
@@ -2116,6 +2142,27 @@ export function PayrollDashboard({
               <p className="text-sm text-gray-500">No saved appointments for this employee and week.</p>
             ) : (
               <div className="space-y-3">
+                <div className="grid gap-3 sm:grid-cols-3">
+                  <WeeklyMetric
+                    label="Weekly cash (expected)"
+                    value={formatMoney(reconciliationWeeklyExpectedCash)}
+                  />
+                  <WeeklyMetric
+                    label="Weekly cash (counted)"
+                    value={formatMoney(reconciliationWeeklyCountedCashCents / 100)}
+                  />
+                  <WeeklyMetric
+                    label="Weekly over / short"
+                    value={reconciliationWeeklyRecords.length > 0
+                      ? formatCashDifference(reconciliationWeeklyDifferenceCents)
+                      : "Pending"}
+                  />
+                </div>
+                <p className="text-sm text-gray-600">
+                  {reconciliationWeeklyRecords.length} of {reconciliationDays.length} worked days reconciled.
+                  {reconciliationWeeklyRecords.length < reconciliationDays.length &&
+                    " Counted cash and over / short include reconciled days only."}
+                </p>
                 {reconciliationDays.map((day) => {
                   const totals = mobileTotalsForEntries(day.entries);
                   const record = reconciliations.find(
@@ -2139,8 +2186,7 @@ export function PayrollDashboard({
                                 Reconciled {new Date(record.reconciledAt).toLocaleString("en-US", {
                                   timeZone: "America/New_York", month: "short", day: "numeric",
                                   year: "numeric", hour: "numeric", minute: "2-digit",
-                                })} · {differenceCents === 0 ? "Even" :
-                                  `${formatMoney(Math.abs(differenceCents) / 100)} ${differenceCents > 0 ? "over" : "short"}`}
+                                })} · {formatCashDifference(differenceCents)}
                               </p>
                               {record.expectedCashCents !== Math.round(totals.cash * 100) && (
                                 <p className="text-sm text-amber-700">Cash total changed since reconciliation. Edit to refresh it.</p>
