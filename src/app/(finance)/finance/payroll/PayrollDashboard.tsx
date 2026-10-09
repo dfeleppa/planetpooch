@@ -1442,7 +1442,11 @@ export function PayrollDashboard({
 
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h2 className="text-xl font-semibold text-gray-900">Payroll</h2>
+          <h2 className="text-xl font-semibold text-gray-900">
+            {isMobileGrooming && mobilePayrollView === "reconciliation"
+              ? "Daily Reconciliation"
+              : "Payroll"}
+          </h2>
           <p className="mt-1 text-gray-500">
             {isMobileGrooming ? "Weekly mobile grooming appointments" : "Weekly staff hours"}{" "}
             ({payPeriod.rangeLabel})
