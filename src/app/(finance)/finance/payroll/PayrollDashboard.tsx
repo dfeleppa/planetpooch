@@ -161,7 +161,7 @@ export type PayrollEmployeeOption = {
 const EMPTY_EMPLOYEE_OPTIONS: PayrollEmployeeOption[] = [];
 
 type MobileSummaryView = "annual" | "weekly";
-type MobilePayrollView = "summary" | "employee" | "report";
+type MobilePayrollView = "summary" | "employee" | "report" | "reconciliation";
 
 type WeeklyTotalsEdit = {
   weekStart: string;
@@ -622,6 +622,8 @@ export function PayrollDashboard({
   const [weeklyTotalsEdit, setWeeklyTotalsEdit] = useState<WeeklyTotalsEdit | null>(null);
   const [savingWeeklyTotals, setSavingWeeklyTotals] = useState(false);
   const [selectedMobileEmployee, setSelectedMobileEmployee] = useState("");
+  const [reconciliationEmployee, setReconciliationEmployee] = useState("");
+  const [reconciliationDay, setReconciliationDay] = useState("");
   const [mobileStopsOpen, setMobileStopsOpen] = useState(true);
   const [weeklyCashOpen, setWeeklyCashOpen] = useState(false);
   const [pullingMoego, setPullingMoego] = useState(false);
@@ -638,6 +640,11 @@ export function PayrollDashboard({
   );
 
   const weekEnd = addDaysParam(weekStart, 6);
+  const currentMobileWeekStart = addDaysParam(lastCompletedWeekStart("mobile-grooming"), 7);
+  const reconciliationWeeks = Array.from({ length: 4 }, (_, index) => {
+    const start = addDaysParam(currentMobileWeekStart, -index * 7);
+    return { weekStart: start, weekEnd: addDaysParam(start, 6) };
+  });
   const isMobileGrooming = business === "mobile-grooming";
   const payPeriod = payrollPayPeriodForBusiness(business);
   const employeeOptions = employeeOptionsByBusiness[business] ?? EMPTY_EMPLOYEE_OPTIONS;
@@ -755,6 +762,13 @@ export function PayrollDashboard({
         mobileViewEmployeeKey
     );
   }, [mobileEntries, mobilePayrollView, mobileViewEmployeeKey]);
+  const reconciliationEntries = mobileEntries.filter(
+    (entry) =>
+      reconciliationDay === entry.serviceDate &&
+      normalizeEmployeeName(entry.employeeName).toLocaleLowerCase() ===
+        normalizeEmployeeName(reconciliationEmployee).toLocaleLowerCase()
+  );
+  const reconciliationTotals = mobileTotalsForEntries(reconciliationEntries);
 
   const selectedWeekMobileTotals = useMemo(
     () => mobileTotalsForEntries(visibleMobileEntries),
@@ -946,6 +960,12 @@ export function PayrollDashboard({
   function selectMobilePayrollView(view: MobilePayrollView) {
     setMobilePayrollView(view);
     setWeeklyTotalsEdit(null);
+    if (view === "reconciliation") {
+      setReconciliationEmployee("");
+      setReconciliationDay("");
+      void loadWeek(currentMobileWeekStart, "mobile-grooming");
+      return;
+    }
     if (view === "report") {
       setReportYear(dateFromParam(weekEnd).getUTCFullYear());
     }
@@ -1393,14 +1413,16 @@ export function PayrollDashboard({
         <div>
           <p className="mb-1 text-sm font-medium text-gray-700">View</p>
           <div className="pp-tabs" role="tablist" aria-label="Mobile grooming payroll view">
-            {(["summary", "employee", "report"] as const).map((view) => {
+            {(["summary", "employee", "report", "reconciliation"] as const).map((view) => {
               const active = mobilePayrollView === view;
               const label =
                 view === "summary"
                   ? "All Staff"
                   : view === "employee"
                     ? "By Employee"
-                    : "Weekly Report";
+                    : view === "report"
+                      ? "Weekly Report"
+                      : "Reconciliation";
               return (
                 <button
                   key={view}
@@ -1544,7 +1566,7 @@ export function PayrollDashboard({
         </div>
       )}
 
-      {isMobileGrooming && mobilePayrollView !== "report" && (
+      {isMobileGrooming && mobilePayrollView !== "report" && mobilePayrollView !== "reconciliation" && (
         <Card>
           <CardContent className="space-y-4">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
@@ -1963,7 +1985,74 @@ export function PayrollDashboard({
         </Card>
       )}
 
-      <Card className={cn(mobilePayrollView === "report" && "pp-mobile-weekly-report")}>
+      {isMobileGrooming && mobilePayrollView === "reconciliation" && (
+        <Card>
+          <CardContent className="space-y-5">
+            <div className="grid gap-3 md:grid-cols-3">
+              <Select
+                id="reconciliation-week"
+                label="Week"
+                value={weekStart}
+                onChange={(event) => {
+                  setReconciliationEmployee("");
+                  setReconciliationDay("");
+                  void loadWeek(event.target.value, "mobile-grooming");
+                }}
+                disabled={loading}
+              >
+                {reconciliationWeeks.map((week) => (
+                  <option key={week.weekStart} value={week.weekStart}>
+                    {formatWeekRange(week.weekStart, week.weekEnd)}
+                  </option>
+                ))}
+              </Select>
+              <Select
+                id="reconciliation-employee"
+                label="Employee"
+                value={reconciliationEmployee}
+                onChange={(event) => {
+                  setReconciliationEmployee(event.target.value);
+                  setReconciliationDay("");
+                }}
+                disabled={loading || !weekStart}
+              >
+                <option value="">Select employee</option>
+                {employeeOptions.map((employee) => (
+                  <option key={employee.id} value={normalizeEmployeeName(employee.name)}>
+                    {normalizeEmployeeName(employee.name)}
+                  </option>
+                ))}
+              </Select>
+              <Select
+                id="reconciliation-day"
+                label="Day"
+                value={reconciliationDay}
+                onChange={(event) => setReconciliationDay(event.target.value)}
+                disabled={loading || !reconciliationEmployee}
+              >
+                <option value="">Select day</option>
+                {weekDays.map((day) => (
+                  <option key={day.value} value={day.value}>{day.label}</option>
+                ))}
+              </Select>
+            </div>
+            {!reconciliationEmployee || !reconciliationDay ? (
+              <p className="text-sm text-gray-500">Choose a week, employee, and day to view appointments.</p>
+            ) : (
+              <>
+                <p className="text-sm text-gray-600">
+                  {reconciliationTotals.stops} appointments · {reconciliationTotals.dogs} pets ·{" "}
+                  {formatMoney(reconciliationTotals.pricing)} revenue ·{" "}
+                  {formatMoney(reconciliationTotals.cash)} cash
+                </p>
+                <MobileGroomingDailyTable entries={reconciliationEntries} />
+              </>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
+      {mobilePayrollView !== "reconciliation" && <Card className={cn(mobilePayrollView === "report" && "pp-mobile-weekly-report")}>
         <CardContent className="space-y-3">
           <div
             className={cn(
@@ -2328,7 +2417,7 @@ export function PayrollDashboard({
             </Table>
           )}
         </CardContent>
-      </Card>
+      </Card>}
 
       {(message || error) && (
         <div
@@ -2340,6 +2429,49 @@ export function PayrollDashboard({
           {error || message}
         </div>
       )}
+    </div>
+  );
+}
+
+function MobileGroomingDailyTable({ entries }: { entries: EditableMobileGroomingEntry[] }) {
+  if (entries.length === 0) {
+    return (
+      <p className="rounded-lg border border-dashed border-gray-200 px-4 py-8 text-center text-sm text-gray-500">
+        No saved appointments for this employee and day. Pull and save the week from All Staff if needed.
+      </p>
+    );
+  }
+
+  return (
+    <div className="overflow-x-auto rounded-lg border border-gray-200">
+      <table className="min-w-full text-left text-sm">
+        <thead className="bg-gray-50 text-xs uppercase tracking-wide text-gray-500">
+          <tr>
+            <th className="px-3 py-2">Payment</th>
+            <th className="px-3 py-2 text-right">Pets</th>
+            <th className="px-3 py-2 text-right">Grooming</th>
+            <th className="px-3 py-2 text-right">Upgrades</th>
+            <th className="px-3 py-2 text-right">CC Tip</th>
+            <th className="px-3 py-2 text-right">Discount</th>
+            <th className="px-3 py-2 text-right">Revenue</th>
+            <th className="px-3 py-2 text-right">Groomer Pay</th>
+          </tr>
+        </thead>
+        <tbody className="divide-y divide-gray-100">
+          {entries.map((entry) => (
+            <tr key={entry.localId}>
+              <td className="px-3 py-2 capitalize">{entry.paymentType}</td>
+              <td className="px-3 py-2 text-right tabular-nums">{mobileEntryDogCount(entry)}</td>
+              <td className="px-3 py-2 text-right tabular-nums">{formatMoney(mobileEntryGroomingPrice(entry))}</td>
+              <td className="px-3 py-2 text-right tabular-nums">{formatMoney(moneyValue(entry.upgradeAmount))}</td>
+              <td className="px-3 py-2 text-right tabular-nums">{formatMoney(moneyValue(entry.creditCardTip))}</td>
+              <td className="px-3 py-2 text-right tabular-nums">{formatMoney(moneyValue(entry.discount))}</td>
+              <td className="px-3 py-2 text-right font-semibold tabular-nums">{formatMoney(mobileEntryTotalPrice(entry))}</td>
+              <td className="px-3 py-2 text-right tabular-nums">{formatMoney(mobileEntryGroomerPay(entry))}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
     </div>
   );
 }
