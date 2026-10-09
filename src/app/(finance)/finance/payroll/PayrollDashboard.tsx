@@ -2186,7 +2186,10 @@ export function PayrollDashboard({
                                 Reconciled {new Date(record.reconciledAt).toLocaleString("en-US", {
                                   timeZone: "America/New_York", month: "short", day: "numeric",
                                   year: "numeric", hour: "numeric", minute: "2-digit",
-                                })} · {formatCashDifference(differenceCents)}
+                                })}
+                                {differenceCents !== 0 &&
+                                  ` · ${formatMoney(record.countedCashCents / 100)} counted cash`}
+                                {` · ${formatCashDifference(differenceCents)}`}
                               </p>
                               {record.expectedCashCents !== Math.round(totals.cash * 100) && (
                                 <p className="text-sm text-amber-700">Cash total changed since reconciliation. Edit to refresh it.</p>
