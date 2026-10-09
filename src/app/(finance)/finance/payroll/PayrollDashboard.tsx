@@ -138,6 +138,7 @@ type DailyReconciliation = {
   employeeName: string;
   expectedCashCents: number;
   countedCashCents: number;
+  note: string;
   reconciledAt: string;
 };
 
@@ -170,6 +171,7 @@ const EMPTY_EMPLOYEE_OPTIONS: PayrollEmployeeOption[] = [];
 
 type MobileSummaryView = "annual" | "weekly";
 type MobilePayrollView = "summary" | "employee" | "report" | "reconciliation";
+type ReconciliationView = "employee" | "weekly";
 
 type WeeklyTotalsEdit = {
   weekStart: string;
@@ -636,10 +638,12 @@ export function PayrollDashboard({
   const [weeklyTotalsEdit, setWeeklyTotalsEdit] = useState<WeeklyTotalsEdit | null>(null);
   const [savingWeeklyTotals, setSavingWeeklyTotals] = useState(false);
   const [selectedMobileEmployee, setSelectedMobileEmployee] = useState("");
+  const [reconciliationView, setReconciliationView] = useState<ReconciliationView>("employee");
   const [reconciliationEmployee, setReconciliationEmployee] = useState("");
   const [reconciliations, setReconciliations] = useState<DailyReconciliation[]>([]);
   const [openReconciliationDay, setOpenReconciliationDay] = useState<string | null>(null);
   const [countedCashDraft, setCountedCashDraft] = useState("");
+  const [reconciliationNoteDraft, setReconciliationNoteDraft] = useState("");
   const [savingReconciliation, setSavingReconciliation] = useState(false);
   const [loadingReconciliations, setLoadingReconciliations] = useState(false);
   const [mobileStopsOpen, setMobileStopsOpen] = useState(true);
@@ -808,6 +812,57 @@ export function PayrollDashboard({
   const reconciliationWeeklyDifferenceCents = reconciliationWeeklyRecords.reduce(
     (sum, record) => sum + record.countedCashCents - record.expectedCashCents,
     0
+  );
+  const allEmployeeReconciliationGroups = useMemo(() => {
+    const byEmployee = new Map<string, { employeeName: string; entries: EditableMobileGroomingEntry[] }>();
+    for (const entry of mobileEntries) {
+      const employeeName = normalizeEmployeeName(entry.employeeName);
+      const key = employeeName.toLocaleLowerCase();
+      if (!key) continue;
+      const group = byEmployee.get(key) ?? { employeeName, entries: [] };
+      group.entries.push(entry);
+      byEmployee.set(key, group);
+    }
+    return Array.from(byEmployee.entries()).map(([key, group]) => {
+      const dates = Array.from(new Set(group.entries.map((entry) => entry.serviceDate)));
+      const records = reconciliations.filter(
+        (record) => record.employeeName.toLocaleLowerCase() === key && dates.includes(record.serviceDate)
+      );
+      const staleDays = records.filter((record) => {
+        const entries = group.entries.filter((entry) => entry.serviceDate === record.serviceDate);
+        return record.expectedCashCents !== Math.round(mobileTotalsForEntries(entries).cash * 100);
+      }).length;
+      return {
+        employeeName: group.employeeName,
+        expectedCash: mobileTotalsForEntries(group.entries).cash,
+        countedCashCents: records.reduce((sum, record) => sum + record.countedCashCents, 0),
+        differenceCents: records.reduce(
+          (sum, record) => sum + record.countedCashCents - record.expectedCashCents,
+          0
+        ),
+        workedDays: dates.length,
+        reconciledDays: records.length,
+        staleDays,
+      };
+    }).sort((a, b) => a.employeeName.localeCompare(b.employeeName));
+  }, [mobileEntries, reconciliations]);
+  const allEmployeeExpectedCash = allEmployeeReconciliationGroups.reduce(
+    (sum, group) => sum + group.expectedCash, 0
+  );
+  const allEmployeeCountedCashCents = allEmployeeReconciliationGroups.reduce(
+    (sum, group) => sum + group.countedCashCents, 0
+  );
+  const allEmployeeDifferenceCents = allEmployeeReconciliationGroups.reduce(
+    (sum, group) => sum + group.differenceCents, 0
+  );
+  const allEmployeeWorkedDays = allEmployeeReconciliationGroups.reduce(
+    (sum, group) => sum + group.workedDays, 0
+  );
+  const allEmployeeReconciledDays = allEmployeeReconciliationGroups.reduce(
+    (sum, group) => sum + group.reconciledDays, 0
+  );
+  const allEmployeeStaleDays = allEmployeeReconciliationGroups.reduce(
+    (sum, group) => sum + group.staleDays, 0
   );
 
   const selectedWeekMobileTotals = useMemo(
@@ -1012,6 +1067,10 @@ export function PayrollDashboard({
       setError("Enter a counted cash amount with no more than two decimal places.");
       return;
     }
+    if (reconciliationNoteDraft.trim().length > 1000) {
+      setError("Keep the reconciliation note to 1,000 characters or fewer.");
+      return;
+    }
     setSavingReconciliation(true);
     setError(null);
     try {
@@ -1023,6 +1082,7 @@ export function PayrollDashboard({
           serviceDate,
           employeeName: reconciliationEmployee,
           countedCashCents: Math.round(countedCash * 100),
+          note: reconciliationNoteDraft.trim(),
         }),
       });
       const data = (await response.json()) as { reconciliation?: DailyReconciliation; error?: string };
@@ -1067,6 +1127,7 @@ export function PayrollDashboard({
     setMobilePayrollView(view);
     setWeeklyTotalsEdit(null);
     if (view === "reconciliation") {
+      setReconciliationView("employee");
       setReconciliationEmployee("");
       setOpenReconciliationDay(null);
       void loadWeek(currentMobileWeekStart, "mobile-grooming");
@@ -1550,7 +1611,7 @@ export function PayrollDashboard({
         <div>
           <h2 className="text-xl font-semibold text-gray-900">
             {isMobileGrooming && mobilePayrollView === "reconciliation"
-              ? "Daily Reconciliation"
+              ? reconciliationView === "employee" ? "Daily Reconciliation" : "Weekly Reconciliation"
               : "Payroll"}
           </h2>
           <p className="mt-1 text-gray-500">
@@ -1564,6 +1625,26 @@ export function PayrollDashboard({
           </Button>
         ) : null}
       </div>
+
+      {isMobileGrooming && mobilePayrollView === "reconciliation" && (
+        <div className="pp-tabs" role="tablist" aria-label="Reconciliation view">
+          {(["employee", "weekly"] as const).map((view) => (
+            <button
+              key={view}
+              type="button"
+              role="tab"
+              aria-selected={reconciliationView === view}
+              className={cn("pp-tab", reconciliationView === view && "is-on")}
+              onClick={() => {
+                setReconciliationView(view);
+                setOpenReconciliationDay(null);
+              }}
+            >
+              {view === "employee" ? "Employee" : "Weekly"}
+            </button>
+          ))}
+        </div>
+      )}
 
       {!isMobileGrooming && automationStatus === "needs_review" ? (
         <Card className="border-amber-300 bg-amber-50">
@@ -2098,7 +2179,7 @@ export function PayrollDashboard({
       {isMobileGrooming && mobilePayrollView === "reconciliation" && (
         <Card>
           <CardContent className="space-y-5">
-            <div className="grid gap-3 md:grid-cols-2">
+            <div className={cn("grid gap-3", reconciliationView === "employee" && "md:grid-cols-2")}>
               <Select
                 id="reconciliation-week"
                 label="Week"
@@ -2116,25 +2197,100 @@ export function PayrollDashboard({
                   </option>
                 ))}
               </Select>
-              <Select
-                id="reconciliation-employee"
-                label="Employee"
-                value={reconciliationEmployee}
-                onChange={(event) => {
-                  setReconciliationEmployee(event.target.value);
-                  setOpenReconciliationDay(null);
-                }}
-                disabled={loading || !weekStart}
-              >
-                <option value="">Select employee</option>
-                {employeeOptions.map((employee) => (
-                  <option key={employee.id} value={normalizeEmployeeName(employee.name)}>
-                    {normalizeEmployeeName(employee.name)}
-                  </option>
-                ))}
-              </Select>
+              {reconciliationView === "employee" && (
+                <Select
+                  id="reconciliation-employee"
+                  label="Employee"
+                  value={reconciliationEmployee}
+                  onChange={(event) => {
+                    setReconciliationEmployee(event.target.value);
+                    setOpenReconciliationDay(null);
+                  }}
+                  disabled={loading || !weekStart}
+                >
+                  <option value="">Select employee</option>
+                  {employeeOptions.map((employee) => (
+                    <option key={employee.id} value={normalizeEmployeeName(employee.name)}>
+                      {normalizeEmployeeName(employee.name)}
+                    </option>
+                  ))}
+                </Select>
+              )}
             </div>
-            {!reconciliationEmployee ? (
+            {reconciliationView === "weekly" ? (
+              loading || loadingReconciliations ? (
+                <p className="text-sm text-gray-500">Loading weekly reconciliation...</p>
+              ) : allEmployeeReconciliationGroups.length === 0 ? (
+                <p className="text-sm text-gray-500">No saved mobile grooming appointments for this week.</p>
+              ) : (
+                <div className="space-y-4">
+                  <div className="grid gap-3 sm:grid-cols-3">
+                    <WeeklyMetric label="Weekly cash (expected)" value={formatMoney(allEmployeeExpectedCash)} />
+                    <WeeklyMetric label="Weekly cash (counted)" value={formatMoney(allEmployeeCountedCashCents / 100)} />
+                    <WeeklyMetric
+                      label="Weekly over / short"
+                      value={allEmployeeReconciledDays > 0
+                        ? formatCashDifference(allEmployeeDifferenceCents)
+                        : "Pending"}
+                    />
+                  </div>
+                  <p className="text-sm text-gray-600">
+                    {allEmployeeReconciledDays} of {allEmployeeWorkedDays} employee days reconciled
+                    {allEmployeeReconciledDays === allEmployeeWorkedDays && allEmployeeStaleDays === 0
+                      ? " · Week reconciled."
+                      : ". Counted cash and over / short include reconciled days only."}
+                    {allEmployeeStaleDays > 0 &&
+                      ` ${allEmployeeStaleDays} day${allEmployeeStaleDays === 1 ? "" : "s"} need an update after payroll changed.`}
+                  </p>
+                  <div className="overflow-x-auto rounded-lg border border-gray-200">
+                    <Table>
+                      <TableHead>
+                        <TableRow>
+                          <TableHeader>Employee</TableHeader>
+                          <TableHeader>Days</TableHeader>
+                          <TableHeader>Expected cash</TableHeader>
+                          <TableHeader>Counted cash</TableHeader>
+                          <TableHeader>Over / short</TableHeader>
+                          <TableHeader>Status</TableHeader>
+                          <TableHeader>Details</TableHeader>
+                        </TableRow>
+                      </TableHead>
+                      <TableBody>
+                        {allEmployeeReconciliationGroups.map((group) => (
+                          <TableRow key={group.employeeName}>
+                            <TableCell className="font-medium">{group.employeeName}</TableCell>
+                            <TableCell>{group.reconciledDays} / {group.workedDays}</TableCell>
+                            <TableCell>{formatMoney(group.expectedCash)}</TableCell>
+                            <TableCell>{formatMoney(group.countedCashCents / 100)}</TableCell>
+                            <TableCell>{group.reconciledDays > 0
+                              ? formatCashDifference(group.differenceCents)
+                              : "Pending"}</TableCell>
+                            <TableCell>{group.staleDays > 0
+                              ? "Needs update"
+                              : group.reconciledDays === group.workedDays
+                                ? "Reconciled"
+                                : "Pending"}</TableCell>
+                            <TableCell>
+                              <Button
+                                type="button"
+                                size="sm"
+                                variant="secondary"
+                                onClick={() => {
+                                  setReconciliationEmployee(group.employeeName);
+                                  setReconciliationView("employee");
+                                }}
+                              >
+                                Review
+                              </Button>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                </div>
+              )
+            ) : !reconciliationEmployee ? (
               <p className="text-sm text-gray-500">Choose a week and employee to view days worked.</p>
             ) : loading || loadingReconciliations ? (
               <p className="text-sm text-gray-500">Loading days worked...</p>
@@ -2194,6 +2350,9 @@ export function PayrollDashboard({
                               {record.expectedCashCents !== Math.round(totals.cash * 100) && (
                                 <p className="text-sm text-amber-700">Cash total changed since reconciliation. Edit to refresh it.</p>
                               )}
+                              {differenceCents !== 0 && record.note && (
+                                <p className="mt-1 whitespace-pre-wrap break-words text-sm text-gray-700">Note: {record.note}</p>
+                              )}
                             </>
                           )}
                         </div>
@@ -2203,6 +2362,7 @@ export function PayrollDashboard({
                           onClick={() => {
                             setOpenReconciliationDay(isOpen ? null : day.value);
                             setCountedCashDraft(record ? (record.countedCashCents / 100).toFixed(2) : "");
+                            setReconciliationNoteDraft(record?.note ?? "");
                           }}
                         >
                           {isOpen ? "Collapse" : record ? "Edit" : "Reconcile"}
@@ -2231,6 +2391,21 @@ export function PayrollDashboard({
                             >
                               {savingReconciliation ? "Saving..." : "Save reconciliation"}
                             </Button>
+                          </div>
+                          <div>
+                            <label htmlFor="reconciliation-note" className="mb-1 block text-sm font-medium text-gray-700">
+                              Reason for over / short (optional)
+                            </label>
+                            <textarea
+                              id="reconciliation-note"
+                              value={reconciliationNoteDraft}
+                              onChange={(event) => setReconciliationNoteDraft(event.target.value)}
+                              maxLength={1000}
+                              rows={3}
+                              disabled={savingReconciliation}
+                              className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm text-gray-900 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 disabled:bg-gray-100"
+                              placeholder="Explain why the cash count differs from the expected amount"
+                            />
                           </div>
                         </div>
                       )}

@@ -1448,6 +1448,7 @@ model FinanceMobileGroomingDailyReconciliation {
   employeeName      String
   expectedCashCents Int
   countedCashCents  Int
+  note              String   @default("")
   reconciledAt      DateTime @default(now())
   updatedAt         DateTime @updatedAt
 

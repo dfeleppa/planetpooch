@@ -21,6 +21,7 @@ function serialize(record: {
   employeeName: string;
   expectedCashCents: number;
   countedCashCents: number;
+  note: string;
   reconciledAt: Date;
 }) {
   return {
@@ -28,6 +29,7 @@ function serialize(record: {
     employeeName: record.employeeName,
     expectedCashCents: record.expectedCashCents,
     countedCashCents: record.countedCashCents,
+    note: record.note,
     reconciledAt: record.reconciledAt.toISOString(),
   };
 }
@@ -57,11 +59,13 @@ export async function POST(req: NextRequest) {
   const serviceDate = dateParam(body.serviceDate);
   const employeeName = normalizeEmployeeName(typeof body.employeeName === "string" ? body.employeeName : "");
   const countedCashCents = body.countedCashCents;
+  const note = body.note === undefined ? "" : body.note;
   if (
     !weekStart || weekStart.getUTCDay() !== 6 || !serviceDate ||
     serviceDate < weekStart || serviceDate.getTime() > weekStart.getTime() + 6 * 86_400_000 ||
     !employeeName || typeof countedCashCents !== "number" ||
-    !Number.isSafeInteger(countedCashCents) || countedCashCents < 0 || countedCashCents > 2_147_483_647
+    !Number.isSafeInteger(countedCashCents) || countedCashCents < 0 || countedCashCents > 2_147_483_647 ||
+    typeof note !== "string" || note.trim().length > 1000
   ) {
     return NextResponse.json({ error: "A valid week, employee, day, and counted cash amount are required." }, { status: 400 });
   }
@@ -88,6 +92,7 @@ export async function POST(req: NextRequest) {
     0
   );
   const reconciledAt = new Date();
+  const normalizedNote = note.trim();
   const reconciliation = await prisma.financeMobileGroomingDailyReconciliation.upsert({
     where: {
       payrollWeekId_employeeName_serviceDate: {
@@ -96,8 +101,8 @@ export async function POST(req: NextRequest) {
         serviceDate,
       },
     },
-    create: { payrollWeekId: week.id, employeeName: canonicalName, serviceDate, expectedCashCents, countedCashCents, reconciledAt },
-    update: { expectedCashCents, countedCashCents, reconciledAt },
+    create: { payrollWeekId: week.id, employeeName: canonicalName, serviceDate, expectedCashCents, countedCashCents, note: normalizedNote, reconciledAt },
+    update: { expectedCashCents, countedCashCents, note: normalizedNote, reconciledAt },
   });
   return NextResponse.json({ reconciliation: serialize(reconciliation) });
 }
