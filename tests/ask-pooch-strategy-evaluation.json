@@ -1,0 +1,28 @@
+{
+  "date": "2026-10-10",
+  "environment": "https://app.planet-pooch.com/knowledge",
+  "baseline_commit": "5eb08e4d5322c59c6587bc22f92cf7e6450b0a35",
+  "model": "GPT-6.1 Sol",
+  "method": "Ten questions submitted through the signed-in in-app browser. Ratings assess retrieved evidence, arithmetic, caveats and actionable recommendations, not whether the underlying saved records are independently audited.",
+  "cases": [
+    { "id": "service-growth", "question": "Which service—boarding, daycare, training, or grooming—offers the strongest growth opportunity based on recent trends, capacity, and available margin data?", "baseline": "fail", "finding": "Only overall P&L retrieved; service KPI evidence omitted. Correctly refused an unsupported ranking." },
+    { "id": "quarter-target", "question": "Are we on track to hit this quarter’s revenue targets? What weekly sales pace do we need for the remainder of the quarter?", "baseline": "partial", "finding": "Quarter-to-date sales retrieved, no target. Used current partial day in pace projection despite a sync caveat." },
+    { "id": "growth-drivers", "question": "Is revenue growth coming from more customers, more visits per customer, or higher spending per visit?", "baseline": "fail", "finding": "Returned one canned sales total with no comparison, decomposition or explanation." },
+    { "id": "unused-capacity", "question": "Which days have the most unused daycare or boarding capacity, and what targeted offers could fill them profitably?", "baseline": "partial", "finding": "Useful conditional offers and cautions; retrieved marketing/training documents instead of available operational KPI context. Daily staffed capacity remains unsupported." },
+    { "id": "retention", "question": "Is our customer retention improving or deteriorating? Which customer groups should we prioritize for retention efforts?", "baseline": "pass-with-limits", "finding": "Correctly distinguished the inactivity snapshot from churn or a retention trend. Recommended matched cohorts and a holdout." },
+    { "id": "price-scenario", "question": "Would a 5% price increase improve profitability? Show scenarios for losing 0%, 5%, or 10% of booking volume and state your assumptions.", "baseline": "pass", "finding": "Correct multiplicative price-volume scenarios and 4.76% break-even volume loss under fixed costs; distinguished estimated profit and orders from bookings." },
+    { "id": "package-value", "question": "Are daycare packages increasing visit frequency and customer value, or mainly discounting visits customers would have purchased anyway?", "baseline": "pass-with-limits", "finding": "Correctly refused causal inference from one aggregate week, accounted for excluded evaluations, and proposed cohort/holdout testing. Package snapshot omitted." },
+    { "id": "van-expansion", "question": "How productive is Mobile Grooming compared with previous months, and do we have enough demand to justify adding another van?", "baseline": "fail", "finding": "Retrieved only one week despite explicit previous-month comparison. Sensible caution about van purchase, but leaked internal metric identifier." },
+    { "id": "funnel", "question": "Where are we losing potential customers between website visits, inquiries, bookings, and completed services? Which improvement should we test first?", "baseline": "partial", "finding": "Correctly refused to divide unlinked forms and whole-business orders, but omitted available customer-linked appointment evidence and leaked an internal metric identifier." },
+    { "id": "investment", "question": "If we had $5,000 to invest next month, how would you prioritize marketing, staffing, equipment, and customer retention? Explain what the available data supports and what remains uncertain.", "baseline": "partial", "finding": "Conditional allocation summed correctly, with no invented ROI. Relevant financial/KPI/ad performance evidence omitted. Submitted successfully after a long answer, confirming the earlier history-length fix." }
+  ],
+  "shared_fixes": [
+    "Always synthesize the original question instead of allowing keyword-based canned-answer bypass.",
+    "Supplement semantic planning with relevant strategy reports, completed KPI history and matched sales periods.",
+    "Use fair evidence selection, deduplication, and explicit failed/capped lookup coverage.",
+    "Add bounded, business-scoped, directly linked website inquiry/customer appointment cohorts with documented exclusions.",
+    "Preserve service qualifiers collectively across split plans; reject invented comparative dates.",
+    "Use business labels instead of internal metric IDs and distinguish incomplete periods, unique customers, estimates and missing evidence."
+  ],
+  "post_fix_live_retest": "Pending deployment."
+}

@@ -10,6 +10,7 @@ import { quarterRevenueRange } from "@/lib/knowledge-finance";
 import { findReportSources, findReportSourcesForKind } from "@/lib/knowledge-reports";
 import { planReportQuestion, type ReportPlan } from "@/lib/knowledge-report-plan";
 import { findVanOilChangeSource } from "@/lib/knowledge-van-maintenance";
+import { supplementReportPlan, collectReportEvidence } from "@/lib/knowledge-evidence-plan";
 
 export type KnowledgeViewer = {
   id: string;
@@ -92,21 +93,15 @@ export async function findKnowledgeSources(
   if (!isKnowledgeOwner(viewer)) return [];
   const vanOilChangeSource = await findVanOilChangeSource(question);
   if (vanOilChangeSource) return vanOilChangeSource;
-  const plan = await planReportQuestion(question);
+  const plan = supplementReportPlan(question, await planReportQuestion(question));
   if (plan?.tasks.length) {
     const results = await Promise.allSettled(plan.tasks.map((task) =>
       findReportSourcesForKind(task.report, task.question)));
     for (const result of results) {
       if (result.status === "rejected") console.error("[knowledge.plan] Planned report lookup failed");
     }
-    const plannedSources = results.flatMap((result) => result.status === "fulfilled" ? result.value : []);
-    if (plannedSources.length) return plannedSources.slice(0, 10).map((source) => ({
-      ...source,
-      excerpt: plannedSources.length > 1 ? source.excerpt.replace(/\s*\[1\]/g, "") : source.excerpt,
-      answer: plan.needsAnalysis ? undefined : source.answer,
-      reportPlan: plan,
-      retrievalPath: "semantic-report" as const,
-    }));
+    const plannedSources = collectReportEvidence(plan, results);
+    if (plannedSources.length) return plannedSources;
     console.warn("[knowledge.plan] No sources returned by planned reports");
   }
   const reportSources = await findReportSources(question);

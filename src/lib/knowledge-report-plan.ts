@@ -42,9 +42,9 @@ function namedBusinesses(question: string): string[] {
 }
 
 const protectedQualifiers: Array<{ test: RegExp; reports: KnowledgeReportId[] }> = [
-  { test: /\bboarding\b/i, reports: ["kpis"] },
-  { test: /\bday[ -]?care\b/i, reports: ["kpis", "daycare"] },
-  { test: /\btraining\b/i, reports: ["kpis"] },
+  { test: /\bboarding\b/i, reports: ["kpis", "kpi-history"] },
+  { test: /\bday[ -]?care\b/i, reports: ["kpis", "kpi-history", "daycare"] },
+  { test: /\btraining\b/i, reports: ["kpis", "kpi-history"] },
   { test: /\bgoogle(?: ads?)?\b/i, reports: ["ads"] },
   { test: /\b(?:meta|facebook)\b/i, reports: ["ads"] },
   { test: /\bexpired\b/i, reports: ["daycare"] },
@@ -77,20 +77,23 @@ export function validateReportPlan(raw: unknown, original: string, now = new Dat
     const report = metrics[0]!.report;
     if (metrics.some((metric) => metric!.report !== report)) return null;
     const plannedPeriod = reportPeriod(task.question, now);
-    const comparative = /\b(?:compare|compared|versus|vs\.?|previous|prior|change|trend)\b/i.test(original);
-    if (!comparative && (allowedPeriods.length
+    if (allowedPeriods.length
       ? !plannedPeriod || !allowedPeriods.some((period) => period.start === plannedPeriod.start && period.end === plannedPeriod.end)
-      : plannedPeriod !== null)) return null;
+      : plannedPeriod !== null) return null;
     const taskBusinesses = namedBusinesses(task.question);
     if (originalBusinesses.length <= 1) {
       if (taskBusinesses.join(",") !== originalBusinesses.join(",")) return null;
     } else if (!taskBusinesses.length || taskBusinesses.some((business) => !originalBusinesses.includes(business))) return null;
     if (report === "forms" && /\b(?:boarding|day[ -]?care|training|grooming)\b/i.test(
       original.replace(/\bmobile[ -]?grooming\b/gi, ""))) return null;
-    if (protectedQualifiers.some(({ test, reports }) => reports.includes(report) && test.test(original) && !test.test(task.question))) return null;
+    if (protectedQualifiers.some(({ test, reports }) => reports.includes(report) && !test.test(original) && test.test(task.question))) return null;
     if (metrics.some((metric) => !task.question.toLowerCase().includes(metric!.term.toLowerCase()))) return null;
     tasks.push({ metricIds: task.metricIds, report, question: task.question });
   }
+  // Separate service/platform tasks may carry separate qualifiers, but none may disappear.
+  if (protectedQualifiers.some(({ test, reports }) => test.test(original)
+    && tasks.some((task) => reports.includes(task.report))
+    && !tasks.some((task) => reports.includes(task.report) && test.test(task.question)))) return null;
   return { tasks: tasks.filter((task, index) => tasks.findIndex((other) =>
     other.report === task.report && other.question.toLowerCase() === task.question.toLowerCase()) === index),
     needsAnalysis: tasks.length > 0 && (parsed.data.needsAnalysis || tasks.length > 1) };

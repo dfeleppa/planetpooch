@@ -9,7 +9,7 @@ import { isMobileGroomingSalesPerAppointmentQuestion, findMobileGroomingSalesPer
 import { isDaycareVisitsPerStaffHourQuestion, isServiceRevenueTargetQuestion } from "@/lib/knowledge-report-kpis";
 import { findFormSubmissionReport, isFormSubmissionCountQuestion } from "@/lib/knowledge-report-forms";
 
-export type ReportKind = "catalog" | "profit-loss" | "kpis" | "payroll" | "ads" | "daycare" | "forms";
+export type ReportKind = "catalog" | "profit-loss" | "kpis" | "payroll" | "ads" | "daycare" | "forms" | "kpi-history" | "funnel";
 
 export const REPORT_CATALOG = [
   { title: "Profit & Loss", url: "/finance/profit-loss", details: "net sales, order count, estimated expenses, and net profit by business and date" },
@@ -49,6 +49,8 @@ export async function findReportSources(question: string): Promise<KnowledgeSour
 
 /** A validated semantic plan can select a report without depending on its wording regex. */
 export async function findReportSourcesForKind(kind: ReportKind, question: string): Promise<KnowledgeSource[]> {
+  if (kind === "kpi-history") return (await import("@/lib/knowledge-kpi-history")).findKpiHistory(question);
+  if (kind === "funnel") return (await import("@/lib/knowledge-funnel")).findFunnelEvidence(question);
   if (kind === "catalog") {
     return REPORT_CATALOG.map((report) => ({
       id: `record:report:catalog:${report.title}`, title: report.title,

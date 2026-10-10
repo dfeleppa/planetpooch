@@ -1,5 +1,7 @@
 /** Business meanings for report questions. The model selects these IDs; only app code executes reports. */
 export const KNOWLEDGE_METRICS = [
+  { id: "kpi.history", report: "kpi-history", term: "KPI history", meaning: "Dated weekly actuals and targets across service segments for growth, capacity, retention proxies and productivity. Defaults to four completed weeks, or three completed months for a previous-month comparison; reports gaps explicitly. Not actual contribution margins or daily spare capacity." },
+  { id: "website.funnel", report: "funnel", term: "website funnel", meaning: "Saved website form cohort linked to subsequent appointments, with booked/completed outcomes and coverage limits. Not total-business orders, not a complete visitor-to-customer funnel." },
   { id: "website.form_submissions", report: "forms", term: "new form submissions", meaning: "Count saved new-client website forms by received date and business. 'Lead forms' without an ad platform means these submitted website forms, not anonymous visits or imported ad leads." },
   { id: "finance.net_sales", report: "profit-loss", term: "net sales", meaning: "Profit & Loss net sales, based on revenue-bearing MoeGo orders; not cash received or ad-attributed revenue." },
   { id: "finance.order_count", report: "profit-loss", term: "order count", meaning: "Number of revenue-bearing orders in the Profit & Loss report." },

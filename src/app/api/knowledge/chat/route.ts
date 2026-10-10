@@ -6,7 +6,6 @@ import { findKnowledgeSources, getKnowledgeViewer } from "@/lib/knowledge";
 import { isKnowledgeOwner } from "@/lib/knowledge-owner";
 import { knowledgeRetrievalQuestion } from "@/lib/knowledge-app-data";
 import { DEFAULT_KNOWLEDGE_CHAT_MODEL, KNOWLEDGE_CHAT_MODEL_IDS } from "@/lib/knowledge-chat-models";
-import { needsKnowledgeAnalysis } from "@/lib/knowledge-answer-policy";
 import { buildKnowledgeAnswerRequest, knowledgeResponseText, type KnowledgeModelResponse } from "@/lib/knowledge-answer-request";
 
 export const runtime = "nodejs";
@@ -50,16 +49,6 @@ export async function POST(request: Request) {
       sources: [],
       reportPlan: null,
       retrievalPath: "none",
-    });
-  }
-
-  const exactReport = sources.length === 1 && sources[0].answer && !needsKnowledgeAnalysis(retrievalQuestion) ? sources[0] : null;
-  if (exactReport) {
-    return NextResponse.json({
-      answer: exactReport.answer,
-      sources: [{ id: exactReport.id, title: exactReport.title, kind: exactReport.kind, url: exactReport.url }],
-      reportPlan: exactReport.reportPlan ?? null,
-      retrievalPath: exactReport.retrievalPath ?? "unknown",
     });
   }
 

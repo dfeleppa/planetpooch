@@ -166,10 +166,12 @@ export async function findProfitLossReport(question: string): Promise<KnowledgeS
     url: `/finance/profit-loss?from=${period.start}&to=${period.end}&business=${businesses[0].key}`,
     excerpt: [
       `Report: Profit & Loss. Business: ${label}. Period: ${period.start} through ${period.end}.`,
-      ...totals.map(({ business, total }) => `${business.label}: net sales ${money(total.revenueCents)}; ${total.orders} orders; estimated expenses ${money(total.expenseCents)}; net profit ${money(total.profitCents)}.`),
+      ...(sync?.lastSyncedAt ? totals.map(({ business, total }) => `${business.label}: net sales ${money(total.revenueCents)}; ${total.orders} orders; estimated expenses ${money(total.expenseCents)}; net profit ${money(total.profitCents)}.`)
+        : ["No recorded order sync: sales, order count, profit and margin cannot be verified. Do not interpret missing synchronization as zero sales."]),
       "Net sales are completed or processing order subtotals less discounts, before tax and tips. Expenses accrue at the rate used by the Profit & Loss chart.",
       "Expenses are a fixed planning estimate, not itemized actual labor and other costs. Net profit and margin derived from these expenses are estimates, not verified accounting profit. Actual labor and other expenses cannot be inferred from this total.",
       `Stored order sync: ${sync?.lastSyncedAt.toISOString() ?? "not recorded"}. This is not a live MoeGo query.`,
+      ...(period.end >= formatEasternDate(new Date()) ? ["This period includes today and may be incomplete. Do not divide its sales by all calendar days to project a full-day pace; a completed-day cutoff is needed."] : []),
     ].join("\n"),
     updatedAt: sync?.updatedAt.toISOString() ?? new Date().toISOString(),
     dateKind: "entry",

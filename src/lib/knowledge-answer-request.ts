@@ -1,6 +1,7 @@
 import type { KnowledgeSource } from "@/lib/knowledge";
 import { KNOWLEDGE_CHAT_MODEL_CONFIG, type KnowledgeChatModel } from "@/lib/knowledge-chat-models";
 import { OWNER_ANALYSIS_INSTRUCTIONS } from "@/lib/knowledge-answer-policy";
+import { knowledgeMetric } from "@/lib/knowledge-metric-catalog";
 
 export type KnowledgeMessage = { role: "user" | "assistant"; content: string };
 export type KnowledgeModelResponse = {
@@ -24,7 +25,8 @@ export function buildKnowledgeAnswerRequest(
   const evidence = sources.map((source, index) =>
     `[${index + 1}] ${source.title} (${source.kind}, ${source.dateKind} updated ${source.updatedAt.slice(0, 10)})\n${source.excerpt}`
   ).join("\n\n");
-  const plannedMetrics = sources[0]?.reportPlan?.tasks.flatMap((task) => task.metricIds) ?? [];
+  const plannedMetrics = [...new Set(sources[0]?.reportPlan?.tasks.flatMap((task) =>
+    task.metricIds.map((id) => knowledgeMetric(id)?.term).filter(Boolean)) ?? [])];
   return {
     model, store: false,
     reasoning: { effort: modelConfig.reasoningEffort },
@@ -46,7 +48,7 @@ export function buildKnowledgeAnswerRequest(
     input: [
       ...messages.slice(0, -1).map(({ role, content }) => ({ role, content })),
       { role: "user" as const, content: `Question: ${question}${plannedMetrics.length
-        ? `\nRequested report metrics: ${plannedMetrics.join(", ")}. Address each one or state which lacks evidence.` : ""}\n\nAuthorized sources:\n${evidence}` },
+        ? `\nSupporting report topics: ${plannedMetrics.join(", ")}. Use relevant evidence to answer the original question; these topics are retrieval aids, not extra user requests.` : ""}\n\nAuthorized sources:\n${evidence}` },
     ],
   };
 }

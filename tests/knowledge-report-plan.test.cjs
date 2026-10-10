@@ -80,6 +80,23 @@ test("planner uses the catalog and validates a structured model response", async
   assert.equal(request.text.format.strict, true);
 });
 
+test("comparison wording cannot authorize invented dates", () => {
+  assert.equal(planner.validateReportPlan({ tasks: [{ metricIds: ["finance.net_sales"],
+    question: "Compare Pet Resort net sales last month." }], needsAnalysis: true },
+  "Compare Pet Resort net sales last week.", now), null);
+});
+
+test("multi-service plans may split services but cannot drop or invent a qualifier", () => {
+  const tasks = [
+    { metricIds: ["kpi.service_revenue"], question: "boarding service revenue last week" },
+    { metricIds: ["kpi.service_revenue"], question: "training service revenue last week" },
+  ];
+  const original = "Compare boarding and training service revenue last week";
+  assert.equal(planner.validateReportPlan({ tasks, needsAnalysis: true }, original, now)?.tasks.length, 2);
+  assert.equal(planner.validateReportPlan({ tasks: tasks.slice(0, 1), needsAnalysis: true }, original, now), null);
+  assert.equal(planner.validateReportPlan({ tasks, needsAnalysis: true }, "Compare boarding service revenue last week", now), null);
+});
+
 test("owner retrieval combines planned reports and disables canned fragments for analysis", async () => {
   const sources = {
     forms: [{ id: "forms", title: "Forms", kind: "record", url: "/forms", excerpt: "7 forms [1]", answer: "7 forms [1]", updatedAt: now.toISOString(), dateKind: "entry" }],
@@ -99,12 +116,16 @@ test("owner retrieval combines planned reports and disables canned fragments for
     "@/lib/knowledge-reports": { findReportSources: async () => null,
       findReportSourcesForKind: async (kind) => sources[kind] },
     "@/lib/knowledge-report-plan": { planReportQuestion: async () => plan },
+    "@/lib/knowledge-evidence-plan": load("src/lib/knowledge-evidence-plan.ts", {
+      "@/lib/knowledge-answer-policy": load("src/lib/knowledge-answer-policy.ts"),
+      "@/lib/knowledge-report-period": {},
+    }),
     "@/lib/knowledge-van-maintenance": { findVanOilChangeSource: async () => null },
   });
   const actual = await knowledge.findKnowledgeSources({ id: "owner" }, "forms and sales");
   assert.deepEqual(Array.from(actual, (source) => source.id), ["forms", "sales"]);
   assert.ok(actual.every((source) => source.answer === undefined));
-  assert.ok(actual.every((source) => source.reportPlan === plan));
+  assert.ok(actual.every((source) => JSON.stringify(source.reportPlan) === JSON.stringify(plan)));
   assert.ok(actual.every((source) => source.retrievalPath === "semantic-report"));
   assert.ok(actual.every((source) => !source.excerpt.includes("[1]")));
 });

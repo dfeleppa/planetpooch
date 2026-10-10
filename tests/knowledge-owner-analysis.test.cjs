@@ -19,6 +19,7 @@ const policy = load("src/lib/knowledge-answer-policy.ts");
 const answerRequest = load("src/lib/knowledge-answer-request.ts", {
   "@/lib/knowledge-chat-models": load("src/lib/knowledge-chat-models.ts"),
   "@/lib/knowledge-answer-policy": policy,
+  "@/lib/knowledge-metric-catalog": load("src/lib/knowledge-metric-catalog.ts"),
 });
 const questions = [
   "How did Pet Resort net sales last week compare with the previous week? Give dollar and percentage changes, explain what drove the change, and recommend the top two actions for next week.",
@@ -64,9 +65,15 @@ for (const question of questions) {
   });
 }
 
-test("simple report lookup still returns its verified answer without an API call", async () => {
-  const route = chatRoute(async () => assert.fail("Simple lookup should not call model"));
-  assert.equal((await (await route.POST(request("What was Pet Resort net sales last week?"))).json()).answer, source.answer);
+test("unrecognized analytical phrasing cannot bypass synthesis", async () => {
+  let payload;
+  const route = chatRoute(async (_url, options) => {
+    payload = JSON.parse(options.body);
+    return Response.json({ output: [{ type: "message", role: "assistant", content: [{ type: "output_text", text: "Growth analysis" }] }] });
+  });
+  const question = "Is revenue growth coming from more customers, more visits per customer, or higher spending per visit?";
+  assert.equal((await (await route.POST(request(question))).json()).answer, "Growth analysis");
+  assert.ok(payload.input.at(-1).content.includes(question));
 });
 
 test("synthesis receives every metric from a multi-report plan", async () => {
@@ -82,7 +89,8 @@ test("synthesis receives every metric from a multi-report plan", async () => {
     { ...source, id: "second", answer: undefined, reportPlan, retrievalPath: "semantic-report" }]);
   const response = await route.POST(request("How many lead forms and how much net sales last week?"));
   const result = await response.json();
-  assert.match(payload.input.at(-1).content, /website\.form_submissions, finance\.net_sales/);
+  assert.match(payload.input.at(-1).content, /new form submissions, net sales/);
+  assert.doesNotMatch(payload.input.at(-1).content, /website\.form_submissions|finance\.net_sales/);
   assert.equal(result.retrievalPath, "semantic-report");
   assert.equal(result.reportPlan.tasks.length, 2);
 });
