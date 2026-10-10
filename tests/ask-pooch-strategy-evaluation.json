@@ -24,5 +24,35 @@
     "Preserve service qualifiers collectively across split plans; reject invented comparative dates.",
     "Use business labels instead of internal metric IDs and distinguish incomplete periods, unique customers, estimates and missing evidence."
   ],
-  "post_fix_live_retest": "Pending deployment."
+  "post_fix_live_retest": {
+    "date": "2026-10-10",
+    "deployed_commit": "75c975391d47fbd6f3d33dfcaed23b71720f8250",
+    "deployment": "dpl_2omxLKjtRQxvMW3Z5PMkeWdoBhcK",
+    "environment": "https://app.planet-pooch.com/knowledge",
+    "model": "GPT-6.1 Sol",
+    "completed_questions": 10,
+    "results": {
+      "service-growth": "Improved: four service histories plus P&L. Conditional boarding recommendation, quantified grooming momentum, explicit daily capacity and service-margin limitations.",
+      "quarter-target": "Improved: rejects projecting a full-day pace from the partial current day. Gives a conditional remaining-days formula and identifies missing approved quarterly target instead of substituting weekly targets.",
+      "growth-drivers": "Improved: retrieves matched completed 28-day periods, challenges the premise of revenue growth, separates increased orders from decreased average order value, and does not equate orders with visits or customers.",
+      "unused-capacity": "Improved: identifies quieter reporting weeks from actual KPIs, distinguishes occupancy/target gaps from daily staffed capacity, and proposes controlled contribution-based tests.",
+      "retention": "Appropriately limited: adds four-week visit-frequency context, does not claim a churn trend from activity totals, and recommends customer-level cohorts and matched follow-up windows.",
+      "price-scenario": "Preserved useful scenario analysis and correct fixed-cost break-even threshold. Follow-up after a long package answer succeeded. A minor 0.01 percentage-point rounding discrepancy remains in the displayed 0%-volume-loss profit-growth percentage; scenario dollar values and decision are unaffected.",
+      "package-value": "Improved: combines history with expiring-package aggregate, discloses the limited row sample, and distinguishes remaining credits from incremental demand or proven package effects.",
+      "van-expansion": "Improved: retrieves July-September reporting weeks, normalizes weekly samples and avoids claiming full calendar-month totals. Separates service volume from productivity per staffed hour and unmet demand; no internal metric IDs displayed.",
+      "funnel": "Improved: uses directly linked inquiry customers and saved appointments. Zero observed outcomes explicitly treated as potentially incomplete linkage/coverage, not a 100% customer loss. Does not divide unrelated totals into a conversion rate.",
+      "investment": "Improved: allocation uses KPI history, latest saved advertising comparison and completed-week P&L. Correctly labels estimates, missing ad spend and conditional staffing/equipment reserves."
+    },
+    "remaining_evidence_limits": [
+      "Actual service contribution margins, daily staffed capacity, approved quarterly revenue targets and causal retention/package cohorts are not established by these sources.",
+      "Mobile Grooming comparisons use weekly reporting samples grouped by week start, not exact calendar-month totals.",
+      "Funnel matching uses direct customer IDs only and does not reconcile duplicate profiles; historical sync completeness is not proven."
+    ],
+    "local_validation": {
+      "ask_pooch_regression_tests": "65 passed",
+      "typescript": "passed",
+      "production_build": "passed",
+      "eslint": "0 errors; 1 pre-existing unused-parameter warning in knowledge-report-mobile-sales.ts"
+    }
+  }
 }
