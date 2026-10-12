@@ -2692,12 +2692,22 @@ export function PayrollDashboard({
                                   record.countedCashCents < record.expectedCashCents
                                 ).sort((a, b) => a.serviceDate.localeCompare(b.serviceDate));
                                 return (
-                                <div key={payout.employeeName} className="rounded-md border border-gray-200 p-3">
+                                <div key={payout.employeeName} className={cn(
+                                  "rounded-md border p-3 transition-colors",
+                                  payout.varianceReviewed ? "border-green-300 bg-green-50/60" : "border-gray-200 bg-white"
+                                )}>
                                   <div className="flex flex-wrap items-center justify-between gap-2 text-sm">
                                     <span className="font-medium">{payout.employeeName}</span>
-                                    <span>{formatCashDifference(payout.varianceCents)}</span>
+                                    <div className="flex flex-wrap items-center gap-2">
+                                      <span>{formatCashDifference(payout.varianceCents)}</span>
+                                      {payout.varianceReviewed && (
+                                        <span className="rounded-full border border-green-200 bg-green-100 px-2 py-0.5 text-xs font-semibold text-green-800">
+                                          ✓ Reviewed
+                                        </span>
+                                      )}
+                                    </div>
                                   </div>
-                                  <p className="mt-1 text-xs text-gray-600">
+                                  <p className={cn("mt-1 text-xs", payout.varianceReviewed ? "text-green-800" : "text-gray-600")}>
                                     {payout.varianceReviewed ? payout.applyVarianceToCashPayout
                                       ? "Applied to cash payout" : "Not applied to cash payout" : "Review required"}
                                   </p>
@@ -2715,19 +2725,21 @@ export function PayrollDashboard({
                                       ))}
                                     </div>
                                   )}
-                                  <div className="mt-2 flex flex-wrap gap-2">
-                                    {payout.varianceCents !== 0 && (
-                                      <Button type="button" size="sm" variant={payout.applyVarianceToCashPayout === true ? "primary" : "secondary"}
-                                        disabled={Boolean(savingVarianceReview)} onClick={() => void saveVarianceReview(payout.employeeName, true)}>
-                                        {payout.varianceCents < 0 ? "Apply shortage to cash payout" : "Add overage to cash payout"}
+                                  {(!payout.varianceReviewed || payout.varianceCents !== 0) && (
+                                    <div className="mt-2 flex flex-wrap gap-2">
+                                      {payout.varianceCents !== 0 && (
+                                        <Button type="button" size="sm" variant={payout.applyVarianceToCashPayout === true ? "primary" : "secondary"}
+                                          disabled={Boolean(savingVarianceReview)} onClick={() => void saveVarianceReview(payout.employeeName, true)}>
+                                          {payout.varianceCents < 0 ? "Apply shortage to cash payout" : "Add overage to cash payout"}
+                                        </Button>
+                                      )}
+                                      <Button type="button" size="sm" variant={payout.applyVarianceToCashPayout === false ? "primary" : "secondary"}
+                                        disabled={Boolean(savingVarianceReview)} onClick={() => void saveVarianceReview(payout.employeeName, false)}>
+                                        {payout.varianceCents < 0 ? "Do not apply shortage"
+                                          : payout.varianceCents === 0 ? "Mark reviewed" : "Do not add to payout"}
                                       </Button>
-                                    )}
-                                    <Button type="button" size="sm" variant={payout.applyVarianceToCashPayout === false ? "primary" : "secondary"}
-                                      disabled={Boolean(savingVarianceReview)} onClick={() => void saveVarianceReview(payout.employeeName, false)}>
-                                      {payout.varianceCents < 0 ? "Do not apply shortage"
-                                        : payout.varianceCents === 0 ? "Mark reviewed" : "Do not add to payout"}
-                                    </Button>
-                                  </div>
+                                    </div>
+                                  )}
                                 </div>
                                 );
                               })}
