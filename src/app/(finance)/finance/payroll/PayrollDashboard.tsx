@@ -2414,7 +2414,7 @@ export function PayrollDashboard({
                                 )}
                               </TableCell>
                               <TableCell className={payout.cashPayoutCents < 0 ? "font-medium text-red-700" : "font-medium"}>
-                                {formatMoney(payout.cashPayoutCents / 100)}
+                                {payout.directDepositSet ? formatMoney(payout.cashPayoutCents / 100) : "Pending"}
                               </TableCell>
                               <TableCell>
                                 {depositEditEmployee !== payout.employeeName && (
@@ -2431,8 +2431,11 @@ export function PayrollDashboard({
                           <TableRow>
                             <TableCell className="font-semibold">Total</TableCell>
                             <TableCell className="font-semibold">{formatMoney(closeoutData.preview.payouts.reduce((sum, payout) => sum + payout.groomerPayCents, 0) / 100)}</TableCell>
-                            <TableCell className="font-semibold">{formatMoney(closeoutData.preview.payouts.reduce((sum, payout) => sum + payout.directDepositCents, 0) / 100)}</TableCell>
-                            <TableCell className="font-semibold">{formatMoney(closeoutData.preview.cashPayoutCents / 100)}</TableCell>
+                            <TableCell className="font-semibold">{closeoutData.preview.missingDepositSettings.length === 0
+                              ? formatMoney(closeoutData.preview.payouts.reduce((sum, payout) => sum + payout.directDepositCents, 0) / 100)
+                              : "Pending"}</TableCell>
+                            <TableCell className="font-semibold">{closeoutData.preview.missingDepositSettings.length === 0
+                              ? formatMoney(closeoutData.preview.cashPayoutCents / 100) : "Pending"}</TableCell>
                             <TableCell />
                           </TableRow>
                         </TableBody>
@@ -2449,8 +2452,10 @@ export function PayrollDashboard({
                     </div>
                     <div className="grid gap-3 sm:grid-cols-3">
                       <WeeklyMetric label="Counted client cash" value={formatMoney(closeoutData.preview.countedCashCents / 100)} />
-                      <WeeklyMetric label="Cash payouts" value={formatMoney(closeoutData.preview.cashPayoutCents / 100)} />
-                      <WeeklyMetric label="Expected deposit" value={formatMoney(closeoutData.preview.expectedDepositCents / 100)} />
+                      <WeeklyMetric label="Cash payouts" value={closeoutData.preview.missingDepositSettings.length === 0
+                        ? formatMoney(closeoutData.preview.cashPayoutCents / 100) : "Pending"} />
+                      <WeeklyMetric label="Expected deposit" value={closeoutData.preview.missingDepositSettings.length === 0
+                        ? formatMoney(closeoutData.preview.expectedDepositCents / 100) : "Pending"} />
                     </div>
                     <p className="text-sm text-gray-600">
                       {closeoutData.preview.reconciledDays} of {closeoutData.preview.workedDays} employee days reconciled.
@@ -2474,11 +2479,12 @@ export function PayrollDashboard({
                           step="0.01"
                           value={finalDepositDraft}
                           onChange={(event) => setFinalDepositDraft(event.target.value)}
-                          disabled={savingCloseout}
+                          disabled={savingCloseout || closeoutData.preview.missingDepositSettings.length > 0}
                         />
                       </div>
                       <p className="pb-2 text-sm text-gray-600">
-                        Difference: {finalDepositDraft.trim() && Number.isFinite(Number(finalDepositDraft))
+                        Difference: {closeoutData.preview.missingDepositSettings.length > 0 ? "Set all direct deposits"
+                          : finalDepositDraft.trim() && Number.isFinite(Number(finalDepositDraft))
                           ? formatCashDifference(Math.round(Number(finalDepositDraft) * 100) - closeoutData.preview.expectedDepositCents)
                           : "Enter final deposit"}
                       </p>
