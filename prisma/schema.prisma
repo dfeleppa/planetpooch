@@ -1396,6 +1396,7 @@ model FinancePayrollWeek {
   mobileGroomingEntries        FinanceMobileGroomingPayrollEntry[]
   mobileGroomingReconciliations FinanceMobileGroomingDailyReconciliation[]
   mobileGroomingWeeklyOverride FinanceMobileGroomingWeeklyOverride?
+  mobileGroomingCloseout       FinanceMobileGroomingWeeklyCloseout?
 
   @@unique([business, weekStart])
   @@index([business, weekStart, weekEnd])
@@ -1456,6 +1457,38 @@ model FinanceMobileGroomingDailyReconciliation {
 
   @@unique([payrollWeekId, employeeName, serviceDate])
   @@index([payrollWeekId, serviceDate])
+}
+
+/// A mobile groomer's weekly direct deposit amount, effective from one payroll week forward.
+/// Older weeks retain the amount that applied to them when the setting is changed.
+model FinanceMobileGroomingDirectDeposit {
+  id                 String   @id @default(cuid())
+  employeeName       String
+  effectiveWeekStart DateTime @db.Date
+  amountCents        Int
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  @@unique([employeeName, effectiveWeekStart])
+  @@index([effectiveWeekStart])
+}
+
+/// A saved final cash closeout for one completed mobile grooming payroll week.
+model FinanceMobileGroomingWeeklyCloseout {
+  id                   String   @id @default(cuid())
+  payrollWeekId        String   @unique
+  countedCashCents     Int
+  cashPayoutCents      Int
+  expectedDepositCents Int
+  finalDepositCents    Int
+  varianceCents        Int
+  note                 String   @default("")
+  sourceFingerprint    String
+  payoutSnapshot       Json
+  closedAt             DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+
+  payrollWeek FinancePayrollWeek @relation(fields: [payrollWeekId], references: [id], onDelete: Cascade)
 }
 
 model FinanceMobileGroomingWeeklyOverride {

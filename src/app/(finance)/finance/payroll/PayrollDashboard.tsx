@@ -1,6 +1,6 @@
 "use client";
 
-import { ChangeEvent, useCallback, useEffect, useMemo, useState } from "react";
+import { ChangeEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -142,6 +142,44 @@ type DailyReconciliation = {
   reconciledAt: string;
 };
 
+type PayoutPreview = {
+  expectedCashCents: number;
+  countedCashCents: number;
+  cashPayoutCents: number;
+  expectedDepositCents: number;
+  payouts: Array<{
+    employeeName: string;
+    groomerPayCents: number;
+    directDepositCents: number;
+    cashPayoutCents: number;
+    directDepositSet: boolean;
+  }>;
+  workedDays: number;
+  reconciledDays: number;
+  missingDays: string[];
+  staleDays: string[];
+  missingDepositSettings: string[];
+  negativeCashPayouts: string[];
+  sourceFingerprint: string;
+};
+
+type WeeklyCloseout = {
+  finalDepositCents: number;
+  expectedDepositCents: number;
+  varianceCents: number;
+  note: string;
+  closedAt: string;
+  sourceFingerprint: string;
+};
+
+type CloseoutResponse = {
+  preview: PayoutPreview;
+  closeout: WeeklyCloseout | null;
+  closeoutCurrent: boolean;
+  weekCompleted: boolean;
+  error?: string;
+};
+
 type EditableRow = {
   localId: string;
   employeeName: string;
@@ -171,7 +209,7 @@ const EMPTY_EMPLOYEE_OPTIONS: PayrollEmployeeOption[] = [];
 
 type MobileSummaryView = "annual" | "weekly";
 type MobilePayrollView = "summary" | "employee" | "report" | "reconciliation";
-type ReconciliationView = "employee" | "weekly";
+type ReconciliationView = "employee" | "weekly" | "payouts";
 
 type WeeklyTotalsEdit = {
   weekStart: string;
@@ -646,6 +684,15 @@ export function PayrollDashboard({
   const [reconciliationNoteDraft, setReconciliationNoteDraft] = useState("");
   const [savingReconciliation, setSavingReconciliation] = useState(false);
   const [loadingReconciliations, setLoadingReconciliations] = useState(false);
+  const [loadingDirectDeposits, setLoadingDirectDeposits] = useState(false);
+  const [depositEditEmployee, setDepositEditEmployee] = useState<string | null>(null);
+  const [depositDraft, setDepositDraft] = useState("");
+  const [savingDirectDeposit, setSavingDirectDeposit] = useState(false);
+  const [closeoutData, setCloseoutData] = useState<CloseoutResponse | null>(null);
+  const [finalDepositDraft, setFinalDepositDraft] = useState("");
+  const [closeoutNoteDraft, setCloseoutNoteDraft] = useState("");
+  const [savingCloseout, setSavingCloseout] = useState(false);
+  const payoutRequestId = useRef(0);
   const [mobileStopsOpen, setMobileStopsOpen] = useState(true);
   const [weeklyCashOpen, setWeeklyCashOpen] = useState(false);
   const [pullingMoego, setPullingMoego] = useState(false);
@@ -1057,6 +1104,95 @@ export function PayrollDashboard({
       });
     return () => controller.abort();
   }, [mobilePayrollView, weekStart]);
+
+  const loadPayouts = useCallback(async (selectedWeekStart: string) => {
+    const requestId = ++payoutRequestId.current;
+    setLoadingDirectDeposits(true);
+    setError(null);
+    try {
+      const response = await fetch(`/api/finance/payroll/mobile-grooming/closeout?weekStart=${selectedWeekStart}`);
+      const data = (await response.json()) as CloseoutResponse;
+      if (!response.ok) throw new Error(data.error || "Could not load payouts.");
+      if (requestId !== payoutRequestId.current) return;
+      setCloseoutData(data);
+      setFinalDepositDraft(data.closeout ? (data.closeout.finalDepositCents / 100).toFixed(2) : "");
+      setCloseoutNoteDraft(data.closeout?.note ?? "");
+    } catch (error) {
+      if (requestId === payoutRequestId.current) {
+        setError(error instanceof Error ? error.message : "Could not load payouts.");
+      }
+    } finally {
+      if (requestId === payoutRequestId.current) setLoadingDirectDeposits(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (mobilePayrollView !== "reconciliation" || reconciliationView !== "payouts") return;
+    setCloseoutData(null);
+    void loadPayouts(weekStart);
+  }, [mobilePayrollView, reconciliationView, weekStart, loadPayouts]);
+
+  async function saveDirectDeposit(employeeName: string) {
+    const trimmed = depositDraft.trim();
+    const amount = Number(trimmed);
+    if (!/^\d+(?:\.\d{1,2})?$/.test(trimmed) ||
+        !Number.isSafeInteger(Math.round(amount * 100)) ||
+        Math.round(amount * 100) > 2_147_483_647) {
+      setError("Enter a direct deposit amount with no more than two decimal places.");
+      return;
+    }
+    setSavingDirectDeposit(true);
+    setError(null);
+    try {
+      const response = await fetch("/api/finance/payroll/mobile-grooming/payouts", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ employeeName, weekStart, amountCents: Math.round(amount * 100) }),
+      });
+      const data = (await response.json()) as { error?: string };
+      if (!response.ok) throw new Error(data.error || "Could not save direct deposit.");
+      setDepositEditEmployee(null);
+      setMessage(`Direct deposit saved for ${employeeName}.`);
+      await loadPayouts(weekStart);
+    } catch (error) {
+      setError(error instanceof Error ? error.message : "Could not save direct deposit.");
+    } finally {
+      setSavingDirectDeposit(false);
+    }
+  }
+
+  async function saveWeeklyCloseout() {
+    const trimmed = finalDepositDraft.trim();
+    const amount = Number(trimmed);
+    if (!/^\d+(?:\.\d{1,2})?$/.test(trimmed) ||
+        !Number.isSafeInteger(Math.round(amount * 100)) ||
+        Math.round(amount * 100) > 2_147_483_647) {
+      setError("Enter the final deposited cash amount with no more than two decimal places.");
+      return;
+    }
+    setSavingCloseout(true);
+    setError(null);
+    try {
+      const response = await fetch("/api/finance/payroll/mobile-grooming/closeout", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          weekStart,
+          finalDepositCents: Math.round(amount * 100),
+          note: closeoutNoteDraft.trim(),
+          sourceFingerprint: closeoutData?.preview.sourceFingerprint,
+        }),
+      });
+      const data = (await response.json()) as CloseoutResponse;
+      if (!response.ok) throw new Error(data.error || "Could not close the payroll week.");
+      setCloseoutData(data);
+      setMessage("Weekly cash closeout saved.");
+    } catch (error) {
+      setError(error instanceof Error ? error.message : "Could not close the payroll week.");
+    } finally {
+      setSavingCloseout(false);
+    }
+  }
 
   async function saveDailyReconciliation(serviceDate: string) {
     const normalizedCountedCash = countedCashDraft.trim();
@@ -1611,7 +1747,8 @@ export function PayrollDashboard({
         <div>
           <h2 className="text-xl font-semibold text-gray-900">
             {isMobileGrooming && mobilePayrollView === "reconciliation"
-              ? reconciliationView === "employee" ? "Daily Reconciliation" : "Weekly Reconciliation"
+              ? reconciliationView === "employee" ? "Daily Reconciliation"
+                : reconciliationView === "weekly" ? "Weekly Reconciliation" : "Payouts and Final Reconciliation"
               : "Payroll"}
           </h2>
           <p className="mt-1 text-gray-500">
@@ -1628,7 +1765,7 @@ export function PayrollDashboard({
 
       {isMobileGrooming && mobilePayrollView === "reconciliation" && (
         <div className="pp-tabs" role="tablist" aria-label="Reconciliation view">
-          {(["employee", "weekly"] as const).map((view) => (
+          {(["employee", "weekly", "payouts"] as const).map((view) => (
             <button
               key={view}
               type="button"
@@ -1638,9 +1775,13 @@ export function PayrollDashboard({
               onClick={() => {
                 setReconciliationView(view);
                 setOpenReconciliationDay(null);
+                setDepositEditEmployee(null);
+                if (view === "payouts" && weekStart > lastCompletedWeekStart("mobile-grooming")) {
+                  void loadWeek(lastCompletedWeekStart("mobile-grooming"), "mobile-grooming");
+                }
               }}
             >
-              {view === "employee" ? "Employee" : "Weekly"}
+              {view === "employee" ? "Employee" : view === "weekly" ? "Weekly" : "Payouts"}
             </button>
           ))}
         </div>
@@ -2217,7 +2358,159 @@ export function PayrollDashboard({
                 </Select>
               )}
             </div>
-            {reconciliationView === "weekly" ? (
+            {reconciliationView === "payouts" ? (
+              loading || loadingDirectDeposits || !closeoutData ? (
+                <p className="text-sm text-gray-500">Loading payouts and closeout...</p>
+              ) : closeoutData.preview.payouts.length === 0 ? (
+                <p className="text-sm text-gray-500">No saved mobile grooming appointments for this week.</p>
+              ) : (
+                <div className="space-y-6">
+                  <div>
+                    <p className="mb-3 text-sm text-gray-600">
+                      Groomer pay includes commission and credit card tips. Cash payout = groomer pay − direct deposit.
+                    </p>
+                    <div className="overflow-x-auto rounded-lg border border-gray-200">
+                      <Table>
+                        <TableHead>
+                          <TableRow>
+                            <TableHeader>Employee</TableHeader>
+                            <TableHeader>Groomer Pay</TableHeader>
+                            <TableHeader>Direct Deposit</TableHeader>
+                            <TableHeader>Cash Payout</TableHeader>
+                            <TableHeader>Details</TableHeader>
+                          </TableRow>
+                        </TableHead>
+                        <TableBody>
+                          {closeoutData.preview.payouts.map((payout) => (
+                            <TableRow key={payout.employeeName}>
+                              <TableCell className="font-medium">{payout.employeeName}</TableCell>
+                              <TableCell>{formatMoney(payout.groomerPayCents / 100)}</TableCell>
+                              <TableCell>
+                                {depositEditEmployee === payout.employeeName ? (
+                                  <div className="flex min-w-56 items-end gap-2">
+                                    <div className="w-32">
+                                      <Input
+                                        label={`Direct deposit for ${payout.employeeName}`}
+                                        type="number"
+                                        min="0"
+                                        step="0.01"
+                                        value={depositDraft}
+                                        onChange={(event) => setDepositDraft(event.target.value)}
+                                        disabled={savingDirectDeposit}
+                                      />
+                                    </div>
+                                    <Button type="button" size="sm" onClick={() => void saveDirectDeposit(payout.employeeName)} disabled={savingDirectDeposit}>
+                                      {savingDirectDeposit ? "Saving..." : "Save"}
+                                    </Button>
+                                    <Button type="button" size="sm" variant="secondary" onClick={() => setDepositEditEmployee(null)} disabled={savingDirectDeposit}>
+                                      Cancel
+                                    </Button>
+                                  </div>
+                                ) : (
+                                  <span>
+                                    {formatMoney(payout.directDepositCents / 100)}
+                                    {!payout.directDepositSet && <span className="ml-2 text-xs text-amber-700">Not set</span>}
+                                  </span>
+                                )}
+                              </TableCell>
+                              <TableCell className={payout.cashPayoutCents < 0 ? "font-medium text-red-700" : "font-medium"}>
+                                {formatMoney(payout.cashPayoutCents / 100)}
+                              </TableCell>
+                              <TableCell>
+                                {depositEditEmployee !== payout.employeeName && (
+                                  <Button type="button" size="sm" variant="secondary" onClick={() => {
+                                    setDepositEditEmployee(payout.employeeName);
+                                    setDepositDraft(payout.directDepositSet ? (payout.directDepositCents / 100).toFixed(2) : "");
+                                  }}>
+                                    {payout.directDepositSet ? "Edit" : "Set amount"}
+                                  </Button>
+                                )}
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                          <TableRow>
+                            <TableCell className="font-semibold">Total</TableCell>
+                            <TableCell className="font-semibold">{formatMoney(closeoutData.preview.payouts.reduce((sum, payout) => sum + payout.groomerPayCents, 0) / 100)}</TableCell>
+                            <TableCell className="font-semibold">{formatMoney(closeoutData.preview.payouts.reduce((sum, payout) => sum + payout.directDepositCents, 0) / 100)}</TableCell>
+                            <TableCell className="font-semibold">{formatMoney(closeoutData.preview.cashPayoutCents / 100)}</TableCell>
+                            <TableCell />
+                          </TableRow>
+                        </TableBody>
+                      </Table>
+                    </div>
+                  </div>
+
+                  <div className="space-y-4 rounded-lg border border-gray-200 p-4">
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <h3 className="text-lg font-semibold text-gray-900">Final weekly reconciliation</h3>
+                      <span className={cn("text-sm font-medium", closeoutData.closeoutCurrent ? "text-green-700" : "text-amber-700")}>
+                        {closeoutData.closeoutCurrent ? "Week closed" : closeoutData.closeout ? "Closeout needs updating" : "Open"}
+                      </span>
+                    </div>
+                    <div className="grid gap-3 sm:grid-cols-3">
+                      <WeeklyMetric label="Counted client cash" value={formatMoney(closeoutData.preview.countedCashCents / 100)} />
+                      <WeeklyMetric label="Cash payouts" value={formatMoney(closeoutData.preview.cashPayoutCents / 100)} />
+                      <WeeklyMetric label="Expected deposit" value={formatMoney(closeoutData.preview.expectedDepositCents / 100)} />
+                    </div>
+                    <p className="text-sm text-gray-600">
+                      {closeoutData.preview.reconciledDays} of {closeoutData.preview.workedDays} employee days reconciled.
+                      {closeoutData.preview.missingDays.length > 0 && ` ${closeoutData.preview.missingDays.length} day(s) still need reconciliation.`}
+                      {closeoutData.preview.staleDays.length > 0 && ` ${closeoutData.preview.staleDays.length} day(s) need updating after payroll changed.`}
+                      {closeoutData.preview.missingDepositSettings.length > 0 && ` Set direct deposit for ${closeoutData.preview.missingDepositSettings.join(", ")}.`}
+                      {closeoutData.preview.negativeCashPayouts.length > 0 && ` Direct deposit exceeds groomer pay for ${closeoutData.preview.negativeCashPayouts.join(", ")}.`}
+                    </p>
+                    {closeoutData.closeout && (
+                      <p className="text-sm text-gray-700">
+                        Last closed {new Date(closeoutData.closeout.closedAt).toLocaleString("en-US", { timeZone: "America/New_York", month: "short", day: "numeric", year: "numeric", hour: "numeric", minute: "2-digit" })}
+                        {` · ${formatMoney(closeoutData.closeout.finalDepositCents / 100)} deposited · ${formatCashDifference(closeoutData.closeout.varianceCents)}`}
+                      </p>
+                    )}
+                    <div className="flex flex-wrap items-end gap-3">
+                      <div className="w-56">
+                        <Input
+                          label="Final cash deposited"
+                          type="number"
+                          min="0"
+                          step="0.01"
+                          value={finalDepositDraft}
+                          onChange={(event) => setFinalDepositDraft(event.target.value)}
+                          disabled={savingCloseout}
+                        />
+                      </div>
+                      <p className="pb-2 text-sm text-gray-600">
+                        Difference: {finalDepositDraft.trim() && Number.isFinite(Number(finalDepositDraft))
+                          ? formatCashDifference(Math.round(Number(finalDepositDraft) * 100) - closeoutData.preview.expectedDepositCents)
+                          : "Enter final deposit"}
+                      </p>
+                    </div>
+                    <div>
+                      <label htmlFor="closeout-note" className="mb-1 block text-sm font-medium text-gray-700">
+                        Difference note (required when final deposit differs)
+                      </label>
+                      <textarea
+                        id="closeout-note"
+                        value={closeoutNoteDraft}
+                        onChange={(event) => setCloseoutNoteDraft(event.target.value)}
+                        maxLength={1000}
+                        rows={2}
+                        disabled={savingCloseout}
+                        className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm text-gray-900 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 disabled:bg-gray-100"
+                      />
+                    </div>
+                    <Button type="button" onClick={() => void saveWeeklyCloseout()} disabled={
+                      savingCloseout || !closeoutData.weekCompleted ||
+                      closeoutData.preview.missingDays.length > 0 || closeoutData.preview.staleDays.length > 0 ||
+                      closeoutData.preview.missingDepositSettings.length > 0 ||
+                      closeoutData.preview.negativeCashPayouts.length > 0 ||
+                      closeoutData.preview.expectedDepositCents < 0
+                    }>
+                      {savingCloseout ? "Saving..." : closeoutData.closeout ? "Update weekly closeout" : "Close week"}
+                    </Button>
+                    {!closeoutData.weekCompleted && <p className="text-sm text-amber-700">The week must end before it can be closed.</p>}
+                  </div>
+                </div>
+              )
+            ) : reconciliationView === "weekly" ? (
               loading || loadingReconciliations ? (
                 <p className="text-sm text-gray-500">Loading weekly reconciliation...</p>
               ) : allEmployeeReconciliationGroups.length === 0 ? (
