@@ -1141,8 +1141,30 @@ body {
 
   .pp-mobile-paystub {
     page: pp-mobile-paystub-page;
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
+    overflow-wrap: anywhere;
     break-after: page;
     page-break-after: always;
+  }
+
+  .pp-mobile-paystub-stops {
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+    table-layout: fixed;
+    font-size: 6.5pt;
+  }
+
+  .pp-mobile-paystub-stops th,
+  .pp-mobile-paystub-stops td {
+    min-width: 0 !important;
+    padding-left: 0.02in;
+    padding-right: 0.02in;
+    white-space: normal !important;
+    overflow-wrap: anywhere;
+    line-height: 1.15;
   }
 
   .pp-mobile-paystub:last-child {

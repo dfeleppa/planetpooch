@@ -3404,7 +3404,14 @@ function MobileGroomingPaystub({
 
       <div className="mt-3">
         <h2 className="mb-1 text-[10pt] font-bold">Weekly stops · cash and credit</h2>
-        <table className="w-full border-collapse text-[7pt]">
+        <table className="pp-mobile-paystub-stops w-full border-collapse text-[7pt]">
+          <colgroup>
+            <col style={{ width: "8%" }} /><col style={{ width: "9%" }} />
+            <col style={{ width: "5%" }} /><col style={{ width: "13%" }} />
+            <col style={{ width: "11%" }} /><col style={{ width: "5%" }} />
+            <col style={{ width: "11%" }} /><col style={{ width: "10%" }} />
+            <col style={{ width: "14%" }} /><col style={{ width: "14%" }} />
+          </colgroup>
           <thead className="border-y border-gray-400 bg-gray-100 text-left">
             <tr>
               <th className="py-1">Date</th><th>Payment</th><th className="text-right">Pets</th>
@@ -3443,7 +3450,6 @@ function MobileGroomingPaystub({
         <p className="mt-1 text-[7pt]">
           Cash stops: {formatMoney(totals.cash)} · Credit stops: {formatMoney(totals.pricing - totals.cash)}
         </p>
-        <p className="mt-1 text-[7pt] text-gray-600">Stop total = grooming + upgrades − discount. Groomer pay uses 40% of (grooming + upgrades − $5 per pet, minimum $0) + CC tip.</p>
       </div>
 
       <div className="pp-mobile-paystub-payout mt-4 border-t-2 border-[#315d64] pt-2">
