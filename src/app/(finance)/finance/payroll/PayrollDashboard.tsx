@@ -3388,9 +3388,9 @@ function MobileGroomingPaystub({
           <thead className="border-y border-gray-400 bg-gray-100 text-left">
             <tr>
               <th className="py-1">Date</th><th>Payment</th><th className="text-right">Pets</th>
-              <th className="text-right">Grooming</th><th className="text-right">Upgrades</th>
+              <th className="text-right">Grooming</th><th className="text-right">Upgrades</th><th className="text-right">Qty</th>
               <th className="text-right">Discount</th><th className="text-right">CC tip</th>
-              <th className="text-right">Stop total</th><th className="text-right">Groomer pay</th>
+              <th className="text-right">Stop total</th><th className="text-right">Comm. base</th>
             </tr>
           </thead>
           <tbody>
@@ -3401,10 +3401,11 @@ function MobileGroomingPaystub({
                 <td className="text-right">{mobileEntryDogCount(entry)}</td>
                 <td className="text-right">{formatMoney(mobileEntryGroomingPrice(entry))}</td>
                 <td className="text-right">{formatMoney(moneyValue(entry.upgradeAmount))}</td>
+                <td className="text-right">{entry.upgradeQuantity}</td>
                 <td className="text-right">{formatMoney(moneyValue(entry.discount))}</td>
                 <td className="text-right">{formatMoney(moneyValue(entry.creditCardTip))}</td>
                 <td className="text-right">{formatMoney(mobileEntryTotalPrice(entry))}</td>
-                <td className="text-right">{formatMoney(mobileEntryGroomerPay(entry))}</td>
+                <td className="text-right">{formatMoney(Math.max(0, mobileEntryGroomingPrice(entry) + moneyValue(entry.upgradeAmount) - mobileEntryDogCount(entry) * 5))}</td>
               </tr>
             ))}
           </tbody>
@@ -3413,12 +3414,15 @@ function MobileGroomingPaystub({
               <td className="py-1">{entries.length} stops</td><td /><td className="text-right">{totals.dogs}</td>
               <td className="text-right">{formatMoney(totals.groomingPrice)}</td>
               <td className="text-right">{formatMoney(totals.upgrades)}</td>
-              <td /><td className="text-right">{formatMoney(totals.creditCardTips)}</td>
+              <td /><td /><td className="text-right">{formatMoney(totals.creditCardTips)}</td>
               <td className="text-right">{formatMoney(totals.pricing)}</td>
-              <td className="text-right">{formatMoney(payout.groomerPayCents / 100)}</td>
+              <td className="text-right">{formatMoney(commissionBaseCents / 100)}</td>
             </tr>
           </tfoot>
         </table>
+        <p className="mt-1 text-[7pt]">
+          Cash stops: {formatMoney(totals.cash)} · Credit stops: {formatMoney(totals.pricing - totals.cash)}
+        </p>
         <p className="mt-1 text-[7pt] text-gray-600">Stop total = grooming + upgrades − discount. Groomer pay uses 40% of (grooming + upgrades − $5 per pet, minimum $0) + CC tip.</p>
       </div>
 

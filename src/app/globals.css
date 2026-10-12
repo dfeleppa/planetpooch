@@ -910,6 +910,10 @@ body {
   display: none;
 }
 
+.pp-mobile-paystubs {
+  display: none;
+}
+
 @media print {
   @page {
     size: landscape;
@@ -927,6 +931,11 @@ body {
   }
 
   @page pp-mobile-weekly-report {
+    size: letter portrait;
+    margin: 0.42in;
+  }
+
+  @page pp-mobile-paystub-page {
     size: letter portrait;
     margin: 0.42in;
   }
@@ -1120,6 +1129,31 @@ body {
   .pp-mobile-weekly-report-employee:last-child {
     break-after: auto;
     page-break-after: auto;
+  }
+
+  .pp-mobile-paystubs-active > :not(.pp-mobile-paystubs) {
+    display: none !important;
+  }
+
+  .pp-mobile-paystubs-active > .pp-mobile-paystubs {
+    display: block !important;
+  }
+
+  .pp-mobile-paystub {
+    page: pp-mobile-paystub-page;
+    break-after: page;
+    page-break-after: always;
+  }
+
+  .pp-mobile-paystub:last-child {
+    break-after: auto;
+    page-break-after: auto;
+  }
+
+  .pp-mobile-paystub tr,
+  .pp-mobile-paystub-payout {
+    break-inside: avoid;
+    page-break-inside: avoid;
   }
 
   .pp-kpi-report-segment {
