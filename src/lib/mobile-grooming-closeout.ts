@@ -103,7 +103,7 @@ export function mobileGroomingCloseoutPreview(
     )).digest("hex");
     const review = reviewByName.get(key);
     const varianceReviewCurrent = Boolean(review && review.varianceCents === varianceCents && review.sourceFingerprint === reconciliationFingerprint);
-    const variancePayoutCents = varianceReviewCurrent && review?.applyToCashPayout && varianceCents > 0 ? varianceCents : 0;
+    const variancePayoutCents = varianceReviewCurrent && review?.applyToCashPayout ? varianceCents : 0;
     return {
       employeeName: employee.employeeName,
       groomerPayCents,
@@ -113,7 +113,7 @@ export function mobileGroomingCloseoutPreview(
       varianceCents,
       reconciliationFingerprint,
       varianceReviewed: varianceReviewCurrent,
-      applyVarianceToCashPayout: varianceReviewCurrent ? review!.applyToCashPayout && varianceCents > 0 : null,
+      applyVarianceToCashPayout: varianceReviewCurrent ? review!.applyToCashPayout : null,
       variancePayoutCents,
       cashPayoutCents: groomerPayCents - directDepositCents + adjustmentCents + variancePayoutCents,
       directDepositSet: settingByName.has(key),

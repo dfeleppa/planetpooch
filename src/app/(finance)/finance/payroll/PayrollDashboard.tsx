@@ -2473,7 +2473,7 @@ export function PayrollDashboard({
                       </Button>
                     </div>
                     <p className="mb-3 text-sm text-gray-600">
-                      Groomer pay includes commission and credit card tips. Cash payout = groomer pay − direct deposit + adjustment + any cash overage added.
+                      Groomer pay includes commission and credit card tips. Cash payout = groomer pay − direct deposit + adjustment + any reviewed weekly over/short applied.
                     </p>
                     <div className="overflow-x-auto rounded-lg border border-gray-200">
                       <Table>
@@ -2483,7 +2483,7 @@ export function PayrollDashboard({
                             <TableHeader>Groomer Pay</TableHeader>
                             <TableHeader>Direct Deposit</TableHeader>
                             <TableHeader>Adjustment</TableHeader>
-                            <TableHeader>Cash overage added</TableHeader>
+                            <TableHeader>Weekly over/short applied</TableHeader>
                             <TableHeader>Cash Payout</TableHeader>
                             <TableHeader>Details</TableHeader>
                           </TableRow>
@@ -2685,8 +2685,13 @@ export function PayrollDashboard({
                           {closeoutStep === "employees" && (
                             <div className="space-y-3">
                               <p className="font-medium">2. Review each employee’s over or short amount</p>
-                              <p className="text-sm text-gray-600">Overages may be added to cash payout. Shortages are recorded without reducing employee pay.</p>
-                              {closeoutData.preview.payouts.map((payout) => (
+                              <p className="text-sm text-gray-600">Choose whether each overage or shortage changes this week’s cash payout. Groomer pay remains unchanged.</p>
+                              {closeoutData.preview.payouts.map((payout) => {
+                                const shortageDays = reconciliations.filter((record) =>
+                                  record.employeeName.toLocaleLowerCase() === payout.employeeName.toLocaleLowerCase() &&
+                                  record.countedCashCents < record.expectedCashCents
+                                ).sort((a, b) => a.serviceDate.localeCompare(b.serviceDate));
+                                return (
                                 <div key={payout.employeeName} className="rounded-md border border-gray-200 p-3">
                                   <div className="flex flex-wrap items-center justify-between gap-2 text-sm">
                                     <span className="font-medium">{payout.employeeName}</span>
@@ -2696,21 +2701,36 @@ export function PayrollDashboard({
                                     {payout.varianceReviewed ? payout.applyVarianceToCashPayout
                                       ? "Applied to cash payout" : "Not applied to cash payout" : "Review required"}
                                   </p>
+                                  {shortageDays.length > 0 && (
+                                    <div className="mt-3 space-y-2 rounded-md bg-amber-50 p-3 text-sm">
+                                      <p className="font-medium text-amber-900">Shortage notes</p>
+                                      {shortageDays.map((record) => (
+                                        <div key={record.serviceDate}>
+                                          <p className="font-medium text-gray-800">
+                                            {dateFromParam(record.serviceDate).toLocaleDateString("en-US", { timeZone: "UTC", month: "short", day: "numeric" })}
+                                            {` · ${formatCashDifference(record.countedCashCents - record.expectedCashCents)}`}
+                                          </p>
+                                          <p className="whitespace-pre-wrap break-words text-gray-700">{record.note.trim() || "No note saved for this day."}</p>
+                                        </div>
+                                      ))}
+                                    </div>
+                                  )}
                                   <div className="mt-2 flex flex-wrap gap-2">
-                                    {payout.varianceCents > 0 && (
+                                    {payout.varianceCents !== 0 && (
                                       <Button type="button" size="sm" variant={payout.applyVarianceToCashPayout === true ? "primary" : "secondary"}
                                         disabled={Boolean(savingVarianceReview)} onClick={() => void saveVarianceReview(payout.employeeName, true)}>
-                                        Add overage to cash payout
+                                        {payout.varianceCents < 0 ? "Apply shortage to cash payout" : "Add overage to cash payout"}
                                       </Button>
                                     )}
                                     <Button type="button" size="sm" variant={payout.applyVarianceToCashPayout === false ? "primary" : "secondary"}
                                       disabled={Boolean(savingVarianceReview)} onClick={() => void saveVarianceReview(payout.employeeName, false)}>
-                                      {payout.varianceCents < 0 ? "Record shortage without pay deduction"
+                                      {payout.varianceCents < 0 ? "Do not apply shortage"
                                         : payout.varianceCents === 0 ? "Mark reviewed" : "Do not add to payout"}
                                     </Button>
                                   </div>
                                 </div>
-                              ))}
+                                );
+                              })}
                               <div className="flex flex-wrap gap-2">
                                 <Button type="button" variant="secondary" onClick={() => setCloseoutStep("days")}>Back to days</Button>
                                 <Button type="button" onClick={() => setCloseoutStep("deposit")} disabled={closeoutData.preview.pendingVarianceReviews.length > 0}>

@@ -77,7 +77,7 @@ test("weeks without adjustments retain the existing closeout fingerprint", () =>
   assert.equal(preview.sourceFingerprint, createHash("sha256").update(JSON.stringify(legacyInput)).digest("hex"));
 });
 
-test("a reviewed shortage never reduces cash payout, even if an invalid saved choice says apply", () => {
+test("a reviewed shortage can reduce only the selected employee's cash payout", () => {
   const settings = [
     { employeeName: "Andrea Groomer", amountCents: 2_000 },
     { employeeName: "Bri Groomer", amountCents: 3_500 },
@@ -89,8 +89,8 @@ test("a reviewed shortage never reduces cash payout, even if an invalid saved ch
   ]);
   assert.deepEqual(applied.pendingVarianceReviews, []);
   assert.equal(applied.payouts[0].groomerPayCents, withoutReview.payouts[0].groomerPayCents);
-  assert.equal(applied.payouts[0].cashPayoutCents, withoutReview.payouts[0].cashPayoutCents);
-  assert.equal(applied.expectedDepositCents, withoutReview.expectedDepositCents);
+  assert.equal(applied.payouts[0].cashPayoutCents, withoutReview.payouts[0].cashPayoutCents - 200);
+  assert.equal(applied.expectedDepositCents, withoutReview.expectedDepositCents + 200);
   assert.notEqual(applied.sourceFingerprint, withoutReview.sourceFingerprint);
 
   const excluded = mobileGroomingCloseoutPreview(entries, reconciliations, settings, [], [
@@ -98,7 +98,7 @@ test("a reviewed shortage never reduces cash payout, even if an invalid saved ch
     { employeeName: "Bri Groomer", varianceCents: 0, sourceFingerprint: withoutReview.payouts[1].reconciliationFingerprint, applyToCashPayout: false },
   ]);
   assert.equal(excluded.payouts[0].cashPayoutCents, withoutReview.payouts[0].cashPayoutCents);
-  assert.equal(excluded.sourceFingerprint, applied.sourceFingerprint);
+  assert.notEqual(excluded.sourceFingerprint, applied.sourceFingerprint);
 });
 
 test("a reviewed cash overage can be added to cash payout without changing groomer pay", () => {

@@ -164,9 +164,6 @@ export async function PUT(req: NextRequest) {
   if (!result) return NextResponse.json({ error: "No saved payroll exists for this week." }, { status: 404 });
   const payout = result.preview.payouts.find((item) => item.employeeName.toLocaleLowerCase() === employeeName.toLocaleLowerCase());
   if (!payout) return NextResponse.json({ error: "Employee was not found in this week." }, { status: 404 });
-  if (body.applyToCashPayout && payout.varianceCents <= 0) {
-    return NextResponse.json({ error: "Only a cash overage can be added to an employee's cash payout." }, { status: 400 });
-  }
   const employeeDays = result.week.mobileGroomingEntries
     .filter((entry) => normalizeEmployeeName(entry.employeeName).toLocaleLowerCase() === employeeName.toLocaleLowerCase());
   const dates = new Set(employeeDays.map((entry) => entry.serviceDate.toISOString().slice(0, 10)));
