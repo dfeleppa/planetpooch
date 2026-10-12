@@ -20,11 +20,13 @@ type Reconciliation = {
 };
 
 type Setting = { employeeName: string; amountCents: number };
+type Adjustment = { employeeName: string; amountCents: number; note: string };
 
 export function mobileGroomingCloseoutPreview(
   entries: Entry[],
   reconciliations: Reconciliation[],
-  settings: Setting[]
+  settings: Setting[],
+  adjustments: Adjustment[] = []
 ) {
   const days = new Map<string, { employeeName: string; serviceDate: string; expectedCashCents: number }>();
   const employees = new Map<string, {
@@ -34,6 +36,9 @@ export function mobileGroomingCloseoutPreview(
   }>();
   const settingByName = new Map(settings.map((setting) => [
     normalizeEmployeeName(setting.employeeName).toLocaleLowerCase(), setting.amountCents,
+  ]));
+  const adjustmentByName = new Map(adjustments.map((adjustment) => [
+    normalizeEmployeeName(adjustment.employeeName).toLocaleLowerCase(), adjustment,
   ]));
 
   for (const entry of entries) {
@@ -76,14 +81,19 @@ export function mobileGroomingCloseoutPreview(
   const payouts = Array.from(employees, ([key, employee]) => {
     const groomerPayCents = Math.round(employee.commissionBaseCents * 0.4) + employee.creditCardTipCents;
     const directDepositCents = settingByName.get(key) ?? 0;
+    const adjustment = adjustmentByName.get(key);
+    const adjustmentCents = adjustment?.amountCents ?? 0;
     return {
       employeeName: employee.employeeName,
       groomerPayCents,
       directDepositCents,
-      cashPayoutCents: groomerPayCents - directDepositCents,
+      adjustmentCents,
+      adjustmentNote: adjustment?.note ?? "",
+      cashPayoutCents: groomerPayCents - directDepositCents + adjustmentCents,
       directDepositSet: settingByName.has(key),
     };
   }).sort((a, b) => a.employeeName.localeCompare(b.employeeName));
+  const adjustmentCents = payouts.reduce((sum, payout) => sum + payout.adjustmentCents, 0);
   const cashPayoutCents = payouts.reduce((sum, payout) => sum + payout.cashPayoutCents, 0);
   const expectedDepositCents = countedCashCents - cashPayoutCents;
   const missingDepositSettings = payouts.filter((payout) => !payout.directDepositSet).map((payout) => payout.employeeName);
@@ -95,13 +105,23 @@ export function mobileGroomingCloseoutPreview(
       countedCashCents: records.get(key)?.countedCashCents ?? null,
       reconciledExpectedCashCents: records.get(key)?.expectedCashCents ?? null,
     })),
-    payouts,
+    payouts: payouts.map((payout) => ({
+      employeeName: payout.employeeName,
+      groomerPayCents: payout.groomerPayCents,
+      directDepositCents: payout.directDepositCents,
+      cashPayoutCents: payout.cashPayoutCents,
+      directDepositSet: payout.directDepositSet,
+      ...(payout.adjustmentCents !== 0 || payout.adjustmentNote
+        ? { adjustmentCents: payout.adjustmentCents, adjustmentNote: payout.adjustmentNote }
+        : {}),
+    })),
   };
   const sourceFingerprint = createHash("sha256").update(JSON.stringify(fingerprintInput)).digest("hex");
 
   return {
     expectedCashCents,
     countedCashCents,
+    adjustmentCents,
     cashPayoutCents,
     expectedDepositCents,
     payouts,

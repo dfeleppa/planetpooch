@@ -29,7 +29,12 @@ async function getWeek(weekStart: Date) {
   const [week, settings] = await Promise.all([
     prisma.financePayrollWeek.findUnique({
       where: { business_weekStart: { business: "mobile-grooming", weekStart } },
-      include: { mobileGroomingEntries: true, mobileGroomingReconciliations: true, mobileGroomingCloseout: true },
+      include: {
+        mobileGroomingEntries: true,
+        mobileGroomingReconciliations: true,
+        mobileGroomingPayoutAdjustments: true,
+        mobileGroomingCloseout: true,
+      },
     }),
     prisma.financeMobileGroomingDirectDeposit.findMany({
       where: { effectiveWeekStart: { lte: weekStart } },
@@ -44,7 +49,10 @@ async function getWeek(weekStart: Date) {
     if (!latestSettings.has(key)) latestSettings.set(key, setting);
   }
   const preview = mobileGroomingCloseoutPreview(
-    week.mobileGroomingEntries, week.mobileGroomingReconciliations, Array.from(latestSettings.values())
+    week.mobileGroomingEntries,
+    week.mobileGroomingReconciliations,
+    Array.from(latestSettings.values()),
+    week.mobileGroomingPayoutAdjustments
   );
   return { week, preview };
 }

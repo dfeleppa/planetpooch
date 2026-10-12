@@ -1397,6 +1397,7 @@ model FinancePayrollWeek {
   mobileGroomingReconciliations FinanceMobileGroomingDailyReconciliation[]
   mobileGroomingWeeklyOverride FinanceMobileGroomingWeeklyOverride?
   mobileGroomingCloseout       FinanceMobileGroomingWeeklyCloseout?
+  mobileGroomingPayoutAdjustments FinanceMobileGroomingPayoutAdjustment[]
 
   @@unique([business, weekStart])
   @@index([business, weekStart, weekEnd])
@@ -1489,6 +1490,21 @@ model FinanceMobileGroomingWeeklyCloseout {
   updatedAt            DateTime @updatedAt
 
   payrollWeek FinancePayrollWeek @relation(fields: [payrollWeekId], references: [id], onDelete: Cascade)
+}
+
+/// One signed payout adjustment and explanation per groomer per payroll week.
+model FinanceMobileGroomingPayoutAdjustment {
+  id            String   @id @default(cuid())
+  payrollWeekId String
+  employeeName  String
+  amountCents   Int
+  note          String   @default("")
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  payrollWeek FinancePayrollWeek @relation(fields: [payrollWeekId], references: [id], onDelete: Cascade)
+
+  @@unique([payrollWeekId, employeeName])
 }
 
 model FinanceMobileGroomingWeeklyOverride {

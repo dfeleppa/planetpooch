@@ -145,12 +145,15 @@ type DailyReconciliation = {
 type PayoutPreview = {
   expectedCashCents: number;
   countedCashCents: number;
+  adjustmentCents: number;
   cashPayoutCents: number;
   expectedDepositCents: number;
   payouts: Array<{
     employeeName: string;
     groomerPayCents: number;
     directDepositCents: number;
+    adjustmentCents: number;
+    adjustmentNote: string;
     cashPayoutCents: number;
     directDepositSet: boolean;
   }>;
@@ -591,6 +594,12 @@ function formatMoney(value: number): string {
   });
 }
 
+function formatSignedMoney(cents: number): string {
+  if (cents > 0) return `+${formatMoney(cents / 100)}`;
+  if (cents < 0) return `-${formatMoney(Math.abs(cents) / 100)}`;
+  return formatMoney(0);
+}
+
 function formatCashDifference(cents: number): string {
   return cents === 0
     ? "Even"
@@ -688,6 +697,10 @@ export function PayrollDashboard({
   const [depositEditEmployee, setDepositEditEmployee] = useState<string | null>(null);
   const [depositDraft, setDepositDraft] = useState("");
   const [savingDirectDeposit, setSavingDirectDeposit] = useState(false);
+  const [adjustmentEditEmployee, setAdjustmentEditEmployee] = useState<string | null>(null);
+  const [adjustmentDraft, setAdjustmentDraft] = useState("");
+  const [adjustmentNoteDraft, setAdjustmentNoteDraft] = useState("");
+  const [savingAdjustment, setSavingAdjustment] = useState(false);
   const [closeoutData, setCloseoutData] = useState<CloseoutResponse | null>(null);
   const [finalDepositDraft, setFinalDepositDraft] = useState("");
   const [closeoutNoteDraft, setCloseoutNoteDraft] = useState("");
@@ -1158,6 +1171,44 @@ export function PayrollDashboard({
       setError(error instanceof Error ? error.message : "Could not save direct deposit.");
     } finally {
       setSavingDirectDeposit(false);
+    }
+  }
+
+  async function saveAdjustment(employeeName: string) {
+    const trimmed = adjustmentDraft.trim();
+    const amount = Number(trimmed);
+    if (!/^[+-]?\d+(?:\.\d{1,2})?$/.test(trimmed) ||
+        !Number.isSafeInteger(Math.round(amount * 100)) ||
+        Math.abs(Math.round(amount * 100)) > 2_147_483_647) {
+      setError("Enter a positive or negative adjustment with no more than two decimal places.");
+      return;
+    }
+    if (adjustmentNoteDraft.trim().length > 1000 || (amount !== 0 && !adjustmentNoteDraft.trim())) {
+      setError("Add a note for a nonzero adjustment, up to 1,000 characters.");
+      return;
+    }
+    setSavingAdjustment(true);
+    setError(null);
+    try {
+      const response = await fetch("/api/finance/payroll/mobile-grooming/payouts/adjustments", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          weekStart,
+          employeeName,
+          amountCents: Math.round(amount * 100),
+          note: adjustmentNoteDraft.trim(),
+        }),
+      });
+      const data = (await response.json()) as { error?: string };
+      if (!response.ok) throw new Error(data.error || "Could not save payout adjustment.");
+      setAdjustmentEditEmployee(null);
+      setMessage(`Payout adjustment saved for ${employeeName}.`);
+      await loadPayouts(weekStart);
+    } catch (error) {
+      setError(error instanceof Error ? error.message : "Could not save payout adjustment.");
+    } finally {
+      setSavingAdjustment(false);
     }
   }
 
@@ -1776,6 +1827,7 @@ export function PayrollDashboard({
                 setReconciliationView(view);
                 setOpenReconciliationDay(null);
                 setDepositEditEmployee(null);
+                setAdjustmentEditEmployee(null);
                 if (view === "payouts" && weekStart > lastCompletedWeekStart("mobile-grooming")) {
                   void loadWeek(lastCompletedWeekStart("mobile-grooming"), "mobile-grooming");
                 }
@@ -2328,6 +2380,8 @@ export function PayrollDashboard({
                 onChange={(event) => {
                   setReconciliationEmployee("");
                   setOpenReconciliationDay(null);
+                  setDepositEditEmployee(null);
+                  setAdjustmentEditEmployee(null);
                   void loadWeek(event.target.value, "mobile-grooming");
                 }}
                 disabled={loading}
@@ -2367,7 +2421,7 @@ export function PayrollDashboard({
                 <div className="space-y-6">
                   <div>
                     <p className="mb-3 text-sm text-gray-600">
-                      Groomer pay includes commission and credit card tips. Cash payout = groomer pay − direct deposit.
+                      Groomer pay includes commission and credit card tips. Cash payout = groomer pay − direct deposit + adjustment.
                     </p>
                     <div className="overflow-x-auto rounded-lg border border-gray-200">
                       <Table>
@@ -2376,6 +2430,7 @@ export function PayrollDashboard({
                             <TableHeader>Employee</TableHeader>
                             <TableHeader>Groomer Pay</TableHeader>
                             <TableHeader>Direct Deposit</TableHeader>
+                            <TableHeader>Adjustment</TableHeader>
                             <TableHeader>Cash Payout</TableHeader>
                             <TableHeader>Details</TableHeader>
                           </TableRow>
@@ -2413,12 +2468,64 @@ export function PayrollDashboard({
                                   </span>
                                 )}
                               </TableCell>
+                              <TableCell>
+                                {adjustmentEditEmployee === payout.employeeName ? (
+                                  <div className="w-56 space-y-2">
+                                    <Input
+                                      label={`Adjustment (+/-) for ${payout.employeeName}`}
+                                      type="number"
+                                      step="0.01"
+                                      value={adjustmentDraft}
+                                      onChange={(event) => setAdjustmentDraft(event.target.value)}
+                                      disabled={savingAdjustment}
+                                    />
+                                    <div>
+                                      <label className="mb-1 block text-sm font-medium text-gray-700" htmlFor={`adjustment-note-${payout.employeeName.replace(/[^a-z0-9]/gi, "-")}`}>
+                                        Adjustment note
+                                      </label>
+                                      <textarea
+                                        id={`adjustment-note-${payout.employeeName.replace(/[^a-z0-9]/gi, "-")}`}
+                                        value={adjustmentNoteDraft}
+                                        onChange={(event) => setAdjustmentNoteDraft(event.target.value)}
+                                        maxLength={1000}
+                                        rows={2}
+                                        disabled={savingAdjustment}
+                                        className="w-full rounded-md border border-gray-300 px-2 py-1 text-sm text-gray-900 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 disabled:bg-gray-100"
+                                      />
+                                    </div>
+                                    <div className="flex gap-2">
+                                      <Button type="button" size="sm" onClick={() => void saveAdjustment(payout.employeeName)} disabled={savingAdjustment}>
+                                        {savingAdjustment ? "Saving..." : "Save adjustment"}
+                                      </Button>
+                                      <Button type="button" size="sm" variant="secondary" onClick={() => setAdjustmentEditEmployee(null)} disabled={savingAdjustment}>
+                                        Cancel
+                                      </Button>
+                                    </div>
+                                  </div>
+                                ) : (
+                                  <div className="min-w-40 space-y-1">
+                                    <span className={cn("font-medium", payout.adjustmentCents < 0 && "text-red-700", payout.adjustmentCents > 0 && "text-green-700")}>
+                                      {formatSignedMoney(payout.adjustmentCents)}
+                                    </span>
+                                    {payout.adjustmentNote && <p className="max-w-60 whitespace-pre-wrap break-words text-xs text-gray-600">{payout.adjustmentNote}</p>}
+                                    <Button type="button" size="sm" variant="secondary" onClick={() => {
+                                      setDepositEditEmployee(null);
+                                      setAdjustmentEditEmployee(payout.employeeName);
+                                      setAdjustmentDraft((payout.adjustmentCents / 100).toFixed(2));
+                                      setAdjustmentNoteDraft(payout.adjustmentNote);
+                                    }}>
+                                      {payout.adjustmentCents === 0 ? "Add adjustment" : "Edit adjustment"}
+                                    </Button>
+                                  </div>
+                                )}
+                              </TableCell>
                               <TableCell className={payout.cashPayoutCents < 0 ? "font-medium text-red-700" : "font-medium"}>
                                 {payout.directDepositSet ? formatMoney(payout.cashPayoutCents / 100) : "Pending"}
                               </TableCell>
                               <TableCell>
                                 {depositEditEmployee !== payout.employeeName && (
                                   <Button type="button" size="sm" variant="secondary" onClick={() => {
+                                    setAdjustmentEditEmployee(null);
                                     setDepositEditEmployee(payout.employeeName);
                                     setDepositDraft(payout.directDepositSet ? (payout.directDepositCents / 100).toFixed(2) : "");
                                   }}>
@@ -2434,6 +2541,7 @@ export function PayrollDashboard({
                             <TableCell className="font-semibold">{closeoutData.preview.missingDepositSettings.length === 0
                               ? formatMoney(closeoutData.preview.payouts.reduce((sum, payout) => sum + payout.directDepositCents, 0) / 100)
                               : "Pending"}</TableCell>
+                            <TableCell className="font-semibold">{formatSignedMoney(closeoutData.preview.adjustmentCents)}</TableCell>
                             <TableCell className="font-semibold">{closeoutData.preview.missingDepositSettings.length === 0
                               ? formatMoney(closeoutData.preview.cashPayoutCents / 100) : "Pending"}</TableCell>
                             <TableCell />
@@ -2462,7 +2570,7 @@ export function PayrollDashboard({
                       {closeoutData.preview.missingDays.length > 0 && ` ${closeoutData.preview.missingDays.length} day(s) still need reconciliation.`}
                       {closeoutData.preview.staleDays.length > 0 && ` ${closeoutData.preview.staleDays.length} day(s) need updating after payroll changed.`}
                       {closeoutData.preview.missingDepositSettings.length > 0 && ` Set direct deposit for ${closeoutData.preview.missingDepositSettings.join(", ")}.`}
-                      {closeoutData.preview.negativeCashPayouts.length > 0 && ` Direct deposit exceeds groomer pay for ${closeoutData.preview.negativeCashPayouts.join(", ")}.`}
+                      {closeoutData.preview.negativeCashPayouts.length > 0 && ` Cash payout is negative for ${closeoutData.preview.negativeCashPayouts.join(", ")}.`}
                     </p>
                     {closeoutData.closeout && (
                       <p className="text-sm text-gray-700">

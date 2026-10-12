@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { createHash } from "node:crypto";
 import { test } from "node:test";
 import { mobileGroomingCloseoutPreview } from "./mobile-grooming-closeout";
 
@@ -35,4 +36,43 @@ test("an unset deposit and a stale daily cash count remain visible before closeo
   ]);
   assert.deepEqual(preview.missingDepositSettings, ["Bri Groomer"]);
   assert.deepEqual(preview.staleDays, ["Andrea Groomer — 2026-10-03"]);
+});
+
+test("signed adjustments change the cash payout and final deposit, with notes retained", () => {
+  const settings = [
+    { employeeName: "Andrea Groomer", amountCents: 2_000 },
+    { employeeName: "Bri Groomer", amountCents: 3_500 },
+  ];
+  const before = mobileGroomingCloseoutPreview(entries, reconciliations, settings);
+  const after = mobileGroomingCloseoutPreview(entries, reconciliations, settings, [
+    { employeeName: "Andrea Groomer", amountCents: 1_000, note: "Extra supplies" },
+    { employeeName: "Bri Groomer", amountCents: -500, note: "Advance repayment" },
+  ]);
+  assert.equal(after.adjustmentCents, 500);
+  assert.deepEqual(after.payouts.map((payout) => [
+    payout.adjustmentCents, payout.adjustmentNote, payout.cashPayoutCents,
+  ]), [[1_000, "Extra supplies", 3_300], [-500, "Advance repayment", -500]]);
+  assert.equal(after.cashPayoutCents, 2_800);
+  assert.equal(after.expectedDepositCents, 7_500);
+  assert.notEqual(after.sourceFingerprint, before.sourceFingerprint);
+  assert.deepEqual(after.negativeCashPayouts, ["Bri Groomer"]);
+});
+
+test("weeks without adjustments retain the existing closeout fingerprint", () => {
+  const settings = [
+    { employeeName: "Andrea Groomer", amountCents: 2_000 },
+    { employeeName: "Bri Groomer", amountCents: 3_500 },
+  ];
+  const preview = mobileGroomingCloseoutPreview(entries, reconciliations, settings);
+  const legacyInput = {
+    days: [
+      { key: "andrea groomer|2026-10-03", expectedCashCents: 10_500, countedCashCents: 10_300, reconciledExpectedCashCents: 10_500 },
+      { key: "bri groomer|2026-10-03", expectedCashCents: 0, countedCashCents: 0, reconciledExpectedCashCents: 0 },
+    ],
+    payouts: [
+      { employeeName: "Andrea Groomer", groomerPayCents: 4_300, directDepositCents: 2_000, cashPayoutCents: 2_300, directDepositSet: true },
+      { employeeName: "Bri Groomer", groomerPayCents: 3_500, directDepositCents: 3_500, cashPayoutCents: 0, directDepositSet: true },
+    ],
+  };
+  assert.equal(preview.sourceFingerprint, createHash("sha256").update(JSON.stringify(legacyInput)).digest("hex"));
 });
