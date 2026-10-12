@@ -76,3 +76,69 @@ test("weeks without adjustments retain the existing closeout fingerprint", () =>
   };
   assert.equal(preview.sourceFingerprint, createHash("sha256").update(JSON.stringify(legacyInput)).digest("hex"));
 });
+
+test("a reviewed shortage never reduces cash payout, even if an invalid saved choice says apply", () => {
+  const settings = [
+    { employeeName: "Andrea Groomer", amountCents: 2_000 },
+    { employeeName: "Bri Groomer", amountCents: 3_500 },
+  ];
+  const withoutReview = mobileGroomingCloseoutPreview(entries, reconciliations, settings);
+  const applied = mobileGroomingCloseoutPreview(entries, reconciliations, settings, [], [
+    { employeeName: "Andrea Groomer", varianceCents: -200, sourceFingerprint: withoutReview.payouts[0].reconciliationFingerprint, applyToCashPayout: true },
+    { employeeName: "Bri Groomer", varianceCents: 0, sourceFingerprint: withoutReview.payouts[1].reconciliationFingerprint, applyToCashPayout: false },
+  ]);
+  assert.deepEqual(applied.pendingVarianceReviews, []);
+  assert.equal(applied.payouts[0].groomerPayCents, withoutReview.payouts[0].groomerPayCents);
+  assert.equal(applied.payouts[0].cashPayoutCents, withoutReview.payouts[0].cashPayoutCents);
+  assert.equal(applied.expectedDepositCents, withoutReview.expectedDepositCents);
+  assert.notEqual(applied.sourceFingerprint, withoutReview.sourceFingerprint);
+
+  const excluded = mobileGroomingCloseoutPreview(entries, reconciliations, settings, [], [
+    { employeeName: "Andrea Groomer", varianceCents: -200, sourceFingerprint: withoutReview.payouts[0].reconciliationFingerprint, applyToCashPayout: false },
+    { employeeName: "Bri Groomer", varianceCents: 0, sourceFingerprint: withoutReview.payouts[1].reconciliationFingerprint, applyToCashPayout: false },
+  ]);
+  assert.equal(excluded.payouts[0].cashPayoutCents, withoutReview.payouts[0].cashPayoutCents);
+  assert.equal(excluded.sourceFingerprint, applied.sourceFingerprint);
+});
+
+test("a reviewed cash overage can be added to cash payout without changing groomer pay", () => {
+  const overageRecords = reconciliations.map((record) => record.employeeName === "Andrea Groomer"
+    ? { ...record, countedCashCents: 10_700 } : record);
+  const settings = [
+    { employeeName: "Andrea Groomer", amountCents: 2_000 },
+    { employeeName: "Bri Groomer", amountCents: 3_500 },
+  ];
+  const before = mobileGroomingCloseoutPreview(entries, overageRecords, settings);
+  const after = mobileGroomingCloseoutPreview(entries, overageRecords, settings, [], [
+    { employeeName: "Andrea Groomer", varianceCents: 200, sourceFingerprint: before.payouts[0].reconciliationFingerprint, applyToCashPayout: true },
+    { employeeName: "Bri Groomer", varianceCents: 0, sourceFingerprint: before.payouts[1].reconciliationFingerprint, applyToCashPayout: false },
+  ]);
+  assert.equal(after.payouts[0].groomerPayCents, before.payouts[0].groomerPayCents);
+  assert.equal(after.payouts[0].cashPayoutCents, before.payouts[0].cashPayoutCents + 200);
+  assert.equal(after.expectedDepositCents, before.expectedDepositCents - 200);
+});
+
+test("a cash change makes a saved employee variance decision require review again", () => {
+  const original = mobileGroomingCloseoutPreview(entries, reconciliations, []);
+  const changed = reconciliations.map((record) => record.employeeName === "Andrea Groomer"
+    ? { ...record, countedCashCents: 10_200 } : record);
+  const preview = mobileGroomingCloseoutPreview(entries, changed, [], [], [
+    { employeeName: "Andrea Groomer", varianceCents: -200, sourceFingerprint: original.payouts[0].reconciliationFingerprint, applyToCashPayout: true },
+  ]);
+  assert.deepEqual(preview.pendingVarianceReviews, ["Andrea Groomer", "Bri Groomer"]);
+  assert.equal(preview.payouts[0].variancePayoutCents, 0);
+});
+
+test("review becomes stale even when changed cash records leave the variance unchanged", () => {
+  const original = mobileGroomingCloseoutPreview(entries, reconciliations, []);
+  const changedEntries = entries.map((entry) => entry.employeeName === "Andrea Groomer"
+    ? { ...entry, priceCents: entry.priceCents + 100 } : entry);
+  const changedRecords = reconciliations.map((record) => record.employeeName === "Andrea Groomer"
+    ? { ...record, expectedCashCents: record.expectedCashCents + 100, countedCashCents: record.countedCashCents + 100 }
+    : record);
+  const preview = mobileGroomingCloseoutPreview(changedEntries, changedRecords, [], [], [
+    { employeeName: "Andrea Groomer", varianceCents: -200, sourceFingerprint: original.payouts[0].reconciliationFingerprint, applyToCashPayout: true },
+  ]);
+  assert.equal(preview.payouts[0].varianceCents, -200);
+  assert.equal(preview.payouts[0].varianceReviewed, false);
+});

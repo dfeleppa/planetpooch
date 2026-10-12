@@ -21,12 +21,14 @@ type Reconciliation = {
 
 type Setting = { employeeName: string; amountCents: number };
 type Adjustment = { employeeName: string; amountCents: number; note: string };
+type VarianceReview = { employeeName: string; varianceCents: number; sourceFingerprint: string; applyToCashPayout: boolean };
 
 export function mobileGroomingCloseoutPreview(
   entries: Entry[],
   reconciliations: Reconciliation[],
   settings: Setting[],
-  adjustments: Adjustment[] = []
+  adjustments: Adjustment[] = [],
+  varianceReviews: VarianceReview[] = []
 ) {
   const days = new Map<string, { employeeName: string; serviceDate: string; expectedCashCents: number }>();
   const employees = new Map<string, {
@@ -39,6 +41,9 @@ export function mobileGroomingCloseoutPreview(
   ]));
   const adjustmentByName = new Map(adjustments.map((adjustment) => [
     normalizeEmployeeName(adjustment.employeeName).toLocaleLowerCase(), adjustment,
+  ]));
+  const reviewByName = new Map(varianceReviews.map((review) => [
+    normalizeEmployeeName(review.employeeName).toLocaleLowerCase(), review,
   ]));
 
   for (const entry of entries) {
@@ -66,12 +71,15 @@ export function mobileGroomingCloseoutPreview(
   const staleDays: string[] = [];
   let countedCashCents = 0;
   let expectedCashCents = 0;
+  const varianceByEmployee = new Map<string, number>();
   for (const [key, day] of days) {
     expectedCashCents += day.expectedCashCents;
     const record = records.get(key);
     if (!record) missingDays.push(`${day.employeeName} — ${day.serviceDate}`);
     else {
       countedCashCents += record.countedCashCents;
+      const employeeKey = normalizeEmployeeName(day.employeeName).toLocaleLowerCase();
+      varianceByEmployee.set(employeeKey, (varianceByEmployee.get(employeeKey) ?? 0) + record.countedCashCents - record.expectedCashCents);
       if (record.expectedCashCents !== day.expectedCashCents) {
         staleDays.push(`${day.employeeName} — ${day.serviceDate}`);
       }
@@ -83,13 +91,31 @@ export function mobileGroomingCloseoutPreview(
     const directDepositCents = settingByName.get(key) ?? 0;
     const adjustment = adjustmentByName.get(key);
     const adjustmentCents = adjustment?.amountCents ?? 0;
+    const varianceCents = varianceByEmployee.get(key) ?? 0;
+    const reconciliationFingerprint = createHash("sha256").update(JSON.stringify(
+      Array.from(days.entries()).filter(([dayKey]) => dayKey.startsWith(`${key}|`))
+        .sort(([a], [b]) => a.localeCompare(b))
+        .map(([dayKey, day]) => ({
+          dayKey, expectedCashCents: day.expectedCashCents,
+          countedCashCents: records.get(dayKey)?.countedCashCents ?? null,
+          reconciledExpectedCashCents: records.get(dayKey)?.expectedCashCents ?? null,
+        }))
+    )).digest("hex");
+    const review = reviewByName.get(key);
+    const varianceReviewCurrent = Boolean(review && review.varianceCents === varianceCents && review.sourceFingerprint === reconciliationFingerprint);
+    const variancePayoutCents = varianceReviewCurrent && review?.applyToCashPayout && varianceCents > 0 ? varianceCents : 0;
     return {
       employeeName: employee.employeeName,
       groomerPayCents,
       directDepositCents,
       adjustmentCents,
       adjustmentNote: adjustment?.note ?? "",
-      cashPayoutCents: groomerPayCents - directDepositCents + adjustmentCents,
+      varianceCents,
+      reconciliationFingerprint,
+      varianceReviewed: varianceReviewCurrent,
+      applyVarianceToCashPayout: varianceReviewCurrent ? review!.applyToCashPayout && varianceCents > 0 : null,
+      variancePayoutCents,
+      cashPayoutCents: groomerPayCents - directDepositCents + adjustmentCents + variancePayoutCents,
       directDepositSet: settingByName.has(key),
     };
   }).sort((a, b) => a.employeeName.localeCompare(b.employeeName));
@@ -98,6 +124,7 @@ export function mobileGroomingCloseoutPreview(
   const expectedDepositCents = countedCashCents - cashPayoutCents;
   const missingDepositSettings = payouts.filter((payout) => !payout.directDepositSet).map((payout) => payout.employeeName);
   const negativeCashPayouts = payouts.filter((payout) => payout.cashPayoutCents < 0).map((payout) => payout.employeeName);
+  const pendingVarianceReviews = payouts.filter((payout) => !payout.varianceReviewed).map((payout) => payout.employeeName);
 
   const fingerprintInput = {
     days: Array.from(days).sort(([a], [b]) => a.localeCompare(b)).map(([key, day]) => ({
@@ -114,6 +141,10 @@ export function mobileGroomingCloseoutPreview(
       ...(payout.adjustmentCents !== 0 || payout.adjustmentNote
         ? { adjustmentCents: payout.adjustmentCents, adjustmentNote: payout.adjustmentNote }
         : {}),
+      ...(payout.varianceReviewed ? {
+        varianceCents: payout.varianceCents,
+        applyVarianceToCashPayout: payout.applyVarianceToCashPayout,
+      } : {}),
     })),
   };
   const sourceFingerprint = createHash("sha256").update(JSON.stringify(fingerprintInput)).digest("hex");
@@ -131,6 +162,7 @@ export function mobileGroomingCloseoutPreview(
     staleDays,
     missingDepositSettings,
     negativeCashPayouts,
+    pendingVarianceReviews,
     sourceFingerprint,
   };
 }

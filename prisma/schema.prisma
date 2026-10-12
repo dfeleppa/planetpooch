@@ -1398,6 +1398,7 @@ model FinancePayrollWeek {
   mobileGroomingWeeklyOverride FinanceMobileGroomingWeeklyOverride?
   mobileGroomingCloseout       FinanceMobileGroomingWeeklyCloseout?
   mobileGroomingPayoutAdjustments FinanceMobileGroomingPayoutAdjustment[]
+  mobileGroomingVarianceReviews FinanceMobileGroomingVarianceReview[]
 
   @@unique([business, weekStart])
   @@index([business, weekStart, weekEnd])
@@ -1501,6 +1502,22 @@ model FinanceMobileGroomingPayoutAdjustment {
   note          String   @default("")
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
+
+  payrollWeek FinancePayrollWeek @relation(fields: [payrollWeekId], references: [id], onDelete: Cascade)
+
+  @@unique([payrollWeekId, employeeName])
+}
+
+/// A reviewed weekly cash variance and the decision to apply it to cash payout.
+model FinanceMobileGroomingVarianceReview {
+  id                 String   @id @default(cuid())
+  payrollWeekId      String
+  employeeName       String
+  varianceCents      Int
+  sourceFingerprint  String
+  applyToCashPayout  Boolean
+  reviewedAt         DateTime @default(now())
+  updatedAt          DateTime @updatedAt
 
   payrollWeek FinancePayrollWeek @relation(fields: [payrollWeekId], references: [id], onDelete: Cascade)
 

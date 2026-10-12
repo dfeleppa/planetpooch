@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSession, isSuperAdmin } from "@/lib/auth-helpers";
 import { mobileGroomingCloseoutPreview } from "@/lib/mobile-grooming-closeout";
-import { lastCompletedPayrollWeekStart } from "@/lib/payroll";
+import { lastCompletedPayrollWeekStart, normalizeEmployeeName } from "@/lib/payroll";
 import { prisma } from "@/lib/prisma";
 
 async function authorized() {
@@ -33,6 +33,7 @@ async function getWeek(weekStart: Date) {
         mobileGroomingEntries: true,
         mobileGroomingReconciliations: true,
         mobileGroomingPayoutAdjustments: true,
+        mobileGroomingVarianceReviews: true,
         mobileGroomingCloseout: true,
       },
     }),
@@ -52,7 +53,8 @@ async function getWeek(weekStart: Date) {
     week.mobileGroomingEntries,
     week.mobileGroomingReconciliations,
     Array.from(latestSettings.values()),
-    week.mobileGroomingPayoutAdjustments
+    week.mobileGroomingPayoutAdjustments,
+    week.mobileGroomingVarianceReviews
   );
   return { week, preview };
 }
@@ -117,9 +119,10 @@ export async function POST(req: NextRequest) {
   if (
     preview.workedDays === 0 || preview.missingDays.length > 0 || preview.staleDays.length > 0 ||
     preview.missingDepositSettings.length > 0 || preview.negativeCashPayouts.length > 0 ||
+    preview.pendingVarianceReviews.length > 0 ||
     preview.expectedDepositCents < 0
   ) {
-    return NextResponse.json({ error: "Complete daily reconciliation and set valid direct deposits for every groomer before closeout." }, { status: 409 });
+    return NextResponse.json({ error: "Complete daily reconciliation, review every employee's variance, and set valid direct deposits before closeout." }, { status: 409 });
   }
   const varianceCents = finalDepositCents - preview.expectedDepositCents;
   if (varianceCents !== 0 && !note.trim()) {
@@ -142,4 +145,46 @@ export async function POST(req: NextRequest) {
     update: data,
   });
   return NextResponse.json({ closeout: serializeCloseout(closeout), preview, closeoutCurrent: true, weekCompleted: true });
+}
+
+export async function PUT(req: NextRequest) {
+  if (!(await authorized())) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  let body: Record<string, unknown>;
+  try {
+    body = (await req.json()) as Record<string, unknown>;
+  } catch {
+    return NextResponse.json({ error: "Invalid JSON body." }, { status: 400 });
+  }
+  const weekStart = dateParam(body.weekStart);
+  const employeeName = normalizeEmployeeName(typeof body.employeeName === "string" ? body.employeeName : "");
+  if (!weekStart || !employeeName || employeeName.length > 200 || typeof body.applyToCashPayout !== "boolean") {
+    return NextResponse.json({ error: "A valid week, employee, and pay decision are required." }, { status: 400 });
+  }
+  const result = await getWeek(weekStart);
+  if (!result) return NextResponse.json({ error: "No saved payroll exists for this week." }, { status: 404 });
+  const payout = result.preview.payouts.find((item) => item.employeeName.toLocaleLowerCase() === employeeName.toLocaleLowerCase());
+  if (!payout) return NextResponse.json({ error: "Employee was not found in this week." }, { status: 404 });
+  if (body.applyToCashPayout && payout.varianceCents <= 0) {
+    return NextResponse.json({ error: "Only a cash overage can be added to an employee's cash payout." }, { status: 400 });
+  }
+  const employeeDays = result.week.mobileGroomingEntries
+    .filter((entry) => normalizeEmployeeName(entry.employeeName).toLocaleLowerCase() === employeeName.toLocaleLowerCase());
+  const dates = new Set(employeeDays.map((entry) => entry.serviceDate.toISOString().slice(0, 10)));
+  if (result.preview.missingDays.some((day) => day.startsWith(`${payout.employeeName} — `)) ||
+      result.preview.staleDays.some((day) => day.startsWith(`${payout.employeeName} — `)) || dates.size === 0) {
+    return NextResponse.json({ error: "Complete and refresh this employee's daily reconciliation first." }, { status: 409 });
+  }
+  await prisma.financeMobileGroomingVarianceReview.upsert({
+    where: { payrollWeekId_employeeName: { payrollWeekId: result.week.id, employeeName: payout.employeeName } },
+    create: { payrollWeekId: result.week.id, employeeName: payout.employeeName, varianceCents: payout.varianceCents, sourceFingerprint: payout.reconciliationFingerprint, applyToCashPayout: body.applyToCashPayout },
+    update: { varianceCents: payout.varianceCents, sourceFingerprint: payout.reconciliationFingerprint, applyToCashPayout: body.applyToCashPayout, reviewedAt: new Date() },
+  });
+  const updated = await getWeek(weekStart);
+  if (!updated) return NextResponse.json({ error: "Payroll week disappeared." }, { status: 409 });
+  const closeout = serializeCloseout(updated.week.mobileGroomingCloseout);
+  return NextResponse.json({
+    preview: updated.preview, closeout,
+    closeoutCurrent: Boolean(closeout && closeout.sourceFingerprint === updated.preview.sourceFingerprint),
+    weekCompleted: weekStart <= lastCompletedEasternWeekStart(),
+  });
 }
