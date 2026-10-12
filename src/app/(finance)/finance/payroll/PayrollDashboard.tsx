@@ -1140,7 +1140,7 @@ export function PayrollDashboard({
   }, []);
 
   useEffect(() => {
-    if (mobilePayrollView !== "reconciliation" || reconciliationView !== "payouts") return;
+    if (mobilePayrollView !== "reconciliation" || (reconciliationView !== "payouts" && reconciliationView !== "weekly")) return;
     setCloseoutData(null);
     void loadPayouts(weekStart);
   }, [mobilePayrollView, reconciliationView, weekStart, loadPayouts]);
@@ -1799,7 +1799,7 @@ export function PayrollDashboard({
           <h2 className="text-xl font-semibold text-gray-900">
             {isMobileGrooming && mobilePayrollView === "reconciliation"
               ? reconciliationView === "employee" ? "Daily Reconciliation"
-                : reconciliationView === "weekly" ? "Weekly Reconciliation" : "Payouts and Final Reconciliation"
+                : reconciliationView === "weekly" ? "Weekly Reconciliation" : "Payouts"
               : "Payroll"}
           </h2>
           <p className="mt-1 text-gray-500">
@@ -2550,7 +2550,36 @@ export function PayrollDashboard({
                       </Table>
                     </div>
                   </div>
-
+                </div>
+              )
+            ) : reconciliationView === "weekly" ? (
+              loading || loadingReconciliations ? (
+                <p className="text-sm text-gray-500">Loading weekly reconciliation...</p>
+              ) : allEmployeeReconciliationGroups.length === 0 ? (
+                <p className="text-sm text-gray-500">No saved mobile grooming appointments for this week.</p>
+              ) : (
+                <div className="space-y-4">
+                  <div className="grid gap-3 sm:grid-cols-3">
+                    <WeeklyMetric label="Weekly cash (expected)" value={formatMoney(allEmployeeExpectedCash)} />
+                    <WeeklyMetric label="Weekly cash (counted)" value={formatMoney(allEmployeeCountedCashCents / 100)} />
+                    <WeeklyMetric
+                      label="Weekly over / short"
+                      value={allEmployeeReconciledDays > 0
+                        ? formatCashDifference(allEmployeeDifferenceCents)
+                        : "Pending"}
+                    />
+                  </div>
+                  <p className="text-sm text-gray-600">
+                    {allEmployeeReconciledDays} of {allEmployeeWorkedDays} employee days reconciled
+                    {allEmployeeReconciledDays === allEmployeeWorkedDays && allEmployeeStaleDays === 0
+                      ? " · Week reconciled."
+                      : ". Counted cash and over / short include reconciled days only."}
+                    {allEmployeeStaleDays > 0 &&
+                      ` ${allEmployeeStaleDays} day${allEmployeeStaleDays === 1 ? "" : "s"} need an update after payroll changed.`}
+                  </p>
+                  {loadingDirectDeposits || !closeoutData ? (
+                    <p className="text-sm text-gray-500">Loading final weekly reconciliation...</p>
+                  ) : (
                   <div className="space-y-4 rounded-lg border border-gray-200 p-4">
                     <div className="flex flex-wrap items-center justify-between gap-2">
                       <h3 className="text-lg font-semibold text-gray-900">Final weekly reconciliation</h3>
@@ -2622,33 +2651,7 @@ export function PayrollDashboard({
                     </Button>
                     {!closeoutData.weekCompleted && <p className="text-sm text-amber-700">The week must end before it can be closed.</p>}
                   </div>
-                </div>
-              )
-            ) : reconciliationView === "weekly" ? (
-              loading || loadingReconciliations ? (
-                <p className="text-sm text-gray-500">Loading weekly reconciliation...</p>
-              ) : allEmployeeReconciliationGroups.length === 0 ? (
-                <p className="text-sm text-gray-500">No saved mobile grooming appointments for this week.</p>
-              ) : (
-                <div className="space-y-4">
-                  <div className="grid gap-3 sm:grid-cols-3">
-                    <WeeklyMetric label="Weekly cash (expected)" value={formatMoney(allEmployeeExpectedCash)} />
-                    <WeeklyMetric label="Weekly cash (counted)" value={formatMoney(allEmployeeCountedCashCents / 100)} />
-                    <WeeklyMetric
-                      label="Weekly over / short"
-                      value={allEmployeeReconciledDays > 0
-                        ? formatCashDifference(allEmployeeDifferenceCents)
-                        : "Pending"}
-                    />
-                  </div>
-                  <p className="text-sm text-gray-600">
-                    {allEmployeeReconciledDays} of {allEmployeeWorkedDays} employee days reconciled
-                    {allEmployeeReconciledDays === allEmployeeWorkedDays && allEmployeeStaleDays === 0
-                      ? " · Week reconciled."
-                      : ". Counted cash and over / short include reconciled days only."}
-                    {allEmployeeStaleDays > 0 &&
-                      ` ${allEmployeeStaleDays} day${allEmployeeStaleDays === 1 ? "" : "s"} need an update after payroll changed.`}
-                  </p>
+                  )}
                   <div className="overflow-x-auto rounded-lg border border-gray-200">
                     <Table>
                       <TableHead>
