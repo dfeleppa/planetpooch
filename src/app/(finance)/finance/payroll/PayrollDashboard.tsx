@@ -2607,6 +2607,28 @@ export function PayrollDashboard({
                       </Table>
                     </div>
                   </div>
+                  <div className="space-y-3 rounded-lg border border-gray-200 p-4">
+                    <div>
+                      <h3 className="text-lg font-semibold text-gray-900">Cash deposit</h3>
+                      <p className="text-sm text-gray-600">Cash collected from daily reconciliation minus employee cash payouts.</p>
+                    </div>
+                    <div className="grid gap-3 sm:grid-cols-3">
+                      <WeeklyMetric label="Cash collected" value={formatMoney(closeoutData.preview.countedCashCents / 100)} />
+                      <WeeklyMetric label="Cash payouts" value={closeoutData.preview.missingDepositSettings.length === 0 && closeoutData.preview.pendingVarianceReviews.length === 0
+                        ? formatMoney(closeoutData.preview.cashPayoutCents / 100) : "Pending"} />
+                      <WeeklyMetric label="Cash deposit" value={closeoutData.preview.missingDays.length === 0 && closeoutData.preview.staleDays.length === 0 &&
+                        closeoutData.preview.missingDepositSettings.length === 0 && closeoutData.preview.pendingVarianceReviews.length === 0 &&
+                        closeoutData.preview.negativeCashPayouts.length === 0 && closeoutData.preview.expectedDepositCents >= 0
+                        ? formatMoney(closeoutData.preview.expectedDepositCents / 100) : "Pending"} />
+                    </div>
+                    {(closeoutData.preview.missingDays.length > 0 || closeoutData.preview.staleDays.length > 0) && (
+                      <p className="text-sm text-amber-700">Cash collected reflects reconciled days so far. Complete daily reconciliation to calculate the deposit.</p>
+                    )}
+                    {(closeoutData.preview.missingDepositSettings.length > 0 || closeoutData.preview.pendingVarianceReviews.length > 0 ||
+                      closeoutData.preview.negativeCashPayouts.length > 0 || closeoutData.preview.expectedDepositCents < 0) && (
+                      <p className="text-sm text-amber-700">Set direct deposits, review weekly variances, and resolve invalid payouts to calculate the deposit.</p>
+                    )}
+                  </div>
                 </div>
               )
             ) : reconciliationView === "weekly" ? (
