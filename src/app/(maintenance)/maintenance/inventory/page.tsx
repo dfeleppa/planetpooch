@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { getActiveBusiness } from "@/lib/business-server";
 import { InventoryTable } from "./InventoryTable";
+import { GroomingInventory } from "./GroomingInventory";
 import { Company } from "@prisma/client";
 import Link from "next/link";
 import { MaintenanceSubnav } from "@/components/maintenance/MaintenanceSubnav";
@@ -27,7 +28,7 @@ export default async function InventoryPage({
   const items = await prisma.inventoryItem.findMany({
     where: { company: active },
     orderBy: { name: "asc" },
-    include: { category: true },
+    include: { category: true, counts: { orderBy: { countedAt: "desc" } } },
   });
 
   return (
@@ -35,7 +36,7 @@ export default async function InventoryPage({
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Inventory</h1>
-          <p className="text-gray-500 mt-1">Supplies and materials tracked for maintenance</p>
+          <p className="text-gray-500 mt-1">{active === "GROOMING" ? "Mobile Grooming supplies and count history" : "Supplies and materials tracked for maintenance"}</p>
         </div>
         {canManage && (
           <Link href={`/maintenance/inventory/new?company=${active}`}>
@@ -64,7 +65,21 @@ export default async function InventoryPage({
           </CardContent>
         </Card>
       ) : (
-        <InventoryTable items={items} />
+        active === "GROOMING" ? (
+          <GroomingInventory
+            items={items.map((item) => ({
+              id: item.id,
+              name: item.name,
+              currentQuantity: item.currentQuantity,
+              minimumThreshold: item.minimumThreshold,
+              category: { name: item.category.name, color: item.category.color },
+              counts: item.counts.map((count) => ({
+                id: count.id, quantity: count.quantity, countedAt: count.countedAt.toISOString(),
+              })),
+            }))}
+            canManage={canManage}
+          />
+        ) : <InventoryTable items={items} />
       )}
     </div>
   );

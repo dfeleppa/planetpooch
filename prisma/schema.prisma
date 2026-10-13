@@ -301,6 +301,7 @@ model User {
   maintenanceTasksAssigned    MaintenanceTask[]          @relation("MaintenanceAssignee")
   maintenanceTasksCompleted   MaintenanceTask[]          @relation("MaintenanceCompleter")
   inventoryAdjustments        InventoryAdjustment[]      @relation("InventoryAdjuster")
+  inventoryCounts             InventoryCount[]           @relation("InventoryCounter")
 
   // Onboarding relations
   onboardingTemplatesCreated OnboardingTemplate[] @relation("TemplateCreator")
@@ -702,6 +703,7 @@ model InventoryItem {
   requirements MaintenanceInventoryRequirement[]
   usages       InventoryUsage[]
   adjustments  InventoryAdjustment[]
+  counts       InventoryCount[]
 
   company Company @default(GROOMING)
 
@@ -748,6 +750,19 @@ model InventoryAdjustment {
   adjustedBy    User?         @relation("InventoryAdjuster", fields: [adjustedById], references: [id], onDelete: SetNull)
 
   @@index([inventoryItemId])
+}
+
+model InventoryCount {
+  id              String   @id @default(cuid())
+  inventoryItemId String
+  quantity        Int
+  countedAt       DateTime @default(now())
+  countedById     String?
+
+  inventoryItem InventoryItem @relation(fields: [inventoryItemId], references: [id], onDelete: Cascade)
+  countedBy     User?         @relation("InventoryCounter", fields: [countedById], references: [id], onDelete: SetNull)
+
+  @@index([inventoryItemId, countedAt])
 }
 
 // ============================================================

@@ -9,24 +9,6 @@ import { Badge } from "@/components/ui/badge";
 import { InventoryItemActions } from "./InventoryItemActions";
 import Link from "next/link";
 
-const categoryLabels: Record<string, string> = {
-  TOOLS: "Tools",
-  MATERIALS: "Materials",
-  EQUIPMENT: "Equipment",
-  PARTS: "Parts",
-  SUPPLIES: "Supplies",
-  OTHER: "Other",
-};
-
-const categoryColors: Record<string, string> = {
-  TOOLS: "bg-purple-100 text-purple-800",
-  MATERIALS: "bg-blue-100 text-blue-800",
-  EQUIPMENT: "bg-green-100 text-green-800",
-  PARTS: "bg-orange-100 text-orange-800",
-  SUPPLIES: "bg-gray-100 text-gray-800",
-  OTHER: "bg-slate-100 text-slate-800",
-};
-
 export default async function InventoryItemPage({
   params,
 }: {
@@ -42,6 +24,7 @@ export default async function InventoryItemPage({
     where: { id: itemId, company: (await getActiveBusiness()).company },
     include: {
       category: true,
+      counts: { orderBy: { countedAt: "desc" } },
       adjustments: {
         orderBy: { createdAt: "desc" },
         take: 20,
@@ -58,6 +41,31 @@ export default async function InventoryItemPage({
   });
 
   if (!item) notFound();
+
+  if (item.company === "GROOMING") {
+    return (
+      <div className="space-y-5">
+        <Link href="/maintenance/inventory?company=GROOMING" className="text-sm text-blue-700 hover:underline">← Mobile Grooming inventory</Link>
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900">{item.name}</h1>
+          <p className="text-sm text-gray-500">{item.category.name}</p>
+        </div>
+        <div className="grid max-w-xl grid-cols-2 gap-4">
+          <Card><CardContent className="py-4"><p className="text-sm text-gray-500">On Hand</p><p className="text-3xl font-bold">{item.id.startsWith("mg-item-") && item.counts.length === 0 && item.currentQuantity === 0 ? "—" : item.currentQuantity}</p></CardContent></Card>
+          <Card><CardContent className="py-4"><p className="text-sm text-gray-500">Req Quantity</p><p className="text-3xl font-bold">{item.id.startsWith("mg-item-") && item.minimumThreshold === 0 ? "—" : item.minimumThreshold}</p></CardContent></Card>
+        </div>
+        <details className="max-w-xl rounded-xl border border-gray-200 bg-white p-4">
+          <summary className="cursor-pointer font-medium text-blue-700">View count history</summary>
+          {item.counts.length ? (
+            <ul className="mt-3 divide-y divide-gray-100">
+              {item.counts.map((count) => <li key={count.id} className="flex justify-between py-2 text-sm"><time dateTime={count.countedAt.toISOString()}>{count.countedAt.toLocaleDateString("en-US", { timeZone: "America/New_York" })}</time><strong>{count.quantity}</strong></li>)}
+            </ul>
+          ) : <p className="mt-3 text-sm text-gray-500">No counts yet.</p>}
+        </details>
+        {canManage && <Link href="/maintenance/inventory?company=GROOMING" className="text-sm text-blue-700 hover:underline">Edit counts on the inventory page</Link>}
+      </div>
+    );
+  }
 
   const isLow = item.minimumThreshold > 0 && item.currentQuantity <= item.minimumThreshold;
 

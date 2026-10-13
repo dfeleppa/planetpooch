@@ -132,7 +132,7 @@ export function NewInventoryItemForm({ initialCompany }: { initialCompany: Compa
             placeholder="e.g., UV Bulbs"
             required
           />
-          <div className="flex flex-col gap-1">
+          {company !== "GROOMING" && <div className="flex flex-col gap-1">
             <label className="text-sm font-medium text-gray-700">Description</label>
             <textarea
               rows={2}
@@ -141,7 +141,7 @@ export function NewInventoryItemForm({ initialCompany }: { initialCompany: Compa
               onChange={(e) => setDescription(e.target.value)}
               placeholder="Optional..."
             />
-          </div>
+          </div>}
 
           <div className="flex flex-col gap-1">
             <label className="text-sm font-medium text-gray-700">Category</label>
@@ -202,12 +202,12 @@ export function NewInventoryItemForm({ initialCompany }: { initialCompany: Compa
             </div>
           )}
 
-          <Input
+          {company !== "GROOMING" && <Input
             label="Unit"
             value={unit}
             onChange={(e) => setUnit(e.target.value)}
             placeholder="e.g., bulbs, gallons, filters"
-          />
+          />}
           <div className="grid grid-cols-2 gap-4">
             <Input
               label="Current Quantity"
@@ -217,7 +217,7 @@ export function NewInventoryItemForm({ initialCompany }: { initialCompany: Compa
               onChange={(e) => setCurrentQuantity(e.target.value)}
             />
             <Input
-              label="Minimum Threshold"
+              label={company === "GROOMING" ? "Req Quantity" : "Minimum Threshold"}
               type="number"
               min={0}
               value={minimumThreshold}
