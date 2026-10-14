@@ -45,10 +45,11 @@ test("signed adjustments change the cash payout and final deposit, with notes re
   ];
   const before = mobileGroomingCloseoutPreview(entries, reconciliations, settings);
   const after = mobileGroomingCloseoutPreview(entries, reconciliations, settings, [
-    { employeeName: "Andrea Groomer", amountCents: 1_000, note: "Extra supplies" },
+    { employeeName: "Andrea Groomer", amountCents: 1_000, note: "Extra supplies", updatedAt: new Date("2026-10-06T14:30:00.000Z") },
     { employeeName: "Bri Groomer", amountCents: -500, note: "Advance repayment" },
   ]);
   assert.equal(after.adjustmentCents, 500);
+  assert.equal(after.payouts[0].adjustmentDate, "2026-10-06T14:30:00.000Z");
   assert.deepEqual(after.payouts.map((payout) => [
     payout.adjustmentCents, payout.adjustmentNote, payout.cashPayoutCents,
   ]), [[1_000, "Extra supplies", 3_300], [-500, "Advance repayment", -500]]);

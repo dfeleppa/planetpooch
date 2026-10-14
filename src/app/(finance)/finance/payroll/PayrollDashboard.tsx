@@ -1,6 +1,6 @@
 "use client";
 
-import { ChangeEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { ChangeEvent, Fragment, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -154,6 +154,7 @@ type PayoutPreview = {
     directDepositCents: number;
     adjustmentCents: number;
     adjustmentNote: string;
+    adjustmentDate: string | null;
     cashPayoutCents: number;
     directDepositSet: boolean;
     varianceCents: number;
@@ -3395,6 +3396,7 @@ export function PayrollDashboard({
                 key={payout.employeeName}
                 payout={payout}
                 entries={group?.entries ?? []}
+                reconciliations={reconciliations}
                 weekStart={weekStart}
                 weekEnd={weekEnd}
               />
@@ -3409,11 +3411,13 @@ export function PayrollDashboard({
 function MobileGroomingPaystub({
   payout,
   entries,
+  reconciliations,
   weekStart,
   weekEnd,
 }: {
   payout: PayoutPreview["payouts"][number];
   entries: EditableMobileGroomingEntry[];
+  reconciliations: DailyReconciliation[];
   weekStart: string;
   weekEnd: string;
 }) {
@@ -3424,6 +3428,14 @@ function MobileGroomingPaystub({
       - mobileEntryDogCount(entry) * 500
   ), 0);
   const creditCardTipsCents = entries.reduce((sum, entry) => sum + Math.round(moneyValue(entry.creditCardTip) * 100), 0);
+  const workedDates = new Set(entries.map((entry) => entry.serviceDate));
+  const appliedVarianceDays = payout.variancePayoutCents !== 0
+    ? reconciliations.filter((record) =>
+        record.employeeName.toLocaleLowerCase() === payout.employeeName.toLocaleLowerCase() &&
+        workedDates.has(record.serviceDate) &&
+        record.countedCashCents !== record.expectedCashCents
+      ).sort((a, b) => a.serviceDate.localeCompare(b.serviceDate))
+    : [];
 
   return (
     <section className="pp-mobile-paystub text-gray-900">
@@ -3494,10 +3506,33 @@ function MobileGroomingPaystub({
           <span>Credit card tips</span><span className="text-right">+ {formatMoney(creditCardTipsCents / 100)}</span>
           <span className="font-semibold">Groomer pay</span><span className="text-right font-semibold">{formatMoney(payout.groomerPayCents / 100)}</span>
           <span>Direct deposit</span><span className="text-right">{payout.directDepositSet ? `− ${formatMoney(payout.directDepositCents / 100)}` : "Not set"}</span>
-          <span>Adjustment{payout.adjustmentNote ? ` · ${payout.adjustmentNote}` : ""}</span><span className="text-right">{formatSignedMoney(payout.adjustmentCents)}</span>
-          <span>Weekly cash over/short</span><span className="text-right">{formatSignedMoney(payout.varianceCents)}</span>
-          <span>Applied to payout</span><span className="text-right">{payout.varianceReviewed ? formatSignedMoney(payout.variancePayoutCents) : "Review pending"}</span>
         </div>
+        <div className="mt-2 flex justify-between border-t border-gray-400 pt-1 text-[9pt] font-bold">
+          <span>Groomer pay − direct deposit</span>
+          <span>{payout.directDepositSet ? formatMoney((payout.groomerPayCents - payout.directDepositCents) / 100) : "Pending direct deposit"}</span>
+        </div>
+        {(payout.adjustmentCents !== 0 || appliedVarianceDays.length > 0) && (
+          <div className="mt-2 grid grid-cols-2 gap-x-8 gap-y-1 text-[8pt]">
+            {payout.adjustmentCents !== 0 && (
+              <>
+                <span className="whitespace-pre-wrap break-words">
+                  Adjustment · {payout.adjustmentDate
+                    ? new Date(payout.adjustmentDate).toLocaleDateString("en-US", { timeZone: "America/New_York", month: "short", day: "numeric", year: "numeric" })
+                    : "Date unavailable"} · {payout.adjustmentNote}
+                </span>
+                <span className="text-right">{formatSignedMoney(payout.adjustmentCents)}</span>
+              </>
+            )}
+            {appliedVarianceDays.map((record) => (
+              <Fragment key={record.serviceDate}>
+                <span className="whitespace-pre-wrap break-words">
+                  Cash over/short · {dateFromParam(record.serviceDate).toLocaleDateString("en-US", { timeZone: "UTC", month: "short", day: "numeric", year: "numeric" })} · {record.note.trim() || "No note saved"}
+                </span>
+                <span className="text-right">{formatSignedMoney(record.countedCashCents - record.expectedCashCents)}</span>
+              </Fragment>
+            ))}
+          </div>
+        )}
         <div className="mt-2 flex justify-between border-t border-gray-400 pt-2 text-[12pt] font-bold">
           <span>Cash payout</span><span>{payout.directDepositSet ? formatMoney(payout.cashPayoutCents / 100) : "Pending direct deposit"}</span>
         </div>

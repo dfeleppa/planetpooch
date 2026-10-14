@@ -20,7 +20,7 @@ type Reconciliation = {
 };
 
 type Setting = { employeeName: string; amountCents: number };
-type Adjustment = { employeeName: string; amountCents: number; note: string };
+type Adjustment = { employeeName: string; amountCents: number; note: string; updatedAt?: Date };
 type VarianceReview = { employeeName: string; varianceCents: number; sourceFingerprint: string; applyToCashPayout: boolean };
 
 export function mobileGroomingCloseoutPreview(
@@ -110,6 +110,7 @@ export function mobileGroomingCloseoutPreview(
       directDepositCents,
       adjustmentCents,
       adjustmentNote: adjustment?.note ?? "",
+      adjustmentDate: adjustment?.updatedAt?.toISOString() ?? null,
       varianceCents,
       reconciliationFingerprint,
       varianceReviewed: varianceReviewCurrent,
