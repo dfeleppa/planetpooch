@@ -2,7 +2,6 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { requireAuth } from "@/lib/auth-helpers";
 import { canReadKnowledgeArticle, getKnowledgeViewer } from "@/lib/knowledge";
-import { isKnowledgeOwner } from "@/lib/knowledge-owner";
 import { prisma } from "@/lib/prisma";
 
 export default async function KnowledgeArticlePage({ params }: { params: Promise<{ id: string }> }) {
@@ -10,7 +9,7 @@ export default async function KnowledgeArticlePage({ params }: { params: Promise
   const viewer = await getKnowledgeViewer(session.user.id);
   const { id } = await params;
   const article = await prisma.knowledgeArticle.findUnique({ where: { id } });
-  if (!viewer || !isKnowledgeOwner(viewer) || !article || !canReadKnowledgeArticle(article, viewer)) notFound();
+  if (!viewer || !article || !canReadKnowledgeArticle(article, viewer)) notFound();
 
   return (
     <div className="mx-auto max-w-3xl space-y-6">

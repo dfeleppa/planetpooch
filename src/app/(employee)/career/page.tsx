@@ -2,7 +2,6 @@ import { requireAuth } from "@/lib/auth-helpers";
 import { getVisibleModuleIdsForUser } from "@/lib/module-visibility";
 import { prisma } from "@/lib/prisma";
 import { cn } from "@/lib/utils";
-import { getActiveBusiness } from "@/lib/business-server";
 import { redirect } from "next/navigation";
 
 type CareerStep = {
@@ -83,7 +82,7 @@ const advanceSteps = [
 
 export default async function CareerPage() {
   const session = await requireAuth();
-  if ((await getActiveBusiness()).company !== "RESORT") redirect("/dashboard");
+  if (session.user.company === "GROOMING") redirect("/dashboard");
   const userId = session.user.id;
 
   const user = await prisma.user.findUnique({

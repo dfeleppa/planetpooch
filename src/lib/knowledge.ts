@@ -53,8 +53,54 @@ export function canReadKnowledgeArticle(
   if (isKnowledgeOwner(viewer)) return true;
   if (!article.isPublished) return false;
   if (isSuperAdmin(viewer.role)) return true;
-  return (article.company === null || article.company === viewer.company) &&
+  return (article.company === null || article.company === viewer.company || viewer.company === "CORPORATE") &&
     article.allowedRoles.includes(viewer.role);
+}
+
+/** Employee answers use only published articles and lessons assigned to that employee. */
+async function findEmployeeKnowledgeSources(viewer: KnowledgeViewer, question: string): Promise<KnowledgeSource[]> {
+  const terms = knowledgeTerms(question);
+  if (!terms.length) return [];
+  const visibleIds = await getVisibleModuleIdsForUser(viewer.id, viewer.jobTitle, viewer.company);
+  const [articles, lessons] = await Promise.all([
+    prisma.knowledgeArticle.findMany({
+      where: {
+        isPublished: true,
+        allowedRoles: { has: viewer.role },
+        OR: [{ company: null }, { company: viewer.company }, ...(viewer.company === "CORPORATE" ? [{ company: "RESORT" as const }, { company: "GROOMING" as const }] : [])],
+        AND: [{ OR: terms.flatMap((term) => [
+          { title: { contains: term, mode: "insensitive" as const } },
+          { content: { contains: term, mode: "insensitive" as const } },
+        ]) }],
+      },
+      orderBy: { updatedAt: "desc" },
+      take: 30,
+    }),
+    visibleIds.size ? prisma.lesson.findMany({
+      where: {
+        subsection: { moduleId: { in: [...visibleIds] } },
+        OR: terms.flatMap((term) => [
+          { title: { contains: term, mode: "insensitive" as const } },
+          { searchText: { contains: term, mode: "insensitive" as const } },
+        ]),
+      },
+      select: { id: true, title: true, searchText: true, updatedAt: true,
+        subsection: { select: { moduleId: true, module: { select: { title: true } } } } },
+      take: 60,
+    }) : Promise.resolve([]),
+  ]);
+  return [
+    ...articles.filter((article) => canReadKnowledgeArticle(article, viewer)).slice(0, 5).map((article) => ({
+      id: `article:${article.id}`, title: article.title, kind: "article" as const,
+      url: `/knowledge/articles/${article.id}`, excerpt: excerptAround(article.content, terms),
+      updatedAt: (article.sourceUpdatedAt ?? article.updatedAt).toISOString(), dateKind: "source" as const,
+    })),
+    ...rankKnowledgeLessons(lessons, terms).slice(0, 5).map((lesson) => ({
+      id: `lesson:${lesson.id}`, title: lesson.title, kind: "lesson" as const,
+      url: `/modules/${lesson.subsection.moduleId}/lessons/${lesson.id}`,
+      excerpt: excerptAround(lesson.searchText, terms), updatedAt: lesson.updatedAt.toISOString(), dateKind: "entry" as const,
+    })),
+  ].slice(0, 10);
 }
 
 export function knowledgeTerms(question: string): string[] {
@@ -90,7 +136,7 @@ export async function findKnowledgeSources(
   viewer: KnowledgeViewer,
   question: string,
 ): Promise<KnowledgeSource[]> {
-  if (!isKnowledgeOwner(viewer)) return [];
+  if (!isKnowledgeOwner(viewer)) return findEmployeeKnowledgeSources(viewer, question);
   const vanOilChangeSource = await findVanOilChangeSource(question);
   if (vanOilChangeSource) return vanOilChangeSource;
   const plan = supplementReportPlan(question, await planReportQuestion(question));

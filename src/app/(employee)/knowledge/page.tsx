@@ -7,6 +7,6 @@ import { notFound } from "next/navigation";
 export default async function KnowledgePage() {
   const session = await requireAuth();
   const viewer = await getKnowledgeViewer(session.user.id);
-  if (!viewer || !isKnowledgeOwner(viewer)) notFound();
-  return <KnowledgeChat />;
+  if (!viewer) notFound();
+  return <KnowledgeChat owner={isKnowledgeOwner(viewer)} />;
 }

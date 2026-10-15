@@ -1,13 +1,16 @@
 "use client";
 
 import { useState } from "react";
+import { usePathname } from "next/navigation";
 import { useBusiness } from "./BusinessProvider";
 import type { Business } from "@/lib/business";
 
 export function BusinessSelector({ options }: { options: readonly Business[] }) {
+  const pathname = usePathname();
   const business = useBusiness();
   const [switching, setSwitching] = useState(false);
   const [error, setError] = useState("");
+  if (["/dashboard", "/modules", "/career", "/knowledge", "/search"].some((path) => pathname === path || pathname.startsWith(`${path}/`))) return null;
 
   async function switchBusiness(company: string) {
     if (company === business.company) return;

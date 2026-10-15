@@ -12,10 +12,15 @@ const SUGGESTIONS = [
   "What was boarding occupancy last week?",
   "How many daycare packages are expiring?",
 ];
+const EMPLOYEE_SUGGESTIONS = [
+  "How do I find my training modules?",
+  "What is the procedure for my role?",
+  "Where can I find the employee handbook?",
+];
 const MODEL_STORAGE_KEY = "ask-pooch-model";
 const MODEL_CHANGE_EVENT = "ask-pooch-model-change";
 
-export function KnowledgeChat({ compact = false, onSourceNavigate }: { compact?: boolean; onSourceNavigate?: () => void }) {
+export function KnowledgeChat({ compact = false, owner = true, onSourceNavigate }: { compact?: boolean; owner?: boolean; onSourceNavigate?: () => void }) {
   const questionId = compact ? "knowledge-widget-question" : "knowledge-question";
   const modelId = compact ? "knowledge-widget-model" : "knowledge-model";
   const [messages, setMessages] = useState<Message[]>([]);
@@ -100,7 +105,7 @@ export function KnowledgeChat({ compact = false, onSourceNavigate }: { compact?:
           <div className="rounded-2xl border border-dashed border-pp-line bg-pp-surface-2 p-6">
             <p className="font-medium text-pp-ink">Try a question</p>
             <div className="mt-4 flex flex-wrap gap-2">
-              {SUGGESTIONS.map((suggestion) => (
+              {(owner ? SUGGESTIONS : EMPLOYEE_SUGGESTIONS).map((suggestion) => (
                 <button key={suggestion} type="button" onClick={() => void ask(suggestion)}
                   className="rounded-full border border-pp-line bg-white px-3 py-2 text-left text-sm text-pp-ink-2 hover:border-pp-accent-line hover:text-pp-accent">
                   {suggestion}

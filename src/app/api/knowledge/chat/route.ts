@@ -31,7 +31,6 @@ export async function POST(request: Request) {
   }
   const viewer = await getKnowledgeViewer(session.user.id);
   if (!viewer) return NextResponse.json({ error: "Sign in required." }, { status: 401 });
-  if (!isKnowledgeOwner(viewer)) return NextResponse.json({ error: "Forbidden." }, { status: 403 });
   const messages = parsed.data.messages;
   const model = parsed.data.model;
   const question = messages[messages.length - 1].content;
@@ -60,7 +59,7 @@ export async function POST(request: Request) {
     const response = await fetch("https://api.openai.com/v1/responses", {
       method: "POST",
       headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
-      body: JSON.stringify(buildKnowledgeAnswerRequest(question, messages, sources, model)),
+      body: JSON.stringify(buildKnowledgeAnswerRequest(question, messages, sources, model, isKnowledgeOwner(viewer))),
       cache: "no-store",
       signal: AbortSignal.timeout(model === "gpt-6.1-sol" ? 45000 : 25000),
     });

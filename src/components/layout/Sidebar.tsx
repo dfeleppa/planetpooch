@@ -19,8 +19,6 @@ const employeeNav: NavItem[] = [
   { href: "/dashboard", label: "Dashboard", icon: "▣" },
   { href: "/modules", label: "Modules", icon: "❏" },
   { href: "/career", label: "Career", icon: "↗" },
-  { href: "/search", label: "Search", icon: "⌕" },
-  { href: "/knowledge", label: "Ask Pooch", icon: "✦" },
 ];
 
 // Full admin nav — SUPER_ADMIN only (includes module management)
@@ -97,8 +95,7 @@ export function Sidebar() {
   const isSuperAdmin = role === "SUPER_ADMIN" || role === "ADMIN";
   const isKnowledgeAccount = isKnowledgeOwner({ email: session?.user?.email, role });
   const businessEmployeeNav = employeeNav.filter((item) =>
-    (business.company === "RESORT" || item.href !== "/career") &&
-    (item.href !== "/knowledge" || isKnowledgeAccount)
+    item.href !== "/career" || session?.user?.company === "RESORT" || session?.user?.company === "CORPORATE"
   );
   const isManager = role === "MANAGER";
   // "Manager-tier admin UI" — controls visibility of the Employee View
@@ -122,7 +119,7 @@ export function Sidebar() {
           .filter((item) => !["/admin/employees", "/admin/org-chart", "/admin/audit-log"].includes(item.href))
           .map((item) => (item.href === "/admin" ? { ...item, href: "/admin/employees" } : item));
   // The admin navs (super admin / manager) are the HR links;
-  // the plain employee nav (Dashboard / Modules / Search) is not.
+  // the plain employee nav (Dashboard / Modules / Career) is not.
   const isAdminNav = baseNav !== employeeNav;
 
   const [collapsed, setCollapsed] = useState(
@@ -395,6 +392,13 @@ export function Sidebar() {
               </div>
             </>
           )}
+
+          {/* Ask Pooch is a standalone destination for every employee. */}
+          <Link href="/knowledge" title={isCollapsed ? "Ask Pooch" : undefined} aria-current={isActive("/knowledge") ? "page" : undefined} className={cn(navItemClass(isActive("/knowledge")), "mt-1 border-t border-pp-line pt-3")}>
+            {activeRail(isActive("/knowledge"))}
+            <span className={cn("text-[14px] w-4 text-center flex-shrink-0", isActive("/knowledge") ? "text-pp-accent" : "text-pp-ink-3")} aria-hidden="true">✦</span>
+            {!isCollapsed && <span className="truncate">Ask Pooch</span>}
+          </Link>
 
         </nav>
 

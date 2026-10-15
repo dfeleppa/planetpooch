@@ -72,7 +72,7 @@ export async function getVisibleModuleIdsForUsers(
         mod.jobTitleAssignments.some(
           (assignment) =>
             assignment.jobTitle === user.jobTitle &&
-            (assignment.company === null || assignment.company === user.company),
+            (assignment.company === null || assignment.company === user.company || user.company === "CORPORATE"),
         )
       ) {
         visibleByUser.get(user.id)!.add(mod.id);
@@ -106,7 +106,8 @@ export async function isModuleVisibleToUser(
       where: {
         moduleId,
         jobTitle,
-        OR: [{ company: null }, ...(company ? [{ company }] : [])],
+        OR: [{ company: null }, ...(company === "CORPORATE" ? [] : company ? [{ company }] : []),
+          ...(company === "CORPORATE" ? [{ company: "CORPORATE" as const }, { company: "RESORT" as const }, { company: "GROOMING" as const }] : [])],
       },
       select: { id: true },
     });
