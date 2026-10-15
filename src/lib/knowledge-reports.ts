@@ -16,7 +16,6 @@ export const REPORT_CATALOG = [
   { title: "KPIs", url: "/finance/kpis", details: "weekly and period KPI actuals for boarding, daycare, training, and grooming" },
   { title: "Payroll", url: "/finance/payroll", details: "saved Pet Resort runs, hours, and Mobile Grooming payroll entries" },
   { title: "Advertising", url: "/marketing/ad-reporting", details: "saved Meta and Google campaign report rows and their dated metrics" },
-  { title: "New Form Submissions", url: "/marketing/website-attribution/new-form-submissions", details: "saved website lead forms received by business and date" },
   { title: "Daycare packages", url: "/operations/daycare/packages", details: "saved expiring and expired package snapshots" },
   { title: "Not Active daycare", url: "/operations/daycare/not-active", details: "saved inactive customer snapshot" },
 ] as const;

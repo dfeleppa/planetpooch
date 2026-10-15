@@ -28,8 +28,8 @@ export async function findFormSubmissionReport(question: string): Promise<Knowle
     where: { company: combined ? { in: businesses.map((business) => business.company) } : businesses[0].company,
       receivedAt: { gte: range.startAt, lt: range.endBefore } },
   });
-  const url = `/marketing/website-attribution/new-form-submissions?submissionStart=${range.start}&submissionEnd=${range.end}`;
-  const answer = `${count} new form submission${count === 1 ? "" : "s"} were received for ${label} from ${range.start} through ${range.end} (Eastern, inclusive). This counts saved website form submissions across all statuses. The report page displays one selected business at a time. [1]`;
+  const url = `/marketing?from=${range.start}&to=${range.end}`;
+  const answer = `${count} new form submission${count === 1 ? "" : "s"} were received for ${label} from ${range.start} through ${range.end} (Eastern, inclusive). This counts saved website form submissions across all statuses. The linked campaign report shows website form totals for Pet Resort and Mobile Grooming together. [1]`;
   return [{
     id: `record:report:form-submissions:${businesses.map((business) => business.company).join("+")}:${range.start}:${range.end}`,
     title: `New form submissions: ${label}, ${range.start} to ${range.end}`,

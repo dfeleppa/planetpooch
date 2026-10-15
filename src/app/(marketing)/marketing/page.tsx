@@ -1,9 +1,9 @@
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { requireMarketing } from "@/lib/auth-helpers";
 import { MetaCreativePerformance } from "./evaluate/MetaCreativePerformance";
 import { loadLeadOutcomes } from "./ad-reporting/LeadOutcomesReport";
 import { CampaignResultsReport } from "./ad-reporting/CampaignResultsReport";
-import { WebsiteAttributionReport } from "./website-attribution/Report";
 import { CampaignReportFilters } from "./ad-reporting/CampaignReportFilters";
 import { reportingRange } from "./ad-reporting/report-range";
 import { Suspense } from "react";
@@ -19,18 +19,21 @@ async function Results({ from, to, source, rangeLabel }: { from: string; to: str
 export default async function MarketingPage({ searchParams }: { searchParams: Promise<SearchParams> }) {
   const session = await requireMarketing();
   const query = await searchParams;
-  const submissions = query.view === "submissions";
+  if (query.view === "submissions") {
+    const dates = query.submissionStart && query.submissionEnd
+      ? `?from=${encodeURIComponent(query.submissionStart)}&to=${encodeURIComponent(query.submissionEnd)}` : "";
+    redirect(`/marketing${dates}`);
+  }
   const creatives = query.view === "creatives";
   const report = reportingRange(query);
   return <div>
     <nav aria-label="Marketing views" className="mb-6 flex flex-wrap items-center gap-3 border-b border-gray-200 pb-4">
       <div className="flex flex-wrap gap-2">
-        <Link href="/marketing" aria-current={!submissions && !creatives ? "page" : undefined} className={`rounded-lg px-4 py-2 text-sm font-medium ${!submissions && !creatives ? "bg-gray-900 text-white" : "bg-white text-gray-700 ring-1 ring-gray-200 hover:bg-gray-50"}`}>Campaign results</Link>
+        <Link href="/marketing" aria-current={!creatives ? "page" : undefined} className={`rounded-lg px-4 py-2 text-sm font-medium ${!creatives ? "bg-gray-900 text-white" : "bg-white text-gray-700 ring-1 ring-gray-200 hover:bg-gray-50"}`}>Campaign results</Link>
         <Link href="/marketing?view=creatives" aria-current={creatives ? "page" : undefined} className={`rounded-lg px-4 py-2 text-sm font-medium ${creatives ? "bg-gray-900 text-white" : "bg-white text-gray-700 ring-1 ring-gray-200 hover:bg-gray-50"}`}>Creative performance</Link>
-        <Link href="/marketing?view=submissions" aria-current={submissions ? "page" : undefined} className={`rounded-lg px-4 py-2 text-sm font-medium ${submissions ? "bg-gray-900 text-white" : "bg-white text-gray-700 ring-1 ring-gray-200 hover:bg-gray-50"}`}>Submission log</Link>
       </div>
     </nav>
-    {submissions ? <WebsiteAttributionReport searchParams={searchParams} /> : creatives ? <MetaCreativePerformance searchParams={query} /> : <>
+    {creatives ? <MetaCreativePerformance searchParams={query} /> : <>
       <p className="mb-5 text-sm text-gray-600">Follow Pet Resort and Mobile Grooming ad spend through website leads and MoeGo outcomes. Use Creative performance to compare individual Meta ads.
         {session.user.role === "SUPER_ADMIN" && <> <Link href="/finance/moego" className="font-medium text-blue-700 underline">Refresh MoeGo orders in Finance</Link>.</>}
       </p>

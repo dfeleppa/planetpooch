@@ -226,7 +226,7 @@ export function CampaignResultsReport({ from, to, source, rangeLabel, outcomes }
         </table>
       </div>}
     </details>
-    <p className="text-xs text-gray-600">This list includes linked forms only. <a href="/marketing?view=submissions" className="font-medium text-blue-700 underline">Submission log</a> has every form attempt, sync status, and history.</p>
+    <p className="text-xs text-gray-600">This list includes forms linked to MoeGo customers. Website form totals above include all saved submissions.</p>
 
     <details onToggle={(event) => setShowPlatform(event.currentTarget.open)} className="rounded-xl border border-gray-200 bg-white">
       <summary className="cursor-pointer px-4 py-3 text-sm font-medium text-gray-800">Platform metrics and CSV imports</summary>

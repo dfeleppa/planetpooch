@@ -40,7 +40,7 @@ test("form count uses explicit business, Eastern bounds, and all statuses", asyn
   assert.equal(where.receivedAt.gte.toISOString(), "2026-09-27T04:00:00.000Z");
   assert.equal(where.receivedAt.lt.toISOString(), "2026-10-04T04:00:00.000Z");
   assert.match(result.answer, /7 new form submissions were received for Pet Resort/);
-  assert.match(result.url, /submissionStart=2026-09-27/);
+  assert.equal(result.url, "/marketing?from=2026-09-27&to=2026-10-03");
 });
 
 test("combined business question counts both company values", async () => {

@@ -1,12 +1,8 @@
 import { redirect } from "next/navigation";
 
-type PageProps = { searchParams: Promise<{ submissionStart?: string; submissionEnd?: string }> };
-
-export default async function WebsiteAttributionPage({ searchParams }: PageProps) {
+export default async function WebsiteAttributionPage({ searchParams }: { searchParams: Promise<{ submissionStart?: string; submissionEnd?: string }> }) {
   const params = await searchParams;
-  const query = new URLSearchParams();
-  if (params.submissionStart) query.set("submissionStart", params.submissionStart);
-  if (params.submissionEnd) query.set("submissionEnd", params.submissionEnd);
-  query.set("view", "submissions");
-  redirect(`/marketing?${query}`);
+  const dates = params.submissionStart && params.submissionEnd
+    ? `?from=${encodeURIComponent(params.submissionStart)}&to=${encodeURIComponent(params.submissionEnd)}` : "";
+  redirect(`/marketing${dates}`);
 }

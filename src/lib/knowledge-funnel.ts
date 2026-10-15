@@ -52,7 +52,7 @@ export async function findFunnelEvidence(question: string): Promise<KnowledgeSou
     const capped = leads.length > 1000 || appointments.length > 5000;
     const cohort = funnelCohort(leads, appointments, now);
     return { id: `record:funnel:${business.company}:${range.start}:${range.end}`, title: `${business.label} website inquiry cohort`,
-      kind: "record", url: `/marketing/website-attribution/new-form-submissions?submissionStart=${range.start}&submissionEnd=${range.end}`,
+      kind: "record", url: `/marketing?from=${range.start}&to=${range.end}`,
       updatedAt: now.toISOString(), dateKind: "entry",
       excerpt: [
         `${business.label}. Saved website form attempts received ${range.start} through ${range.end} (Eastern): ${total}, across all statuses. ${period ? "" : "Default cohort: last 30 calendar days including today; today may be incomplete."}`,

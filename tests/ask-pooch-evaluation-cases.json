@@ -39,7 +39,7 @@
       "id": "forms-and-sales-answer",
       "question": "How many lead forms came in last week, and what were Pet Resort net sales?",
       "sources": [
-        { "id": "form-count", "title": "New form submissions: Pet Resort", "kind": "record", "url": "/marketing/website-attribution/new-form-submissions", "excerpt": "Pet Resort saved 7 new-client website form submissions received from 2026-09-27 through 2026-10-03, Eastern inclusive. This includes all submission statuses.", "updatedAt": "2026-10-05T16:00:00Z", "dateKind": "entry" },
+        { "id": "form-count", "title": "New form submissions: Pet Resort", "kind": "record", "url": "/marketing?from=2026-09-27&to=2026-10-03", "excerpt": "Pet Resort saved 7 new-client website form submissions received from 2026-09-27 through 2026-10-03, Eastern inclusive. This includes all submission statuses.", "updatedAt": "2026-10-05T16:00:00Z", "dateKind": "entry" },
         { "id": "sales-total", "title": "Pet Resort Profit and Loss", "kind": "record", "url": "/finance/profit-loss", "excerpt": "Pet Resort net sales for 2026-09-27 through 2026-10-03 were $19,099.50 from synced revenue-bearing orders. Latest order sync was 2026-10-04.", "updatedAt": "2026-10-04T16:00:00Z", "dateKind": "entry" }
       ],
       "mustContain": ["7", "$19,099.50", "2026-09-27"], "mustNotContain": ["google ads leads"]
