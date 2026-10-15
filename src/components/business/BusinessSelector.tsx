@@ -11,6 +11,7 @@ export function BusinessSelector({ options }: { options: readonly Business[] }) 
   const [switching, setSwitching] = useState(false);
   const [error, setError] = useState("");
   if (["/dashboard", "/modules", "/career", "/knowledge", "/search"].some((path) => pathname === path || pathname.startsWith(`${path}/`))
+    || pathname === "/cash-management"
     || pathname === "/marketing"
     || pathname === "/admin/knowledge"
     || ["/marketing/ad-reporting", "/marketing/evaluate", "/marketing/performance", "/marketing/website-attribution"].some((path) => pathname === path || pathname.startsWith(`${path}/`))) return null;

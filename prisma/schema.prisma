@@ -1508,6 +1508,18 @@ model FinanceMobileGroomingWeeklyCloseout {
   payrollWeek FinancePayrollWeek @relation(fields: [payrollWeekId], references: [id], onDelete: Cascade)
 }
 
+/// Cash physically taken to the bank. The source balance remains derived from payroll.
+model FinanceCashBankDeposit {
+  id           String   @id @default(cuid())
+  source       String
+  amountCents  Int
+  depositedAt  DateTime @default(now())
+  recordedById String
+  requestId    String   @unique
+
+  @@index([source, depositedAt(sort: Desc)])
+}
+
 /// One signed payout adjustment and explanation per groomer per payroll week.
 model FinanceMobileGroomingPayoutAdjustment {
   id            String   @id @default(cuid())
