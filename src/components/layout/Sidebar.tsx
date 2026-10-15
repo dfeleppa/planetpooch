@@ -44,7 +44,7 @@ const marketingNav: NavItem[] = [
 ];
 
 const financeNav: NavItem[] = [
-  { href: "/finance", label: "Finance", icon: "$" },
+  { href: "/finance", label: "Finance", icon: "" },
   { href: "/finance/payroll", label: "Payroll", icon: "◷" },
   { href: "/cash-management", label: "Cash Management", icon: "$" },
 ];
@@ -63,6 +63,21 @@ const modulePaths = [
 ];
 
 function sidebarIcon(item: NavItem) {
+  if (item.href === "/admin/dashboard") {
+    return (
+      <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+        <rect x="3" y="3" width="18" height="18" rx="2" />
+        <path d="M3 9h18M10 9v12" />
+      </svg>
+    );
+  }
+  if (item.href === "/finance") {
+    return (
+      <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+        <path d="M3 21h18M6 17v-5h3v5m3 0V7h3v10m3 0V3h3v14" />
+      </svg>
+    );
+  }
   if (item.href === "/marketing") {
     return (
       <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
@@ -280,7 +295,7 @@ export function Sidebar() {
                 <div className="mx-1.5 h-px bg-pp-line" />
               )}
               <div className="-mt-2 flex flex-col gap-px">
-                {[{ href: "/admin/dashboard", label: "Overview", icon: "▣" }, ...businessFinanceNav, ...marketingNav, ...(isKnowledgeAccount ? [{ href: "/admin/knowledge", label: "Knowledge library", icon: "✦" }] : [])].map((item) => {
+                {[{ href: "/admin/dashboard", label: "Dashboard", icon: "" }, ...businessFinanceNav, ...marketingNav, ...(isKnowledgeAccount ? [{ href: "/admin/knowledge", label: "Knowledge library", icon: "✦" }] : [])].map((item) => {
                   const active = item.href === "/admin/dashboard"
                     ? pathname === item.href
                     : isActive(item.href);
