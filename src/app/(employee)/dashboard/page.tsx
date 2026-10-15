@@ -126,7 +126,7 @@ export default async function DashboardPage() {
     <div className="pp-today">
       <div className="pp-today-intro">
         <div>
-          <p className="pp-eyebrow">Your workspace · {new Intl.DateTimeFormat("en-US", { timeZone: "America/New_York", month: "long", day: "numeric", year: "numeric" }).format(new Date())}</p>
+          <p className="pp-eyebrow">Employee Dashboard · {new Intl.DateTimeFormat("en-US", { timeZone: "America/New_York", month: "long", day: "numeric", year: "numeric" }).format(new Date())}</p>
           <h1>Good to see you, {displayName}.</h1>
           <p>Pick up where you left off and see what matters today.</p>
         </div>
@@ -173,13 +173,19 @@ export default async function DashboardPage() {
               <div className="pp-learning-copy"><Link href={`/modules/${mod.id}`}>{mod.title}</Link><p>{mod.description || `${mod.completedLessons} of ${mod.totalLessons} lessons complete`}</p><ProgressBar value={mod.completedLessons} max={mod.totalLessons} showLabel={false} size="sm" /></div>
               <div className="pp-learning-end"><span>{mod.totalLessons ? Math.round((mod.completedLessons / mod.totalLessons) * 100) : 0}%</span>{mod.continueLesson ? <Link href={`/modules/${mod.id}/lessons/${mod.continueLesson.id}`}>Continue</Link> : <span>{mod.totalLessons ? "Complete" : "Not started"}</span>}</div>
             </div>
-          ))}</div> : <p className="pp-today-empty">No modules are assigned yet. Check back soon.</p>}
+          ))}</div> : <p className="pp-today-empty">No modules are assigned to you.</p>}
         </section>
         <section className="pp-today-panel" aria-labelledby="quick-actions-heading">
-          <div className="pp-today-panel-header"><div><p className="pp-eyebrow">Useful links</p><h2 id="quick-actions-heading">Quick actions</h2></div></div>
+          <div className="pp-today-panel-header"><div><p className="pp-eyebrow">Employee tools</p><h2 id="quick-actions-heading">Explore your workspace</h2></div></div>
           <div className="pp-quick-actions">
+            <Link href="/modules"><span className="pp-quick-icon" aria-hidden="true">❏</span><span><strong>Modules</strong><small>Browse your assigned training</small></span><span aria-hidden="true">→</span></Link>
+            {(user?.company === "RESORT" || user?.company === "CORPORATE") && (
+              <Link href="/career"><span className="pp-quick-icon" aria-hidden="true">↗</span><span><strong>Career</strong><small>See your growth path</small></span><span aria-hidden="true">→</span></Link>
+            )}
+            <Link href="/maintenance/checklists"><span className="pp-quick-icon" aria-hidden="true">✓</span><span><strong>Daily checklists</strong><small>Open your assigned checklists</small></span><span aria-hidden="true">→</span></Link>
             <a href="#employee-documents"><span className="pp-quick-icon" aria-hidden="true">▤</span><span><strong>Documents</strong><small>View your employee files</small></span><span aria-hidden="true">→</span></a>
             <Link href="/knowledge"><span className="pp-quick-icon" aria-hidden="true">✦</span><span><strong>Ask Pooch</strong><small>Find answers and guidance</small></span><span aria-hidden="true">→</span></Link>
+            <a href="#availability"><span className="pp-quick-icon" aria-hidden="true">◷</span><span><strong>Availability</strong><small>View your weekly availability</small></span><span aria-hidden="true">→</span></a>
             <a href="#employee-info"><span className="pp-quick-icon" aria-hidden="true">◉</span><span><strong>Employee info</strong><small>Review your details</small></span><span aria-hidden="true">→</span></a>
           </div>
         </section>

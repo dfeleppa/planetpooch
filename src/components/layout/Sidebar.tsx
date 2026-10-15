@@ -16,9 +16,7 @@ interface NavItem {
 }
 
 const employeeNav: NavItem[] = [
-  { href: "/dashboard", label: "My home", icon: "▣" },
-  { href: "/modules", label: "Modules", icon: "❏" },
-  { href: "/career", label: "Career", icon: "↗" },
+  { href: "/dashboard", label: "Employee Dashboard", icon: "▣" },
 ];
 
 // Full admin nav — SUPER_ADMIN only (includes module management)
@@ -94,9 +92,6 @@ export function Sidebar() {
   const jobTitle = session?.user?.jobTitle;
   const isSuperAdmin = role === "SUPER_ADMIN" || role === "ADMIN";
   const isKnowledgeAccount = isKnowledgeOwner({ email: session?.user?.email, role });
-  const businessEmployeeNav = employeeNav.filter((item) =>
-    item.href !== "/career" || session?.user?.company === "RESORT" || session?.user?.company === "CORPORATE"
-  );
   const isManager = role === "MANAGER";
   // "Manager-tier admin UI" — controls visibility of the Employee View
   // section.
@@ -114,12 +109,12 @@ export function Sidebar() {
     : employeeNav;
   const nav =
     baseNav === employeeNav
-      ? businessEmployeeNav
+      ? employeeNav
       : baseNav
           .filter((item) => !["/admin/employees", "/admin/org-chart", "/admin/audit-log"].includes(item.href))
           .map((item) => (item.href === "/admin" ? { ...item, href: "/admin/employees" } : item));
   // The admin navs (super admin / manager) are the HR links;
-  // the plain employee nav (Dashboard / Modules / Career) is not.
+  // the plain employee nav is not.
   const isAdminNav = baseNav !== employeeNav;
 
   const [collapsed, setCollapsed] = useState(
@@ -161,7 +156,12 @@ export function Sidebar() {
         path === "/admin" ? pathname === path : pathname === path || pathname.startsWith(path + "/")
       );
     }
-    if (href === "/dashboard" || href === "/admin") return pathname === href;
+    if (href === "/dashboard") {
+      return ["/dashboard", "/modules", "/career"].some(
+        (path) => pathname === path || pathname.startsWith(path + "/")
+      );
+    }
+    if (href === "/admin") return pathname === href;
     if (pathname !== href && !pathname.startsWith(href + "/")) return false;
     // Longest-prefix wins: don't highlight /maintenance when on /maintenance/inventory.
     const candidates = [...nav, ...operationsNav, ...marketingNav, ...businessFinanceNav]
@@ -375,8 +375,8 @@ export function Sidebar() {
                 <div className="mx-1.5 h-px bg-pp-line" />
               )}
               <div className="-mt-2 flex flex-col gap-px">
-                {businessEmployeeNav.map((item) => {
-                  const active = pathname === item.href;
+                {employeeNav.map((item) => {
+                  const active = isActive(item.href);
                   return (
                     <Link key={item.href} href={item.href} title={isCollapsed ? item.label : undefined} className={navItemClass(active)}>
                       {activeRail(active)}
