@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { AdminPeopleNav } from "../AdminPeopleNav";
+import { AdminModulesNav } from "../AdminModulesNav";
 
 interface AuditLog {
   id: string;
@@ -77,7 +77,7 @@ export default function AuditLogPage() {
       <h1 className="text-2xl font-bold text-gray-900">Audit Log</h1>
       <p className="text-gray-500 mt-1">Track all lesson completion and uncompletion events</p>
       <div className="mt-6">
-        <AdminPeopleNav active="audit-log" />
+        <AdminModulesNav active="audit-log" />
       </div>
 
       {/* Filters */}

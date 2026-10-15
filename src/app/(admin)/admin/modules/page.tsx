@@ -25,6 +25,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { DragHandle } from "@/components/SortableList";
+import { AdminModulesNav } from "../AdminModulesNav";
 
 interface Lesson {
   id: string;
@@ -287,6 +288,10 @@ export default function AdminModulesPage() {
             {showCreate ? "Cancel" : "New Module"}
           </Button>
         </div>
+      </div>
+
+      <div className="mt-6">
+        <AdminModulesNav active="manage" />
       </div>
 
       {showCreate && (

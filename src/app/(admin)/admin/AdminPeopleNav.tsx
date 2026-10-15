@@ -5,17 +5,13 @@ type AdminPeopleView =
   | "employees"
   | "scheduling"
   | "guidelines"
-  | "module-progress"
-  | "org-chart"
-  | "audit-log";
+  | "org-chart";
 
 const adminPeopleNav: { href: string; label: string; view: AdminPeopleView }[] = [
   { href: "/admin/employees", label: "Employees", view: "employees" },
   { href: "/admin/scheduling", label: "Scheduling", view: "scheduling" },
   { href: "/admin/scheduling/guidelines", label: "Guidelines", view: "guidelines" },
-  { href: "/admin/module-progress", label: "Module Progress", view: "module-progress" },
   { href: "/admin/org-chart", label: "Org Chart", view: "org-chart" },
-  { href: "/admin/audit-log", label: "Audit Log", view: "audit-log" },
 ];
 
 export function AdminPeopleNav({ active }: { active: AdminPeopleView }) {

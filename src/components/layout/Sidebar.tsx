@@ -21,19 +21,14 @@ const employeeNav: NavItem[] = [
 
 // Full admin nav — SUPER_ADMIN only (includes module management)
 const superAdminNav: NavItem[] = [
-  { href: "/admin", label: "People", icon: "▣" },
-  { href: "/admin/employees", label: "Employees", icon: "◉" },
-  { href: "/admin/modules", label: "Manage Modules", icon: "❏" },
-  { href: "/admin/org-chart", label: "Org Chart", icon: "⌬" },
-  { href: "/admin/audit-log", label: "Audit Log", icon: "≡" },
+  { href: "/admin/employees", label: "People", icon: "" },
+  { href: "/admin/modules", label: "Modules", icon: "❏" },
 ];
 
 // Manager nav — no module management
 const managerNav: NavItem[] = [
-  { href: "/admin", label: "People", icon: "▣" },
-  { href: "/admin/employees", label: "Employees", icon: "◉" },
-  { href: "/admin/org-chart", label: "Org Chart", icon: "⌬" },
-  { href: "/admin/audit-log", label: "Audit Log", icon: "≡" },
+  { href: "/admin/employees", label: "People", icon: "" },
+  { href: "/admin/module-progress", label: "Modules", icon: "❏" },
 ];
 
 const sharedNav: NavItem[] = [
@@ -52,17 +47,16 @@ const financeNav: NavItem[] = [
   { href: "/finance/payroll", label: "Cash Mgmt & Payroll", icon: "◷" },
 ];
 
-const schedulingNavItem: NavItem = {
-  href: "/admin/scheduling",
-  label: "Scheduling",
-  icon: "•",
-};
-
-const adminDashboardPaths = [
+const peoplePaths = [
   "/admin",
   "/admin/employees",
-  "/admin/module-progress",
+  "/admin/scheduling",
   "/admin/org-chart",
+];
+
+const modulePaths = [
+  "/admin/modules",
+  "/admin/module-progress",
   "/admin/audit-log",
 ];
 
@@ -107,12 +101,7 @@ export function Sidebar() {
     : isManager
     ? managerNav
     : employeeNav;
-  const nav =
-    baseNav === employeeNav
-      ? employeeNav
-      : baseNav
-          .filter((item) => !["/admin/employees", "/admin/org-chart", "/admin/audit-log"].includes(item.href))
-          .map((item) => (item.href === "/admin" ? { ...item, href: "/admin/employees" } : item));
+  const nav = baseNav;
   // The admin navs (super admin / manager) are the HR links;
   // the plain employee nav is not.
   const isAdminNav = baseNav !== employeeNav;
@@ -152,9 +141,12 @@ export function Sidebar() {
   function isActive(href: string) {
     if (href === "/admin/knowledge") return pathname === href || pathname.startsWith(href + "/");
     if (href === "/admin/employees") {
-      return adminDashboardPaths.some((path) =>
+      return peoplePaths.some((path) =>
         path === "/admin" ? pathname === path : pathname === path || pathname.startsWith(path + "/")
       );
+    }
+    if (href === "/admin/modules" || href === "/admin/module-progress") {
+      return modulePaths.some((path) => pathname === path || pathname.startsWith(path + "/"));
     }
     if (href === "/dashboard") {
       return ["/dashboard", "/modules", "/career"].some(
@@ -343,25 +335,18 @@ export function Sidebar() {
                 <Link key={item.href} href={item.href} title={isCollapsed ? item.label : undefined} className={navItemClass(active)}>
                   {activeRail(active)}
                   <span className={cn("text-[14px] w-4 text-center flex-shrink-0", active ? "text-pp-accent" : "text-pp-ink-3")}>
-                    {item.icon}
+                    {item.href === "/admin/employees" ? (
+                      <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                        <circle cx="9" cy="8" r="3" />
+                        <path d="M3 19v-1a6 6 0 0 1 12 0v1H3Z" />
+                        <path d="M17 11a3 3 0 1 0-1.2-5.75M17 14a5 5 0 0 1 4 5h-3" />
+                      </svg>
+                    ) : item.icon}
                   </span>
                   {!isCollapsed && <span className="truncate">{item.label}</span>}
                 </Link>
               );
             })}
-            {isAdminNav && (
-              <Link
-                href={schedulingNavItem.href}
-                title={isCollapsed ? schedulingNavItem.label : undefined}
-                className={navItemClass(isActive(schedulingNavItem.href))}
-              >
-                {activeRail(isActive(schedulingNavItem.href))}
-                <span className={cn("text-[14px] w-4 text-center flex-shrink-0", isActive(schedulingNavItem.href) ? "text-pp-accent" : "text-pp-ink-3")}>
-                  {schedulingNavItem.icon}
-                </span>
-                {!isCollapsed && <span className="truncate">{schedulingNavItem.label}</span>}
-              </Link>
-            )}
           </div>
 
           {/* Manager/Admin: Employee View section */}

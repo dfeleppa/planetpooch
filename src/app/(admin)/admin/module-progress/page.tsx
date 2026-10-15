@@ -4,7 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import Link from "next/link";
-import { AdminPeopleNav } from "../AdminPeopleNav";
+import { AdminModulesNav } from "../AdminModulesNav";
 
 export default async function AdminModuleProgressPage() {
   await requireAdmin();
@@ -50,7 +50,7 @@ export default async function AdminModuleProgressPage() {
         <p className="pp-sub">Employee module completion overview.</p>
       </div>
 
-      <AdminPeopleNav active="module-progress" />
+      <AdminModulesNav active="module-progress" />
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
         <Card>
