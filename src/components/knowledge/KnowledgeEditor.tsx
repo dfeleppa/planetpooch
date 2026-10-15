@@ -6,7 +6,6 @@ import { FormEvent, useEffect, useMemo, useState } from "react";
 import styles from "./KnowledgeEditor.module.css";
 
 type Role = "SUPER_ADMIN" | "ADMIN" | "MANAGER" | "EMPLOYEE" | "MARKETING";
-type Company = "RESORT" | "GROOMING" | "CORPORATE";
 type Article = {
   id: string;
   title: string;
@@ -15,17 +14,16 @@ type Article = {
   sourceLabel: string | null;
   sourceUrl: string | null;
   sourceUpdatedAt: string | null;
-  company: Company | null;
   allowedRoles: Role[];
   isPublished: boolean;
   createdAt: string | null;
   updatedAt: string | null;
 };
-type ArticleSummary = Pick<Article, "id" | "title" | "category" | "company" | "allowedRoles" | "isPublished" | "createdAt" | "updatedAt">;
+type ArticleSummary = Pick<Article, "id" | "title" | "category" | "allowedRoles" | "isPublished" | "createdAt" | "updatedAt">;
 
 const emptyArticle: Article = {
   id: "", title: "", content: "", category: "General", sourceLabel: null,
-  sourceUrl: null, sourceUpdatedAt: null, company: null, allowedRoles: ["SUPER_ADMIN"], isPublished: false,
+  sourceUrl: null, sourceUpdatedAt: null, allowedRoles: ["SUPER_ADMIN"], isPublished: false,
   createdAt: null, updatedAt: null,
 };
 const articleDateTime = new Intl.DateTimeFormat("en-US", {
@@ -147,7 +145,7 @@ export function KnowledgeEditor() {
         <div>
           <p className="text-xs font-semibold uppercase tracking-wide text-pp-accent">Experimental</p>
           <h1 className="mt-1 text-2xl font-semibold text-pp-ink">Knowledge library</h1>
-          <p className="mt-1 text-sm text-pp-ink-3">Add verified Planet Pooch information for <Link href="/knowledge" className="text-pp-accent underline">Ask Pooch</Link>.</p>
+          <p className="mt-1 text-sm text-pp-ink-3">Add verified information shared by Pet Resort and Mobile Grooming for <Link href="/knowledge" className="text-pp-accent underline">Ask Pooch</Link>.</p>
         </div>
         <button type="button" onClick={() => { setEditing({ ...emptyArticle }); setIsEditing(true); setError(""); setSuccess(""); }}
           className="rounded-lg bg-pp-accent px-4 py-2 text-sm font-medium text-white hover:bg-pp-accent-2">New article</button>
@@ -164,7 +162,7 @@ export function KnowledgeEditor() {
                 className="w-full rounded-lg border border-pp-line p-3 text-left hover:border-pp-accent-line hover:bg-pp-accent-soft">
                 <span className="block font-medium text-pp-ink">{article.title}</span>
                 <span className="mt-1 block text-xs text-pp-ink-3">
-                  {article.category} · {article.company ?? "Both businesses"} · {article.isPublished ? "Published" : "Draft"}
+                  {article.category} · Both businesses · {article.isPublished ? "Published" : "Draft"}
                 </span>
                 <span className="mt-1 block text-xs text-pp-ink-3">Added {formatArticleDateTime(article.createdAt)}</span>
                 <span className="block text-xs text-pp-ink-3">Updated {formatArticleDateTime(article.updatedAt)}</span>
@@ -179,7 +177,7 @@ export function KnowledgeEditor() {
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <div>
                   <h2 className="text-xl font-semibold text-pp-ink">{editing.title}</h2>
-                  <p className="mt-1 text-sm text-pp-ink-3">{editing.category} · {editing.company ?? "Both businesses"} · {editing.isPublished ? "Published" : "Draft"}</p>
+                  <p className="mt-1 text-sm text-pp-ink-3">{editing.category} · Both businesses · {editing.isPublished ? "Published" : "Draft"}</p>
                   <p className="mt-2 text-xs text-pp-ink-3">Added {formatArticleDateTime(editing.createdAt)} · Updated {formatArticleDateTime(editing.updatedAt)}</p>
                 </div>
                 <button type="button" onClick={() => { setIsEditing(true); setError(""); setSuccess(""); }}
@@ -201,18 +199,10 @@ export function KnowledgeEditor() {
                 <input required minLength={3} maxLength={180} value={editing.title} onChange={(event) => update("title", event.target.value)}
                   className="mt-1 w-full rounded-lg border border-pp-line px-3 py-2 text-sm" />
               </label>
-              <div className="grid gap-4 sm:grid-cols-2">
-                <label className="block text-sm font-medium text-pp-ink-2">Category
-                  <input required minLength={2} maxLength={80} value={editing.category} onChange={(event) => update("category", event.target.value)}
-                    className="mt-1 w-full rounded-lg border border-pp-line px-3 py-2 text-sm" />
-                </label>
-                <label className="block text-sm font-medium text-pp-ink-2">Business
-                  <select value={editing.company ?? ""} onChange={(event) => update("company", (event.target.value || null) as Company | null)}
-                    className="mt-1 w-full rounded-lg border border-pp-line px-3 py-2 text-sm">
-                    <option value="">Both businesses</option><option value="RESORT">Pet Resort</option><option value="GROOMING">Mobile Grooming</option><option value="CORPORATE">Corporate</option>
-                  </select>
-                </label>
-              </div>
+              <label className="block text-sm font-medium text-pp-ink-2">Category
+                <input required minLength={2} maxLength={80} value={editing.category} onChange={(event) => update("category", event.target.value)}
+                  className="mt-1 w-full rounded-lg border border-pp-line px-3 py-2 text-sm" />
+              </label>
               <label className="block text-sm font-medium text-pp-ink-2">Content
                 <textarea required minLength={10} maxLength={100000} rows={15} value={editing.content} onChange={(event) => update("content", event.target.value)}
                   placeholder="Paste the approved policy, procedure, or reference text here."

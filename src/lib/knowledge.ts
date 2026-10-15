@@ -47,14 +47,13 @@ export async function getKnowledgeViewer(userId: string): Promise<KnowledgeViewe
 }
 
 export function canReadKnowledgeArticle(
-  article: Pick<KnowledgeArticle, "isPublished" | "company" | "allowedRoles">,
+  article: Pick<KnowledgeArticle, "isPublished" | "allowedRoles">,
   viewer: KnowledgeViewer,
 ): boolean {
   if (isKnowledgeOwner(viewer)) return true;
   if (!article.isPublished) return false;
   if (isSuperAdmin(viewer.role)) return true;
-  return (article.company === null || article.company === viewer.company || viewer.company === "CORPORATE") &&
-    article.allowedRoles.includes(viewer.role);
+  return article.allowedRoles.includes(viewer.role);
 }
 
 /** Employee answers use only published articles and lessons assigned to that employee. */
@@ -66,8 +65,7 @@ async function findEmployeeKnowledgeSources(viewer: KnowledgeViewer, question: s
     prisma.knowledgeArticle.findMany({
       where: {
         isPublished: true,
-        allowedRoles: { has: viewer.role },
-        OR: [{ company: null }, { company: viewer.company }, ...(viewer.company === "CORPORATE" ? [{ company: "RESORT" as const }, { company: "GROOMING" as const }] : [])],
+        ...(!isSuperAdmin(viewer.role) ? { allowedRoles: { has: viewer.role } } : {}),
         AND: [{ OR: terms.flatMap((term) => [
           { title: { contains: term, mode: "insensitive" as const } },
           { content: { contains: term, mode: "insensitive" as const } },

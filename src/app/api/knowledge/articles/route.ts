@@ -1,4 +1,4 @@
-import { Company, Role } from "@prisma/client";
+import { Role } from "@prisma/client";
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { getSession } from "@/lib/auth-helpers";
@@ -15,7 +15,6 @@ const articleSchema = z.object({
   sourceLabel: z.string().trim().max(180).nullable(),
   sourceUrl: z.union([z.url().refine((value) => /^https?:\/\//i.test(value)), z.literal("")]).nullable(),
   sourceUpdatedAt: z.coerce.date().nullable(),
-  company: z.enum(Company).nullable(),
   allowedRoles: z.array(z.enum(Role)).min(1),
   isPublished: z.boolean(),
 });
@@ -38,7 +37,7 @@ export async function GET(request: Request) {
     orderBy: { updatedAt: "desc" },
     take: 200,
     select: {
-      id: true, title: true, category: true, company: true,
+      id: true, title: true, category: true,
       allowedRoles: true, isPublished: true, createdAt: true, updatedAt: true,
     },
   });
@@ -56,6 +55,7 @@ export async function POST(request: Request) {
   const { id, ...fields } = parsed.data;
   const data = {
     ...fields,
+    company: null,
     sourceLabel: fields.sourceLabel || null,
     sourceUrl: fields.sourceUrl || null,
     allowedRoles: [...new Set(fields.allowedRoles)],

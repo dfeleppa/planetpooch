@@ -14,7 +14,7 @@ const employee: KnowledgeViewer = {
   id: "employee-1", email: "employee@example.com", role: "EMPLOYEE", company: "RESORT", jobTitle: null,
 };
 
-test("published knowledge is limited by role and company", () => {
+test("published knowledge is shared across companies and limited by role", () => {
   const article = {
     isPublished: true,
     company: "RESORT" as const,
@@ -22,7 +22,7 @@ test("published knowledge is limited by role and company", () => {
   };
   assert.equal(canReadKnowledgeArticle(article, employee), false);
   assert.equal(canReadKnowledgeArticle(article, { ...employee, role: "MANAGER" }), true);
-  assert.equal(canReadKnowledgeArticle(article, { ...employee, role: "MANAGER", company: "GROOMING" }), false);
+  assert.equal(canReadKnowledgeArticle(article, { ...employee, role: "MANAGER", company: "GROOMING" }), true);
 });
 
 test("knowledge access belongs to Daniel and Anderson's admin logins", () => {

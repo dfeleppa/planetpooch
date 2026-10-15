@@ -10,7 +10,9 @@ export function BusinessSelector({ options }: { options: readonly Business[] }) 
   const business = useBusiness();
   const [switching, setSwitching] = useState(false);
   const [error, setError] = useState("");
-  if (["/dashboard", "/modules", "/career", "/knowledge", "/search"].some((path) => pathname === path || pathname.startsWith(`${path}/`))) return null;
+  if (["/dashboard", "/modules", "/career", "/knowledge", "/search"].some((path) => pathname === path || pathname.startsWith(`${path}/`))
+    || pathname === "/marketing"
+    || ["/marketing/ad-reporting", "/marketing/evaluate", "/marketing/performance", "/marketing/website-attribution"].some((path) => pathname === path || pathname.startsWith(`${path}/`))) return null;
 
   async function switchBusiness(company: string) {
     if (company === business.company) return;
