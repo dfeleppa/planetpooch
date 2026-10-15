@@ -22,7 +22,7 @@ const employeeNav: NavItem[] = [
 // Full admin nav — SUPER_ADMIN only (includes module management)
 const superAdminNav: NavItem[] = [
   { href: "/admin/employees", label: "People", icon: "" },
-  { href: "/admin/modules", label: "Modules", icon: "❏" },
+  { href: "/admin/module-progress", label: "Modules", icon: "❏" },
 ];
 
 // Manager nav — no module management
@@ -39,7 +39,7 @@ const sharedNav: NavItem[] = [
 ];
 
 const marketingNav: NavItem[] = [
-  { href: "/marketing", label: "Marketing", icon: "▤" },
+  { href: "/marketing", label: "Marketing", icon: "" },
 ];
 
 const financeNav: NavItem[] = [
@@ -59,6 +59,34 @@ const modulePaths = [
   "/admin/module-progress",
   "/admin/audit-log",
 ];
+
+function sidebarIcon(item: NavItem) {
+  if (item.href === "/marketing") {
+    return (
+      <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+        <path d="M3 10h4l10-4v12L7 14H3v-4Z" />
+        <path d="m7 14 1.5 5h3L10 15M20 9l2-1M20 15l2 1" />
+      </svg>
+    );
+  }
+  if (["/admin/modules", "/admin/module-progress"].includes(item.href)) {
+    return (
+      <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+        <path d="M12 5.5C9.5 4 6.5 4 3 4v14c3.5 0 6.5 0 9 1.5 2.5-1.5 5.5-1.5 9-1.5V4c-3.5 0-6.5 0-9 1.5Z" />
+        <path d="M12 5.5v14" />
+      </svg>
+    );
+  }
+  if (item.href === "/dashboard") {
+    return (
+      <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+        <circle cx="12" cy="8" r="3.5" />
+        <path d="M5 20v-1a7 7 0 0 1 14 0v1H5Z" />
+      </svg>
+    );
+  }
+  return item.icon;
+}
 
 const ROLE_LABELS: Record<string, string> = {
   SUPER_ADMIN: "Super Admin",
@@ -258,7 +286,7 @@ export function Sidebar() {
                 <div className="mx-1.5 h-px bg-pp-line" />
               )}
               <div className="-mt-2 flex flex-col gap-px">
-                {[{ href: "/admin/dashboard", label: "Overview", icon: "▣" }, ...businessFinanceNav, { href: "/marketing", label: "Marketing", icon: "▤" }, ...(isKnowledgeAccount ? [{ href: "/admin/knowledge", label: "Knowledge library", icon: "✦" }] : [])].map((item) => {
+                {[{ href: "/admin/dashboard", label: "Overview", icon: "▣" }, ...businessFinanceNav, ...marketingNav, ...(isKnowledgeAccount ? [{ href: "/admin/knowledge", label: "Knowledge library", icon: "✦" }] : [])].map((item) => {
                   const active = item.href === "/admin/dashboard"
                     ? pathname === item.href
                     : isActive(item.href);
@@ -266,7 +294,7 @@ export function Sidebar() {
                     <Link key={item.href} href={item.href} title={isCollapsed ? item.label : undefined} aria-current={active ? "page" : undefined} className={navItemClass(active)}>
                       {activeRail(active)}
                       <span className={cn("text-[14px] w-4 text-center flex-shrink-0", active ? "text-pp-accent" : "text-pp-ink-3")} aria-hidden="true">
-                        {item.icon}
+                        {sidebarIcon(item)}
                       </span>
                       {!isCollapsed && <span className="truncate">{item.label}</span>}
                     </Link>
@@ -292,7 +320,7 @@ export function Sidebar() {
                     <Link key={item.href} href={item.href} title={isCollapsed ? item.label : undefined} className={navItemClass(active)}>
                       {activeRail(active)}
                       <span className={cn("text-[14px] w-4 text-center flex-shrink-0", active ? "text-pp-accent" : "text-pp-ink-3")}>
-                        {item.icon}
+                        {sidebarIcon(item)}
                       </span>
                       {!isCollapsed && <span className="truncate">{item.label}</span>}
                     </Link>
@@ -341,7 +369,7 @@ export function Sidebar() {
                         <path d="M3 19v-1a6 6 0 0 1 12 0v1H3Z" />
                         <path d="M17 11a3 3 0 1 0-1.2-5.75M17 14a5 5 0 0 1 4 5h-3" />
                       </svg>
-                    ) : item.icon}
+                    ) : sidebarIcon(item)}
                   </span>
                   {!isCollapsed && <span className="truncate">{item.label}</span>}
                 </Link>
@@ -366,7 +394,7 @@ export function Sidebar() {
                     <Link key={item.href} href={item.href} title={isCollapsed ? item.label : undefined} className={navItemClass(active)}>
                       {activeRail(active)}
                       <span className={cn("text-[14px] w-4 text-center flex-shrink-0", active ? "text-pp-accent" : "text-pp-ink-3")}>
-                        {item.icon}
+                        {sidebarIcon(item)}
                       </span>
                       {!isCollapsed && <span className="truncate">{item.label}</span>}
                     </Link>
