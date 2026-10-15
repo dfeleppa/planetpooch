@@ -36,9 +36,9 @@ export function MetaSyncRangeButton({ from, to }: { from: string; to: string }) 
     }
   }
 
-  return <div className="mt-3 flex flex-wrap items-center gap-3">
+  return <div className="flex items-center gap-2">
     <button type="button" onClick={syncRange} disabled={working}
-      className="rounded-lg border border-blue-600 bg-white px-3 py-2 text-sm font-medium text-blue-700 hover:bg-blue-50 disabled:opacity-50">
+      className="inline-flex h-10 items-center justify-center rounded-lg bg-blue-700 px-4 text-sm font-medium text-white hover:bg-blue-800 disabled:opacity-50">
       {working ? "Syncing Meta…" : "Sync Meta for selected dates"}
     </button>
     {progress && <span role="status" className="text-xs text-gray-600">{progress}</span>}

@@ -66,11 +66,11 @@ export async function WebsiteAttributionReport({ searchParams }: PageProps) {
 
   return (
     <div className="min-w-0">
-      <h2 className="text-lg font-semibold text-gray-900">Form Submissions</h2>
+      <h2 className="text-lg font-semibold text-gray-900">Submission log</h2>
       <section className="mt-6 min-w-0">
         <h3 className="text-lg font-semibold text-gray-900">New Client Form Submissions</h3>
         <p className="mt-2 text-sm text-gray-600">
-          Pet Resort and Mobile Grooming copies received from /new-client/ before MoeGo is contacted. Every attempt and status transition is retained. Times are Eastern.
+          Every Pet Resort and Mobile Grooming form attempt, including submissions not linked to MoeGo. Review sync status and the full submission history here. Times are Eastern.
         </p>
         <form className="mt-5 flex flex-wrap items-end gap-3" method="get">
           <input type="hidden" name="view" value="submissions" />

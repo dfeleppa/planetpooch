@@ -25,7 +25,7 @@ export function SyncLeadOutcomesButton() {
   }
 
   return <div className="flex flex-wrap items-center gap-2">
-    <button type="button" onClick={sync} disabled={working} className="rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-800 hover:bg-gray-50 disabled:opacity-60">
+    <button type="button" onClick={sync} disabled={working} className="inline-flex h-10 items-center justify-center rounded-lg bg-teal-700 px-4 text-sm font-medium text-white hover:bg-teal-800 disabled:opacity-60">
       {working ? "Syncing MoeGo…" : "Sync MoeGo appointments"}
     </button>
     {message && <span role="status" className="text-xs text-gray-600">{message}</span>}

@@ -27,7 +27,7 @@ export default async function MarketingPage({ searchParams }: { searchParams: Pr
       <div className="flex flex-wrap gap-2">
         <Link href="/marketing" aria-current={!submissions && !creatives ? "page" : undefined} className={`rounded-lg px-4 py-2 text-sm font-medium ${!submissions && !creatives ? "bg-gray-900 text-white" : "bg-white text-gray-700 ring-1 ring-gray-200 hover:bg-gray-50"}`}>Campaign results</Link>
         <Link href="/marketing?view=creatives" aria-current={creatives ? "page" : undefined} className={`rounded-lg px-4 py-2 text-sm font-medium ${creatives ? "bg-gray-900 text-white" : "bg-white text-gray-700 ring-1 ring-gray-200 hover:bg-gray-50"}`}>Creative performance</Link>
-        <Link href="/marketing?view=submissions" aria-current={submissions ? "page" : undefined} className={`rounded-lg px-4 py-2 text-sm font-medium ${submissions ? "bg-gray-900 text-white" : "bg-white text-gray-700 ring-1 ring-gray-200 hover:bg-gray-50"}`}>Form Submissions</Link>
+        <Link href="/marketing?view=submissions" aria-current={submissions ? "page" : undefined} className={`rounded-lg px-4 py-2 text-sm font-medium ${submissions ? "bg-gray-900 text-white" : "bg-white text-gray-700 ring-1 ring-gray-200 hover:bg-gray-50"}`}>Submission log</Link>
       </div>
     </nav>
     {submissions ? <WebsiteAttributionReport searchParams={searchParams} /> : creatives ? <MetaCreativePerformance searchParams={query} /> : <>

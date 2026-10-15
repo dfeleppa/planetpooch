@@ -114,7 +114,7 @@ export function CampaignResultsReport({ from, to, source, rangeLabel, outcomes }
         <h2 id="campaign-results-heading" className="text-lg font-semibold text-gray-900">Campaign results</h2>
         <p className="mt-1 text-sm text-gray-600">One view of ad spend, submitted website forms, and outcomes observed after MoeGo-linked forms in {rangeLabel}.</p>
       </div>
-      <div className="flex flex-wrap gap-2">
+      <div className="flex flex-wrap items-center gap-2">
         {(source === "all" || source === "meta") && <MetaSyncRangeButton from={from} to={to} />}
         {outcomes.isAdmin && <SyncLeadOutcomesButton />}
       </div>
@@ -213,7 +213,7 @@ export function CampaignResultsReport({ from, to, source, rangeLabel, outcomes }
     </div>
 
     <details onToggle={(event) => setShowLeads(event.currentTarget.open)} className="rounded-xl border border-gray-200 bg-white">
-      <summary className="cursor-pointer px-4 py-3 text-sm font-medium text-gray-800">Individual linked leads ({outcomes.leads.length})</summary>
+      <summary className="cursor-pointer px-4 py-3 text-sm font-medium text-gray-800">MoeGo-linked submissions ({outcomes.leads.length})</summary>
       {showLeads && <div className="overflow-x-auto border-t border-gray-100">
         <table className="w-full min-w-[1000px] text-left text-sm">
           <thead className="bg-gray-50 text-xs uppercase text-gray-600"><tr>{["Submitted", "Customer", "Business", "Source", "Campaign", "Services", "Profiles", "Booked", "Pending", "First booked", "Net paid after form"].map((label) => <th key={label} className="px-4 py-3 font-medium">{label}</th>)}</tr></thead>
@@ -226,6 +226,7 @@ export function CampaignResultsReport({ from, to, source, rangeLabel, outcomes }
         </table>
       </div>}
     </details>
+    <p className="text-xs text-gray-600">This list includes linked forms only. <a href="/marketing?view=submissions" className="font-medium text-blue-700 underline">Submission log</a> has every form attempt, sync status, and history.</p>
 
     <details onToggle={(event) => setShowPlatform(event.currentTarget.open)} className="rounded-xl border border-gray-200 bg-white">
       <summary className="cursor-pointer px-4 py-3 text-sm font-medium text-gray-800">Platform metrics and CSV imports</summary>
