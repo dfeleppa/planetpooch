@@ -1,4 +1,5 @@
 import type { LeadAttributionSource } from "./lead-attribution";
+import type { MetaSpendCampaign } from "./meta-spend-breakdown";
 
 export type ReportCampaign = {
   source: LeadAttributionSource;
@@ -32,6 +33,26 @@ export type CombinedCampaign = {
   netPaidCents: number;
   ads: ReportCampaign[];
 };
+
+export type SpendCampaign = CombinedCampaign & { metaSpend?: MetaSpendCampaign };
+
+/** Include Meta campaigns with spend even when no website form carried their campaign ID. */
+export function attachMetaSpendCampaigns(campaigns: CombinedCampaign[], spend: MetaSpendCampaign[] | null): SpendCampaign[] {
+  if (spend === null) return campaigns;
+  const byId = new Map(spend.filter((row) => row.id !== null).map((row) => [row.id, row]));
+  const matched = new Set<string>();
+  const result: SpendCampaign[] = campaigns.map((campaign) => {
+    const metaSpend = campaign.source === "meta" && campaign.id ? byId.get(campaign.id) : undefined;
+    if (metaSpend?.id) matched.add(metaSpend.id);
+    return metaSpend ? { ...campaign, name: metaSpend.name, metaSpend } : campaign;
+  });
+  for (const metaSpend of spend) {
+    if (metaSpend.id && matched.has(metaSpend.id)) continue;
+    result.push({ source: "meta", id: metaSpend.id, name: metaSpend.name,
+      formLeads: 0, linked: 0, bookedLeads: 0, appointments: 0, netPaidCents: 0, ads: [], metaSpend });
+  }
+  return result;
+}
 
 export function combineCampaignRows(forms: ReportCampaign[], outcomes: OutcomeCampaign[]): CombinedCampaign[] {
   const groups = new Map<string, CombinedCampaign>();

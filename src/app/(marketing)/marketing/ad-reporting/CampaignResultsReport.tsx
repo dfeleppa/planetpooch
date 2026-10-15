@@ -1,7 +1,8 @@
 "use client";
 
 import { Fragment, useEffect, useMemo, useState } from "react";
-import { combineCampaignRows, type ReportCampaign } from "@/lib/marketing/campaign-results";
+import { attachMetaSpendCampaigns, combineCampaignRows, type ReportCampaign } from "@/lib/marketing/campaign-results";
+import type { MetaSpendCampaign } from "@/lib/marketing/meta-spend-breakdown";
 import { FacebookCampaignReportTable, GoogleCampaignReportTable } from "./CampaignReportTables";
 import { GoogleLsaLeadReportTable } from "./GoogleLsaLeadReportTable";
 import { MetaSyncRangeButton } from "./MetaSyncRangeButton";
@@ -17,6 +18,7 @@ type LeadData = {
 };
 type Metric = {
   metaAdSpend: number | null; googleAdSpend: number | null; googleLsaAdSpend: number | null;
+  metaSpendCampaigns: MetaSpendCampaign[] | null;
   metaDataComplete: boolean; metaDataThrough: string | null;
   moegoDataAvailable: boolean; leadsLimited: boolean;
   googleSpendOrigin: "manual" | "csv" | null;
@@ -31,7 +33,7 @@ const LABELS: Record<Source, string> = {
 const dollars = (cents: number | null) => cents === null ? "—" : (cents / 100).toLocaleString("en-US", { style: "currency", currency: "USD" });
 const number = (value: number | null) => value === null ? "—" : value.toLocaleString("en-US");
 const dateTime = (value: string | null) => value ? new Intl.DateTimeFormat("en-US", { timeZone: "America/New_York", dateStyle: "medium", timeStyle: "short" }).format(new Date(value)) : "—";
-const keyFor = (source: Source, id: string | null) => `${source}|${id ?? ""}`;
+const keyFor = (source: Source, id: string | null, name: string) => `${source}|${id ?? `name:${name}`}`;
 
 export function CampaignResultsReport({ from, to, source, rangeLabel, outcomes }: {
   from: string; to: string; source: ReportSource; rangeLabel: string; outcomes: Outcomes;
@@ -74,7 +76,9 @@ export function CampaignResultsReport({ from, to, source, rangeLabel, outcomes }
   const leads = current?.leads;
   const metric = current?.metric;
   const visibleSources = source === "all" ? SOURCES : [source];
-  const campaigns = useMemo(() => combineCampaignRows(leads?.campaigns ?? [], outcomes.campaigns), [leads, outcomes.campaigns]);
+  const campaigns = useMemo(() => attachMetaSpendCampaigns(
+    combineCampaignRows(leads?.campaigns ?? [], outcomes.campaigns), metric?.metaSpendCampaigns ?? null,
+  ), [leads, outcomes.campaigns, metric?.metaSpendCampaigns]);
 
   function sourceSpend(rowSource: Source): number | null {
     if (!metric || rowSource === "unattributed") return null;
@@ -161,7 +165,11 @@ export function CampaignResultsReport({ from, to, source, rangeLabel, outcomes }
                   <td className="px-4 py-3 text-right">{ratio}</td>
                 </tr>
                 {sourceCampaigns.map((campaign) => {
-                  const campaignKey = keyFor(campaign.source, campaign.id);
+                  const campaignKey = keyFor(campaign.source, campaign.id, campaign.name);
+                  const campaignSpend = campaign.source === "meta" && metric?.metaDataComplete
+                    ? campaign.metaSpend?.spendCents ?? (campaign.id ? 0 : null) : null;
+                  const campaignReturn = campaignSpend && outcomes.orderDataAvailable && metric?.moegoDataAvailable
+                    ? `${(campaign.netPaidCents / campaignSpend).toFixed(2)}x` : "—";
                   return <Fragment key={campaignKey}>
                     <tr className="hover:bg-gray-50">
                       <th scope="row" className="max-w-80 px-4 py-3 pl-8 font-normal text-gray-800">
@@ -170,16 +178,23 @@ export function CampaignResultsReport({ from, to, source, rangeLabel, outcomes }
                         </button>
                         {campaign.id && campaign.id !== campaign.name && <span className="block pl-5 text-xs text-gray-400">ID: {campaign.id}</span>}
                       </th>
-                      <td className="px-4 py-3 text-right text-gray-400">—</td>
+                      <td className="px-4 py-3 text-right tabular-nums">{dollars(campaignSpend)}</td>
                       <td className="px-4 py-3 text-right">{number(leads ? campaign.formLeads : null)}</td>
                       <td className="px-4 py-3 text-right">{campaign.linked}</td>
                       <td className="px-4 py-3 text-right">{number(outcomes.appointmentsAvailable ? campaign.bookedLeads : null)}</td>
                       <td className="px-4 py-3 text-right">{number(outcomes.appointmentsAvailable ? campaign.appointments : null)}</td>
                       <td className="px-4 py-3 text-right">{dollars(outcomes.orderDataAvailable && metric?.moegoDataAvailable ? campaign.netPaidCents : null)}</td>
-                      <td className="px-4 py-3 text-right text-gray-400">—</td>
+                      <td className="px-4 py-3 text-right">{campaignReturn}</td>
                     </tr>
                     {expanded === campaignKey && <tr><td colSpan={8} className="bg-white px-8 py-4">
-                      <p className="mb-2 text-xs text-gray-500">Ad spend is available at source level for this report. Website form details below use captured ad tags.</p>
+                      {campaign.metaSpend && <div className="mb-4 space-y-3 text-sm">
+                        <p className="text-xs font-medium text-gray-600">Meta spend by ad set and ad</p>
+                        {campaign.metaSpend.adsets.map((adset) => <div key={adset.id ?? "unknown"}>
+                          <div className="flex justify-between gap-4 border-b border-gray-200 py-1 font-medium"><span>{adset.name}</span><span className="whitespace-nowrap tabular-nums">{dollars(adset.spendCents)}</span></div>
+                          {adset.ads.map((ad) => <div key={ad.id} className="flex justify-between gap-4 border-b border-gray-100 py-1 pl-5"><span>{ad.name}</span><span className="whitespace-nowrap tabular-nums">{dollars(ad.spendCents)}</span></div>)}
+                        </div>)}
+                      </div>}
+                      <p className="mb-2 text-xs font-medium text-gray-600">Website forms with captured ad tags</p>
                       {campaign.ads.length ? <div className="space-y-1 text-sm">{campaign.ads.map((ad) => <div key={`${ad.adsetId}|${ad.adId}`} className="flex justify-between gap-4 border-b border-gray-100 py-1"><span>{ad.adsetName || ad.adsetId || "No ad set"} · {ad.adName || ad.adId || "No ad"}</span><span className="whitespace-nowrap">{ad.leads} website forms</span></div>)}</div> : <p className="text-sm text-gray-500">No ad tags were captured for these forms.</p>}
                     </td></tr>}
                   </Fragment>;
@@ -205,7 +220,7 @@ export function CampaignResultsReport({ from, to, source, rangeLabel, outcomes }
 
     <div className="space-y-1 text-xs text-gray-600">
       <p>Website forms are actual submissions; Meta platform leads may differ. MoeGo outcomes can occur after the form date. Each appointment and order is assigned to the latest prior linked form. Observed return is net paid after form divided by known source spend; it does not prove the ad caused a purchase.</p>
-      <p>Spend uses the selected calendar dates. Google manual spend covers Pet Resort and Mobile Grooming together for this exact range and takes priority over imported CSV totals. A dash means unavailable, not zero.</p>
+      <p>Spend uses the selected calendar dates. Meta campaign, ad set, and ad amounts come from the same synced insight rows as the Meta source total; campaigns with spend appear even without tagged website forms. Google manual spend covers Pet Resort and Mobile Grooming together for this exact range and takes priority over imported CSV totals. A dash means unavailable, not zero.</p>
       <p>{outcomes.linkedSubmissions} linked submissions ({outcomes.linkedCustomers} customers); {outcomes.duplicateProfileLeads} include verified duplicate MoeGo profiles. Appointments synced: {dateTime(outcomes.appointmentSyncedAt)}. Orders synced: {dateTime(outcomes.orderSyncedAt)}. Meta synced: {dateTime(metric?.metaSyncedAt ?? null)}.</p>
       {outcomes.incomplete && <p className="text-amber-700">Some MoeGo counts may be incomplete while a sync is behind.</p>}
       {metric && !metric.metaDataComplete && (source === "all" || source === "meta") && <p className="text-amber-700">Meta spend does not cover the full period{metric.metaDataThrough ? ` (latest available day: ${metric.metaDataThrough})` : ""}; spend and return are hidden.</p>}

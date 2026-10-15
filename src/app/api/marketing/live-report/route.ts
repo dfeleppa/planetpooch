@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getSession, hasMarketingAccess } from "@/lib/auth-helpers";
 import { prisma } from "@/lib/prisma";
 import { getMetaPeriodMetrics } from "@/lib/marketing/meta-reporting";
+import { getMetaSpendBreakdown } from "@/lib/marketing/meta-spend-breakdown";
 import { leadRevenueBySource } from "@/lib/marketing/lead-revenue-report";
 import type { LeadAttributionSource } from "@/lib/marketing/lead-attribution";
 import { leadOutcomeWindow } from "@/lib/marketing/lead-outcomes";
@@ -30,8 +31,9 @@ export async function GET(req: NextRequest) {
   const source: LeadAttributionSource | "all" = sourceParam === "meta" || sourceParam === "google-ads" || sourceParam === "google-lsa"
     ? sourceParam : "all";
 
-  const [meta, orderCursor, latestOrder, google, lsa, manualSpend] = await Promise.all([
+  const [meta, metaSpendCampaigns, orderCursor, latestOrder, google, lsa, manualSpend] = await Promise.all([
     getMetaPeriodMetrics("", from, toExclusive),
+    source === "all" || source === "meta" ? getMetaSpendBreakdown(from, toExclusive) : Promise.resolve([]),
     prisma.moegoSyncState.findUnique({ where: { resource: "order" }, select: { lastSyncedAt: true } }),
     prisma.moegoOrder.aggregate({ _max: { syncedAt: true } }),
     prisma.financeGoogleCampaignReportRow.aggregate({
@@ -59,7 +61,9 @@ export async function GET(req: NextRequest) {
 
   return NextResponse.json({
     metric: {
-      metaAdSpend: meta.spendCents,
+      metaAdSpend: meta.complete && (source === "all" || source === "meta")
+        ? metaSpendCampaigns.reduce((sum, campaign) => sum + campaign.spendCents, 0) : meta.spendCents,
+      metaSpendCampaigns: meta.complete ? metaSpendCampaigns : null,
       googleAdSpend: manualGoogle?.amountCents ?? (google._count._all ? google._sum.costCents : null),
       googleLsaAdSpend: manualLsa?.amountCents ?? (lsa._count._all ? lsa._sum.totalPaidCents : null),
       googleSpendOrigin: manualGoogle ? "manual" : google._count._all ? "csv" : null,
