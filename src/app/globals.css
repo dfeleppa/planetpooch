@@ -75,8 +75,7 @@ body {
 .pp-sidebar button:hover { color: #fff; background: rgba(255,255,255,.1); }
 .pp-sidebar [class*="border-pp-line"] { border-color: rgba(255,255,255,.15); }
 .pp-sidebar [class*="bg-pp-line"] { background: rgba(255,255,255,.15); }
-.pp-mobile-bar button { color: #fff; }
-.pp-app-header { box-shadow: 0 1px 0 rgba(50,73,83,.04); }
+.pp-mobile-bar > button { color: #fff; }
 
 /* Today First employee home */
 .pp-today { color: #213640; }

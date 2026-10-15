@@ -3,11 +3,12 @@
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
-import { signOut, useSession } from "next-auth/react";
+import { useSession } from "next-auth/react";
 import { cn } from "@/lib/utils";
 import { useState, useEffect } from "react";
 import { useBusiness } from "@/components/business/BusinessProvider";
 import { isKnowledgeOwner } from "@/lib/knowledge-owner";
+import { UserMenu } from "./UserMenu";
 
 interface NavItem {
   href: string;
@@ -88,14 +89,6 @@ function sidebarIcon(item: NavItem) {
   }
   return item.icon;
 }
-
-const ROLE_LABELS: Record<string, string> = {
-  SUPER_ADMIN: "Super Admin",
-  MANAGER: "Manager",
-  EMPLOYEE: "Employee",
-  MARKETING: "Marketing",
-  ADMIN: "Admin",
-};
 
 export function Sidebar() {
   const business = useBusiness();
@@ -414,49 +407,6 @@ export function Sidebar() {
 
         </nav>
 
-        {/* User section */}
-        <div className="mt-3 border-t border-pp-line pt-3">
-          {!isCollapsed ? (
-            <>
-              <div className="px-2 py-1">
-                <p className="truncate text-[13px] font-medium text-pp-ink">{session?.user?.name}</p>
-                {role && (
-                  <p className="truncate text-[11px] text-pp-ink-3">{ROLE_LABELS[role] ?? role}</p>
-                )}
-                <p className="truncate text-[11px] text-pp-ink-4">{session?.user?.email}</p>
-              </div>
-              <button
-                onClick={() => signOut({ callbackUrl: "/login" })}
-                className="mt-1 w-full rounded-md px-3 py-1.5 text-left text-[12px] text-pp-ink-3 transition-colors hover:bg-black/[0.04] hover:text-pp-ink"
-              >
-                Sign out
-              </button>
-            </>
-          ) : (
-            <div className="flex flex-col items-center gap-2">
-              <div
-                className="grid h-[30px] w-[30px] place-items-center rounded-md bg-pp-accent text-[11px] font-semibold tracking-wide text-white"
-                title={session?.user?.name || ""}
-              >
-                {session?.user?.name?.charAt(0) || "?"}
-              </div>
-              <button
-                onClick={() => signOut({ callbackUrl: "/login" })}
-                title="Sign out"
-                aria-label="Sign out"
-                className="rounded-md p-1.5 text-pp-ink-4 transition-colors hover:bg-black/[0.04]"
-              >
-                <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"
-                  />
-                </svg>
-              </button>
-            </div>
-          )}
-        </div>
       </>
     );
   }
@@ -486,7 +436,7 @@ export function Sidebar() {
             className="h-6 w-auto"
           />
         </Link>
-        <div className="w-8" />
+        <UserMenu compact />
       </div>
 
       {/* Mobile drawer */}
