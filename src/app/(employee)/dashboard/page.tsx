@@ -110,137 +110,86 @@ export default async function DashboardPage() {
   });
 
   const availabilityByDay = new Map(availability.map((a) => [a.dayOfWeek, a]));
+  const todayLabel = new Intl.DateTimeFormat("en-US", {
+    timeZone: "America/New_York",
+    weekday: "long",
+  }).format(new Date());
+  const todayDay = DAYS_OF_WEEK.find((day) => day.label === todayLabel);
+  const todayAvailability = todayDay ? availabilityByDay.get(todayDay.value) : null;
+  const featuredModule = moduleProgress.find((mod) => mod.continueLesson && mod.completedLessons < mod.totalLessons);
+  const featuredProgress = featuredModule && featuredModule.totalLessons > 0
+    ? Math.round((featuredModule.completedLessons / featuredModule.totalLessons) * 100)
+    : 0;
+  const displayName = user?.firstName || session.user.name?.split(" ")[0] || "there";
 
   return (
-    <div>
-      <h1 className="text-2xl font-bold text-gray-900">Dashboard</h1>
-      <p className="text-gray-500 mt-1">Welcome back, {session.user.name}</p>
-
-      <h2 className="text-lg font-semibold text-gray-900 mt-6 mb-4">Your Modules</h2>
-      <div className="grid gap-4">
-        {moduleProgress.map((mod) => (
-          <Card key={mod.id} className="hover:shadow-md transition-shadow">
-            <CardContent className="py-4">
-              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2">
-                    {mod.icon && <span className="text-xl flex-shrink-0">{mod.icon}</span>}
-                    <Link href={`/modules/${mod.id}`} className="text-lg font-medium text-gray-900 hover:text-blue-600 break-words">
-                      {mod.title}
-                    </Link>
-                  </div>
-                  {mod.description && (
-                    <p className="text-sm text-gray-500 mt-1">{mod.description}</p>
-                  )}
-                  <ProgressBar value={mod.completedLessons} max={mod.totalLessons} className="mt-3" />
-                </div>
-                {mod.continueLesson && mod.completedLessons < mod.totalLessons && (
-                  <Link
-                    href={`/modules/${mod.id}/lessons/${mod.continueLesson.id}`}
-                    className="self-start sm:self-auto sm:ml-4 px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors whitespace-nowrap"
-                  >
-                    Continue
-                  </Link>
-                )}
-                {mod.completedLessons === mod.totalLessons && mod.totalLessons > 0 && (
-                  <span className="self-start sm:self-auto sm:ml-4 px-4 py-2 bg-green-100 text-green-700 text-sm font-medium rounded-lg">
-                    Complete!
-                  </span>
-                )}
-              </div>
-            </CardContent>
-          </Card>
-        ))}
-
-        {modules.length === 0 && (
-          <Card>
-            <CardContent className="py-8 text-center text-gray-500">
-              No modules available yet. Check back soon!
-            </CardContent>
-          </Card>
-        )}
+    <div className="pp-today">
+      <div className="pp-today-intro">
+        <div>
+          <p className="pp-eyebrow">Your workspace · {new Intl.DateTimeFormat("en-US", { timeZone: "America/New_York", month: "long", day: "numeric", year: "numeric" }).format(new Date())}</p>
+          <h1>Good to see you, {displayName}.</h1>
+          <p>Pick up where you left off and see what matters today.</p>
+        </div>
+        <Link className="pp-today-help" href="/knowledge"><span aria-hidden="true">✦</span> Ask Pooch <span aria-hidden="true">↗</span></Link>
       </div>
 
-      {user && (
-        <Card className="mt-6">
-          <CardHeader>
-            <h2 className="font-semibold text-gray-900">Employee Info</h2>
-          </CardHeader>
-          <CardContent className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
-            <Field label="First Name" value={user.firstName} />
-            <Field label="Last Name" value={user.lastName} />
-            <Field
-              label="Email"
-              value={
-                user.email.endsWith("@placeholder.local")
-                  ? "— (not set)"
-                  : user.email
-              }
-            />
-            <Field label="Phone" value={user.phone || "—"} />
-            <Field label="Role" value={user.role} />
-            <Field label="Company" value={COMPANY_LABELS[user.company]} />
-            <Field label="Job Title" value={user.jobTitle || "—"} />
-            <Field
-              label="Hire Date"
-              value={user.hireDate ? user.hireDate.toISOString().slice(0, 10) : "—"}
-            />
-          </CardContent>
-        </Card>
-      )}
+      <section className="pp-today-feature-grid" aria-label="Today at a glance">
+        <article className="pp-today-feature pp-today-feature-primary">
+          <span className="pp-feature-icon" aria-hidden="true">↗</span>
+          <p className="pp-eyebrow">Pick up where you left off</p>
+          <h2>{featuredModule ? featuredModule.title : "Your learning"}</h2>
+          {featuredModule ? (
+            <>
+              <p>{featuredModule.continueLesson?.title}</p>
+              <div className="pp-feature-progress"><span style={{ width: `${featuredProgress}%` }} /></div>
+              <div className="pp-feature-footer"><strong>{featuredProgress}% complete</strong><Link href={`/modules/${featuredModule.id}/lessons/${featuredModule.continueLesson?.id}`}>Continue <span aria-hidden="true">→</span></Link></div>
+            </>
+          ) : (
+            <><p>{modules.length ? "Your assigned modules are complete." : "No modules are assigned yet."}</p><Link className="pp-feature-inline-link" href="/modules">View modules →</Link></>
+          )}
+        </article>
+        <article className="pp-today-feature">
+          <span className="pp-feature-icon" aria-hidden="true">✓</span>
+          <p className="pp-eyebrow">Operations</p>
+          <h2>Daily checklists</h2>
+          <p>Open your checklists and see what needs to be done.</p>
+          <Link className="pp-feature-inline-link" href="/maintenance/checklists">View checklists →</Link>
+        </article>
+        <article className="pp-today-feature">
+          <span className="pp-feature-icon" aria-hidden="true">◷</span>
+          <p className="pp-eyebrow">Your availability</p>
+          <h2>{todayDay?.label || "Today"}</h2>
+          <p>{todayAvailability ? `${formatTimeLabel(todayAvailability.startTime)} – ${formatTimeLabel(todayAvailability.endTime)}` : "No availability listed today"}</p>
+          <a className="pp-feature-inline-link" href="#availability">View your week →</a>
+        </article>
+      </section>
 
-      {user && (
-        <div className="mt-6">
-          <EmployeeDocumentsCard
-            employeeId={user.id}
-            hasDriveFolder={!!user.driveFolderId}
-            isTerminated={!!user.terminatedAt}
-            handbookSigned={handbookSigned}
-            ssCardNotNeeded={user.ssCardNotNeeded}
-            initialIssues={[]}
-            initialDocuments={employeeDocuments.map((d) => ({
-              id: d.id,
-              category: d.category,
-              customName: d.customName,
-              fileName: d.fileName,
-              driveFileId: d.driveFileId,
-              mimeType: d.mimeType,
-              fileSize: d.fileSize,
-              uploadedAt: d.uploadedAt.toISOString(),
-              uploadedBy: d.uploadedBy,
-            }))}
-          />
-        </div>
-      )}
+      <div className="pp-today-main-grid">
+        <section className="pp-today-panel" aria-labelledby="my-learning-heading">
+          <div className="pp-today-panel-header"><div><p className="pp-eyebrow">Keep growing</p><h2 id="my-learning-heading">My learning</h2></div><Link href="/modules">View all →</Link></div>
+          {moduleProgress.length ? <div className="pp-learning-list">{moduleProgress.map((mod) => (
+            <div className="pp-learning-row" key={mod.id}>
+              <div className="pp-learning-icon" aria-hidden="true">{mod.icon || "↗"}</div>
+              <div className="pp-learning-copy"><Link href={`/modules/${mod.id}`}>{mod.title}</Link><p>{mod.description || `${mod.completedLessons} of ${mod.totalLessons} lessons complete`}</p><ProgressBar value={mod.completedLessons} max={mod.totalLessons} showLabel={false} size="sm" /></div>
+              <div className="pp-learning-end"><span>{mod.totalLessons ? Math.round((mod.completedLessons / mod.totalLessons) * 100) : 0}%</span>{mod.continueLesson ? <Link href={`/modules/${mod.id}/lessons/${mod.continueLesson.id}`}>Continue</Link> : <span>{mod.totalLessons ? "Complete" : "Not started"}</span>}</div>
+            </div>
+          ))}</div> : <p className="pp-today-empty">No modules are assigned yet. Check back soon.</p>}
+        </section>
+        <section className="pp-today-panel" aria-labelledby="quick-actions-heading">
+          <div className="pp-today-panel-header"><div><p className="pp-eyebrow">Useful links</p><h2 id="quick-actions-heading">Quick actions</h2></div></div>
+          <div className="pp-quick-actions">
+            <a href="#employee-documents"><span className="pp-quick-icon" aria-hidden="true">▤</span><span><strong>Documents</strong><small>View your employee files</small></span><span aria-hidden="true">→</span></a>
+            <Link href="/knowledge"><span className="pp-quick-icon" aria-hidden="true">✦</span><span><strong>Ask Pooch</strong><small>Find answers and guidance</small></span><span aria-hidden="true">→</span></Link>
+            <a href="#employee-info"><span className="pp-quick-icon" aria-hidden="true">◉</span><span><strong>Employee info</strong><small>Review your details</small></span><span aria-hidden="true">→</span></a>
+          </div>
+        </section>
+      </div>
 
-      <Card className="mt-6">
-        <CardHeader>
-          <h2 className="font-semibold text-gray-900">Availability</h2>
-        </CardHeader>
-        <CardContent className="p-0">
-          <ul className="divide-y divide-gray-100">
-            {DAYS_OF_WEEK.map((day) => {
-              const entry = availabilityByDay.get(day.value);
-              return (
-                <li
-                  key={day.value}
-                  className="flex items-center justify-between px-6 py-2 text-sm"
-                >
-                  <span className="text-gray-900">{day.label}</span>
-                  {entry ? (
-                    <span className="text-gray-600">
-                      {formatTimeLabel(entry.startTime)} – {formatTimeLabel(entry.endTime)}
-                    </span>
-                  ) : (
-                    <span className="text-gray-400">Unavailable</span>
-                  )}
-                </li>
-              );
-            })}
-          </ul>
-        </CardContent>
-      </Card>
-
+      <div className="pp-today-details">
+        {user && <section id="employee-info"><Card><CardHeader><h2 className="font-semibold text-pp-ink">Employee info</h2></CardHeader><CardContent className="grid grid-cols-1 gap-3 text-sm sm:grid-cols-2"><Field label="First name" value={user.firstName} /><Field label="Last name" value={user.lastName} /><Field label="Email" value={user.email.endsWith("@placeholder.local") ? "— (not set)" : user.email} /><Field label="Phone" value={user.phone || "—"} /><Field label="Role" value={user.role} /><Field label="Company" value={COMPANY_LABELS[user.company]} /><Field label="Job title" value={user.jobTitle || "—"} /><Field label="Hire date" value={user.hireDate ? user.hireDate.toISOString().slice(0, 10) : "—"} /></CardContent></Card></section>}
+        <section id="availability"><Card><CardHeader><h2 className="font-semibold text-pp-ink">Weekly availability</h2></CardHeader><CardContent className="p-0"><ul className="divide-y divide-pp-line">{DAYS_OF_WEEK.map((day) => { const entry = availabilityByDay.get(day.value); return <li key={day.value} className="flex items-center justify-between gap-3 px-6 py-2.5 text-sm"><span className="text-pp-ink">{day.label}</span><span className={entry ? "text-pp-ink-2" : "text-pp-ink-4"}>{entry ? `${formatTimeLabel(entry.startTime)} – ${formatTimeLabel(entry.endTime)}` : "Unavailable"}</span></li>; })}</ul></CardContent></Card></section>
+      </div>
+      {user && <section id="employee-documents" className="mt-6"><EmployeeDocumentsCard employeeId={user.id} hasDriveFolder={!!user.driveFolderId} isTerminated={!!user.terminatedAt} handbookSigned={handbookSigned} ssCardNotNeeded={user.ssCardNotNeeded} initialIssues={[]} initialDocuments={employeeDocuments.map((d) => ({ id: d.id, category: d.category, customName: d.customName, fileName: d.fileName, driveFileId: d.driveFileId, mimeType: d.mimeType, fileSize: d.fileSize, uploadedAt: d.uploadedAt.toISOString(), uploadedBy: d.uploadedBy }))} /></section>}
     </div>
   );
 }
@@ -248,8 +197,8 @@ export default async function DashboardPage() {
 function Field({ label, value }: { label: string; value: string }) {
   return (
     <div>
-      <div className="text-xs text-gray-500 uppercase tracking-wide">{label}</div>
-      <div className="text-gray-900 mt-0.5">{value}</div>
+      <div className="text-xs text-pp-ink-4 uppercase tracking-wide">{label}</div>
+      <div className="text-pp-ink mt-0.5">{value}</div>
     </div>
   );
 }

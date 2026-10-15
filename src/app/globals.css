@@ -6,23 +6,24 @@
   --font-sans: var(--font-inter);
   --font-mono: var(--font-jb-mono);
 
-  /* Portal palette — warm-neutral stone, quiet teal-slate accent */
-  --color-pp-bg: #fafaf8;
-  --color-pp-bg-2: #f4f3ef;
+  /* Today First palette: slate and mint from the supplied brand reference. */
+  --color-pp-bg: #f5f8f7;
+  --color-pp-bg-2: #eaf2ee;
   --color-pp-surface: #ffffff;
-  --color-pp-surface-2: #faf9f6;
-  --color-pp-line: #e8e6df;
-  --color-pp-line-2: #ddd9cf;
-  --color-pp-line-soft: #efeee8;
-  --color-pp-ink: #1a1a17;
-  --color-pp-ink-2: #3d3a33;
-  --color-pp-ink-3: #6c6860;
-  --color-pp-ink-4: #97938a;
-  --color-pp-ink-5: #b9b5ab;
-  --color-pp-accent: #4e6b74;
-  --color-pp-accent-2: #3d555c;
-  --color-pp-accent-soft: #eef2f3;
-  --color-pp-accent-line: #d4dde0;
+  --color-pp-surface-2: #f8fbf9;
+  --color-pp-line: #dce7e2;
+  --color-pp-line-2: #c9d8d0;
+  --color-pp-line-soft: #e8f0ec;
+  --color-pp-ink: #213640;
+  --color-pp-ink-2: #324953;
+  --color-pp-ink-3: #567077;
+  --color-pp-ink-4: #748a8a;
+  --color-pp-ink-5: #a8b9b4;
+  --color-pp-accent: #324953;
+  --color-pp-accent-2: #243b44;
+  --color-pp-accent-soft: #e8f6ed;
+  --color-pp-accent-line: #bfe8c9;
+  --color-pp-mint: #bfe8c9;
   --color-pp-warn: #b4621d;
   --color-pp-warn-bg: #fdf3e6;
   --color-pp-warn-line: #f1d9b8;
@@ -30,19 +31,19 @@
   --color-pp-ok-bg: #eef4ea;
   --color-pp-ok-line: #cfdec5;
 
-  /* Remap the default blue palette to the company teal-slate (#4e6b74)
+  /* Remap the default blue palette to the company slate (#324953)
      so existing `bg-blue-*` / `text-blue-*` usages pick up the accent. */
-  --color-blue-50: #f1f5f6;
-  --color-blue-100: #e3eaec;
-  --color-blue-200: #c5d3d6;
-  --color-blue-300: #a3b8be;
-  --color-blue-400: #78959e;
-  --color-blue-500: #5d7d87;
-  --color-blue-600: #4e6b74;
-  --color-blue-700: #3d555c;
-  --color-blue-800: #314449;
-  --color-blue-900: #243336;
-  --color-blue-950: #141d1f;
+  --color-blue-50: #f2f7f5;
+  --color-blue-100: #e5f1e9;
+  --color-blue-200: #cde8d5;
+  --color-blue-300: #bfe8c9;
+  --color-blue-400: #8cbaaa;
+  --color-blue-500: #557d78;
+  --color-blue-600: #324953;
+  --color-blue-700: #293f48;
+  --color-blue-800: #21363f;
+  --color-blue-900: #1a2e37;
+  --color-blue-950: #12242c;
 }
 
 body {
@@ -50,6 +51,79 @@ body {
   color: var(--color-foreground);
   font-family: var(--font-sans), -apple-system, "Segoe UI", system-ui, sans-serif;
 }
+
+/* Shared Today First shell */
+.pp-sidebar, .pp-mobile-bar { background: #324953; color: #fff; }
+.pp-sidebar { border-right: 1px solid #263d45; }
+.pp-sidebar img, .pp-mobile-bar img { filter: brightness(0) invert(1); }
+.pp-sidebar nav > div, .pp-sidebar nav > a { scrollbar-color: #6d8b89 transparent; }
+.pp-sidebar nav div[class*="uppercase"] { color: #bfe8c9; }
+.pp-sidebar nav a:not(.bg-pp-mint) { color: rgba(255,255,255,.82); }
+.pp-sidebar nav a:not(.bg-pp-mint) span { color: rgba(255,255,255,.82); }
+.pp-sidebar nav a.bg-pp-mint, .pp-sidebar nav a.bg-pp-mint span { color: #213640; }
+.pp-sidebar nav a:not(.bg-pp-mint):hover { background: rgba(255,255,255,.12); color: #fff; }
+.pp-sidebar p, .pp-sidebar button { color: rgba(255,255,255,.84); }
+.pp-sidebar button:hover { color: #fff; background: rgba(255,255,255,.1); }
+.pp-sidebar [class*="border-pp-line"] { border-color: rgba(255,255,255,.15); }
+.pp-sidebar [class*="bg-pp-line"] { background: rgba(255,255,255,.15); }
+.pp-mobile-bar button { color: #fff; }
+.pp-app-header { box-shadow: 0 1px 0 rgba(50,73,83,.04); }
+
+/* Today First employee home */
+.pp-today { color: #213640; }
+.pp-eyebrow { margin: 0; color: #567077; font-size: 11px; font-weight: 700; letter-spacing: .13em; text-transform: uppercase; }
+.pp-today-intro { display: flex; align-items: end; justify-content: space-between; gap: 20px; margin: 4px 0 28px; }
+.pp-today-intro h1 { margin: 10px 0 6px; font-size: clamp(30px, 3vw, 44px); line-height: 1.15; letter-spacing: -.045em; font-weight: 750; color: #213640; }
+.pp-today-intro > div > p:last-child { color: #567077; font-size: 15px; }
+.pp-today-help { display: inline-flex; align-items: center; gap: 9px; flex: none; padding: 11px 16px; border-radius: 999px; background: #324953; color: white; font-size: 13px; font-weight: 650; text-decoration: none; transition: background .15s, transform .15s; }
+.pp-today-help:hover { background: #243b44; transform: translateY(-1px); }
+.pp-today-feature-grid { display: grid; grid-template-columns: 1.25fr 1fr 1fr; gap: 16px; }
+.pp-today-feature { min-height: 224px; display: flex; flex-direction: column; align-items: flex-start; border: 1px solid #dce7e2; border-radius: 20px; background: #fff; padding: 23px; box-shadow: 0 10px 35px rgba(50,73,83,.035); }
+.pp-today-feature-primary { background: linear-gradient(135deg, #e8f6ed 0%, #f7fcf9 100%); border-color: #cfe9d7; }
+.pp-feature-icon { display: grid; place-items: center; width: 38px; height: 38px; margin-bottom: 14px; border-radius: 12px; background: #e8f6ed; color: #324953; font-size: 21px; font-weight: 700; }
+.pp-today-feature-primary .pp-feature-icon { background: #bfe8c9; }
+.pp-today-feature h2 { margin: 5px 0 6px; font-size: clamp(19px, 1.5vw, 23px); line-height: 1.25; font-weight: 690; letter-spacing: -.025em; }
+.pp-today-feature > p:not(.pp-eyebrow) { margin: 0; color: #567077; font-size: 13px; line-height: 1.5; }
+.pp-feature-progress { width: 100%; height: 8px; margin-top: auto; overflow: hidden; border-radius: 999px; background: #d5e9dc; }
+.pp-feature-progress span { display: block; height: 100%; border-radius: inherit; background: #324953; }
+.pp-feature-footer { width: 100%; display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: 12px; font-size: 12px; }
+.pp-feature-footer strong { color: #324953; font-weight: 700; }
+.pp-feature-footer a { display: inline-flex; align-items: center; gap: 7px; border-radius: 9px; background: #324953; color: #fff; padding: 8px 11px; font-size: 12px; font-weight: 700; text-decoration: none; }
+.pp-feature-footer a:hover { background: #243b44; }
+.pp-feature-inline-link { color: #324953; font-size: 13px; font-weight: 700; text-decoration: none; }
+.pp-feature-inline-link { margin-top: auto; padding-top: 18px; }
+.pp-feature-inline-link:hover { text-decoration: underline; }
+.pp-today-main-grid { display: grid; grid-template-columns: minmax(0, 1.6fr) minmax(280px, .8fr); gap: 16px; margin-top: 18px; }
+.pp-today-panel { min-width: 0; border: 1px solid #dce7e2; border-radius: 20px; background: #fff; box-shadow: 0 10px 35px rgba(50,73,83,.035); }
+.pp-today-panel-header { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 23px 24px 18px; }
+.pp-today-panel-header h2 { margin: 5px 0 0; font-size: 22px; font-weight: 700; letter-spacing: -.025em; }
+.pp-today-panel-header > a { color: #324953; font-size: 13px; font-weight: 650; white-space: nowrap; }
+.pp-learning-list { padding: 0 24px 10px; }
+.pp-learning-row { display: flex; align-items: center; gap: 15px; min-width: 0; padding: 16px 0; border-top: 1px solid #e8f0ec; }
+.pp-learning-icon { display: grid; place-items: center; flex: none; width: 48px; height: 48px; border-radius: 14px; background: #e8f6ed; color: #324953; font-size: 23px; }
+.pp-learning-copy { flex: 1; min-width: 0; }
+.pp-learning-copy > a { color: #213640; font-size: 15px; font-weight: 680; text-decoration: none; }
+.pp-learning-copy > a:hover { text-decoration: underline; }
+.pp-learning-copy p { margin: 2px 0 9px; overflow: hidden; color: #567077; font-size: 12px; text-overflow: ellipsis; white-space: nowrap; }
+.pp-learning-copy > div { max-width: 400px; }
+.pp-learning-end { display: flex; flex-direction: column; align-items: end; gap: 6px; flex: none; color: #567077; font-size: 12px; }
+.pp-learning-end > span:first-child { color: #324953; font-weight: 750; font-size: 14px; }
+.pp-learning-end a { color: #324953; font-weight: 700; }
+.pp-today-empty { padding: 4px 24px 28px; color: #567077; font-size: 14px; }
+.pp-quick-actions { display: grid; gap: 10px; padding: 0 20px 22px; }
+.pp-quick-actions > a { display: flex; align-items: center; gap: 12px; min-height: 65px; padding: 9px 12px; border: 1px solid #e1eae5; border-radius: 13px; color: #324953; text-decoration: none; transition: border .15s, background .15s; }
+.pp-quick-actions > a:hover { border-color: #bfe8c9; background: #f6fbf8; }
+.pp-quick-actions > a > span:nth-child(2) { flex: 1; min-width: 0; }
+.pp-quick-actions strong { display: block; font-size: 13px; }
+.pp-quick-actions small { display: block; margin-top: 2px; color: #567077; font-size: 11px; }
+.pp-quick-icon { display: grid; place-items: center; width: 37px; height: 37px; flex: none; border-radius: 11px; background: #e8f6ed; font-size: 18px; }
+.pp-today-details { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 22px; }
+.pp-today-details > section { min-width: 0; scroll-margin-top: 24px; }
+.pp-today-details .rounded-xl, #employee-documents .rounded-xl { border-color: #dce7e2; border-radius: 18px; box-shadow: 0 10px 35px rgba(50,73,83,.025); }
+#employee-documents { scroll-margin-top: 24px; }
+@media (max-width: 1100px) { .pp-today-feature-grid { grid-template-columns: repeat(2, 1fr); } .pp-today-feature-primary { grid-column: span 2; } }
+@media (max-width: 800px) { .pp-today-main-grid, .pp-today-details { grid-template-columns: 1fr; } }
+@media (max-width: 600px) { .pp-today-intro { align-items: start; } .pp-today-intro h1 { font-size: 31px; } .pp-today-help { display: none; } .pp-today-feature-grid { grid-template-columns: 1fr; } .pp-today-feature-primary { grid-column: auto; } .pp-today-feature { min-height: 200px; } .pp-learning-list { padding-inline: 16px; } .pp-today-panel-header { padding-inline: 16px; } }
 
 /* ============================================================
    Portal — Employees redesign components (Variation A · Roster)

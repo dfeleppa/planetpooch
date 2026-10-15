@@ -16,14 +16,14 @@ interface NavItem {
 }
 
 const employeeNav: NavItem[] = [
-  { href: "/dashboard", label: "Dashboard", icon: "▣" },
+  { href: "/dashboard", label: "My home", icon: "▣" },
   { href: "/modules", label: "Modules", icon: "❏" },
   { href: "/career", label: "Career", icon: "↗" },
 ];
 
 // Full admin nav — SUPER_ADMIN only (includes module management)
 const superAdminNav: NavItem[] = [
-  { href: "/admin", label: "Dashboard", icon: "▣" },
+  { href: "/admin", label: "People", icon: "▣" },
   { href: "/admin/employees", label: "Employees", icon: "◉" },
   { href: "/admin/modules", label: "Manage Modules", icon: "❏" },
   { href: "/admin/org-chart", label: "Org Chart", icon: "⌬" },
@@ -32,7 +32,7 @@ const superAdminNav: NavItem[] = [
 
 // Manager nav — no module management
 const managerNav: NavItem[] = [
-  { href: "/admin", label: "Dashboard", icon: "▣" },
+  { href: "/admin", label: "People", icon: "▣" },
   { href: "/admin/employees", label: "Employees", icon: "◉" },
   { href: "/admin/org-chart", label: "Org Chart", icon: "⌬" },
   { href: "/admin/audit-log", label: "Audit Log", icon: "≡" },
@@ -124,8 +124,8 @@ export function Sidebar() {
 
   const [collapsed, setCollapsed] = useState(
     () =>
-      typeof window !== "undefined" &&
-      localStorage.getItem("portal-sidebar-collapsed") === "true"
+      typeof window === "undefined" ||
+      localStorage.getItem("portal-sidebar-collapsed") !== "false"
   );
   const [mobileOpen, setMobileOpen] = useState(false);
 
@@ -178,17 +178,15 @@ export function Sidebar() {
   function renderInner(isCollapsed: boolean) {
     const navItemClass = (active: boolean) =>
       cn(
-        "relative flex items-center gap-3 rounded-md px-2.5 py-1.5 text-[13px] transition-colors",
+        "relative flex min-h-10 items-center gap-3 rounded-xl px-2.5 py-2 text-[13px] transition-colors",
         isCollapsed ? "justify-center px-2" : "",
         active
-          ? "bg-pp-surface text-pp-ink font-medium shadow-[inset_0_0_0_1px_var(--color-pp-line)]"
-          : "text-pp-ink-2 hover:bg-black/[0.04]"
+          ? "bg-pp-mint text-pp-ink font-semibold"
+          : "text-white/80 hover:bg-white/10 hover:text-white"
       );
 
     const activeRail = (active: boolean) =>
-      active && !isCollapsed ? (
-        <span className="absolute -left-[14px] top-1.5 bottom-1.5 w-[2px] rounded bg-pp-accent" />
-      ) : null;
+      active && !isCollapsed ? <span className="absolute -left-[14px] top-2 bottom-2 w-[3px] rounded bg-pp-mint" /> : null;
 
     return (
       <>
@@ -268,7 +266,7 @@ export function Sidebar() {
                 <div className="mx-1.5 h-px bg-pp-line" />
               )}
               <div className="-mt-2 flex flex-col gap-px">
-                {[{ href: "/admin/dashboard", label: "Dashboard", icon: "▣" }, ...businessFinanceNav, { href: "/marketing", label: "Marketing", icon: "▤" }, ...(isKnowledgeAccount ? [{ href: "/admin/knowledge", label: "Knowledge library", icon: "✦" }] : [])].map((item) => {
+                {[{ href: "/admin/dashboard", label: "Overview", icon: "▣" }, ...businessFinanceNav, { href: "/marketing", label: "Marketing", icon: "▤" }, ...(isKnowledgeAccount ? [{ href: "/admin/knowledge", label: "Knowledge library", icon: "✦" }] : [])].map((item) => {
                   const active = item.href === "/admin/dashboard"
                     ? pathname === item.href
                     : isActive(item.href);
@@ -454,7 +452,7 @@ export function Sidebar() {
       {/* Mobile top bar — only shows below md. Sits at the top of the page,
           above the main content. The rest of the layout adds top padding to
           compensate. */}
-      <div className="md:hidden sticky top-0 z-30 flex h-12 items-center justify-between border-b border-pp-line bg-pp-bg-2 px-3">
+      <div className="pp-mobile-bar md:hidden sticky top-0 z-30 flex h-14 items-center justify-between px-3">
         <button
           onClick={() => setMobileOpen(true)}
           className="rounded-md p-1.5 text-pp-ink-2 transition-colors hover:bg-black/[0.04]"
@@ -485,7 +483,7 @@ export function Sidebar() {
             onClick={() => setMobileOpen(false)}
             aria-hidden
           />
-          <aside className="absolute left-0 top-0 bottom-0 flex w-[260px] max-w-[85vw] flex-col bg-pp-bg-2 px-[14px] py-[18px] shadow-xl">
+          <aside className="pp-sidebar absolute left-0 top-0 bottom-0 flex w-[260px] max-w-[85vw] flex-col px-[14px] py-[18px] shadow-xl">
             {renderInner(false)}
           </aside>
         </div>
@@ -494,8 +492,8 @@ export function Sidebar() {
       {/* Desktop sidebar */}
       <aside
         className={cn(
-          "hidden md:sticky md:top-0 md:flex h-screen flex-col flex-shrink-0 transition-all duration-300 bg-pp-bg-2 border-r border-pp-line",
-          collapsed ? "md:w-[60px] md:px-2 md:py-4" : "md:w-[232px] md:px-[14px] md:py-[18px]"
+          "pp-sidebar hidden md:sticky md:top-0 md:flex h-screen flex-col flex-shrink-0 transition-all duration-300",
+          collapsed ? "md:w-[76px] md:px-3 md:py-5" : "md:w-[240px] md:px-[14px] md:py-[18px]"
         )}
       >
         {renderInner(collapsed)}

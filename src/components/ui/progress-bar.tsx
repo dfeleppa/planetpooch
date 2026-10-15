@@ -14,17 +14,24 @@ export function ProgressBar({ value, max = 100, className, showLabel = true, siz
 
   return (
     <div className={cn("flex items-center gap-3", className)}>
-      <div className={cn("flex-1 rounded-full bg-gray-200 overflow-hidden", heights[size])}>
+      <div
+        className={cn("flex-1 rounded-full bg-pp-accent-soft overflow-hidden", heights[size])}
+        role="progressbar"
+        aria-valuenow={value}
+        aria-valuemin={0}
+        aria-valuemax={Math.max(max, 1)}
+        aria-valuetext={`${percentage}% complete`}
+      >
         <div
           className={cn(
             "h-full rounded-full transition-all duration-300",
-            percentage === 100 ? "bg-green-500" : percentage > 0 ? "bg-blue-500" : "bg-gray-200"
+            percentage === 100 ? "bg-pp-mint" : percentage > 0 ? "bg-pp-accent" : "bg-pp-accent-soft"
           )}
           style={{ width: `${percentage}%` }}
         />
       </div>
       {showLabel && (
-        <span className="text-sm font-medium text-gray-600 min-w-[3rem] text-right">
+        <span className="text-sm font-medium text-pp-ink-3 min-w-[3rem] text-right">
           {percentage}%
         </span>
       )}
