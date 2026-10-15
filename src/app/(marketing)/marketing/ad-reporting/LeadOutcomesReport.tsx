@@ -4,17 +4,10 @@ import { assignLeadOutcomes, leadOutcomeWindow, matchingOutcomeCustomerIds, type
 import { attributionText, classifyLeadAttribution, type LeadAttributionSource, type SubmissionAttribution } from "@/lib/marketing/lead-attribution";
 import { normalizedPhone } from "@/lib/marketing/moego-client-history";
 import { Prisma } from "@prisma/client";
-import { SyncLeadOutcomesButton } from "./SyncLeadOutcomesButton";
 import type { ReportSource } from "./report-range";
 import { resolveSubmissionDateRange } from "@/lib/marketing/submission-date-range";
 
-const money = (cents: number) => (cents / 100).toLocaleString("en-US", { style: "currency", currency: "USD" });
-const eastern = new Intl.DateTimeFormat("en-US", { timeZone: "America/New_York", dateStyle: "medium" });
-const SOURCE_LABELS: Record<LeadAttributionSource, string> = {
-  meta: "Meta", "google-ads": "Google Ads", "google-lsa": "Google LSA", unattributed: "Unattributed",
-};
-
-export async function LeadOutcomesReport({ from, to, source }: { from: string; to: string; source: ReportSource }) {
+export async function loadLeadOutcomes({ from, to, source }: { from: string; to: string; source: ReportSource }) {
   const { startAt: since, endBefore: until } = resolveSubmissionDateRange(from, to);
   const { staleBefore } = leadOutcomeWindow(1);
   const [session, submissions, appointmentSync, orderSync, latestOrder, latestCustomer] = await Promise.all([
@@ -138,79 +131,34 @@ export async function LeadOutcomesReport({ from, to, source }: { from: string; t
     (appointmentSync && appointmentSync.lastSyncedAt < staleBefore) ||
     (orderSync && orderSync.lastSyncedAt < staleBefore) || (orderSync && !orderDataAvailable));
 
-  return <div>
-    <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
-      <div>
-        <p className="text-sm text-gray-600">Pet Resort and Mobile Grooming website submissions linked to a MoeGo customer appear here. Confirmed bookings and net paid are observed after each form; they are not proof that an ad caused the purchase.</p>
-      </div>
-      {isAdmin && <SyncLeadOutcomesButton />}
-    </div>
-    <div className="mb-4 grid gap-3 sm:grid-cols-3">
-      <div className="rounded-xl border border-gray-200 bg-white p-4"><p className="text-xs text-gray-500">Linked customers</p><p className="mt-1 text-2xl font-semibold">{uniqueOutcomes.size}</p></div>
-      <div className="rounded-xl border border-gray-200 bg-white p-4"><p className="text-xs text-gray-500">Confirmed bookings</p><p className="mt-1 text-2xl font-semibold">{appointmentSync ? totalBooked : "—"}</p></div>
-      <div className="rounded-xl border border-gray-200 bg-white p-4"><p className="text-xs text-gray-500">Net paid after form</p><p className="mt-1 text-2xl font-semibold">{orderDataAvailable ? money(totalNetPaidCents) : "—"}</p></div>
-    </div>
-    <p className="mb-4 text-sm text-gray-600">
-      {rows.length} linked submissions shown{rows.length === 500 ? " (first 500 only)" : ""}; {duplicateProfileLeads} include verified duplicate MoeGo profiles.
-      {appointmentSync ? ` Appointments synced through ${eastern.format(appointmentSync.lastSyncedAt)}.` : " Appointment sync has not run yet."}
-      {orderSync ? ` Order cursor through ${eastern.format(orderSync.lastSyncedAt)}.` : " Order sync has not run yet."}
-      {!orderDataAvailable && " Recent order data is unavailable; paid totals are hidden."}
-      {incomplete && " Counts may be incomplete while a sync is behind."}
-    </p>
-    <div className="mb-6 overflow-x-auto rounded-xl border border-gray-200 bg-white">
-      <div className="border-b border-gray-100 px-4 py-3">
-        <h4 className="font-semibold text-gray-900">Leads, appointments, and paid revenue by campaign</h4>
-        <p className="mt-1 text-xs text-gray-500">Successful MoeGo-linked forms received in the selected period. Outcomes after each form are assigned to its captured campaign; repeat forms receive each appointment or order once, at the latest prior submission. Unattributed leads remain visible.</p>
-      </div>
-      <table className="w-full min-w-[760px] text-left text-sm">
-        <thead className="bg-gray-50 text-gray-700"><tr>
-          {["Source", "Campaign", "Leads", "Booked leads", "Appointments", "Net paid after form"].map((label) => <th key={label} className="px-4 py-3 font-medium">{label}</th>)}
-        </tr></thead>
-        <tbody>
-          {campaignRows.map((row) => <tr key={`${row.source}|${row.campaignId ?? ""}`} className="border-t border-gray-100">
-            <td className="px-4 py-3">{SOURCE_LABELS[row.source]}</td>
-            <td className="max-w-72 break-words px-4 py-3">{row.campaignName}{row.campaignId && row.campaignId !== row.campaignName && <div className="text-xs text-gray-500">ID: {row.campaignId}</div>}</td>
-            <td className="px-4 py-3 tabular-nums">{row.leads}</td>
-            <td className="px-4 py-3 tabular-nums">{appointmentSync ? row.bookedLeads : "—"}</td>
-            <td className="px-4 py-3 tabular-nums">{appointmentSync ? row.appointments : "—"}</td>
-            <td className="px-4 py-3 tabular-nums">{orderDataAvailable ? money(row.netPaidCents) : "—"}</td>
-          </tr>)}
-          {campaignRows.length === 0 && <tr><td colSpan={6} className="px-4 py-8 text-center text-gray-500">No linked website leads in this period.</td></tr>}
-          {campaignRows.length > 0 && <tr className="border-t border-gray-200 bg-gray-50 font-semibold text-gray-900">
-            <td className="px-4 py-3" colSpan={2}>Total</td>
-            <td className="px-4 py-3 tabular-nums">{outcomes.length}</td>
-            <td className="px-4 py-3 tabular-nums">{appointmentSync ? totalBookedLeads : "—"}</td>
-            <td className="px-4 py-3 tabular-nums">{appointmentSync ? totalBooked : "—"}</td>
-            <td className="px-4 py-3 tabular-nums">{orderDataAvailable ? money(totalNetPaidCents) : "—"}</td>
-          </tr>}
-        </tbody>
-      </table>
-    </div>
-    <details className="rounded-xl border border-gray-200 bg-white">
-      <summary className="cursor-pointer px-4 py-3 text-sm font-medium text-gray-800">Show individual linked leads ({outcomes.length})</summary>
-      <div className="overflow-x-auto border-t border-gray-100">
-      <table className="w-full min-w-[1000px] text-left text-sm">
-        <thead className="bg-gray-50 text-gray-700"><tr>
-          {["Submitted", "Customer", "Business", "Source", "Campaign", "Services", "MoeGo profiles", "Booked", "Pending", "First booked", "Net paid after form"].map((label) => <th key={label} className="px-4 py-3 font-medium">{label}</th>)}
-        </tr></thead>
-        <tbody>{attributedOutcomes.map((row) => <tr key={row.id} className="border-t border-gray-100 align-top">
-          <td className="whitespace-nowrap px-4 py-3">{eastern.format(row.receivedAt)}</td>
-          <td className="px-4 py-3">{[row.firstName, row.lastName].filter(Boolean).join(" ") || row.moegoCustomerId}</td>
-          <td className="whitespace-nowrap px-4 py-3">{row.company === "RESORT" ? "Pet Resort" : "Mobile Grooming"}</td>
-          <td className="px-4 py-3">{SOURCE_LABELS[row.source]}</td>
-          <td className="max-w-56 break-words px-4 py-3">{row.source === "unattributed" ? "—" : row.campaignId ? campaignNames.get(`${row.source}|${row.campaignId}`) ?? row.campaignId : "—"}</td>
-          <td className="px-4 py-3">{row.services.join(", ") || "—"}</td>
-          <td className="px-4 py-3 tabular-nums">{row.profileCount}</td>
-          <td className="px-4 py-3 tabular-nums">{appointmentSync ? row.result.booked : "—"}</td>
-          <td className="px-4 py-3 tabular-nums">{appointmentSync ? row.result.pending : "—"}</td>
-          <td className="whitespace-nowrap px-4 py-3">{appointmentSync && row.result.firstBookedAt ? eastern.format(row.result.firstBookedAt) : "—"}</td>
-          <td className="whitespace-nowrap px-4 py-3 tabular-nums">{orderDataAvailable ? money(row.result.netPaidCents) : "—"}</td>
-        </tr>)}
-        {outcomes.length === 0 && <tr><td colSpan={11} className="px-4 py-8 text-center text-gray-500">No linked website submissions in this range.</td></tr>}
-        </tbody>
-      </table>
-      </div>
-    </details>
-    <p className="mt-3 text-xs text-gray-500">Duplicate profiles require the same phone and exact name or email; a shared phone alone is excluded. These are observed customer outcomes, not proof that an ad caused them. Unconfirmed appointments appear under Pending. Canceled, deleted, and no-show appointments are excluded.</p>
-  </div>;
+  return {
+    campaigns: campaignRows,
+    leads: attributedOutcomes.map((row) => ({
+      id: row.id,
+      receivedAt: row.receivedAt.toISOString(),
+      customer: [row.firstName, row.lastName].filter(Boolean).join(" ") || row.moegoCustomerId!,
+      business: row.company === "RESORT" ? "Pet Resort" : "Mobile Grooming",
+      source: row.source,
+      campaignId: row.campaignId,
+      campaignName: row.campaignId ? campaignNames.get(`${row.source}|${row.campaignId}`) ?? row.campaignId : null,
+      services: row.services,
+      profileCount: row.profileCount,
+      booked: row.result.booked,
+      pending: row.result.pending,
+      firstBookedAt: row.result.firstBookedAt?.toISOString() ?? null,
+      netPaidCents: row.result.netPaidCents,
+    })),
+    isAdmin,
+    linkedSubmissions: outcomes.length,
+    linkedCustomers: uniqueOutcomes.size,
+    duplicateProfileLeads,
+    totalBookedLeads,
+    totalBooked,
+    totalNetPaidCents,
+    appointmentsAvailable: Boolean(appointmentSync),
+    orderDataAvailable,
+    incomplete,
+    appointmentSyncedAt: appointmentSync?.lastSyncedAt.toISOString() ?? null,
+    orderSyncedAt: orderSync?.lastSyncedAt.toISOString() ?? null,
+  };
 }

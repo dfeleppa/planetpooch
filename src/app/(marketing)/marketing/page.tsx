@@ -1,15 +1,20 @@
 import Link from "next/link";
 import { requireMarketing } from "@/lib/auth-helpers";
-import { AdReportingDashboard } from "./ad-reporting/AdReportingDashboard";
 import { MetaCreativePerformance } from "./evaluate/MetaCreativePerformance";
-import { LeadOutcomesReport } from "./ad-reporting/LeadOutcomesReport";
+import { loadLeadOutcomes } from "./ad-reporting/LeadOutcomesReport";
+import { CampaignResultsReport } from "./ad-reporting/CampaignResultsReport";
 import { WebsiteAttributionReport } from "./website-attribution/Report";
 import { CampaignReportFilters } from "./ad-reporting/CampaignReportFilters";
 import { reportingRange } from "./ad-reporting/report-range";
-import { LeadAttributionDashboard } from "./ad-reporting/LeadAttributionDashboard";
 import { Suspense } from "react";
+import type { ReportSource } from "./ad-reporting/report-range";
 
 type SearchParams = { view?: string; month?: string; year?: string; range?: string; source?: string; submissionStart?: string; submissionEnd?: string; page?: string; days?: string; from?: string; to?: string; campaign?: string; sort?: string; dir?: string };
+
+async function Results({ from, to, source, rangeLabel }: { from: string; to: string; source: ReportSource; rangeLabel: string }) {
+  const outcomes = await loadLeadOutcomes({ from, to, source });
+  return <CampaignResultsReport from={from} to={to} source={source} rangeLabel={rangeLabel} outcomes={outcomes} />;
+}
 
 export default async function MarketingPage({ searchParams }: { searchParams: Promise<SearchParams> }) {
   const session = await requireMarketing();
@@ -33,23 +38,9 @@ export default async function MarketingPage({ searchParams }: { searchParams: Pr
         <CampaignReportFilters from={report.from} to={report.to} source={report.source} days={report.days} />
       </Suspense>
       <p className="mb-5 text-sm text-gray-600">Showing <strong>Pet Resort and Mobile Grooming</strong> · {report.label}</p>
-      <section aria-labelledby="spend-heading">
-        <h2 id="spend-heading" className="text-lg font-semibold text-gray-900">1. Spend and net paid after new lead forms</h2>
-        <p className="mt-1 text-sm text-gray-600">Revenue uses the linked form submissions and post-form MoeGo outcomes in section 3. Meta spend is synced from Ads Manager; Google spend comes from date-matched CSV imports or manual entries.</p>
-        <AdReportingDashboard business="" from={report.from} to={report.to} source={report.source} rangeLabel={report.label} />
-      </section>
-      <section aria-labelledby="website-leads-heading" className="mt-8 border-t border-gray-200 pt-7">
-        <h2 id="website-leads-heading" className="text-lg font-semibold text-gray-900">2. Submitted website leads</h2>
-        <p className="mt-1 text-sm text-gray-600">Real form submissions with captured source and campaign information. These can differ from leads reported inside Meta.</p>
-        <LeadAttributionDashboard from={report.from} to={report.to} source={report.source} />
-      </section>
-      <section aria-labelledby="outcomes-heading" className="mt-8 border-t border-gray-200 pt-7">
-        <h2 id="outcomes-heading" className="text-lg font-semibold text-gray-900">3. MoeGo outcomes</h2>
-        <p className="mt-1 mb-5 text-sm text-gray-600">See which submitted leads became bookings and paid customers.</p>
-        <Suspense fallback={<p className="text-sm text-gray-500">Loading MoeGo outcomes…</p>}>
-          <LeadOutcomesReport from={report.from} to={report.to} source={report.source} />
-        </Suspense>
-      </section>
+      <Suspense fallback={<p className="text-sm text-gray-500">Loading campaign results…</p>}>
+        <Results from={report.from} to={report.to} source={report.source} rangeLabel={report.label} />
+      </Suspense>
     </>}
   </div>;
 }
