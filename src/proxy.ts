@@ -105,7 +105,7 @@ export async function proxy(req: NextRequest) {
   }
 
   // Finance section: top-tier admins only.
-  if (pathname.startsWith("/finance") && !canAccessFinance) {
+  if ((pathname.startsWith("/finance") || pathname.startsWith("/cash-management")) && !canAccessFinance) {
     return NextResponse.redirect(new URL("/dashboard", req.url));
   }
 
@@ -143,6 +143,7 @@ export const config = {
     "/api/marketing/ad-assets/:path*",
     "/api/marketing/voice/:path*",
     "/finance/:path*",
+    "/cash-management/:path*",
     "/change-password",
   ],
 };

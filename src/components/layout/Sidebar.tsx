@@ -44,7 +44,8 @@ const marketingNav: NavItem[] = [
 
 const financeNav: NavItem[] = [
   { href: "/finance", label: "Finance", icon: "$" },
-  { href: "/finance/payroll", label: "Cash Mgmt & Payroll", icon: "◷" },
+  { href: "/finance/payroll", label: "Payroll", icon: "◷" },
+  { href: "/cash-management", label: "Cash Management", icon: "$" },
 ];
 
 const peoplePaths = [
