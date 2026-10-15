@@ -18,14 +18,23 @@ type Article = {
   company: Company | null;
   allowedRoles: Role[];
   isPublished: boolean;
-  updatedAt: string;
+  createdAt: string | null;
+  updatedAt: string | null;
 };
-type ArticleSummary = Pick<Article, "id" | "title" | "category" | "company" | "allowedRoles" | "isPublished" | "updatedAt">;
+type ArticleSummary = Pick<Article, "id" | "title" | "category" | "company" | "allowedRoles" | "isPublished" | "createdAt" | "updatedAt">;
 
-const emptyArticle: Omit<Article, "updatedAt"> = {
+const emptyArticle: Article = {
   id: "", title: "", content: "", category: "General", sourceLabel: null,
   sourceUrl: null, sourceUpdatedAt: null, company: null, allowedRoles: ["SUPER_ADMIN"], isPublished: false,
+  createdAt: null, updatedAt: null,
 };
+const articleDateTime = new Intl.DateTimeFormat("en-US", {
+  dateStyle: "medium", timeStyle: "short", timeZone: "America/New_York",
+});
+
+function formatArticleDateTime(value: string | null) {
+  return value ? `${articleDateTime.format(new Date(value))} ET` : "Unavailable";
+}
 const roleOptions: { role: Role; label: string }[] = [
   { role: "EMPLOYEE", label: "Employee role" },
   { role: "MANAGER", label: "Manager role" },
@@ -35,7 +44,7 @@ const roleOptions: { role: Role; label: string }[] = [
 
 export function KnowledgeEditor() {
   const [articles, setArticles] = useState<ArticleSummary[]>([]);
-  const [editing, setEditing] = useState<Omit<Article, "updatedAt"> | null>(null);
+  const [editing, setEditing] = useState<Article | null>(null);
   const [isEditing, setIsEditing] = useState(false);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -75,7 +84,7 @@ export function KnowledgeEditor() {
     }
   }
 
-  function update<K extends keyof Omit<Article, "updatedAt">>(key: K, value: Omit<Article, "updatedAt">[K]) {
+  function update<K extends keyof Omit<Article, "createdAt" | "updatedAt">>(key: K, value: Article[K]) {
     setEditing((current) => current ? { ...current, [key]: value } : current);
   }
 
@@ -157,6 +166,8 @@ export function KnowledgeEditor() {
                 <span className="mt-1 block text-xs text-pp-ink-3">
                   {article.category} · {article.company ?? "Both businesses"} · {article.isPublished ? "Published" : "Draft"}
                 </span>
+                <span className="mt-1 block text-xs text-pp-ink-3">Added {formatArticleDateTime(article.createdAt)}</span>
+                <span className="block text-xs text-pp-ink-3">Updated {formatArticleDateTime(article.updatedAt)}</span>
               </button>
             ))}
           </div>
@@ -169,6 +180,7 @@ export function KnowledgeEditor() {
                 <div>
                   <h2 className="text-xl font-semibold text-pp-ink">{editing.title}</h2>
                   <p className="mt-1 text-sm text-pp-ink-3">{editing.category} · {editing.company ?? "Both businesses"} · {editing.isPublished ? "Published" : "Draft"}</p>
+                  <p className="mt-2 text-xs text-pp-ink-3">Added {formatArticleDateTime(editing.createdAt)} · Updated {formatArticleDateTime(editing.updatedAt)}</p>
                 </div>
                 <button type="button" onClick={() => { setIsEditing(true); setError(""); setSuccess(""); }}
                   className="rounded-lg border border-pp-line px-4 py-2 text-sm font-medium text-pp-ink hover:bg-pp-accent-soft">Edit</button>

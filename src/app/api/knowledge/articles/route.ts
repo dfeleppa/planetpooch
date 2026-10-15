@@ -39,7 +39,7 @@ export async function GET(request: Request) {
     take: 200,
     select: {
       id: true, title: true, category: true, company: true,
-      allowedRoles: true, isPublished: true, updatedAt: true,
+      allowedRoles: true, isPublished: true, createdAt: true, updatedAt: true,
     },
   });
   return NextResponse.json(articles);
