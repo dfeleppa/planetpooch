@@ -46,10 +46,11 @@ export function attachMetaSpendCampaigns(campaigns: CombinedCampaign[], spend: M
   }
   const matched = new Set<string>();
   const result: SpendCampaign[] = campaigns.map((campaign) => {
-    const spendMatchedByName = campaign.source === "meta" && !campaign.id;
-    const metaSpend = campaign.source === "meta"
-      ? campaign.id ? byId.get(campaign.id) : byUniqueName.get(campaign.name) ?? undefined
-      : undefined;
+    const idMatch = campaign.source === "meta" && campaign.id ? byId.get(campaign.id) : undefined;
+    const nameMatch = campaign.source === "meta" && (!campaign.id || campaign.id === campaign.name)
+      ? byUniqueName.get(campaign.name) ?? undefined : undefined;
+    const metaSpend = idMatch ?? nameMatch;
+    const spendMatchedByName = Boolean(metaSpend && !idMatch);
     if (metaSpend?.id) matched.add(metaSpend.id);
     return metaSpend ? { ...campaign, name: metaSpend.name, metaSpend, spendMatchedByName } : campaign;
   });
