@@ -34,3 +34,19 @@ test("a form without a campaign ID is not assigned another campaign's spend", ()
   assert.equal(display[0].metaSpend, undefined);
   assert.equal(display[1].metaSpend?.spendCents, 900);
 });
+
+test("a missing campaign ID can use one exact Meta campaign name without changing form attribution", () => {
+  const forms: CombinedCampaign[] = [{ source: "meta", id: null, name: "Grooming Sep 2026", formLeads: 37,
+    linked: 37, bookedLeads: 2, appointments: 4, netPaidCents: 37902, ads: [] }];
+  const spend = aggregateMetaSpend([
+    { campaignId: "c1", campaignName: "Grooming Sep 2026", adsetId: "s1", adsetName: "Local", adId: "a1", adName: "Play", spendCents: 27637 },
+  ]);
+  const display = attachMetaSpendCampaigns(forms, spend);
+  assert.equal(display.length, 1);
+  assert.equal(display[0].id, null);
+  assert.equal(display[0].spendMatchedByName, true);
+  assert.equal(display[0].metaSpend?.spendCents, 27637);
+
+  const ambiguous = attachMetaSpendCampaigns(forms, [spend[0], { ...spend[0], id: "c2" }]);
+  assert.equal(ambiguous[0].metaSpend, undefined);
+});

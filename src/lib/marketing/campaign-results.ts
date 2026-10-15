@@ -34,17 +34,24 @@ export type CombinedCampaign = {
   ads: ReportCampaign[];
 };
 
-export type SpendCampaign = CombinedCampaign & { metaSpend?: MetaSpendCampaign };
+export type SpendCampaign = CombinedCampaign & { metaSpend?: MetaSpendCampaign; spendMatchedByName?: boolean };
 
 /** Include Meta campaigns with spend even when no website form carried their campaign ID. */
 export function attachMetaSpendCampaigns(campaigns: CombinedCampaign[], spend: MetaSpendCampaign[] | null): SpendCampaign[] {
   if (spend === null) return campaigns;
   const byId = new Map(spend.filter((row) => row.id !== null).map((row) => [row.id, row]));
+  const byUniqueName = new Map<string, MetaSpendCampaign | null>();
+  for (const row of spend) {
+    byUniqueName.set(row.name, byUniqueName.has(row.name) ? null : row);
+  }
   const matched = new Set<string>();
   const result: SpendCampaign[] = campaigns.map((campaign) => {
-    const metaSpend = campaign.source === "meta" && campaign.id ? byId.get(campaign.id) : undefined;
+    const spendMatchedByName = campaign.source === "meta" && !campaign.id;
+    const metaSpend = campaign.source === "meta"
+      ? campaign.id ? byId.get(campaign.id) : byUniqueName.get(campaign.name) ?? undefined
+      : undefined;
     if (metaSpend?.id) matched.add(metaSpend.id);
-    return metaSpend ? { ...campaign, name: metaSpend.name, metaSpend } : campaign;
+    return metaSpend ? { ...campaign, name: metaSpend.name, metaSpend, spendMatchedByName } : campaign;
   });
   for (const metaSpend of spend) {
     if (metaSpend.id && matched.has(metaSpend.id)) continue;

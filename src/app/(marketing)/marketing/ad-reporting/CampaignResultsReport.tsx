@@ -177,6 +177,7 @@ export function CampaignResultsReport({ from, to, source, rangeLabel, outcomes }
                           <span aria-hidden="true" className="mr-2 text-gray-400">{expanded === campaignKey ? "▾" : "▸"}</span>{campaign.name}
                         </button>
                         {campaign.id && campaign.id !== campaign.name && <span className="block pl-5 text-xs text-gray-400">ID: {campaign.id}</span>}
+                        {campaign.spendMatchedByName && <span className="block pl-5 text-xs text-gray-500">Spend matched by unique campaign name · Meta ID: {campaign.metaSpend?.id ?? "unavailable"}</span>}
                       </th>
                       <td className="px-4 py-3 text-right tabular-nums">{dollars(campaignSpend)}</td>
                       <td className="px-4 py-3 text-right">{number(leads ? campaign.formLeads : null)}</td>
