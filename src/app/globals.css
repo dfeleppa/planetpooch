@@ -52,11 +52,20 @@ body {
   font-family: var(--font-sans), -apple-system, "Segoe UI", system-ui, sans-serif;
 }
 
+/* Keep the sidebar scrollable without showing the browser's scrollbar. */
+.pp-sidebar-nav {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.pp-sidebar-nav::-webkit-scrollbar {
+  display: none;
+}
+
 /* Shared Today First shell */
 .pp-sidebar, .pp-mobile-bar { background: #324953; color: #fff; }
 .pp-sidebar { border-right: 1px solid #263d45; }
 .pp-sidebar img, .pp-mobile-bar img { filter: brightness(0) invert(1); }
-.pp-sidebar nav > div, .pp-sidebar nav > a { scrollbar-color: #6d8b89 transparent; }
 .pp-sidebar nav div[class*="uppercase"] { color: #bfe8c9; }
 .pp-sidebar nav a:not(.bg-pp-mint) { color: rgba(255,255,255,.82); }
 .pp-sidebar nav a:not(.bg-pp-mint) span { color: rgba(255,255,255,.82); }

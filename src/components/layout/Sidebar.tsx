@@ -274,7 +274,7 @@ export function Sidebar() {
           </button>
         )}
 
-        <nav className="mt-4 flex flex-1 flex-col gap-4 overflow-y-auto">
+        <nav className="pp-sidebar-nav mt-4 flex flex-1 flex-col gap-4 overflow-y-auto">
           {/* Management section — SUPER_ADMIN only */}
           {isSuperAdmin && (
             <>
