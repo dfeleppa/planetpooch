@@ -1082,6 +1082,19 @@ body {
 }
 
 @media print {
+  .pp-marketing-print-report > :not(.pp-marketing-campaign-results),
+  .pp-marketing-campaign-results > :not(.pp-marketing-campaign-table) {
+    display: none !important;
+  }
+
+  .pp-marketing-campaign-results,
+  .pp-marketing-campaign-table {
+    margin: 0 !important;
+    padding: 0 !important;
+    border: 0 !important;
+    box-shadow: none !important;
+  }
+
   .pp-marketing-print-report .overflow-x-auto,
   .pp-marketing-print-report .overflow-hidden {
     overflow: visible !important;

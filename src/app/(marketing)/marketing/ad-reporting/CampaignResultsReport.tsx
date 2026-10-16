@@ -9,6 +9,7 @@ import { MetaSyncRangeButton } from "./MetaSyncRangeButton";
 import { SyncLeadOutcomesButton } from "./SyncLeadOutcomesButton";
 import type { loadLeadOutcomes } from "./LeadOutcomesReport";
 import type { ReportSource } from "./report-range";
+import { MarketingPrintButton } from "../MarketingPrintButton";
 
 type Outcomes = Awaited<ReturnType<typeof loadLeadOutcomes>>;
 type Source = Exclude<ReportSource, "all"> | "unattributed";
@@ -112,19 +113,20 @@ export function CampaignResultsReport({ from, to, source, rangeLabel, outcomes }
   const totalForms = leads ? leads.totals.selected : null;
   const totalRevenue = outcomes.orderDataAvailable && metric?.moegoDataAvailable ? outcomes.totalNetPaidCents : null;
 
-  return <section aria-labelledby="campaign-results-heading" className="space-y-4">
+  return <section aria-labelledby="campaign-results-heading" className="pp-marketing-campaign-results space-y-4">
     <div className="flex flex-wrap items-start justify-between gap-3">
       <div>
         <h2 id="campaign-results-heading" className="text-lg font-semibold text-gray-900">Campaign results</h2>
         <p className="mt-1 text-sm text-gray-600">One view of ad spend, submitted website forms, and outcomes observed after MoeGo-linked forms in {rangeLabel}.</p>
       </div>
-      <div className="flex flex-wrap items-center gap-2 print:hidden">
+      <div className="flex w-full flex-wrap items-center gap-2 print:hidden">
         {(source === "all" || source === "meta") && <MetaSyncRangeButton from={from} to={to} />}
         {outcomes.isAdmin && <SyncLeadOutcomesButton />}
+        <MarketingPrintButton />
       </div>
     </div>
 
-    <div className="overflow-hidden rounded-xl border border-gray-200 bg-white">
+    <div className="pp-marketing-campaign-table overflow-hidden rounded-xl border border-gray-200 bg-white">
       <div className="overflow-x-auto">
         <table className="w-full min-w-[1100px] text-left text-sm">
           <thead className="bg-gray-50 text-xs uppercase tracking-wide text-gray-600"><tr>
