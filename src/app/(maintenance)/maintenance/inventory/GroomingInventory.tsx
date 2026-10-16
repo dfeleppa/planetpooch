@@ -108,18 +108,19 @@ export function GroomingInventory({ items, canManage }: { items: Item[]; canMana
         <section key={category} className="overflow-hidden rounded-xl border border-gray-200 bg-white">
           <h2 className="border-b border-gray-200 bg-gray-50 px-4 py-3 text-base font-semibold text-gray-900">{category}</h2>
           <div className="overflow-x-auto">
-            <table className="w-full text-sm">
+            <table className="w-full min-w-[760px] table-fixed text-sm">
+              <colgroup><col className="w-[46%]" /><col className="w-[23%]" /><col className="w-[17%]" /><col className="w-[14%]" /></colgroup>
               <thead><tr className="text-left text-xs uppercase tracking-wide text-gray-500">
                 <th scope="col" className="px-4 py-3">Item</th>
-                <th scope="col" className="w-48 px-3 py-3">On Hand</th>
-                <th scope="col" className="w-32 px-3 py-3">Req Quantity</th>
-                <th scope="col" className="w-28 px-3 py-3">History</th>
+                <th scope="col" className="px-3 py-3">On Hand</th>
+                <th scope="col" className="px-3 py-3">Req Quantity</th>
+                <th scope="col" className="px-3 py-3">History</th>
               </tr></thead>
               <tbody className="divide-y divide-gray-100">
                 {items.filter((item) => item.category.name === category).map((item) => (
                   <Fragment key={item.id}>
                   <tr>
-                    <td className="px-4 py-3 font-medium"><Link href={`/maintenance/inventory/${item.id}`} className="text-blue-700 hover:underline">{item.name}</Link></td>
+                    <td className="break-words px-4 py-3 font-medium"><Link href={`/maintenance/inventory/${item.id}`} className="text-blue-700 hover:underline">{item.name}</Link></td>
                     <td className="px-3 py-3">
                       {editing ? <div className="flex items-center gap-1 whitespace-nowrap">
                         <button type="button" aria-label={`Decrease ${item.name} on hand`} disabled={saving || Number(onHand[item.id]) <= 0} onClick={() => adjustOnHand(item.id, -1)} className="rounded border border-gray-300 px-2 py-1 font-semibold hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-40">−</button>
