@@ -96,6 +96,20 @@ enum Company {
   CORPORATE
 }
 
+/// Append-only count of the Cash Management safe against its fixed target.
+model SafeBalanceVerification {
+  id             String   @id @default(cuid())
+  expectedCents  Int
+  countedCents   Int
+  varianceCents  Int
+  note           String   @default("") @db.Text
+  verifiedById   String
+  verifiedByName String
+  verifiedAt     DateTime @default(now())
+
+  @@index([verifiedAt(sort: Desc)])
+}
+
 /// Curated source material for the employee knowledge assistant. Access is
 /// checked by the app before any text is sent to the AI provider.
 model KnowledgeArticle {

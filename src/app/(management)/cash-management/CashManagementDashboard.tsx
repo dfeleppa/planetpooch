@@ -2,6 +2,7 @@
 
 import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import { SafeBalanceVerification } from "./SafeBalanceVerification";
 
 type Deposit = { id: string; amountCents: number; depositedAt: string };
 type MobileSummary = {
@@ -87,9 +88,10 @@ export function CashManagementDashboard({ mobile, safeCents }: { mobile: MobileS
         <section className="rounded-xl border border-pp-line bg-white p-6 shadow-sm">
           <h2 className="text-lg font-semibold text-gray-900">Safe</h2>
           <p className="mt-4 text-3xl font-bold text-gray-900">{money(safeCents)}</p>
-          <p className="mt-2 text-sm text-gray-500">Fixed safe balance</p>
+          <p className="mt-2 text-sm text-gray-500">Expected safe balance</p>
         </section>
       </div>
+      <SafeBalanceVerification expectedCents={safeCents} />
       <section className="rounded-xl border border-pp-line bg-white p-6 shadow-sm">
         <h2 className="text-lg font-semibold text-gray-900">Mobile Grooming activity</h2>
         <p className="mt-2 text-sm text-gray-600">Completed payroll deposits: {money(mobile.payrollCents)} · Banked: {money(mobile.bankedCents)}</p>
