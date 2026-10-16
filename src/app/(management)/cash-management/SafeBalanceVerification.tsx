@@ -23,7 +23,7 @@ function parseCents(value: string): number | null {
   return Number.isSafeInteger(amount) && amount <= 2_147_483_647 ? amount : null;
 }
 
-export function SafeBalanceVerification({ expectedCents }: { expectedCents: number }) {
+export function SafeBalanceVerification({ expectedCents, onLatestCountChange }: { expectedCents: number; onLatestCountChange: (countedCents: number | null) => void }) {
   const [entries, setEntries] = useState<Entry[]>([]);
   const [counted, setCounted] = useState("");
   const [note, setNote] = useState("");
@@ -38,12 +38,15 @@ export function SafeBalanceVerification({ expectedCents }: { expectedCents: numb
       .then(async (response) => {
         const result = await response.json();
         if (!response.ok) throw new Error(result.error ?? "Could not load safe verifications.");
-        if (active) setEntries(result.entries);
+        if (active) {
+          setEntries(result.entries);
+          onLatestCountChange(result.entries[0]?.countedCents ?? null);
+        }
       })
       .catch((cause) => { if (active) setError(cause instanceof Error ? cause.message : "Could not load safe verifications."); })
       .finally(() => { if (active) setLoading(false); });
     return () => { active = false; };
-  }, []);
+  }, [onLatestCountChange]);
 
   const countedCents = parseCents(counted);
   const varianceCents = countedCents === null ? null : countedCents - expectedCents;
@@ -61,6 +64,7 @@ export function SafeBalanceVerification({ expectedCents }: { expectedCents: numb
       const result = await response.json();
       if (!response.ok) throw new Error(result.error ?? "Could not save verification.");
       setEntries((current) => [result.entry, ...current].slice(0, 50));
+      onLatestCountChange(result.entry.countedCents);
       setCounted(""); setNote("");
       setSuccess("Safe balance verification saved.");
     } catch (cause) {

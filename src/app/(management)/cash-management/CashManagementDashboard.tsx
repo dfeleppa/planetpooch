@@ -16,12 +16,13 @@ function money(cents: number) {
   return new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(cents / 100);
 }
 
-export function CashManagementDashboard({ mobile, safeCents }: { mobile: MobileSummary; safeCents: number }) {
+export function CashManagementDashboard({ mobile, safeCents, initialCountedCents }: { mobile: MobileSummary; safeCents: number; initialCountedCents: number | null }) {
   const router = useRouter();
   const [amount, setAmount] = useState("");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
+  const [countedSafeCents, setCountedSafeCents] = useState(initialCountedCents);
   const requestId = useRef<string | null>(null);
 
   async function recordDeposit(event: React.FormEvent<HTMLFormElement>) {
@@ -87,11 +88,12 @@ export function CashManagementDashboard({ mobile, safeCents }: { mobile: MobileS
         </section>
         <section className="rounded-xl border border-pp-line bg-white p-6 shadow-sm">
           <h2 className="text-lg font-semibold text-gray-900">Safe</h2>
-          <p className="mt-4 text-3xl font-bold text-gray-900">{money(safeCents)}</p>
-          <p className="mt-2 text-sm text-gray-500">Expected safe balance</p>
+          <p className="mt-4 text-3xl font-bold text-gray-900">{money(countedSafeCents ?? safeCents)}</p>
+          <p className="mt-2 text-sm text-gray-500">{countedSafeCents === null ? "Target safe balance" : `Last verified safe balance · Target ${money(safeCents)}`}</p>
+          {countedSafeCents !== null && countedSafeCents !== safeCents && <p className="mt-1 text-sm font-medium text-amber-800">{money(Math.abs(countedSafeCents - safeCents))} {countedSafeCents > safeCents ? "over target" : "under target"}</p>}
         </section>
       </div>
-      <SafeBalanceVerification expectedCents={safeCents} />
+      <SafeBalanceVerification expectedCents={safeCents} onLatestCountChange={setCountedSafeCents} />
       <section className="rounded-xl border border-pp-line bg-white p-6 shadow-sm">
         <h2 className="text-lg font-semibold text-gray-900">Mobile Grooming activity</h2>
         <p className="mt-2 text-sm text-gray-600">Completed payroll deposits: {money(mobile.payrollCents)} · Banked: {money(mobile.bankedCents)}</p>
