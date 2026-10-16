@@ -47,6 +47,14 @@ export function GroomingInventory({ items, canManage }: { items: Item[]; canMana
     setEditing(true);
   }
 
+  function adjustOnHand(itemId: string, amount: -1 | 1) {
+    const current = Number(onHand[itemId]);
+    const next = current + amount;
+    if (!Number.isSafeInteger(current) || !Number.isSafeInteger(next) || next < 0) return;
+    setOnHand((previous) => ({ ...previous, [itemId]: String(next) }));
+    setTouchedCounts((previous) => previous.includes(itemId) ? previous : [...previous, itemId]);
+  }
+
   async function save() {
     const changedRequirements = items.filter((item) => required[item.id] !== String(item.minimumThreshold));
     const changedCounts = items.filter((item) => touchedCounts.includes(item.id));
@@ -103,7 +111,7 @@ export function GroomingInventory({ items, canManage }: { items: Item[]; canMana
             <table className="w-full text-sm">
               <thead><tr className="text-left text-xs uppercase tracking-wide text-gray-500">
                 <th scope="col" className="px-4 py-3">Item</th>
-                <th scope="col" className="w-28 px-3 py-3">On Hand</th>
+                <th scope="col" className="w-48 px-3 py-3">On Hand</th>
                 <th scope="col" className="w-32 px-3 py-3">Req Quantity</th>
                 <th scope="col" className="w-28 px-3 py-3">History</th>
               </tr></thead>
@@ -113,7 +121,11 @@ export function GroomingInventory({ items, canManage }: { items: Item[]; canMana
                   <tr>
                     <td className="px-4 py-3 font-medium"><Link href={`/maintenance/inventory/${item.id}`} className="text-blue-700 hover:underline">{item.name}</Link></td>
                     <td className="px-3 py-3">
-                      {editing ? <input aria-label={`${item.name} on hand`} type="number" min="0" step="1" inputMode="numeric" className="w-20 rounded border border-gray-300 px-2 py-1" value={onHand[item.id] ?? ""} onChange={(event) => { setOnHand((previous) => ({ ...previous, [item.id]: event.target.value })); setTouchedCounts((previous) => previous.includes(item.id) ? previous : [...previous, item.id]); }} /> : item.id.startsWith("mg-item-") && item.counts.length === 0 && item.currentQuantity === 0 ? "—" : item.currentQuantity}
+                      {editing ? <div className="flex items-center gap-1 whitespace-nowrap">
+                        <button type="button" aria-label={`Decrease ${item.name} on hand`} disabled={saving || Number(onHand[item.id]) <= 0} onClick={() => adjustOnHand(item.id, -1)} className="rounded border border-gray-300 px-2 py-1 font-semibold hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-40">−</button>
+                        <input aria-label={`${item.name} on hand`} type="number" min="0" step="1" inputMode="numeric" className="w-16 rounded border border-gray-300 px-2 py-1" value={onHand[item.id] ?? ""} onChange={(event) => { setOnHand((previous) => ({ ...previous, [item.id]: event.target.value })); setTouchedCounts((previous) => previous.includes(item.id) ? previous : [...previous, item.id]); }} />
+                        <button type="button" aria-label={`Increase ${item.name} on hand`} disabled={saving || Number(onHand[item.id]) >= Number.MAX_SAFE_INTEGER} onClick={() => adjustOnHand(item.id, 1)} className="rounded border border-gray-300 px-2 py-1 font-semibold hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-40">+</button>
+                      </div> : item.id.startsWith("mg-item-") && item.counts.length === 0 && item.currentQuantity === 0 ? "—" : item.currentQuantity}
                     </td>
                     <td className="px-3 py-3">
                       {editing ? <input aria-label={`${item.name} required quantity`} type="number" min="0" step="1" inputMode="numeric" className="w-20 rounded border border-gray-300 px-2 py-1" value={required[item.id] ?? ""} onChange={(event) => setRequired((previous) => ({ ...previous, [item.id]: event.target.value }))} /> : item.id.startsWith("mg-item-") && item.minimumThreshold === 0 ? "—" : item.minimumThreshold}
