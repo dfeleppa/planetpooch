@@ -1082,6 +1082,27 @@ body {
 }
 
 @media print {
+  .pp-marketing-print-report .overflow-x-auto,
+  .pp-marketing-print-report .overflow-hidden {
+    overflow: visible !important;
+  }
+
+  .pp-marketing-print-report table {
+    min-width: 0 !important;
+    width: 100% !important;
+    font-size: 8pt;
+  }
+
+  .pp-marketing-print-report th,
+  .pp-marketing-print-report td {
+    padding: 0.06in !important;
+    overflow-wrap: anywhere;
+  }
+
+  .pp-marketing-print-report tr {
+    break-inside: avoid;
+  }
+
   @page {
     size: landscape;
     margin: 0.35in;

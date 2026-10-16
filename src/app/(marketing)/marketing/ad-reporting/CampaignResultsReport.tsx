@@ -118,7 +118,7 @@ export function CampaignResultsReport({ from, to, source, rangeLabel, outcomes }
         <h2 id="campaign-results-heading" className="text-lg font-semibold text-gray-900">Campaign results</h2>
         <p className="mt-1 text-sm text-gray-600">One view of ad spend, submitted website forms, and outcomes observed after MoeGo-linked forms in {rangeLabel}.</p>
       </div>
-      <div className="flex flex-wrap items-center gap-2">
+      <div className="flex flex-wrap items-center gap-2 print:hidden">
         {(source === "all" || source === "meta") && <MetaSyncRangeButton from={from} to={to} />}
         {outcomes.isAdmin && <SyncLeadOutcomesButton />}
       </div>
@@ -153,9 +153,9 @@ export function CampaignResultsReport({ from, to, source, rangeLabel, outcomes }
                   <td className="whitespace-nowrap px-4 py-3 text-right">
                     {editing === rowSource ? <form onSubmit={saveSpend} className="flex items-center justify-end gap-1">
                       <span>$</span><input aria-label={`${LABELS[rowSource]} spend in dollars`} type="number" min="0" max="21474836.47" step="0.01" required value={amount} onChange={(event) => setAmount(event.target.value)} className="w-24 rounded border border-gray-300 px-2 py-1 text-right" />
-                      <button type="submit" disabled={saving} className="text-blue-700 underline">{saving ? "Saving…" : "Save"}</button>
-                      <button type="button" onClick={() => setEditing(null)} className="text-gray-600 underline">Cancel</button>
-                    </form> : <>{dollars(spend)}{(rowSource === "google-ads" || rowSource === "google-lsa") && <button type="button" onClick={() => { setEditing(rowSource); setAmount(((spend ?? 0) / 100).toFixed(2)); setSaveError(""); }} className="ml-2 text-xs font-normal text-blue-700 underline">Edit</button>}</>}
+                      <button type="submit" disabled={saving} className="text-blue-700 underline print:hidden">{saving ? "Saving…" : "Save"}</button>
+                      <button type="button" onClick={() => setEditing(null)} className="text-gray-600 underline print:hidden">Cancel</button>
+                    </form> : <>{dollars(spend)}{(rowSource === "google-ads" || rowSource === "google-lsa") && <button type="button" onClick={() => { setEditing(rowSource); setAmount(((spend ?? 0) / 100).toFixed(2)); setSaveError(""); }} className="ml-2 text-xs font-normal text-blue-700 underline print:hidden">Edit</button>}</>}
                   </td>
                   <td className="px-4 py-3 text-right">{number(forms)}</td>
                   <td className="px-4 py-3 text-right">{number(linked)}</td>
