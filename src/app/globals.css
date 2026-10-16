@@ -52,6 +52,91 @@ body {
   font-family: var(--font-sans), -apple-system, "Segoe UI", system-ui, sans-serif;
 }
 
+.pp-grooming-print {
+  display: none;
+}
+
+@media print {
+  @page pp-grooming-inventory {
+    size: letter portrait;
+    margin: 0.42in;
+  }
+
+  body:has(.pp-grooming-print) * {
+    visibility: hidden !important;
+  }
+
+  body:has(.pp-grooming-print) .pp-grooming-print,
+  body:has(.pp-grooming-print) .pp-grooming-print * {
+    visibility: visible !important;
+  }
+
+  .pp-grooming-screen {
+    display: none !important;
+  }
+
+  .pp-grooming-print {
+    display: block;
+    position: absolute;
+    inset: 0 auto auto 0;
+    width: 100%;
+    max-width: 100%;
+    page: pp-grooming-inventory;
+    color: #111827;
+    font: 9pt Arial, sans-serif;
+  }
+
+  .pp-grooming-print-header {
+    margin-bottom: 0.14in;
+  }
+
+  .pp-grooming-print-header h1 {
+    margin: 0;
+    font-size: 16pt;
+    font-weight: 700;
+  }
+
+  .pp-grooming-print-header p {
+    margin: 0.03in 0 0;
+    color: #4b5563;
+  }
+
+  .pp-grooming-print table {
+    width: 100%;
+    table-layout: fixed;
+    border-collapse: collapse;
+  }
+
+  .pp-grooming-print thead {
+    display: table-header-group;
+  }
+
+  .pp-grooming-print th,
+  .pp-grooming-print td {
+    padding: 0.045in 0.08in;
+    border-bottom: 1px solid #d1d5db;
+    overflow-wrap: anywhere;
+    text-align: left;
+    vertical-align: top;
+  }
+
+  .pp-grooming-print th:nth-child(n + 2),
+  .pp-grooming-print td:nth-child(n + 2) {
+    text-align: right;
+  }
+
+  .pp-grooming-print-category th {
+    padding-top: 0.1in;
+    background: #e5e7eb !important;
+    font-weight: 700;
+    text-align: left !important;
+  }
+
+  .pp-grooming-print tr {
+    break-inside: avoid;
+  }
+}
+
 /* Keep the sidebar scrollable without showing the browser's scrollbar. */
 .pp-sidebar-nav {
   scrollbar-width: none;

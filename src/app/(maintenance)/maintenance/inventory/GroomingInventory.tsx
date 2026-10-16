@@ -85,17 +85,17 @@ export function GroomingInventory({ items, canManage }: { items: Item[]; canMana
 
   return (
     <div className="space-y-5">
-      {canManage && (
+      <div className="pp-grooming-screen">
         <div className="flex items-center justify-end gap-2">
           {error && <p role="alert" className="mr-auto text-sm text-red-600">{error}</p>}
-          {editing ? (
+          <Button type="button" size="sm" variant="secondary" disabled={editing || saving} onClick={() => window.print()}>Print / PDF</Button>
+          {canManage && (editing ? (
             <>
               <Button size="sm" disabled={saving} onClick={save}>{saving ? "Saving..." : "Save counts"}</Button>
               <Button size="sm" variant="secondary" disabled={saving} onClick={() => setEditing(false)}>Cancel</Button>
             </>
-          ) : <Button size="sm" variant="secondary" onClick={startEditing}>Edit counts</Button>}
+          ) : <Button size="sm" variant="secondary" onClick={startEditing}>Edit counts</Button>)}
         </div>
-      )}
       {categories.map((category) => (
         <section key={category} className="overflow-hidden rounded-xl border border-gray-200 bg-white">
           <h2 className="border-b border-gray-200 bg-gray-50 px-4 py-3 text-base font-semibold text-gray-900">{category}</h2>
@@ -132,6 +132,29 @@ export function GroomingInventory({ items, canManage }: { items: Item[]; canMana
           </div>
         </section>
       ))}
+      </div>
+      <div className="pp-grooming-print" aria-hidden="true">
+        <header className="pp-grooming-print-header">
+          <h1>Mobile Grooming Inventory</h1>
+          <p>On hand and required quantities</p>
+        </header>
+        <table>
+          <colgroup><col style={{ width: "72%" }} /><col style={{ width: "14%" }} /><col style={{ width: "14%" }} /></colgroup>
+          <thead><tr><th scope="col">Item</th><th scope="col">On Hand</th><th scope="col">Req Qty</th></tr></thead>
+          {categories.map((category) => (
+            <tbody key={category}>
+              <tr className="pp-grooming-print-category"><th scope="rowgroup" colSpan={3}>{category}</th></tr>
+              {items.filter((item) => item.category.name === category).map((item) => (
+                <tr key={item.id}>
+                  <td>{item.name}</td>
+                  <td>{item.id.startsWith("mg-item-") && item.counts.length === 0 && item.currentQuantity === 0 ? "—" : item.currentQuantity}</td>
+                  <td>{item.id.startsWith("mg-item-") && item.minimumThreshold === 0 ? "—" : item.minimumThreshold}</td>
+                </tr>
+              ))}
+            </tbody>
+          ))}
+        </table>
+      </div>
     </div>
   );
 }
