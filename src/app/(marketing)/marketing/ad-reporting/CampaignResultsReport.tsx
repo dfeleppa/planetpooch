@@ -34,6 +34,7 @@ const LABELS: Record<Source, string> = {
 const dollars = (cents: number | null) => cents === null ? "—" : (cents / 100).toLocaleString("en-US", { style: "currency", currency: "USD" });
 const number = (value: number | null) => value === null ? "—" : value.toLocaleString("en-US");
 const dateTime = (value: string | null) => value ? new Intl.DateTimeFormat("en-US", { timeZone: "America/New_York", dateStyle: "medium", timeStyle: "short" }).format(new Date(value)) : "—";
+const reportDate = (value: string) => new Intl.DateTimeFormat("en-US", { timeZone: "UTC", month: "short", day: "numeric", year: "numeric" }).format(new Date(`${value}T00:00:00Z`));
 const keyFor = (source: Source, id: string | null, name: string) => `${source}|${id ?? `name:${name}`}`;
 
 export function CampaignResultsReport({ from, to, source, rangeLabel, outcomes }: {
@@ -129,6 +130,7 @@ export function CampaignResultsReport({ from, to, source, rangeLabel, outcomes }
     <div className="pp-marketing-campaign-table overflow-hidden rounded-xl border border-gray-200 bg-white">
       <div className="overflow-x-auto">
         <table className="w-full min-w-[1100px] text-left text-sm">
+          <caption className="pp-marketing-print-period text-left">Reporting period: {reportDate(from)} – {reportDate(to)}</caption>
           <thead className="bg-gray-50 text-xs uppercase tracking-wide text-gray-600"><tr>
             <th scope="col" className="px-4 py-3 font-medium">Source / campaign</th>
             <th scope="col" className="px-4 py-3 text-right font-medium">Ad spend</th>

@@ -1081,6 +1081,10 @@ body {
   display: none;
 }
 
+.pp-marketing-print-period {
+  display: none;
+}
+
 @media print {
   .pp-marketing-print-report > :not(.pp-marketing-campaign-results),
   .pp-marketing-campaign-results > :not(.pp-marketing-campaign-table) {
@@ -1104,6 +1108,14 @@ body {
     min-width: 0 !important;
     width: 100% !important;
     font-size: 8pt;
+  }
+
+  .pp-marketing-print-period {
+    display: table-caption;
+    margin-bottom: 0.1in;
+    color: #111827;
+    font-size: 11pt;
+    font-weight: 700;
   }
 
   .pp-marketing-print-report th,
