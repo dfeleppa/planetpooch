@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { Prisma } from "@prisma/client";
 import { getSession, isSuperAdmin } from "@/lib/auth-helpers";
-import { cashOnHandCents, MOBILE_GROOMING_SOURCE } from "@/lib/cash-management";
+import { cashOnHandCents, MOBILE_GROOMING_SOURCE, PET_RESORT_SOURCE } from "@/lib/cash-management";
 import { prisma } from "@/lib/prisma";
 
 export async function POST(request: Request) {
@@ -19,10 +19,10 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Invalid request." }, { status: 400 });
   }
   const { source, amountCents, requestId } = body;
-  if (source !== MOBILE_GROOMING_SOURCE || typeof amountCents !== "number" ||
+  if ((source !== MOBILE_GROOMING_SOURCE && source !== PET_RESORT_SOURCE) || typeof amountCents !== "number" ||
       !Number.isSafeInteger(amountCents) || amountCents <= 0 || amountCents > 2_147_483_647 ||
       typeof requestId !== "string" || !/^[0-9a-f-]{36}$/i.test(requestId)) {
-    return NextResponse.json({ error: "Enter a valid Mobile Grooming deposit amount." }, { status: 400 });
+    return NextResponse.json({ error: "Enter a valid deposit amount and source." }, { status: 400 });
   }
 
   try {
@@ -36,17 +36,19 @@ export async function POST(request: Request) {
         }
         return { id: existing.id, duplicate: true };
       }
-      const [payroll, banked] = await Promise.all([
-        tx.financeMobileGroomingWeeklyCloseout.aggregate({ _sum: { finalDepositCents: true } }),
+      const [received, banked] = await Promise.all([
+        source === MOBILE_GROOMING_SOURCE
+          ? tx.financeMobileGroomingWeeklyCloseout.aggregate({ _sum: { finalDepositCents: true } }).then((result) => result._sum.finalDepositCents ?? 0)
+          : tx.financePetResortCashTransaction.aggregate({ _sum: { amountCents: true } }).then((result) => result._sum.amountCents ?? 0),
         tx.financeCashBankDeposit.aggregate({
-          where: { source: MOBILE_GROOMING_SOURCE }, _sum: { amountCents: true },
+          where: { source }, _sum: { amountCents: true },
         }),
       ]);
-      const available = cashOnHandCents(payroll._sum.finalDepositCents ?? 0, banked._sum.amountCents ?? 0);
-      if (amountCents > available) return { error: "Deposit exceeds Mobile Grooming cash on hand." };
+      const available = cashOnHandCents(received, banked._sum.amountCents ?? 0);
+      if (amountCents > available) return { error: "Deposit exceeds cash on hand." };
       const deposit = await tx.financeCashBankDeposit.create({
         data: {
-          source: MOBILE_GROOMING_SOURCE,
+          source,
           amountCents,
           requestId,
           recordedById: userId,

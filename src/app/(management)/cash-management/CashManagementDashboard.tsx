@@ -3,6 +3,7 @@
 import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { SafeBalanceVerification } from "./SafeBalanceVerification";
+import { PetResortCash, type PetResortSummary } from "./PetResortCash";
 
 type Deposit = { id: string; amountCents: number; depositedAt: string };
 type MobileSummary = {
@@ -16,7 +17,7 @@ function money(cents: number) {
   return new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(cents / 100);
 }
 
-export function CashManagementDashboard({ mobile, safeCents, initialCountedCents }: { mobile: MobileSummary; safeCents: number; initialCountedCents: number | null }) {
+export function CashManagementDashboard({ mobile, petResort, safeCents, initialCountedCents }: { mobile: MobileSummary; petResort: PetResortSummary; safeCents: number; initialCountedCents: number | null }) {
   const router = useRouter();
   const [amount, setAmount] = useState("");
   const [saving, setSaving] = useState(false);
@@ -68,9 +69,7 @@ export function CashManagementDashboard({ mobile, safeCents, initialCountedCents
       <div className="grid gap-4 lg:grid-cols-3">
         <section className="rounded-xl border border-pp-line bg-white p-6 shadow-sm">
           <h2 className="text-lg font-semibold text-gray-900">Pet Resort Deposit</h2>
-          <p className="mt-4 text-3xl font-bold text-gray-900">Pending</p>
-          <p className="mt-2 text-sm text-gray-500">Cash source will appear when the Pet Resort cash page is built.</p>
-          <button type="button" disabled className="mt-5 rounded-lg bg-gray-100 px-4 py-2 text-sm font-semibold text-gray-500">Deposit unavailable</button>
+          <PetResortCash summary={petResort} />
         </section>
         <section className="rounded-xl border border-pp-line bg-white p-6 shadow-sm">
           <h2 className="text-lg font-semibold text-gray-900">Mobile Grooming Deposit</h2>
@@ -94,6 +93,16 @@ export function CashManagementDashboard({ mobile, safeCents, initialCountedCents
         </section>
       </div>
       <SafeBalanceVerification expectedCents={safeCents} onLatestCountChange={setCountedSafeCents} />
+      <section className="rounded-xl border border-pp-line bg-white p-6 shadow-sm">
+        <h2 className="text-lg font-semibold text-gray-900">Pet Resort activity</h2>
+        <p className="mt-2 text-sm text-gray-600">{petResort.transactionCount} imported cash transactions · Cash received: {money(petResort.receivedCents)} · Banked: {money(petResort.bankedCents)}</p>
+        {petResort.recentDeposits.length > 0 ? <ul className="mt-4 divide-y divide-pp-line">
+          {petResort.recentDeposits.map((deposit) => <li key={deposit.id} className="flex justify-between gap-4 py-3 text-sm text-gray-700">
+            <span>{new Intl.DateTimeFormat("en-US", { dateStyle: "medium", timeZone: "America/New_York" }).format(new Date(deposit.depositedAt))}</span>
+            <span className="font-semibold">Bank deposit · {money(deposit.amountCents)}</span>
+          </li>)}
+        </ul> : <p className="mt-4 text-sm text-gray-500">No Pet Resort bank deposits recorded yet.</p>}
+      </section>
       <section className="rounded-xl border border-pp-line bg-white p-6 shadow-sm">
         <h2 className="text-lg font-semibold text-gray-900">Mobile Grooming activity</h2>
         <p className="mt-2 text-sm text-gray-600">Completed payroll deposits: {money(mobile.payrollCents)} · Banked: {money(mobile.bankedCents)}</p>

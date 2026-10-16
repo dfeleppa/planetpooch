@@ -1534,6 +1534,21 @@ model FinanceCashBankDeposit {
   @@index([source, depositedAt(sort: Desc)])
 }
 
+/// Cash received or refunded in Pet Resort MoeGo transactions, deduplicated across overlapping exports.
+model FinancePetResortCashTransaction {
+  id              String   @id @default(cuid())
+  fingerprint     String   @unique
+  transactionAt   DateTime
+  amountCents     Int
+  transactionType String
+  invoiceId       String
+  bookingId       String
+  importedAt      DateTime @default(now())
+  importedById    String
+
+  @@index([transactionAt(sort: Desc)])
+}
+
 /// One signed payout adjustment and explanation per groomer per payroll week.
 model FinanceMobileGroomingPayoutAdjustment {
   id            String   @id @default(cuid())

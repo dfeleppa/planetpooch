@@ -2,6 +2,7 @@ import { prisma } from "@/lib/prisma";
 
 export const SAFE_CENTS = 250_000;
 export const MOBILE_GROOMING_SOURCE = "mobile-grooming";
+export const PET_RESORT_SOURCE = "pet-resort";
 
 export function cashOnHandCents(payrollCents: number, depositedCents: number) {
   return payrollCents - depositedCents;
@@ -31,6 +32,29 @@ export async function mobileGroomingCashSummary(db: Pick<typeof prisma, "finance
       id: deposit.id,
       amountCents: deposit.amountCents,
       depositedAt: deposit.depositedAt.toISOString(),
+    })),
+  };
+}
+
+export async function petResortCashSummary(db: Pick<typeof prisma, "financePetResortCashTransaction" | "financeCashBankDeposit"> = prisma) {
+  const [received, deposited, transactionCount, recentDeposits] = await Promise.all([
+    db.financePetResortCashTransaction.aggregate({ _sum: { amountCents: true } }),
+    db.financeCashBankDeposit.aggregate({ where: { source: PET_RESORT_SOURCE }, _sum: { amountCents: true } }),
+    db.financePetResortCashTransaction.count(),
+    db.financeCashBankDeposit.findMany({
+      where: { source: PET_RESORT_SOURCE }, orderBy: { depositedAt: "desc" }, take: 10,
+      select: { id: true, amountCents: true, depositedAt: true },
+    }),
+  ]);
+  const receivedCents = received._sum.amountCents ?? 0;
+  const bankedCents = deposited._sum.amountCents ?? 0;
+  return {
+    receivedCents,
+    bankedCents,
+    onHandCents: cashOnHandCents(receivedCents, bankedCents),
+    transactionCount,
+    recentDeposits: recentDeposits.map((deposit) => ({
+      id: deposit.id, amountCents: deposit.amountCents, depositedAt: deposit.depositedAt.toISOString(),
     })),
   };
 }
