@@ -8,6 +8,7 @@ import { PetResortCash, type PetResortSummary } from "./PetResortCash";
 type Deposit = { id: string; amountCents: number; depositedAt: string };
 type MobileSummary = {
   payrollCents: number;
+  pendingCountedCents: number;
   bankedCents: number;
   onHandCents: number;
   recentDeposits: Deposit[];
@@ -74,7 +75,8 @@ export function CashManagementDashboard({ mobile, petResort, safeCents, initialC
         <section className="rounded-xl border border-pp-line bg-white p-6 shadow-sm">
           <h2 className="text-lg font-semibold text-gray-900">Mobile Grooming Deposit</h2>
           <p className="mt-4 text-3xl font-bold text-gray-900">{money(mobile.onHandCents)}</p>
-          <p className="mt-2 text-sm text-gray-500">Cash on hand from completed payroll closeouts, less bank deposits recorded here.</p>
+          <p className="mt-2 text-sm text-gray-500">Completed payroll deposits plus counted cash awaiting closeout, less bank deposits recorded here.</p>
+          {mobile.pendingCountedCents > 0 && <p className="mt-1 text-sm text-amber-800">Includes {money(mobile.pendingCountedCents)} counted cash awaiting closeout; employee cash payouts are not yet deducted from that amount.</p>}
           <form onSubmit={recordDeposit} className="mt-5 space-y-3">
             <label htmlFor="mobile-deposit-amount" className="block text-sm font-medium text-gray-700">Amount to deposit at bank</label>
             <div className="flex flex-wrap gap-2">
@@ -113,7 +115,7 @@ export function CashManagementDashboard({ mobile, petResort, safeCents, initialC
       </section>
       <section className="rounded-xl border border-pp-line bg-white p-6 shadow-sm">
         <h2 className="text-lg font-semibold text-gray-900">Mobile Grooming activity</h2>
-        <p className="mt-2 text-sm text-gray-600">Completed payroll deposits: {money(mobile.payrollCents)} · Banked: {money(mobile.bankedCents)}</p>
+        <p className="mt-2 text-sm text-gray-600">Completed payroll deposits: {money(mobile.payrollCents)} · Counted cash awaiting closeout: {money(mobile.pendingCountedCents)} · Banked: {money(mobile.bankedCents)}</p>
         {mobile.recentDeposits.length > 0 ? (
           <ul className="mt-4 divide-y divide-pp-line">
             {mobile.recentDeposits.map((deposit) => (

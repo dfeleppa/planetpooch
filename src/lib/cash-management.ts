@@ -4,17 +4,21 @@ export const SAFE_CENTS = 250_000;
 export const MOBILE_GROOMING_SOURCE = "mobile-grooming";
 export const PET_RESORT_SOURCE = "pet-resort";
 
-export function cashOnHandCents(payrollCents: number, depositedCents: number) {
-  return payrollCents - depositedCents;
+export function cashOnHandCents(payrollCents: number, pendingCountedCents: number, depositedCents: number) {
+  return payrollCents + pendingCountedCents - depositedCents;
 }
 
 export function petResortOnHandCents(importedCents: number, dailyCashCents: number, bankedCents: number) {
   return importedCents + dailyCashCents - bankedCents;
 }
 
-export async function mobileGroomingCashSummary(db: Pick<typeof prisma, "financeMobileGroomingWeeklyCloseout" | "financeCashBankDeposit"> = prisma) {
-  const [payroll, deposited, recentDeposits] = await Promise.all([
+export async function mobileGroomingCashSummary(db: Pick<typeof prisma, "financeMobileGroomingWeeklyCloseout" | "financeMobileGroomingDailyReconciliation" | "financeCashBankDeposit"> = prisma) {
+  const [payroll, pendingCounted, deposited, recentDeposits] = await Promise.all([
     db.financeMobileGroomingWeeklyCloseout.aggregate({ _sum: { finalDepositCents: true } }),
+    db.financeMobileGroomingDailyReconciliation.aggregate({
+      where: { payrollWeek: { business: MOBILE_GROOMING_SOURCE, mobileGroomingCloseout: { is: null } } },
+      _sum: { countedCashCents: true },
+    }),
     db.financeCashBankDeposit.aggregate({
       where: { source: MOBILE_GROOMING_SOURCE },
       _sum: { amountCents: true },
@@ -27,11 +31,13 @@ export async function mobileGroomingCashSummary(db: Pick<typeof prisma, "finance
     }),
   ]);
   const payrollCents = payroll._sum.finalDepositCents ?? 0;
+  const pendingCountedCents = pendingCounted._sum.countedCashCents ?? 0;
   const bankedCents = deposited._sum.amountCents ?? 0;
   return {
     payrollCents,
+    pendingCountedCents,
     bankedCents,
-    onHandCents: cashOnHandCents(payrollCents, bankedCents),
+    onHandCents: cashOnHandCents(payrollCents, pendingCountedCents, bankedCents),
     recentDeposits: recentDeposits.map((deposit) => ({
       id: deposit.id,
       amountCents: deposit.amountCents,

@@ -1,6 +1,30 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { petResortCashSummary } from "../src/lib/cash-management";
+import { mobileGroomingCashSummary, petResortCashSummary } from "../src/lib/cash-management";
+
+test("Mobile Grooming includes unclosed counted cash without counting closed weeks twice", async () => {
+  const db = {
+    financeMobileGroomingWeeklyCloseout: {
+      aggregate: async () => ({ _sum: { finalDepositCents: 622_120 } }),
+    },
+    financeMobileGroomingDailyReconciliation: {
+      aggregate: async (query: { where: { payrollWeek: { business: string; mobileGroomingCloseout: { is: null } } } }) => {
+        assert.deepEqual(query.where, {
+          payrollWeek: { business: "mobile-grooming", mobileGroomingCloseout: { is: null } },
+        });
+        return { _sum: { countedCashCents: 339_600 } };
+      },
+    },
+    financeCashBankDeposit: {
+      aggregate: async () => ({ _sum: { amountCents: 0 } }),
+      findMany: async () => [],
+    },
+  } as unknown as Parameters<typeof mobileGroomingCashSummary>[0];
+
+  const summary = await mobileGroomingCashSummary(db);
+  assert.equal(summary.pendingCountedCents, 339_600);
+  assert.equal(summary.onHandCents, 961_720);
+});
 
 test("Pet Resort daily cash increases the available deposit and remains in the activity log", async () => {
   const db = {
