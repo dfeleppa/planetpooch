@@ -119,22 +119,25 @@ export function GroomingInventory({ items, canManage, canEditCounts }: { items: 
               <tbody className="block space-y-2 bg-gray-50 p-3 md:table-row-group md:space-y-0 md:divide-y md:divide-gray-100 md:bg-white md:p-0">
                 {items.filter((item) => item.category.name === category).map((item) => (
                   <Fragment key={item.id}>
-                  <tr className="grid grid-cols-2 gap-x-3 gap-y-2 rounded-lg border border-gray-200 bg-white p-3 md:table-row md:rounded-none md:border-0 md:p-0">
-                    <td className="col-span-2 break-words pb-1 font-medium md:px-4 md:py-3"><Link href={`/maintenance/inventory/${item.id}`} className="text-blue-700 hover:underline">{item.name}</Link></td>
-                    <td className="col-span-2 md:px-3 md:py-3">
+                  <tr className="relative grid grid-cols-2 gap-x-3 gap-y-2 rounded-lg border border-gray-200 bg-white p-3 md:table-row md:rounded-none md:border-0 md:p-0">
+                    <td className="col-span-2 break-words pb-1 pr-10 font-medium md:px-4 md:py-3"><Link href={`/maintenance/inventory/${item.id}`} className="text-blue-700 hover:underline">{item.name}</Link></td>
+                    <td className="min-w-0 md:px-3 md:py-3">
                       <span className="mb-1 block text-xs font-medium uppercase tracking-wide text-gray-500 md:hidden">On Hand</span>
-                      {editing ? <div className="flex items-center gap-2 whitespace-nowrap md:gap-1">
-                        <button type="button" aria-label={`Decrease ${item.name} on hand`} disabled={saving || Number(onHand[item.id]) <= 0} onClick={() => adjustOnHand(item.id, -1)} className="min-h-10 min-w-10 rounded border border-gray-300 font-semibold hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-40 md:min-h-0 md:min-w-0 md:px-2 md:py-1">−</button>
-                        <input aria-label={`${item.name} on hand`} type="number" min="0" step="1" inputMode="numeric" className="h-10 w-20 rounded border border-gray-300 px-2 py-1 md:h-auto md:w-16" value={onHand[item.id] ?? ""} onChange={(event) => { setOnHand((previous) => ({ ...previous, [item.id]: event.target.value })); setTouchedCounts((previous) => previous.includes(item.id) ? previous : [...previous, item.id]); }} />
-                        <button type="button" aria-label={`Increase ${item.name} on hand`} disabled={saving || Number(onHand[item.id]) >= Number.MAX_SAFE_INTEGER} onClick={() => adjustOnHand(item.id, 1)} className="min-h-10 min-w-10 rounded border border-gray-300 font-semibold hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-40 md:min-h-0 md:min-w-0 md:px-2 md:py-1">+</button>
+                      {editing ? <div className="flex items-center gap-1 whitespace-nowrap">
+                        <button type="button" aria-label={`Decrease ${item.name} on hand`} disabled={saving || Number(onHand[item.id]) <= 0} onClick={() => adjustOnHand(item.id, -1)} className="min-h-10 min-w-8 rounded border border-gray-300 font-semibold hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-40 md:min-h-0 md:min-w-0 md:px-2 md:py-1">−</button>
+                        <input aria-label={`${item.name} on hand`} type="number" min="0" step="1" inputMode="numeric" className="h-10 w-12 min-w-0 rounded border border-gray-300 px-1 py-1 md:h-auto md:w-16 md:px-2" value={onHand[item.id] ?? ""} onChange={(event) => { setOnHand((previous) => ({ ...previous, [item.id]: event.target.value })); setTouchedCounts((previous) => previous.includes(item.id) ? previous : [...previous, item.id]); }} />
+                        <button type="button" aria-label={`Increase ${item.name} on hand`} disabled={saving || Number(onHand[item.id]) >= Number.MAX_SAFE_INTEGER} onClick={() => adjustOnHand(item.id, 1)} className="min-h-10 min-w-8 rounded border border-gray-300 font-semibold hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-40 md:min-h-0 md:min-w-0 md:px-2 md:py-1">+</button>
                       </div> : item.id.startsWith("mg-item-") && item.counts.length === 0 && item.currentQuantity === 0 ? "—" : item.currentQuantity}
                     </td>
                     <td className="md:px-3 md:py-3">
                       <span className="mb-1 block text-xs font-medium uppercase tracking-wide text-gray-500 md:hidden">Req Quantity</span>
                       {editing && canManage ? <input aria-label={`${item.name} required quantity`} type="number" min="0" step="1" inputMode="numeric" className="h-10 w-20 rounded border border-gray-300 px-2 py-1 md:h-auto" value={required[item.id] ?? ""} onChange={(event) => setRequired((previous) => ({ ...previous, [item.id]: event.target.value }))} /> : item.id.startsWith("mg-item-") && item.minimumThreshold === 0 ? "—" : item.minimumThreshold}
                     </td>
-                    <td className="flex items-end justify-end md:table-cell md:px-3 md:py-3">
-                      <button type="button" aria-expanded={expanded.includes(item.id)} onClick={() => setExpanded((previous) => previous.includes(item.id) ? previous.filter((id) => id !== item.id) : [...previous, item.id])} className="text-blue-700 hover:underline">{expanded.includes(item.id) ? "Hide history" : "View history"}</button>
+                    <td className="absolute right-2 top-2 md:static md:table-cell md:px-3 md:py-3">
+                      <button type="button" aria-label={`${expanded.includes(item.id) ? "Hide" : "View"} history for ${item.name}`} aria-expanded={expanded.includes(item.id)} onClick={() => setExpanded((previous) => previous.includes(item.id) ? previous.filter((id) => id !== item.id) : [...previous, item.id])} className="flex h-10 w-10 items-center justify-center rounded text-blue-700 hover:bg-blue-50 md:inline md:h-auto md:w-auto md:hover:bg-transparent md:hover:underline">
+                        <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className="h-5 w-5 md:hidden"><path d="M3 12a9 9 0 1 0 2.6-6.4" /><path d="M3 4v4h4" /><path d="M12 7v5l3 2" /></svg>
+                        <span className="hidden md:inline">{expanded.includes(item.id) ? "Hide history" : "View history"}</span>
+                      </button>
                     </td>
                   </tr>
                   {expanded.includes(item.id) && <tr className="block rounded-lg border border-gray-200 bg-white md:table-row md:rounded-none md:border-0 md:bg-gray-50"><td colSpan={4} className="block px-3 py-3 md:table-cell md:px-4">
