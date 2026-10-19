@@ -71,6 +71,17 @@ export type QuarterlyHeadlineSummary = {
   payrollPercent: QuarterlyHeadlineRollup;
 };
 
+export type AnnualHeadlineSummary = {
+  year: number;
+  quarters: { quarter: number; summary: QuarterlyHeadlineSummary }[];
+  completedWeeks: number;
+  netSalesTotal: number | null;
+  payrollTotal: number | null;
+  payrollPercent: number | null;
+  netSalesRunRate: number | null;
+  payrollRunRate: number | null;
+};
+
 type MobileGroomingImportReport = {
   finishedAppointments: number;
   uniqueClients: number;
@@ -147,6 +158,7 @@ const SECTION_ORDER: KpiSection[] = ["ACTUALS", "FORECAST"];
 
 const PET_RESORT_TAB = "PET_RESORT";
 const PET_RESORT_COPY_TAB = "PET_RESORT_COPY";
+const PET_RESORT_ANNUAL_TAB = "PET_RESORT_ANNUAL";
 const MOBILE_GROOMING_QUARTERLY_TAB = "MOBILE_GROOMING_QUARTERLY";
 const PET_RESORT_SEGMENTS = KPI_SEGMENTS.filter(
   (segmentDef) => segmentDef.key !== "MOBILE_GROOMING"
@@ -521,6 +533,8 @@ export function KpiView({
   quarterlyMobileData,
   quarterlyPayrollByWeek,
   quarterlyHeadlineSummary,
+  annualHeadlineSummary,
+  annualSegmentsData,
   headlineSummary,
 }: {
   segment: KpiSegment;
@@ -532,16 +546,19 @@ export function KpiView({
   quarterlyMobileData?: QuarterlyKpiWeek[];
   quarterlyPayrollByWeek?: Record<string, number>;
   quarterlyHeadlineSummary?: QuarterlyHeadlineSummary;
+  annualHeadlineSummary?: AnnualHeadlineSummary;
+  annualSegmentsData?: Record<string, QuarterlyKpiWeek[]>;
   headlineSummary: WeeklyHeadlineSummary;
 }) {
   const router = useRouter();
   const pathname = usePathname();
   const segmentDef = getSegmentDef(segment);
   const isPetResort =
-    activeTab === PET_RESORT_TAB || activeTab === PET_RESORT_COPY_TAB;
+    activeTab === PET_RESORT_TAB || activeTab === PET_RESORT_COPY_TAB || activeTab === PET_RESORT_ANNUAL_TAB;
   const petResortTab =
-    activeTab === PET_RESORT_COPY_TAB ? PET_RESORT_COPY_TAB : PET_RESORT_TAB;
+    activeTab === PET_RESORT_COPY_TAB ? PET_RESORT_COPY_TAB : activeTab === PET_RESORT_ANNUAL_TAB ? PET_RESORT_ANNUAL_TAB : PET_RESORT_TAB;
   const isPetResortCopy = activeTab === PET_RESORT_COPY_TAB;
+  const isPetResortAnnual = activeTab === PET_RESORT_ANNUAL_TAB;
   const isMobileQuarterly = activeTab === MOBILE_GROOMING_QUARTERLY_TAB;
   const quarterSummary = getQuarterSummary(week);
   const dataWithDerivedValues = useMemo(
@@ -838,15 +855,159 @@ export function KpiView({
 
     document.title = `Planet Pooch ${
       isPetResort ? "Pet Resort" : "Mobile Grooming"
-    } ${isPetResortCopy || isMobileQuarterly ? "Quarterly" : "Weekly"} KPI Report - ${week}`;
+    } ${isPetResortAnnual ? "Annual" : isPetResortCopy || isMobileQuarterly ? "Quarterly" : "Weekly"} KPI Report - ${isPetResortAnnual ? annualHeadlineSummary?.year : week}`;
     window.addEventListener("afterprint", restoreTitle, { once: true });
     window.print();
   }
 
   const tabs = [
     { id: PET_RESORT_COPY_TAB, label: "Quarterly" },
+    { id: PET_RESORT_ANNUAL_TAB, label: "Annual" },
     { id: PET_RESORT_TAB, label: "Weekly (legacy)" },
   ];
+
+  if (isPetResortAnnual && annualHeadlineSummary) {
+    const annual = annualHeadlineSummary;
+    const money = (cents: number | null) => cents === null ? "—" : quarterCurrencyFormatter.format(cents / 100);
+    const percent = (value: number | null) => value === null ? "—" : `${Math.round(value)}%`;
+    const csvRows = [
+      ["Period", "Completed weeks", "Net sales", "Net sales run rate", "Payroll", "Payroll run rate", "Payroll % of net sales"],
+      ...annual.quarters.map(({ quarter, summary }) => [
+        `Q${quarter} ${annual.year}`,
+        String(summary.completedWeeks),
+        money(summary.netSales.total),
+        money(summary.netSales.runRate),
+        money(summary.payroll.total),
+        money(summary.payroll.runRate),
+        percent(summary.payrollPercent.total),
+      ]),
+      ["Year to date", String(annual.completedWeeks), money(annual.netSalesTotal), money(annual.netSalesRunRate), money(annual.payrollTotal), money(annual.payrollRunRate), percent(annual.payrollPercent)],
+    ];
+    if (annualSegmentsData) {
+      const primaryMetrics = PET_RESORT_SEGMENTS.flatMap((segmentDef) =>
+        quarterMetricsForSegment(segmentDef, false).map((metric) => ({ segmentDef, metric }))
+      );
+      csvRows.push([], ["Primary KPIs by quarter", ...primaryMetrics.map(({ segmentDef, metric }) => `${segmentDef.label}: ${metric.label}`)]);
+      for (const quarter of [1, 2, 3, 4]) {
+        csvRows.push([`Q${quarter} ${annual.year}`, ...primaryMetrics.map(({ segmentDef, metric }) => {
+          const values = (annualSegmentsData[segmentDef.key] ?? []).slice((quarter - 1) * 13, quarter * 13)
+            .map((entry) => entry.data[metric.key]?.value ?? null);
+          const kind = isAdditiveQuarterMetric(segmentDef.key, metric.key, metric.format) ? "total" : "average";
+          return formatQuarterKpiValue(quarterAggregate(values, kind), metric.format);
+        })]);
+      }
+    }
+    const exportAnnualCsv = () => {
+      const csv = csvRows.map((row) => row.map((cell) => `"${cell.replace(/"/g, '""')}"`).join(",")).join("\n");
+      const url = URL.createObjectURL(new Blob([csv], { type: "text/csv" }));
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `kpis-pet-resort-annual-${annual.year}.csv`;
+      link.click();
+      URL.revokeObjectURL(url);
+    };
+    return (
+      <div className="pp-kpi-quarterly-report">
+        <Tabs tabs={tabs} activeTab={PET_RESORT_ANNUAL_TAB} onChange={(id) => navigate(id, week)} className="pp-kpi-screen-tabs mb-6" />
+        <section className="pp-kpi-quarter-card mb-6 rounded-xl border border-gray-200 bg-white px-5 py-4 shadow-sm">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-wider text-gray-500">Year</p>
+              <h2 className="mt-1 text-xl font-semibold text-gray-900">Annual Pet Resort KPIs {annual.year}</h2>
+              <p className="mt-1 text-sm text-gray-500">January 1, {annual.year} – December 31, {annual.year}</p>
+            </div>
+            <label className="flex flex-col gap-1 text-xs font-medium text-gray-500 print:hidden">
+              Year
+              <select aria-label="Annual year" className={SELECT_CLS} value={annual.year} onChange={(event) => navigate(PET_RESORT_ANNUAL_TAB, firstSundayInQuarter(Number(event.target.value), 1))}>
+                {yearsRange().map((year) => <option key={year} value={year}>{year}</option>)}
+              </select>
+            </label>
+          </div>
+        </section>
+        <header className="pp-kpi-print-header">
+          <div><div className="pp-kpi-print-eyebrow">Planet Pooch</div><h1>Pet Resort Annual KPI Report</h1></div>
+          <div className="pp-kpi-print-period"><strong>{annual.year}</strong><span>January 1 – December 31</span></div>
+        </header>
+        <div className="pp-kpi-report-controls mb-6 flex justify-end gap-2 print:hidden">
+          <Button variant="secondary" onClick={exportAnnualCsv}>Export CSV</Button>
+          <Button variant="secondary" onClick={printReport}>Print / PDF</Button>
+        </div>
+        <section className="mb-5" aria-labelledby="annual-headline-heading">
+          <h2 id="annual-headline-heading" className="text-sm font-semibold text-gray-900">Annual headline</h2>
+          <p className="mb-2 text-xs text-gray-500">Based on {annual.completedWeeks} completed {annual.completedWeeks === 1 ? "week" : "weeks"}. Run rate projects the weekly average across 52 weeks.</p>
+          <div className="grid gap-3 sm:grid-cols-3">
+            <Card><CardContent className="py-3"><p className="text-xs font-semibold uppercase text-gray-600">Pet Resort net sales</p><p className="mt-2 text-sm">Total <strong className="ml-2 tabular-nums">{money(annual.netSalesTotal)}</strong></p><p className="text-sm">Run rate <strong className="ml-2 tabular-nums">{money(annual.netSalesRunRate)}</strong></p></CardContent></Card>
+            <Card><CardContent className="py-3"><p className="text-xs font-semibold uppercase text-gray-600">Pet Resort payroll</p><p className="mt-2 text-sm">Total <strong className="ml-2 tabular-nums">{money(annual.payrollTotal)}</strong></p><p className="text-sm">Run rate <strong className="ml-2 tabular-nums">{money(annual.payrollRunRate)}</strong></p></CardContent></Card>
+            <Card><CardContent className="py-3"><p className="text-xs font-semibold uppercase text-gray-600">Payroll % of net sales</p><p className="mt-2 text-lg font-semibold tabular-nums">{percent(annual.payrollPercent)}</p></CardContent></Card>
+          </div>
+        </section>
+        <div className="pp-kpi-report-segments overflow-x-auto">
+          <Table className="min-w-[850px] text-sm print:w-full print:min-w-0 print:table-fixed">
+            <TableHead><tr>
+              <TableHeader>Quarter</TableHeader><TableHeader className="text-right">Completed weeks</TableHeader><TableHeader className="text-right">Net sales</TableHeader><TableHeader className="text-right">Quarter run rate</TableHeader><TableHeader className="text-right">Payroll</TableHeader><TableHeader className="text-right">Quarter run rate</TableHeader><TableHeader className="text-right">Payroll %</TableHeader>
+            </tr></TableHead>
+            <TableBody>
+              {annual.quarters.map(({ quarter, summary }) => (
+                <TableRow key={quarter}>
+                  <TableCell className="font-semibold">Q{quarter} {annual.year}</TableCell>
+                  <TableCell className="text-right tabular-nums">{summary.completedWeeks}</TableCell>
+                  <TableCell className="text-right tabular-nums">{money(summary.netSales.total)}</TableCell>
+                  <TableCell className="text-right tabular-nums">{money(summary.netSales.runRate)}</TableCell>
+                  <TableCell className="text-right tabular-nums">{money(summary.payroll.total)}</TableCell>
+                  <TableCell className="text-right tabular-nums">{money(summary.payroll.runRate)}</TableCell>
+                  <TableCell className="text-right tabular-nums">{percent(summary.payrollPercent.total)}</TableCell>
+                </TableRow>
+              ))}
+              <TableRow className="bg-slate-100 font-semibold"><TableCell>Year to date</TableCell><TableCell className="text-right">{annual.completedWeeks}</TableCell><TableCell className="text-right">{money(annual.netSalesTotal)}</TableCell><TableCell className="text-right">{money(annual.netSalesRunRate)}</TableCell><TableCell className="text-right">{money(annual.payrollTotal)}</TableCell><TableCell className="text-right">{money(annual.payrollRunRate)}</TableCell><TableCell className="text-right">{percent(annual.payrollPercent)}</TableCell></TableRow>
+            </TableBody>
+          </Table>
+        </div>
+        <p className="mt-2 text-xs text-gray-500">Quarter run rate projects each quarter’s completed-week average across 13 weeks. The year-to-date run rate projects across 52 weeks.</p>
+        {annualSegmentsData && (
+          <section className="mt-7" aria-labelledby="annual-segments-heading">
+            <h2 id="annual-segments-heading" className="mb-2 text-sm font-semibold text-gray-900">Primary KPIs by quarter</h2>
+            <div className="pp-kpi-report-segments overflow-x-auto">
+              <Table className="min-w-[1000px] text-xs print:w-full print:min-w-0 print:table-fixed">
+                <TableHead>
+                  <tr>
+                    <TableHeader rowSpan={2}>Quarter</TableHeader>
+                    {PET_RESORT_SEGMENTS.map((segmentDef) => (
+                      <TableHeader key={segmentDef.key} colSpan={quarterMetricsForSegment(segmentDef, false).length} className="border-l border-gray-200 text-center">
+                        {segmentDef.key === "IN_HOUSE_GROOMING" ? "In-House" : segmentDef.label}
+                      </TableHeader>
+                    ))}
+                  </tr>
+                  <tr>
+                    {PET_RESORT_SEGMENTS.flatMap((segmentDef) => quarterMetricsForSegment(segmentDef, false).map((metric) => (
+                      <TableHeader key={`${segmentDef.key}-${metric.key}`} className="whitespace-pre-line border-l border-gray-200 text-right text-[10px]">
+                        {quarterMetricLabel(segmentDef.key, metric.key, metric.label)}
+                      </TableHeader>
+                    )))}
+                  </tr>
+                </TableHead>
+                <TableBody>
+                  {[1, 2, 3, 4].map((quarter) => (
+                    <TableRow key={quarter}>
+                      <TableCell className="font-semibold">Q{quarter}</TableCell>
+                      {PET_RESORT_SEGMENTS.flatMap((segmentDef) => quarterMetricsForSegment(segmentDef, false).map((metric) => {
+                        const values = (annualSegmentsData[segmentDef.key] ?? []).slice((quarter - 1) * 13, quarter * 13)
+                          .map((entry) => entry.data[metric.key]?.value ?? null);
+                        const kind = isAdditiveQuarterMetric(segmentDef.key, metric.key, metric.format) ? "total" : "average";
+                        return <TableCell key={`${segmentDef.key}-${metric.key}`} className="border-l border-gray-200 text-right tabular-nums">
+                          {formatQuarterKpiValue(quarterAggregate(values, kind), metric.format)}
+                        </TableCell>;
+                      }))}
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+            <p className="mt-2 text-xs text-gray-500">Currency and count KPIs show quarterly totals; occupancy and average daily dogs show the average of available weeks.</p>
+          </section>
+        )}
+      </div>
+    );
+  }
 
   return (
     <div className={isPetResortCopy || isMobileQuarterly ? "pp-kpi-quarterly-report" : undefined}>

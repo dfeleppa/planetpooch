@@ -18,12 +18,14 @@ import {
   KpiView,
   type KpiCell,
   type QuarterlyHeadlineSummary,
+  type AnnualHeadlineSummary,
   type QuarterlyKpiWeek,
   type WeeklyHeadlineSummary,
 } from "./KpiView";
 
 const PET_RESORT_TAB = "PET_RESORT";
 const PET_RESORT_COPY_TAB = "PET_RESORT_COPY";
+const PET_RESORT_ANNUAL_TAB = "PET_RESORT_ANNUAL";
 const MOBILE_GROOMING_QUARTERLY_TAB = "MOBILE_GROOMING_QUARTERLY";
 const PET_RESORT_SEGMENTS = KPI_SEGMENTS.filter(
   (segmentDef) => segmentDef.key !== "MOBILE_GROOMING"
@@ -306,11 +308,11 @@ export default async function KpisPage({
 
   // Report source links can open the named business without changing the saved preference.
   const business = params.segment === "MOBILE_GROOMING" || params.segment === MOBILE_GROOMING_QUARTERLY_TAB ? { company: "GROOMING" as const }
-    : params.segment === PET_RESORT_TAB || params.segment === PET_RESORT_COPY_TAB
+    : params.segment === PET_RESORT_TAB || params.segment === PET_RESORT_COPY_TAB || params.segment === PET_RESORT_ANNUAL_TAB
       ? { company: "RESORT" as const } : await getActiveBusiness();
   const activeTab = business.company === "GROOMING" ? (params.segment === MOBILE_GROOMING_QUARTERLY_TAB ? MOBILE_GROOMING_QUARTERLY_TAB : "MOBILE_GROOMING")
-    : params.segment === PET_RESORT_TAB ? PET_RESORT_TAB : PET_RESORT_COPY_TAB;
-  const showPetResort = activeTab === PET_RESORT_TAB || activeTab === PET_RESORT_COPY_TAB;
+    : params.segment === PET_RESORT_TAB ? PET_RESORT_TAB : params.segment === PET_RESORT_ANNUAL_TAB ? PET_RESORT_ANNUAL_TAB : PET_RESORT_COPY_TAB;
+  const showPetResort = activeTab === PET_RESORT_TAB || activeTab === PET_RESORT_COPY_TAB || activeTab === PET_RESORT_ANNUAL_TAB;
   const segment: KpiSegment = "MOBILE_GROOMING";
 
   let weekStart: Date;
@@ -328,6 +330,76 @@ export default async function KpisPage({
   }
 
   const week = toWeekParam(weekStart);
+  if (activeTab === PET_RESORT_ANNUAL_TAB) {
+    const year = weekStart.getUTCFullYear();
+    const annualWeekStarts = [1, 2, 3, 4].flatMap((quarter) =>
+      getQuarterWeekStarts(new Date(Date.UTC(year, (quarter - 1) * 3, 1)))
+    );
+    const [quarters, annualValueRows] = await Promise.all([
+      Promise.all(
+      [1, 2, 3, 4].map(async (quarter) => ({
+        quarter,
+        summary: await getQuarterlyHeadlineSummary(
+          getQuarterWeekStarts(new Date(Date.UTC(year, (quarter - 1) * 3, 1)))
+        ),
+      }))
+      ),
+      prisma.kpiWeeklyValue.findMany({
+        where: {
+          segment: { in: PET_RESORT_SEGMENTS.map((segmentDef) => segmentDef.key) },
+          weekStart: { in: annualWeekStarts, lt: currentWeekStart() },
+        },
+        select: { segment: true, weekStart: true, metricKey: true, value: true },
+      }),
+    ]);
+    const annualValuesByWeek = new Map<string, Map<string, number | null>>();
+    for (const row of annualValueRows) {
+      const key = `${row.segment}:${toWeekParam(row.weekStart)}`;
+      if (!annualValuesByWeek.has(key)) annualValuesByWeek.set(key, new Map());
+      annualValuesByWeek.get(key)!.set(row.metricKey, row.value);
+    }
+    const annualSegmentsData: Record<string, QuarterlyKpiWeek[]> = {};
+    for (const segmentDef of PET_RESORT_SEGMENTS) {
+      annualSegmentsData[segmentDef.key] = annualWeekStarts.map((start) => {
+        const values = annualValuesByWeek.get(`${segmentDef.key}:${toWeekParam(start)}`);
+        const data: Record<string, KpiCell> = {};
+        for (const metric of segmentDef.metrics) {
+          data[metric.key] = { value: values?.get(metric.key) ?? null, previousValue: null, target: null, average: null };
+        }
+        return { week: toWeekParam(start), data: withDerivedKpiCells(segmentDef.key, data) };
+      });
+    }
+    const completedWeeks = quarters.reduce((sum, row) => sum + row.summary.completedWeeks, 0);
+    const netSalesTotal = quarters.reduce((sum, row) => sum + (row.summary.netSales.total ?? 0), 0);
+    const payrollTotal = quarters.reduce((sum, row) => sum + (row.summary.payroll.total ?? 0), 0);
+    const annualHeadlineSummary: AnnualHeadlineSummary = {
+      year,
+      quarters,
+      completedWeeks,
+      netSalesTotal: completedWeeks ? netSalesTotal : null,
+      payrollTotal: completedWeeks ? payrollTotal : null,
+      payrollPercent: netSalesTotal > 0 ? (payrollTotal / netSalesTotal) * 100 : null,
+      netSalesRunRate: completedWeeks ? Math.round(netSalesTotal / completedWeeks * 52) : null,
+      payrollRunRate: completedWeeks ? Math.round(payrollTotal / completedWeeks * 52) : null,
+    };
+    return (
+      <div className="pp-kpi-print-page pp-kpi-quarterly-print-page">
+        <div className="pp-kpi-screen-heading mb-6">
+          <h2 className="text-xl font-semibold text-gray-900">KPIs</h2>
+          <p className="mt-1 text-gray-500">Key performance indicators for Pet Resort and Mobile Grooming</p>
+        </div>
+        <KpiView
+          segment="MOBILE_GROOMING"
+          week={week}
+          data={{}}
+          activeTab={activeTab}
+          annualHeadlineSummary={annualHeadlineSummary}
+          annualSegmentsData={annualSegmentsData}
+          headlineSummary={{ mobileNetSalesCents: null, resortNetSalesCents: null, resortPayrollCents: null, resortPayrollPercent: null }}
+        />
+      </div>
+    );
+  }
   const previousWeekStart = addWeeks(weekStart, -1);
   const previousWeek = toWeekParam(previousWeekStart);
   const quarterWeekStarts =
