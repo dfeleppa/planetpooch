@@ -13,7 +13,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/Table";
-import { createPetResortPayrollRun } from "./actions";
+import { createPetResortPayrollRun, updatePetResortPayrollRun } from "./actions";
 
 export type PetResortPayrollRunRow = {
   id: string;
@@ -56,6 +56,13 @@ const initialEntry = {
   payPeriodEnd: "",
 };
 
+type EditableEntry = typeof initialEntry & { id: string };
+
+function usDateToIso(value: string): string {
+  const match = /^(\d{2})\/(\d{2})\/(\d{4})$/.exec(value);
+  return match ? `${match[3]}-${match[1]}-${match[2]}` : "";
+}
+
 function quarterForDate(date: string): number {
   return Math.floor((Number(date.slice(5, 7)) - 1) / 3) + 1;
 }
@@ -75,6 +82,8 @@ export function PetResortPayrollLedger({ rows }: { rows: PetResortPayrollRunRow[
   const [entry, setEntry] = useState(initialEntry);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
+  const [editing, setEditing] = useState<EditableEntry | null>(null);
+  const [editError, setEditError] = useState("");
   const visibleRows = rows.filter(
     (row) => Number(row.checkDate.slice(0, 4)) === year && quarterForDate(row.checkDate) === quarter
   );
@@ -97,6 +106,40 @@ export function PetResortPayrollLedger({ rows }: { rows: PetResortPayrollRunRow[
 
       setEntry(initialEntry);
       router.refresh();
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const startEditing = (row: PetResortPayrollRunRow) => {
+    const [start, end] = row.payPeriod.split(" to ");
+    setEditing({
+      id: row.id,
+      payrollType: row.payrollType,
+      checkDate: row.checkDate,
+      amount: row.amount,
+      payPeriodStart: usDateToIso(start ?? ""),
+      payPeriodEnd: usDateToIso(end ?? ""),
+    });
+    setEditError("");
+  };
+
+  const saveEdit = async () => {
+    if (!editing) return;
+    setSaving(true);
+    setEditError("");
+    try {
+      const result = await updatePetResortPayrollRun(editing);
+      if (!result.ok) {
+        setEditError(result.error);
+        return;
+      }
+      setYear(Number(editing.checkDate.slice(0, 4)));
+      setQuarter(quarterForDate(editing.checkDate));
+      setEditing(null);
+      router.refresh();
+    } catch {
+      setEditError("Could not update the payroll run. Please try again.");
     } finally {
       setSaving(false);
     }
@@ -239,19 +282,72 @@ export function PetResortPayrollLedger({ rows }: { rows: PetResortPayrollRunRow[
                   </TableCell>
                 </TableRow>
               ) : (
-                visibleRows.map((row) => (
-                  <TableRow key={row.id}>
-                    <TableCell>{row.payrollType}</TableCell>
-                    <TableCell className="whitespace-nowrap">
-                      {checkDateFormatter.format(new Date(`${row.checkDate}T00:00:00.000Z`))}
-                    </TableCell>
-                    <TableCell className="whitespace-nowrap text-right font-medium">
-                      {moneyFormatter.format(Number(row.amount))}
-                    </TableCell>
-                    <TableCell>{row.payPeriod}</TableCell>
-                    <TableCell />
-                  </TableRow>
-                ))
+                visibleRows.map((row) =>
+                  editing?.id === row.id ? (
+                    <TableRow key={row.id} className="bg-amber-50/60 align-top">
+                      <TableCell>
+                        <label htmlFor={`edit-type-${row.id}`} className="sr-only">Payroll type</label>
+                        <input id={`edit-type-${row.id}`} value={editing.payrollType} maxLength={50}
+                          onChange={(event) => setEditing({ ...editing, payrollType: event.target.value })}
+                          className={inputClassName} required />
+                      </TableCell>
+                      <TableCell>
+                        <label htmlFor={`edit-check-date-${row.id}`} className="sr-only">Check date</label>
+                        <input id={`edit-check-date-${row.id}`} type="date" value={editing.checkDate}
+                          onChange={(event) => setEditing({ ...editing, checkDate: event.target.value })}
+                          className={inputClassName} required />
+                      </TableCell>
+                      <TableCell>
+                        <label htmlFor={`edit-amount-${row.id}`} className="sr-only">Amount</label>
+                        <input id={`edit-amount-${row.id}`} type="number" min="0" step="0.01" value={editing.amount}
+                          onChange={(event) => setEditing({ ...editing, amount: event.target.value })}
+                          className={inputClassName} required />
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex min-w-72 items-center gap-2">
+                          <div>
+                            <label htmlFor={`edit-period-start-${row.id}`} className="sr-only">Pay period start</label>
+                            <input id={`edit-period-start-${row.id}`} type="date" value={editing.payPeriodStart}
+                              onChange={(event) => setEditing({ ...editing, payPeriodStart: event.target.value })}
+                              className={inputClassName} required />
+                          </div>
+                          <span className="text-gray-500">to</span>
+                          <div>
+                            <label htmlFor={`edit-period-end-${row.id}`} className="sr-only">Pay period end</label>
+                            <input id={`edit-period-end-${row.id}`} type="date" value={editing.payPeriodEnd}
+                              onChange={(event) => setEditing({ ...editing, payPeriodEnd: event.target.value })}
+                              className={inputClassName} required />
+                          </div>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex gap-2">
+                          <Button type="button" size="sm" disabled={saving} onClick={saveEdit}>
+                            {saving ? "Saving…" : "Save"}
+                          </Button>
+                          <Button type="button" size="sm" variant="secondary" disabled={saving}
+                            onClick={() => { setEditing(null); setEditError(""); }}>Cancel</Button>
+                        </div>
+                        {editError ? <p role="alert" className="mt-2 min-w-48 text-sm text-red-600">{editError}</p> : null}
+                      </TableCell>
+                    </TableRow>
+                  ) : (
+                    <TableRow key={row.id}>
+                      <TableCell>{row.payrollType}</TableCell>
+                      <TableCell className="whitespace-nowrap">
+                        {checkDateFormatter.format(new Date(`${row.checkDate}T00:00:00.000Z`))}
+                      </TableCell>
+                      <TableCell className="whitespace-nowrap text-right font-medium">
+                        {moneyFormatter.format(Number(row.amount))}
+                      </TableCell>
+                      <TableCell>{row.payPeriod}</TableCell>
+                      <TableCell>
+                        <Button type="button" size="sm" variant="secondary" disabled={saving}
+                          onClick={() => startEditing(row)}>Edit</Button>
+                      </TableCell>
+                    </TableRow>
+                  )
+                )
               )}
             </TableBody>
           </Table>
