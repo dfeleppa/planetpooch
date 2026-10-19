@@ -5,6 +5,10 @@
       "schedule": "0 7 * * *"
     },
     {
+      "path": "/api/marketing/google-ads/cron",
+      "schedule": "15 7 * * *"
+    },
+    {
       "path": "/api/finance/moego/cron",
       "schedule": "30 7 * * *"
     },

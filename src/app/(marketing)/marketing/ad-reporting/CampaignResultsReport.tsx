@@ -6,6 +6,7 @@ import type { MetaSpendCampaign } from "@/lib/marketing/meta-spend-breakdown";
 import { FacebookCampaignReportTable, GoogleCampaignReportTable } from "./CampaignReportTables";
 import { GoogleLsaLeadReportTable } from "./GoogleLsaLeadReportTable";
 import { MetaSyncRangeButton } from "./MetaSyncRangeButton";
+import { GoogleAdsSync } from "./GoogleAdsSync";
 import { SyncLeadOutcomesButton } from "./SyncLeadOutcomesButton";
 import type { loadLeadOutcomes } from "./LeadOutcomesReport";
 import type { ReportSource } from "./report-range";
@@ -22,7 +23,7 @@ type Metric = {
   metaSpendCampaigns: MetaSpendCampaign[] | null;
   metaDataComplete: boolean; metaDataThrough: string | null;
   moegoDataAvailable: boolean; leadsLimited: boolean;
-  googleSpendOrigin: "manual" | "csv" | null;
+  googleSpendOrigin: "manual" | "csv" | "api" | null;
   googleLsaSpendOrigin: "manual" | "csv" | null;
   metaSyncedAt: string | null; moegoSyncedAt: string | null;
 };
@@ -127,6 +128,8 @@ export function CampaignResultsReport({ from, to, source, rangeLabel, outcomes }
       </div>
     </div>
 
+    {(source === "all" || source === "google-ads") && <div className="print:hidden"><GoogleAdsSync from={from} to={to} /></div>}
+
     <div className="pp-marketing-campaign-table overflow-hidden rounded-xl border border-gray-200 bg-white">
       <div className="overflow-x-auto">
         <table className="w-full min-w-[1100px] text-left text-sm">
@@ -225,7 +228,7 @@ export function CampaignResultsReport({ from, to, source, rangeLabel, outcomes }
 
     <div className="space-y-1 text-xs text-gray-600">
       <p>Website forms are actual submissions; Meta platform leads may differ. MoeGo outcomes can occur after the form date. Each appointment and order is assigned to the latest prior linked form. Observed return is net paid after form divided by known source spend; it does not prove the ad caused a purchase.</p>
-      <p>Spend uses the selected calendar dates. Meta campaign, ad set, and ad amounts come from the same synced insight rows as the Meta source total; campaigns with spend appear even without tagged website forms. Google manual spend covers Pet Resort and Mobile Grooming together for this exact range and takes priority over imported CSV totals. A dash means unavailable, not zero.</p>
+      <p>Spend uses the selected calendar dates. Meta campaign, ad set, and ad amounts come from the same synced insight rows as the Meta source total; campaigns with spend appear even without tagged website forms. Google Ads spend can be synced from its API after campaigns are assigned to a division. Google manual spend covers Pet Resort and Mobile Grooming together for this exact range and takes priority over synced or imported totals. A dash means unavailable, not zero.</p>
       <p>{outcomes.linkedSubmissions} linked submissions ({outcomes.linkedCustomers} customers); {outcomes.duplicateProfileLeads} include verified duplicate MoeGo profiles. Appointments synced: {dateTime(outcomes.appointmentSyncedAt)}. Orders synced: {dateTime(outcomes.orderSyncedAt)}. Meta synced: {dateTime(metric?.metaSyncedAt ?? null)}.</p>
       {outcomes.incomplete && <p className="text-amber-700">Some MoeGo counts may be incomplete while a sync is behind.</p>}
       {metric && !metric.metaDataComplete && (source === "all" || source === "meta") && <p className="text-amber-700">Meta spend does not cover the full period{metric.metaDataThrough ? ` (latest available day: ${metric.metaDataThrough})` : ""}; spend and return are hidden.</p>}

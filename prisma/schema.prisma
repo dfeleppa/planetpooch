@@ -1284,6 +1284,7 @@ model FinanceGoogleCampaignReportRow {
   periodStart         DateTime @db.Date
   periodEnd           DateTime @db.Date
   rowOrder            Int      @default(0)
+  origin              String   @default("csv")
   campaignId          String?
   campaign            String
   status              String?
@@ -1306,6 +1307,35 @@ model FinanceGoogleCampaignReportRow {
   @@unique([business, periodStart, periodEnd, rowOrder], map: "FinanceGoogleCampaignReport_business_period_row_order_key")
   @@index([business, periodStart, periodEnd], map: "FinanceGoogleCampaignReport_business_period_idx")
   @@index([campaignId], map: "FinanceGoogleCampaignReport_campaign_id_idx")
+}
+
+/// A Google Ads campaign must belong to one division before its API spend is reported.
+model GoogleAdsCampaignBusiness {
+  campaignId String   @id
+  campaign   String
+  business   String?
+  updatedAt  DateTime @updatedAt
+}
+
+/// Original CSV rows retained when an API sync first replaces a date range.
+model GoogleAdsCsvBackup {
+  id          String   @id @default(cuid())
+  business    String
+  periodStart DateTime @db.Date
+  periodEnd   DateTime @db.Date
+  rows        Json
+  createdAt   DateTime @default(now())
+
+  @@unique([business, periodStart, periodEnd])
+}
+
+model GoogleAdsSyncWindow {
+  id        String   @id @default(cuid())
+  from      DateTime @db.Date
+  to        DateTime @db.Date
+  syncedAt  DateTime @default(now())
+
+  @@unique([from, to])
 }
 
 /// Google Local Services Ads lead rows imported for marketing reporting.

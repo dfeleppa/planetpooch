@@ -31,7 +31,7 @@ export async function GET(req: NextRequest) {
   const source: LeadAttributionSource | "all" = sourceParam === "meta" || sourceParam === "google-ads" || sourceParam === "google-lsa"
     ? sourceParam : "all";
 
-  const [meta, metaSpendCampaigns, orderCursor, latestOrder, google, lsa, manualSpend] = await Promise.all([
+  const [meta, metaSpendCampaigns, orderCursor, latestOrder, google, lsa, manualSpend, googleOrigins, googleWindow] = await Promise.all([
     getMetaPeriodMetrics("", from, toExclusive),
     source === "all" || source === "meta" ? getMetaSpendBreakdown(from, toExclusive) : Promise.resolve([]),
     prisma.moegoSyncState.findUnique({ where: { resource: "order" }, select: { lastSyncedAt: true } }),
@@ -48,6 +48,11 @@ export async function GET(req: NextRequest) {
       where: { business: "combined", periodStart: from, periodEnd: to },
       select: { source: true, amountCents: true, updatedAt: true },
     }),
+    prisma.financeGoogleCampaignReportRow.findMany({
+      where: { business: { in: ["pet-resort", "mobile-grooming"] }, periodStart: from, periodEnd: to },
+      distinct: ["origin"], select: { origin: true },
+    }),
+    prisma.googleAdsSyncWindow.findUnique({ where: { from_to: { from, to } }, select: { syncedAt: true } }),
   ]);
   const manualGoogle = manualSpend.find((item) => item.source === "google-ads");
   const manualLsa = manualSpend.find((item) => item.source === "google-lsa");
@@ -64,9 +69,9 @@ export async function GET(req: NextRequest) {
       metaAdSpend: meta.complete && (source === "all" || source === "meta")
         ? metaSpendCampaigns.reduce((sum, campaign) => sum + campaign.spendCents, 0) : meta.spendCents,
       metaSpendCampaigns: meta.complete ? metaSpendCampaigns : null,
-      googleAdSpend: manualGoogle?.amountCents ?? (google._count._all ? google._sum.costCents : null),
+      googleAdSpend: manualGoogle?.amountCents ?? (google._count._all ? google._sum.costCents : googleWindow ? 0 : null),
       googleLsaAdSpend: manualLsa?.amountCents ?? (lsa._count._all ? lsa._sum.totalPaidCents : null),
-      googleSpendOrigin: manualGoogle ? "manual" : google._count._all ? "csv" : null,
+      googleSpendOrigin: manualGoogle ? "manual" : google._count._all ? googleOrigins.every((row) => row.origin === "api") ? "api" : "csv" : googleWindow ? "api" : null,
       googleLsaSpendOrigin: manualLsa ? "manual" : lsa._count._all ? "csv" : null,
       metaRevenue: revenue?.totals.meta ?? null,
       googleRevenue: revenue?.totals["google-ads"] ?? null,
@@ -80,7 +85,7 @@ export async function GET(req: NextRequest) {
       moegoSyncedAt: latestOrder._max.syncedAt,
       moegoCursorThrough: orderCursor?.lastSyncedAt ?? null,
       moegoDataAvailable: orderDataAvailable,
-      googleImportedAt: google._max.updatedAt,
+      googleImportedAt: google._max.updatedAt ?? googleWindow?.syncedAt ?? null,
       googleLsaImportedAt: lsa._max.updatedAt,
     },
   });

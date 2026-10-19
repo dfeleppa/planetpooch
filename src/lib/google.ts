@@ -88,6 +88,27 @@ export function getDriveClient(): drive_v3.Drive | null {
   return cachedDrive;
 }
 
+/** Uses a Google Ads service account in the Cloud project approved for Ads API access. */
+export function getGoogleAdsAuthClient(): ReturnType<typeof ExternalAccountClient.fromJSON> {
+  const projectNumber = process.env.GOOGLE_ADS_GCP_PROJECT_NUMBER;
+  const poolId = process.env.GOOGLE_ADS_WIF_POOL_ID;
+  const providerId = process.env.GOOGLE_ADS_WIF_PROVIDER_ID;
+  const serviceAccountEmail = process.env.GOOGLE_ADS_SERVICE_ACCOUNT_EMAIL;
+  if (!projectNumber || !poolId || !providerId || !serviceAccountEmail) return null;
+  const audience = `//iam.googleapis.com/projects/${projectNumber}/locations/global/workloadIdentityPools/${poolId}/providers/${providerId}`;
+  const client = ExternalAccountClient.fromJSON({
+    type: "external_account",
+    audience,
+    subject_token_type: "urn:ietf:params:oauth:token-type:jwt",
+    token_url: "https://sts.googleapis.com/v1/token",
+    service_account_impersonation_url: `https://iamcredentials.googleapis.com/v1/projects/-/serviceAccounts/${serviceAccountEmail}:generateAccessToken`,
+    subject_token_supplier: { getSubjectToken: () => getVercelOidcToken() },
+  });
+  if (!client) throw new Error("Could not initialize Google Ads credentials.");
+  client.scopes = ["https://www.googleapis.com/auth/adwords"];
+  return client;
+}
+
 export function getSharedDriveId(): string | undefined {
   return process.env.GOOGLE_DRIVE_SHARED_DRIVE_ID;
 }
