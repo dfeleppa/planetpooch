@@ -11,6 +11,7 @@ import { GroomingInventory } from "./GroomingInventory";
 import { Company } from "@prisma/client";
 import Link from "next/link";
 import { MaintenanceSubnav } from "@/components/maintenance/MaintenanceSubnav";
+import { canEditGroomingCounts } from "@/lib/grooming-inventory-access";
 
 export default async function InventoryPage({
   searchParams,
@@ -19,11 +20,12 @@ export default async function InventoryPage({
 }) {
   await requireAuth();
   const session = await getServerSession(authOptions);
-  const user = session?.user as { role?: string; company?: Company | null } | undefined;
+  const user = session?.user as { id?: string; role?: string; company?: Company | null } | undefined;
   const canManage = isManagerOrAbove(user?.role);
+  const canEditCounts = canEditGroomingCounts(user);
 
   await searchParams;
-  const active = (await getActiveBusiness()).company;
+  const active = canEditCounts && !canManage ? "GROOMING" : (await getActiveBusiness()).company;
 
   const items = await prisma.inventoryItem.findMany({
     where: { company: active },
@@ -78,6 +80,7 @@ export default async function InventoryPage({
               })),
             }))}
             canManage={canManage}
+            canEditCounts={canEditCounts}
           />
         ) : <InventoryTable items={items} />
       )}

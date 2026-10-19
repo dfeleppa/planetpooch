@@ -22,7 +22,7 @@ const categoryOrder = [
   "Miscellaneous",
 ];
 
-export function GroomingInventory({ items, canManage }: { items: Item[]; canManage: boolean }) {
+export function GroomingInventory({ items, canManage, canEditCounts }: { items: Item[]; canManage: boolean; canEditCounts: boolean }) {
   const router = useRouter();
   const [editing, setEditing] = useState(false);
   const [onHand, setOnHand] = useState<Record<string, string>>({});
@@ -56,7 +56,7 @@ export function GroomingInventory({ items, canManage }: { items: Item[]; canMana
   }
 
   async function save() {
-    const changedRequirements = items.filter((item) => required[item.id] !== String(item.minimumThreshold));
+    const changedRequirements = canManage ? items.filter((item) => required[item.id] !== String(item.minimumThreshold)) : [];
     const changedCounts = items.filter((item) => touchedCounts.includes(item.id));
     const values = [...changedRequirements.map((item) => required[item.id]), ...changedCounts.map((item) => onHand[item.id])];
     if (values.some((value) => value === "" || !Number.isSafeInteger(Number(value)) || Number(value) < 0)) {
@@ -94,10 +94,10 @@ export function GroomingInventory({ items, canManage }: { items: Item[]; canMana
   return (
     <div className="space-y-5">
       <div className="pp-grooming-screen">
-        <div className="flex items-center justify-end gap-2">
-          {error && <p role="alert" className="mr-auto text-sm text-red-600">{error}</p>}
+        <div className="flex flex-wrap items-center justify-start gap-2 sm:justify-end">
+          {error && <p role="alert" className="w-full text-sm text-red-600 sm:mr-auto sm:w-auto">{error}</p>}
           <Button type="button" size="sm" variant="secondary" disabled={editing || saving} onClick={() => window.print()}>Print / PDF</Button>
-          {canManage && (editing ? (
+          {canEditCounts && (editing ? (
             <>
               <Button size="sm" disabled={saving} onClick={save}>{saving ? "Saving..." : "Save counts"}</Button>
               <Button size="sm" variant="secondary" disabled={saving} onClick={() => setEditing(false)}>Cancel</Button>
@@ -107,35 +107,37 @@ export function GroomingInventory({ items, canManage }: { items: Item[]; canMana
       {categories.map((category) => (
         <section key={category} className="overflow-hidden rounded-xl border border-gray-200 bg-white">
           <h2 className="border-b border-gray-200 bg-gray-50 px-4 py-3 text-base font-semibold text-gray-900">{category}</h2>
-          <div className="overflow-x-auto">
-            <table className="w-full min-w-[760px] table-fixed text-sm">
-              <colgroup><col className="w-[46%]" /><col className="w-[23%]" /><col className="w-[17%]" /><col className="w-[14%]" /></colgroup>
-              <thead><tr className="text-left text-xs uppercase tracking-wide text-gray-500">
+          <div className="md:overflow-x-auto">
+            <table className="w-full text-sm md:min-w-[760px] md:table-fixed">
+              <colgroup className="hidden md:table-column-group"><col className="w-[46%]" /><col className="w-[23%]" /><col className="w-[17%]" /><col className="w-[14%]" /></colgroup>
+              <thead className="sr-only md:not-sr-only"><tr className="text-left text-xs uppercase tracking-wide text-gray-500">
                 <th scope="col" className="px-4 py-3">Item</th>
                 <th scope="col" className="px-3 py-3">On Hand</th>
                 <th scope="col" className="px-3 py-3">Req Quantity</th>
                 <th scope="col" className="px-3 py-3">History</th>
               </tr></thead>
-              <tbody className="divide-y divide-gray-100">
+              <tbody className="block space-y-2 bg-gray-50 p-3 md:table-row-group md:space-y-0 md:divide-y md:divide-gray-100 md:bg-white md:p-0">
                 {items.filter((item) => item.category.name === category).map((item) => (
                   <Fragment key={item.id}>
-                  <tr>
-                    <td className="break-words px-4 py-3 font-medium"><Link href={`/maintenance/inventory/${item.id}`} className="text-blue-700 hover:underline">{item.name}</Link></td>
-                    <td className="px-3 py-3">
-                      {editing ? <div className="flex items-center gap-1 whitespace-nowrap">
-                        <button type="button" aria-label={`Decrease ${item.name} on hand`} disabled={saving || Number(onHand[item.id]) <= 0} onClick={() => adjustOnHand(item.id, -1)} className="rounded border border-gray-300 px-2 py-1 font-semibold hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-40">−</button>
-                        <input aria-label={`${item.name} on hand`} type="number" min="0" step="1" inputMode="numeric" className="w-16 rounded border border-gray-300 px-2 py-1" value={onHand[item.id] ?? ""} onChange={(event) => { setOnHand((previous) => ({ ...previous, [item.id]: event.target.value })); setTouchedCounts((previous) => previous.includes(item.id) ? previous : [...previous, item.id]); }} />
-                        <button type="button" aria-label={`Increase ${item.name} on hand`} disabled={saving || Number(onHand[item.id]) >= Number.MAX_SAFE_INTEGER} onClick={() => adjustOnHand(item.id, 1)} className="rounded border border-gray-300 px-2 py-1 font-semibold hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-40">+</button>
+                  <tr className="grid grid-cols-2 gap-x-3 gap-y-2 rounded-lg border border-gray-200 bg-white p-3 md:table-row md:rounded-none md:border-0 md:p-0">
+                    <td className="col-span-2 break-words pb-1 font-medium md:px-4 md:py-3"><Link href={`/maintenance/inventory/${item.id}`} className="text-blue-700 hover:underline">{item.name}</Link></td>
+                    <td className="col-span-2 md:px-3 md:py-3">
+                      <span className="mb-1 block text-xs font-medium uppercase tracking-wide text-gray-500 md:hidden">On Hand</span>
+                      {editing ? <div className="flex items-center gap-2 whitespace-nowrap md:gap-1">
+                        <button type="button" aria-label={`Decrease ${item.name} on hand`} disabled={saving || Number(onHand[item.id]) <= 0} onClick={() => adjustOnHand(item.id, -1)} className="min-h-10 min-w-10 rounded border border-gray-300 font-semibold hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-40 md:min-h-0 md:min-w-0 md:px-2 md:py-1">−</button>
+                        <input aria-label={`${item.name} on hand`} type="number" min="0" step="1" inputMode="numeric" className="h-10 w-20 rounded border border-gray-300 px-2 py-1 md:h-auto md:w-16" value={onHand[item.id] ?? ""} onChange={(event) => { setOnHand((previous) => ({ ...previous, [item.id]: event.target.value })); setTouchedCounts((previous) => previous.includes(item.id) ? previous : [...previous, item.id]); }} />
+                        <button type="button" aria-label={`Increase ${item.name} on hand`} disabled={saving || Number(onHand[item.id]) >= Number.MAX_SAFE_INTEGER} onClick={() => adjustOnHand(item.id, 1)} className="min-h-10 min-w-10 rounded border border-gray-300 font-semibold hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-40 md:min-h-0 md:min-w-0 md:px-2 md:py-1">+</button>
                       </div> : item.id.startsWith("mg-item-") && item.counts.length === 0 && item.currentQuantity === 0 ? "—" : item.currentQuantity}
                     </td>
-                    <td className="px-3 py-3">
-                      {editing ? <input aria-label={`${item.name} required quantity`} type="number" min="0" step="1" inputMode="numeric" className="w-20 rounded border border-gray-300 px-2 py-1" value={required[item.id] ?? ""} onChange={(event) => setRequired((previous) => ({ ...previous, [item.id]: event.target.value }))} /> : item.id.startsWith("mg-item-") && item.minimumThreshold === 0 ? "—" : item.minimumThreshold}
+                    <td className="md:px-3 md:py-3">
+                      <span className="mb-1 block text-xs font-medium uppercase tracking-wide text-gray-500 md:hidden">Req Quantity</span>
+                      {editing && canManage ? <input aria-label={`${item.name} required quantity`} type="number" min="0" step="1" inputMode="numeric" className="h-10 w-20 rounded border border-gray-300 px-2 py-1 md:h-auto" value={required[item.id] ?? ""} onChange={(event) => setRequired((previous) => ({ ...previous, [item.id]: event.target.value }))} /> : item.id.startsWith("mg-item-") && item.minimumThreshold === 0 ? "—" : item.minimumThreshold}
                     </td>
-                    <td className="px-3 py-3">
+                    <td className="flex items-end justify-end md:table-cell md:px-3 md:py-3">
                       <button type="button" aria-expanded={expanded.includes(item.id)} onClick={() => setExpanded((previous) => previous.includes(item.id) ? previous.filter((id) => id !== item.id) : [...previous, item.id])} className="text-blue-700 hover:underline">{expanded.includes(item.id) ? "Hide history" : "View history"}</button>
                     </td>
                   </tr>
-                  {expanded.includes(item.id) && <tr className="bg-gray-50"><td colSpan={4} className="px-4 py-3">
+                  {expanded.includes(item.id) && <tr className="block rounded-lg border border-gray-200 bg-white md:table-row md:rounded-none md:border-0 md:bg-gray-50"><td colSpan={4} className="block px-3 py-3 md:table-cell md:px-4">
                     {item.counts.length ? <ul className="max-w-xs space-y-1 text-gray-700">{item.counts.map((count) => <li key={count.id} className="flex justify-between gap-4"><time dateTime={count.countedAt}>{new Date(count.countedAt).toLocaleDateString("en-US", { timeZone: "America/New_York" })}</time><strong>{count.quantity}</strong></li>)}</ul> : <p className="text-gray-500">No counts yet</p>}
                   </td></tr>}
                   </Fragment>

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/auth-helpers";
+import { canEditGroomingCounts } from "@/lib/grooming-inventory-access";
 
 export async function POST(
   req: NextRequest,
@@ -8,6 +9,9 @@ export async function POST(
 ) {
   const session = await getSession();
   if (!session?.user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  if (!canEditGroomingCounts(session.user)) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
 
   const { itemId } = await params;
   const { quantity } = await req.json();

@@ -8,6 +8,7 @@ import { cn } from "@/lib/utils";
 import { useState, useEffect } from "react";
 import { useBusiness } from "@/components/business/BusinessProvider";
 import { isKnowledgeOwner } from "@/lib/knowledge-owner";
+import { canEditGroomingCounts } from "@/lib/grooming-inventory-access";
 import { UserMenu } from "./UserMenu";
 
 interface NavItem {
@@ -127,6 +128,7 @@ export function Sidebar() {
   // "Manager-tier admin UI" — controls visibility of the Employee View
   // section.
   const isManagerOrAbove = isSuperAdmin || isManager;
+  const showGroomingInventory = !isManagerOrAbove && canEditGroomingCounts(session?.user);
   const hasMarketingAccess =
     role === "MARKETING" || isSuperAdmin || jobTitle === "CMO";
   // CMO can manage modules — give the same admin nav as SUPER_ADMIN so
@@ -357,6 +359,13 @@ export function Sidebar() {
                 </Link>
               );
             })}
+            {showGroomingInventory && (
+              <Link href="/maintenance/inventory?company=GROOMING" title={isCollapsed ? "Inventory" : undefined} className={navItemClass(pathname === "/maintenance/inventory")}>
+                {activeRail(pathname === "/maintenance/inventory")}
+                <span className="text-[14px] w-4 text-center flex-shrink-0" aria-hidden="true">▤</span>
+                {!isCollapsed && <span className="truncate">Inventory</span>}
+              </Link>
+            )}
           </div>
 
           {/* Human Resources — admin navs only (plain employee nav has no header) */}
