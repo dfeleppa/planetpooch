@@ -1549,6 +1549,19 @@ model FinancePetResortCashTransaction {
   @@index([transactionAt(sort: Desc)])
 }
 
+/// Cash entered in the Pet Resort daily deposit log, separate from MoeGo imports.
+model FinancePetResortDailyCash {
+  id           String   @id @default(cuid())
+  cashDate     DateTime @db.Date
+  amountCents  Int
+  note         String   @default("")
+  recordedAt   DateTime @default(now())
+  recordedById String
+  requestId    String   @unique
+
+  @@index([cashDate(sort: Desc), recordedAt(sort: Desc)])
+}
+
 /// One signed payout adjustment and explanation per groomer per payroll week.
 model FinanceMobileGroomingPayoutAdjustment {
   id            String   @id @default(cuid())

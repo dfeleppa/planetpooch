@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { Prisma } from "@prisma/client";
 import { getSession, isSuperAdmin } from "@/lib/auth-helpers";
-import { cashOnHandCents, MOBILE_GROOMING_SOURCE, PET_RESORT_SOURCE } from "@/lib/cash-management";
+import { cashOnHandCents, petResortOnHandCents, MOBILE_GROOMING_SOURCE, PET_RESORT_SOURCE } from "@/lib/cash-management";
 import { prisma } from "@/lib/prisma";
 
 export async function POST(request: Request) {
@@ -36,15 +36,20 @@ export async function POST(request: Request) {
         }
         return { id: existing.id, duplicate: true };
       }
-      const [received, banked] = await Promise.all([
+      const [received, dailyCash, banked] = await Promise.all([
         source === MOBILE_GROOMING_SOURCE
           ? tx.financeMobileGroomingWeeklyCloseout.aggregate({ _sum: { finalDepositCents: true } }).then((result) => result._sum.finalDepositCents ?? 0)
           : tx.financePetResortCashTransaction.aggregate({ _sum: { amountCents: true } }).then((result) => result._sum.amountCents ?? 0),
+        source === PET_RESORT_SOURCE
+          ? tx.financePetResortDailyCash.aggregate({ _sum: { amountCents: true } }).then((result) => result._sum.amountCents ?? 0)
+          : Promise.resolve(0),
         tx.financeCashBankDeposit.aggregate({
           where: { source }, _sum: { amountCents: true },
         }),
       ]);
-      const available = cashOnHandCents(received, banked._sum.amountCents ?? 0);
+      const available = source === PET_RESORT_SOURCE
+        ? petResortOnHandCents(received, dailyCash, banked._sum.amountCents ?? 0)
+        : cashOnHandCents(received, banked._sum.amountCents ?? 0);
       if (amountCents > available) return { error: "Deposit exceeds cash on hand." };
       const deposit = await tx.financeCashBankDeposit.create({
         data: {

@@ -1,14 +1,17 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 
 type Deposit = { id: string; amountCents: number; depositedAt: string };
+type DailyCash = { id: string; cashDate: string; amountCents: number; note: string };
 export type PetResortSummary = {
   receivedCents: number;
+  dailyCashCents: number;
   bankedCents: number;
   onHandCents: number;
   transactionCount: number;
+  recentDailyCash: DailyCash[];
   recentDeposits: Deposit[];
 };
 
@@ -18,11 +21,52 @@ export function PetResortCash({ summary }: { summary: PetResortSummary }) {
   const router = useRouter();
   const [importFile, setImportFile] = useState<File | null>(null);
   const [amount, setAmount] = useState("");
+  const [cashDate, setCashDate] = useState("");
+  const [dailyAmount, setDailyAmount] = useState("");
+  const [dailyNote, setDailyNote] = useState("");
+  const [savingDaily, setSavingDaily] = useState(false);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
   const requestId = useRef<string | null>(null);
+  const dailyRequestId = useRef<string | null>(null);
   const importInput = useRef<HTMLInputElement | null>(null);
+
+  useEffect(() => {
+    const parts = new Intl.DateTimeFormat("en-US", {
+      timeZone: "America/New_York", year: "numeric", month: "2-digit", day: "2-digit",
+    }).formatToParts(new Date());
+    const value = (type: string) => parts.find((part) => part.type === type)?.value ?? "";
+    setCashDate(`${value("year")}-${value("month")}-${value("day")}`);
+  }, []);
+
+  async function recordDailyCash(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setError(""); setMessage("");
+    if (!/^\d+(?:\.\d{1,2})?$/.test(dailyAmount)) {
+      setError("Enter daily cash in dollars and cents."); return;
+    }
+    const amountCents = Math.round(Number(dailyAmount) * 100);
+    if (!cashDate || !Number.isSafeInteger(amountCents) || amountCents <= 0 || amountCents > 2_147_483_647) {
+      setError("Enter a valid date and cash amount above zero."); return;
+    }
+    setSavingDaily(true);
+    try {
+      dailyRequestId.current ??= crypto.randomUUID();
+      const response = await fetch("/api/cash-management/pet-resort-daily-cash", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ cashDate, amountCents, note: dailyNote, requestId: dailyRequestId.current }),
+      });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error ?? "Unable to save daily cash.");
+      dailyRequestId.current = null;
+      setDailyAmount(""); setDailyNote("");
+      setMessage(`${money(amountCents)} added to the Pet Resort deposit.`);
+      router.refresh();
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "Unable to save daily cash.");
+    } finally { setSavingDaily(false); }
+  }
 
   async function importCash(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -71,7 +115,22 @@ export function PetResortCash({ summary }: { summary: PetResortSummary }) {
 
   return <>
     <p className="mt-4 text-3xl font-bold text-gray-900">{money(summary.onHandCents)}</p>
-    <p className="mt-2 text-sm text-gray-500">Cash received from MoeGo, less bank deposits recorded here.</p>
+    <p className="mt-2 text-sm text-gray-500">MoeGo cash plus daily cash entries, less bank deposits recorded here.</p>
+    <form onSubmit={recordDailyCash} className="mt-5 space-y-3 border-t border-pp-line pt-5">
+      <h3 className="text-sm font-semibold text-gray-900">Daily cash deposit log</h3>
+      <div className="grid gap-3 sm:grid-cols-2">
+        <label className="block text-sm font-medium text-gray-700">Date
+          <input type="date" required value={cashDate} onChange={(event) => { setCashDate(event.target.value); dailyRequestId.current = null; }} className="mt-1 block w-full rounded-lg border border-pp-line px-3 py-2 text-sm text-gray-900" />
+        </label>
+        <label className="block text-sm font-medium text-gray-700">Cash
+          <input type="number" min="0.01" step="0.01" required value={dailyAmount} onChange={(event) => { setDailyAmount(event.target.value); dailyRequestId.current = null; }} placeholder="0.00" className="mt-1 block w-full rounded-lg border border-pp-line px-3 py-2 text-sm text-gray-900" />
+        </label>
+      </div>
+      <label className="block text-sm font-medium text-gray-700">Notes <span className="font-normal text-gray-500">(optional)</span>
+        <textarea rows={2} maxLength={2000} value={dailyNote} onChange={(event) => { setDailyNote(event.target.value); dailyRequestId.current = null; }} className="mt-1 block w-full rounded-lg border border-pp-line px-3 py-2 text-sm text-gray-900" />
+      </label>
+      <button type="submit" disabled={savingDaily || !cashDate || !dailyAmount} className="rounded-lg bg-pp-accent px-4 py-2 text-sm font-semibold text-white disabled:opacity-50">{savingDaily ? "Saving…" : "Add daily cash"}</button>
+    </form>
     <form onSubmit={importCash} className="mt-5 space-y-2">
       <label htmlFor="pet-resort-cash-import" className="block text-sm font-medium text-gray-700">MoeGo cash import JSON</label>
       <input id="pet-resort-cash-import" ref={importInput} type="file" accept=".json,application/json" required

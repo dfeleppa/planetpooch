@@ -95,7 +95,15 @@ export function CashManagementDashboard({ mobile, petResort, safeCents, initialC
       <SafeBalanceVerification expectedCents={safeCents} onLatestCountChange={setCountedSafeCents} />
       <section className="rounded-xl border border-pp-line bg-white p-6 shadow-sm">
         <h2 className="text-lg font-semibold text-gray-900">Pet Resort activity</h2>
-        <p className="mt-2 text-sm text-gray-600">{petResort.transactionCount} imported cash transactions · Cash received: {money(petResort.receivedCents)} · Banked: {money(petResort.bankedCents)}</p>
+        <p className="mt-2 text-sm text-gray-600">{petResort.transactionCount} imported cash transactions · MoeGo cash: {money(petResort.receivedCents)} · Daily cash: {money(petResort.dailyCashCents)} · Banked: {money(petResort.bankedCents)}</p>
+        <h3 className="mt-5 text-sm font-semibold text-gray-900">Daily cash log</h3>
+        {petResort.recentDailyCash.length > 0 ? <ul className="mt-2 divide-y divide-pp-line">
+          {petResort.recentDailyCash.map((entry) => <li key={entry.id} className="flex flex-wrap justify-between gap-2 py-3 text-sm text-gray-700">
+            <span>{new Intl.DateTimeFormat("en-US", { dateStyle: "medium", timeZone: "UTC" }).format(new Date(`${entry.cashDate}T00:00:00Z`))}{entry.note && <span className="block whitespace-pre-wrap text-gray-500">{entry.note}</span>}</span>
+            <span className="font-semibold">+{money(entry.amountCents)}</span>
+          </li>)}
+        </ul> : <p className="mt-2 text-sm text-gray-500">No daily cash entries yet.</p>}
+        <h3 className="mt-5 text-sm font-semibold text-gray-900">Bank deposits</h3>
         {petResort.recentDeposits.length > 0 ? <ul className="mt-4 divide-y divide-pp-line">
           {petResort.recentDeposits.map((deposit) => <li key={deposit.id} className="flex justify-between gap-4 py-3 text-sm text-gray-700">
             <span>{new Intl.DateTimeFormat("en-US", { dateStyle: "medium", timeZone: "America/New_York" }).format(new Date(deposit.depositedAt))}</span>
