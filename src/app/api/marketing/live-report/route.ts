@@ -3,6 +3,7 @@ import { getSession, hasMarketingAccess } from "@/lib/auth-helpers";
 import { prisma } from "@/lib/prisma";
 import { getMetaPeriodMetrics } from "@/lib/marketing/meta-reporting";
 import { getMetaSpendBreakdown } from "@/lib/marketing/meta-spend-breakdown";
+import { aggregateGoogleSpend } from "@/lib/marketing/campaign-results";
 import { leadRevenueBySource } from "@/lib/marketing/lead-revenue-report";
 import type { LeadAttributionSource } from "@/lib/marketing/lead-attribution";
 import { leadOutcomeWindow } from "@/lib/marketing/lead-outcomes";
@@ -31,7 +32,7 @@ export async function GET(req: NextRequest) {
   const source: LeadAttributionSource | "all" = sourceParam === "meta" || sourceParam === "google-ads" || sourceParam === "google-lsa"
     ? sourceParam : "all";
 
-  const [meta, metaSpendCampaigns, orderCursor, latestOrder, google, lsa, manualSpend, googleOrigins, googleWindow] = await Promise.all([
+  const [meta, metaSpendCampaigns, orderCursor, latestOrder, google, lsa, manualSpend, googleRows, googleWindow] = await Promise.all([
     getMetaPeriodMetrics("", from, toExclusive),
     source === "all" || source === "meta" ? getMetaSpendBreakdown(from, toExclusive) : Promise.resolve([]),
     prisma.moegoSyncState.findUnique({ where: { resource: "order" }, select: { lastSyncedAt: true } }),
@@ -50,7 +51,7 @@ export async function GET(req: NextRequest) {
     }),
     prisma.financeGoogleCampaignReportRow.findMany({
       where: { business: { in: ["pet-resort", "mobile-grooming"] }, periodStart: from, periodEnd: to },
-      distinct: ["origin"], select: { origin: true },
+      select: { origin: true, campaignId: true, campaign: true, costCents: true },
     }),
     prisma.googleAdsSyncWindow.findUnique({ where: { from_to: { from, to } }, select: { syncedAt: true } }),
   ]);
@@ -70,8 +71,9 @@ export async function GET(req: NextRequest) {
         ? metaSpendCampaigns.reduce((sum, campaign) => sum + campaign.spendCents, 0) : meta.spendCents,
       metaSpendCampaigns: meta.complete ? metaSpendCampaigns : null,
       googleAdSpend: manualGoogle?.amountCents ?? (google._count._all ? google._sum.costCents : googleWindow ? 0 : null),
+      googleSpendCampaigns: manualGoogle ? null : aggregateGoogleSpend(googleRows),
       googleLsaAdSpend: manualLsa?.amountCents ?? (lsa._count._all ? lsa._sum.totalPaidCents : null),
-      googleSpendOrigin: manualGoogle ? "manual" : google._count._all ? googleOrigins.every((row) => row.origin === "api") ? "api" : "csv" : googleWindow ? "api" : null,
+      googleSpendOrigin: manualGoogle ? "manual" : google._count._all ? googleRows.every((row) => row.origin === "api") ? "api" : "csv" : googleWindow ? "api" : null,
       googleLsaSpendOrigin: manualLsa ? "manual" : lsa._count._all ? "csv" : null,
       metaRevenue: revenue?.totals.meta ?? null,
       googleRevenue: revenue?.totals["google-ads"] ?? null,

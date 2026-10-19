@@ -1,7 +1,7 @@
 "use client";
 
 import { Fragment, useEffect, useMemo, useState } from "react";
-import { attachMetaSpendCampaigns, combineCampaignRows, type ReportCampaign } from "@/lib/marketing/campaign-results";
+import { attachGoogleSpendCampaigns, attachMetaSpendCampaigns, combineCampaignRows, type GoogleSpendCampaign, type ReportCampaign } from "@/lib/marketing/campaign-results";
 import type { MetaSpendCampaign } from "@/lib/marketing/meta-spend-breakdown";
 import { FacebookCampaignReportTable, GoogleCampaignReportTable } from "./CampaignReportTables";
 import { GoogleLsaLeadReportTable } from "./GoogleLsaLeadReportTable";
@@ -21,6 +21,7 @@ type LeadData = {
 type Metric = {
   metaAdSpend: number | null; googleAdSpend: number | null; googleLsaAdSpend: number | null;
   metaSpendCampaigns: MetaSpendCampaign[] | null;
+  googleSpendCampaigns: GoogleSpendCampaign[] | null;
   metaDataComplete: boolean; metaDataThrough: string | null;
   moegoDataAvailable: boolean; leadsLimited: boolean;
   googleSpendOrigin: "manual" | "csv" | "api" | null;
@@ -79,9 +80,10 @@ export function CampaignResultsReport({ from, to, source, rangeLabel, outcomes }
   const leads = current?.leads;
   const metric = current?.metric;
   const visibleSources = source === "all" ? SOURCES : [source];
-  const campaigns = useMemo(() => attachMetaSpendCampaigns(
-    combineCampaignRows(leads?.campaigns ?? [], outcomes.campaigns), metric?.metaSpendCampaigns ?? null,
-  ), [leads, outcomes.campaigns, metric?.metaSpendCampaigns]);
+  const campaigns = useMemo(() => attachGoogleSpendCampaigns(
+    attachMetaSpendCampaigns(combineCampaignRows(leads?.campaigns ?? [], outcomes.campaigns), metric?.metaSpendCampaigns ?? null),
+    metric?.googleSpendCampaigns ?? null,
+  ), [leads, outcomes.campaigns, metric?.metaSpendCampaigns, metric?.googleSpendCampaigns]);
 
   function sourceSpend(rowSource: Source): number | null {
     if (!metric || rowSource === "unattributed") return null;
@@ -174,7 +176,9 @@ export function CampaignResultsReport({ from, to, source, rangeLabel, outcomes }
                 {sourceCampaigns.map((campaign) => {
                   const campaignKey = keyFor(campaign.source, campaign.id, campaign.name);
                   const campaignSpend = campaign.source === "meta" && metric?.metaDataComplete
-                    ? campaign.metaSpend?.spendCents ?? (campaign.id ? 0 : null) : null;
+                    ? campaign.metaSpend?.spendCents ?? (campaign.id ? 0 : null)
+                    : campaign.source === "google-ads" && metric?.googleSpendCampaigns != null
+                      ? campaign.googleSpend?.spendCents ?? null : null;
                   const campaignReturn = campaignSpend && outcomes.orderDataAvailable && metric?.moegoDataAvailable
                     ? `${(campaign.netPaidCents / campaignSpend).toFixed(2)}x` : "—";
                   return <Fragment key={campaignKey}>
@@ -228,7 +232,7 @@ export function CampaignResultsReport({ from, to, source, rangeLabel, outcomes }
 
     <div className="space-y-1 text-xs text-gray-600">
       <p>Website forms are actual submissions; Meta platform leads may differ. MoeGo outcomes can occur after the form date. Each appointment and order is assigned to the latest prior linked form. Observed return is net paid after form divided by known source spend; it does not prove the ad caused a purchase.</p>
-      <p>Spend uses the selected calendar dates. Meta campaign, ad set, and ad amounts come from the same synced insight rows as the Meta source total; campaigns with spend appear even without tagged website forms. Google Ads spend can be synced from its API after campaigns are assigned to a division. Google manual spend covers Pet Resort and Mobile Grooming together for this exact range and takes priority over synced or imported totals. A dash means unavailable, not zero.</p>
+      <p>Spend uses the selected calendar dates. Meta campaign, ad set, and ad amounts come from the same synced insight rows as the Meta source total. Google Ads campaign spend uses the saved campaign IDs for this range; campaigns with spend appear even without tagged website forms. Form tags with different campaign IDs remain separate until mapped. Google manual spend covers Pet Resort and Mobile Grooming together for this exact range and takes priority over campaign totals. A dash means unavailable, not zero.</p>
       <p>{outcomes.linkedSubmissions} linked submissions ({outcomes.linkedCustomers} customers); {outcomes.duplicateProfileLeads} include verified duplicate MoeGo profiles. Appointments synced: {dateTime(outcomes.appointmentSyncedAt)}. Orders synced: {dateTime(outcomes.orderSyncedAt)}. Meta synced: {dateTime(metric?.metaSyncedAt ?? null)}.</p>
       {outcomes.incomplete && <p className="text-amber-700">Some MoeGo counts may be incomplete while a sync is behind.</p>}
       {metric && !metric.metaDataComplete && (source === "all" || source === "meta") && <p className="text-amber-700">Meta spend does not cover the full period{metric.metaDataThrough ? ` (latest available day: ${metric.metaDataThrough})` : ""}; spend and return are hidden.</p>}

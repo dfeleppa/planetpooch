@@ -36,6 +36,46 @@ export type CombinedCampaign = {
 
 export type SpendCampaign = CombinedCampaign & { metaSpend?: MetaSpendCampaign; spendMatchedByName?: boolean };
 
+export type GoogleSpendCampaign = { id: string | null; name: string; spendCents: number };
+export type CampaignWithSpend = SpendCampaign & { googleSpend?: GoogleSpendCampaign };
+
+export function aggregateGoogleSpend(rows: { campaignId: string | null; campaign: string; costCents: number | null }[]): GoogleSpendCampaign[] {
+  const byId = new Map<string, GoogleSpendCampaign>();
+  let unmatchedCents = 0;
+  for (const row of rows) {
+    if (row.costCents === null) continue;
+    if (!row.campaignId) {
+      unmatchedCents += row.costCents;
+      continue;
+    }
+    const campaign = byId.get(row.campaignId) ?? { id: row.campaignId, name: row.campaign, spendCents: 0 };
+    campaign.spendCents += row.costCents;
+    byId.set(row.campaignId, campaign);
+  }
+  return [...byId.values(), ...(unmatchedCents ? [{ id: null, name: "Google Ads spend without a campaign ID", spendCents: unmatchedCents }] : [])];
+}
+
+/** Match Google Ads spend by campaign ID; form tags that use another name remain separate. */
+export function attachGoogleSpendCampaigns(campaigns: SpendCampaign[], spend: GoogleSpendCampaign[] | null): CampaignWithSpend[] {
+  if (spend === null) return campaigns;
+  const byId = new Map<string, GoogleSpendCampaign>();
+  for (const row of spend) {
+    if (row.id) byId.set(row.id, row);
+  }
+  const matched = new Set<string>();
+  const result: CampaignWithSpend[] = campaigns.map((campaign) => {
+    const googleSpend = campaign.source === "google-ads" && campaign.id ? byId.get(campaign.id) : undefined;
+    if (googleSpend?.id) matched.add(googleSpend.id);
+    return googleSpend ? { ...campaign, name: googleSpend.name, googleSpend } : campaign;
+  });
+  for (const googleSpend of spend) {
+    if (googleSpend.spendCents <= 0 || (googleSpend.id && matched.has(googleSpend.id))) continue;
+    result.push({ source: "google-ads", id: googleSpend.id, name: googleSpend.name,
+      formLeads: 0, linked: 0, bookedLeads: 0, appointments: 0, netPaidCents: 0, ads: [], googleSpend });
+  }
+  return result;
+}
+
 /** Include Meta campaigns with spend even when no website form carried their campaign ID. */
 export function attachMetaSpendCampaigns(campaigns: CombinedCampaign[], spend: MetaSpendCampaign[] | null): SpendCampaign[] {
   if (spend === null) return campaigns;
