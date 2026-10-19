@@ -17,6 +17,10 @@
       "schedule": "0 12 * * 1"
     },
     {
+      "path": "/api/finance/moego/in-house-grooming-weekly/cron",
+      "schedule": "15 12 * * 1"
+    },
+    {
       "path": "/api/finance/payroll/cron",
       "schedule": "0 13 * * 1"
     },
