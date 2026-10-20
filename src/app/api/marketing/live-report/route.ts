@@ -88,6 +88,7 @@ export async function GET(req: NextRequest) {
       moegoCursorThrough: orderCursor?.lastSyncedAt ?? null,
       moegoDataAvailable: orderDataAvailable,
       googleImportedAt: google._max.updatedAt ?? googleWindow?.syncedAt ?? null,
+      googleSyncedAt: googleWindow?.syncedAt ?? null,
       googleLsaImportedAt: lsa._max.updatedAt,
     },
   });

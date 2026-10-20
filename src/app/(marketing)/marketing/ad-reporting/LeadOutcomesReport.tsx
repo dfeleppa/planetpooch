@@ -159,6 +159,7 @@ export async function loadLeadOutcomes({ from, to, source }: { from: string; to:
     orderDataAvailable,
     incomplete,
     appointmentSyncedAt: appointmentSync?.lastSyncedAt.toISOString() ?? null,
+    appointmentUpdatedAt: appointmentSync?.updatedAt.toISOString() ?? null,
     orderSyncedAt: orderSync?.lastSyncedAt.toISOString() ?? null,
   };
 }

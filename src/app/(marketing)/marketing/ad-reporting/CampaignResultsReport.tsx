@@ -5,9 +5,7 @@ import { attachGoogleSpendCampaigns, attachMetaSpendCampaigns, combineCampaignRo
 import type { MetaSpendCampaign } from "@/lib/marketing/meta-spend-breakdown";
 import { FacebookCampaignReportTable, GoogleCampaignReportTable } from "./CampaignReportTables";
 import { GoogleLsaLeadReportTable } from "./GoogleLsaLeadReportTable";
-import { MetaSyncRangeButton } from "./MetaSyncRangeButton";
-import { GoogleAdsSync } from "./GoogleAdsSync";
-import { SyncLeadOutcomesButton } from "./SyncLeadOutcomesButton";
+import { CampaignSyncControls } from "./CampaignSyncControls";
 import type { loadLeadOutcomes } from "./LeadOutcomesReport";
 import type { ReportSource } from "./report-range";
 import { MarketingPrintButton } from "../MarketingPrintButton";
@@ -26,7 +24,7 @@ type Metric = {
   moegoDataAvailable: boolean; leadsLimited: boolean;
   googleSpendOrigin: "manual" | "csv" | "api" | null;
   googleLsaSpendOrigin: "manual" | "csv" | null;
-  metaSyncedAt: string | null; moegoSyncedAt: string | null;
+  metaSyncedAt: string | null; moegoSyncedAt: string | null; googleSyncedAt: string | null;
 };
 
 const SOURCES: Source[] = ["meta", "google-ads", "google-lsa", "unattributed"];
@@ -123,14 +121,13 @@ export function CampaignResultsReport({ from, to, source, rangeLabel, outcomes }
         <h2 id="campaign-results-heading" className="text-lg font-semibold text-gray-900">Campaign results</h2>
         <p className="mt-1 text-sm text-gray-600">One view of ad spend, submitted website forms, and outcomes observed after MoeGo-linked forms in {rangeLabel}.</p>
       </div>
-      <div className="flex w-full flex-wrap items-center gap-2 print:hidden">
-        {(source === "all" || source === "meta") && <MetaSyncRangeButton from={from} to={to} />}
-        {outcomes.isAdmin && <SyncLeadOutcomesButton />}
+      <div className="flex w-full items-start gap-2 print:hidden">
+        <div className="min-w-0 flex-1"><CampaignSyncControls from={from} to={to} isAdmin={outcomes.isAdmin}
+          metaSyncedAt={metric?.metaSyncedAt ?? null} googleSyncedAt={metric?.googleSyncedAt ?? null}
+          moegoSyncedAt={outcomes.appointmentUpdatedAt} onUpdated={() => setRefresh((value) => value + 1)} /></div>
         <MarketingPrintButton />
       </div>
     </div>
-
-    {(source === "all" || source === "google-ads") && <div className="print:hidden"><GoogleAdsSync from={from} to={to} /></div>}
 
     <div className="pp-marketing-campaign-table overflow-hidden rounded-xl border border-gray-200 bg-white">
       <div className="overflow-x-auto">

@@ -2,6 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
+import { AppRouterContext } from "next/dist/shared/lib/app-router-context.shared-runtime";
 import { CampaignResultsReport } from "../src/app/(marketing)/marketing/ad-reporting/CampaignResultsReport";
 
 test("campaign results render as one primary report table with honest loading values", () => {
@@ -10,11 +11,12 @@ test("campaign results render as one primary report table with honest loading va
     leads: [], isAdmin: false, linkedSubmissions: 2, linkedCustomers: 2,
     duplicateProfileLeads: 0, totalBookedLeads: 1, totalBooked: 1, totalNetPaidCents: 10000,
     appointmentsAvailable: true, orderDataAvailable: true, incomplete: false,
-    appointmentSyncedAt: null, orderSyncedAt: null,
+    appointmentSyncedAt: null, appointmentUpdatedAt: null, orderSyncedAt: null,
   };
-  const markup = renderToStaticMarkup(createElement(CampaignResultsReport, {
-    from: "2026-10-01", to: "2026-10-15", source: "all", rangeLabel: "Oct 1–15", outcomes,
-  }));
+  const markup = renderToStaticMarkup(createElement(AppRouterContext.Provider, { value: {} as never },
+    createElement(CampaignResultsReport, {
+      from: "2026-10-01", to: "2026-10-15", source: "all", rangeLabel: "Oct 1–15", outcomes,
+    })));
 
   assert.equal((markup.match(/<table\b/g) ?? []).length, 1);
   assert.match(markup, /Website forms/);
