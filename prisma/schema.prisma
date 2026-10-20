@@ -1564,6 +1564,18 @@ model FinanceCashBankDeposit {
   @@index([source, depositedAt(sort: Desc)])
 }
 
+/// A signed, explained correction to Mobile Grooming cash on hand.
+model FinanceMobileGroomingCashAdjustment {
+  id           String   @id @default(cuid())
+  amountCents  Int
+  note         String
+  recordedAt   DateTime @default(now())
+  recordedById String
+  requestId    String   @unique
+
+  @@index([recordedAt(sort: Desc)])
+}
+
 /// Cash received or refunded in Pet Resort MoeGo transactions, deduplicated across overlapping exports.
 model FinancePetResortCashTransaction {
   id              String   @id @default(cuid())

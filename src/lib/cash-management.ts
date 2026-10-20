@@ -4,8 +4,8 @@ export const SAFE_CENTS = 250_000;
 export const MOBILE_GROOMING_SOURCE = "mobile-grooming";
 export const PET_RESORT_SOURCE = "pet-resort";
 
-export function cashOnHandCents(payrollCents: number, pendingCountedCents: number, depositedCents: number) {
-  return payrollCents + pendingCountedCents - depositedCents;
+export function cashOnHandCents(payrollCents: number, pendingCountedCents: number, depositedCents: number, adjustmentCents = 0) {
+  return payrollCents + pendingCountedCents + adjustmentCents - depositedCents;
 }
 
 export function petResortOnHandCents(importedCents: number, dailyCashCents: number, bankedCents: number) {
@@ -29,10 +29,11 @@ type CompletedWeek = {
   payrollWeek: { weekStart: Date; weekEnd: Date };
 };
 type BankDeposit = { id: string; amountCents: number; depositedAt: Date };
+type ManualAdjustment = { id: string; amountCents: number; note: string; recordedAt: Date };
 
 export type MobileCashLedgerEntry = {
   id: string;
-  kind: "counted" | "completed" | "adjustment" | "bank";
+  kind: "counted" | "completed" | "adjustment" | "manual" | "bank";
   occurredAt: string;
   amountCents: number;
   balanceCents: number;
@@ -45,7 +46,7 @@ function ledgerMoney(cents: number) {
   return new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(cents / 100);
 }
 
-export function buildMobileCashLedger(pending: PendingCount[], completed: CompletedWeek[], deposits: BankDeposit[]): MobileCashLedgerEntry[] {
+export function buildMobileCashLedger(pending: PendingCount[], completed: CompletedWeek[], deposits: BankDeposit[], adjustments: ManualAdjustment[] = []): MobileCashLedgerEntry[] {
   const entries: Omit<MobileCashLedgerEntry, "balanceCents">[] = [
     ...pending.map((row) => ({
       id: `counted-${row.id}`, kind: "counted" as const, occurredAt: row.serviceDate.toISOString(),
@@ -68,15 +69,19 @@ export function buildMobileCashLedger(pending: PendingCount[], completed: Comple
       id: `bank-${deposit.id}`, kind: "bank" as const, occurredAt: deposit.depositedAt.toISOString(),
       amountCents: -deposit.amountCents, label: "Removed for bank deposit", detail: "Bank deposit recorded",
     })),
+    ...adjustments.map((adjustment) => ({
+      id: `manual-${adjustment.id}`, kind: "manual" as const, occurredAt: adjustment.recordedAt.toISOString(),
+      amountCents: adjustment.amountCents, label: "Cash adjustment", detail: adjustment.note,
+    })),
   ];
-  const order = { counted: 0, completed: 1, adjustment: 2, bank: 3 };
+  const order = { counted: 0, completed: 1, adjustment: 2, manual: 3, bank: 4 };
   entries.sort((a, b) => a.occurredAt.localeCompare(b.occurredAt) || order[a.kind] - order[b.kind] || a.id.localeCompare(b.id));
   let balanceCents = 0;
   return entries.map((entry) => ({ ...entry, balanceCents: balanceCents += entry.amountCents })).reverse();
 }
 
-export async function mobileGroomingCashSummary(db: Pick<typeof prisma, "financeMobileGroomingWeeklyCloseout" | "financeMobileGroomingDailyReconciliation" | "financeCashBankDeposit"> = prisma) {
-  const [completed, pending, deposits] = await Promise.all([
+export async function mobileGroomingCashSummary(db: Pick<typeof prisma, "financeMobileGroomingWeeklyCloseout" | "financeMobileGroomingDailyReconciliation" | "financeCashBankDeposit" | "financeMobileGroomingCashAdjustment"> = prisma) {
+  const [completed, pending, deposits, adjustments] = await Promise.all([
     db.financeMobileGroomingWeeklyCloseout.findMany({
       select: { id: true, countedCashCents: true, cashPayoutCents: true, expectedDepositCents: true,
         finalDepositCents: true, note: true,
@@ -91,16 +96,21 @@ export async function mobileGroomingCashSummary(db: Pick<typeof prisma, "finance
       where: { source: MOBILE_GROOMING_SOURCE },
       select: { id: true, amountCents: true, depositedAt: true },
     }),
+    db.financeMobileGroomingCashAdjustment.findMany({
+      select: { id: true, amountCents: true, note: true, recordedAt: true },
+    }),
   ]);
   const payrollCents = completed.reduce((sum, week) => sum + week.finalDepositCents, 0);
   const pendingCountedCents = pending.reduce((sum, row) => sum + row.countedCashCents, 0);
   const bankedCents = deposits.reduce((sum, deposit) => sum + deposit.amountCents, 0);
+  const adjustmentCents = adjustments.reduce((sum, adjustment) => sum + adjustment.amountCents, 0);
   return {
     payrollCents,
     pendingCountedCents,
     bankedCents,
-    onHandCents: cashOnHandCents(payrollCents, pendingCountedCents, bankedCents),
-    ledger: buildMobileCashLedger(pending, completed, deposits),
+    adjustmentCents,
+    onHandCents: cashOnHandCents(payrollCents, pendingCountedCents, bankedCents, adjustmentCents),
+    ledger: buildMobileCashLedger(pending, completed, deposits, adjustments),
   };
 }
 

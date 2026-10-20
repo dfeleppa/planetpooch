@@ -36,7 +36,7 @@ export async function POST(request: Request) {
         }
         return { id: existing.id, duplicate: true };
       }
-      const [received, dailyCash, pendingCounted, banked] = await Promise.all([
+      const [received, dailyCash, pendingCounted, banked, adjustments] = await Promise.all([
         source === MOBILE_GROOMING_SOURCE
           ? tx.financeMobileGroomingWeeklyCloseout.aggregate({ _sum: { finalDepositCents: true } }).then((result) => result._sum.finalDepositCents ?? 0)
           : tx.financePetResortCashTransaction.aggregate({ _sum: { amountCents: true } }).then((result) => result._sum.amountCents ?? 0),
@@ -52,10 +52,14 @@ export async function POST(request: Request) {
         tx.financeCashBankDeposit.aggregate({
           where: { source }, _sum: { amountCents: true },
         }),
+        source === MOBILE_GROOMING_SOURCE
+          ? tx.financeMobileGroomingCashAdjustment.aggregate({ _sum: { amountCents: true } })
+              .then((result) => result._sum.amountCents ?? 0)
+          : Promise.resolve(0),
       ]);
       const available = source === PET_RESORT_SOURCE
         ? petResortOnHandCents(received, dailyCash, banked._sum.amountCents ?? 0)
-        : cashOnHandCents(received, pendingCounted, banked._sum.amountCents ?? 0);
+        : cashOnHandCents(received, pendingCounted, banked._sum.amountCents ?? 0, adjustments);
       if (amountCents > available) return { error: "Deposit exceeds cash on hand." };
       const deposit = await tx.financeCashBankDeposit.create({
         data: {

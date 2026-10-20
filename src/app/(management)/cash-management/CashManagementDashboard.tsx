@@ -11,6 +11,7 @@ type MobileSummary = {
   payrollCents: number;
   pendingCountedCents: number;
   bankedCents: number;
+  adjustmentCents: number;
   onHandCents: number;
   ledger: MobileCashLedgerEntry[];
 };
@@ -25,6 +26,12 @@ export function CashManagementDashboard({ mobile, petResort, safeCents, initialC
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
+  const [adjustDirection, setAdjustDirection] = useState<"add" | "remove">("add");
+  const [adjustAmount, setAdjustAmount] = useState("");
+  const [adjustNote, setAdjustNote] = useState("");
+  const [savingAdjustment, setSavingAdjustment] = useState(false);
+  const [adjustError, setAdjustError] = useState("");
+  const [adjustSuccess, setAdjustSuccess] = useState("");
   const [countedSafeCents, setCountedSafeCents] = useState(initialCountedCents);
   const [editingCash, setEditingCash] = useState<DailyCash | null>(null);
   const [editDate, setEditDate] = useState("");
@@ -34,6 +41,40 @@ export function CashManagementDashboard({ mobile, petResort, safeCents, initialC
   const [editError, setEditError] = useState("");
   const [editMessage, setEditMessage] = useState("");
   const requestId = useRef<string | null>(null);
+  const adjustmentRequestId = useRef<string | null>(null);
+
+  async function recordAdjustment(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setAdjustError(""); setAdjustSuccess("");
+    if (!/^\d+(?:\.\d{1,2})?$/.test(adjustAmount)) {
+      setAdjustError("Enter an amount in dollars and cents."); return;
+    }
+    const amountCents = Math.round(Number(adjustAmount) * 100);
+    if (!Number.isSafeInteger(amountCents) || amountCents <= 0 || amountCents > 2_147_483_647 ||
+        (adjustDirection === "remove" && amountCents > mobile.onHandCents)) {
+      setAdjustError("Enter a valid amount no greater than cash on hand when removing cash."); return;
+    }
+    if (!adjustNote.trim() || adjustNote.trim().length > 1000) {
+      setAdjustError("Enter a reason (up to 1,000 characters)."); return;
+    }
+    setSavingAdjustment(true);
+    try {
+      adjustmentRequestId.current ??= crypto.randomUUID();
+      const response = await fetch("/api/cash-management/mobile-grooming-adjustments", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ direction: adjustDirection, amountCents, note: adjustNote,
+          requestId: adjustmentRequestId.current }),
+      });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error ?? "Unable to record adjustment.");
+      adjustmentRequestId.current = null;
+      setAdjustAmount(""); setAdjustNote("");
+      setAdjustSuccess(`${money(amountCents)} cash adjustment recorded.`);
+      router.refresh();
+    } catch (cause) {
+      setAdjustError(cause instanceof Error ? cause.message : "Unable to record adjustment.");
+    } finally { setSavingAdjustment(false); }
+  }
 
   function beginCashEdit(entry: DailyCash) {
     setEditingCash(entry);
@@ -120,7 +161,7 @@ export function CashManagementDashboard({ mobile, petResort, safeCents, initialC
         <section className="rounded-xl border border-pp-line bg-white p-6 shadow-sm">
           <h2 className="text-lg font-semibold text-gray-900">Mobile Grooming Deposit</h2>
           <p className="mt-4 text-3xl font-bold text-gray-900">{money(mobile.onHandCents)}</p>
-          <p className="mt-2 text-sm text-gray-500">Completed week net cash and closeout adjustments, plus counted cash awaiting closeout, less bank deposits recorded here.</p>
+          <p className="mt-2 text-sm text-gray-500">Completed week net cash, closeout and cash adjustments, plus counted cash awaiting closeout, less bank deposits recorded here.</p>
           {mobile.pendingCountedCents > 0 && <p className="mt-1 text-sm text-amber-800">Includes {money(mobile.pendingCountedCents)} counted cash awaiting closeout; employee cash payouts are not yet deducted from that amount.</p>}
           <form onSubmit={recordDeposit} className="mt-5 space-y-3">
             <label htmlFor="mobile-deposit-amount" className="block text-sm font-medium text-gray-700">Amount to deposit at bank</label>
@@ -130,6 +171,25 @@ export function CashManagementDashboard({ mobile, petResort, safeCents, initialC
             </div>
             {error && <p role="alert" className="text-sm text-red-700">{error}</p>}
             {success && <p role="status" className="text-sm text-green-700">{success}</p>}
+          </form>
+          <form onSubmit={recordAdjustment} className="mt-5 space-y-3 border-t border-pp-line pt-5">
+            <h3 className="text-sm font-semibold text-gray-900">Adjust cash on hand</h3>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <label className="block text-sm font-medium text-gray-700">Adjustment
+                <select value={adjustDirection} onChange={(event) => { setAdjustDirection(event.target.value as "add" | "remove"); adjustmentRequestId.current = null; }} className="mt-1 block w-full rounded-lg border border-pp-line bg-white px-3 py-2 text-sm text-gray-900">
+                  <option value="add">Add cash</option><option value="remove">Remove cash</option>
+                </select>
+              </label>
+              <label className="block text-sm font-medium text-gray-700">Amount
+                <input type="number" min="0.01" max={adjustDirection === "remove" ? Math.max(0, mobile.onHandCents / 100) : 21474836.47} step="0.01" required value={adjustAmount} onChange={(event) => { setAdjustAmount(event.target.value); adjustmentRequestId.current = null; }} placeholder="0.00" className="mt-1 block w-full rounded-lg border border-pp-line px-3 py-2 text-sm text-gray-900" />
+              </label>
+            </div>
+            <label className="block text-sm font-medium text-gray-700">Reason
+              <textarea rows={2} maxLength={1000} required value={adjustNote} onChange={(event) => { setAdjustNote(event.target.value); adjustmentRequestId.current = null; }} className="mt-1 block w-full rounded-lg border border-pp-line px-3 py-2 text-sm text-gray-900" />
+            </label>
+            <button type="submit" disabled={savingAdjustment || (adjustDirection === "remove" && mobile.onHandCents <= 0)} className="rounded-lg bg-pp-accent px-4 py-2 text-sm font-semibold text-white disabled:opacity-50">{savingAdjustment ? "Saving…" : "Record adjustment"}</button>
+            {adjustError && <p role="alert" className="text-sm text-red-700">{adjustError}</p>}
+            {adjustSuccess && <p role="status" className="text-sm text-green-700">{adjustSuccess}</p>}
           </form>
         </section>
         <section className="rounded-xl border border-pp-line bg-white p-6 shadow-sm">
@@ -174,7 +234,7 @@ export function CashManagementDashboard({ mobile, petResort, safeCents, initialC
       </section>
       <section className="rounded-xl border border-pp-line bg-white p-6 shadow-sm">
         <h2 className="text-lg font-semibold text-gray-900">Mobile Grooming activity</h2>
-        <p className="mt-2 text-sm text-gray-600">Completed week net + adjustments: {money(mobile.payrollCents)} · Counted cash awaiting closeout: {money(mobile.pendingCountedCents)} · Banked: {money(mobile.bankedCents)}</p>
+        <p className="mt-2 text-sm text-gray-600">Completed week net + closeout adjustments: {money(mobile.payrollCents)} · Counted cash awaiting closeout: {money(mobile.pendingCountedCents)} · Cash adjustments: {money(mobile.adjustmentCents)} · Banked: {money(mobile.bankedCents)}</p>
         {mobile.ledger.length > 0 ? (
           <div className="mt-4">
             <div className="hidden grid-cols-[7rem_minmax(0,1fr)_7rem_8rem] gap-3 border-b border-pp-line pb-2 text-xs font-semibold uppercase tracking-wide text-gray-500 sm:grid">
@@ -183,7 +243,7 @@ export function CashManagementDashboard({ mobile, petResort, safeCents, initialC
             <ul className="divide-y divide-pp-line">
               {mobile.ledger.map((entry) => (
                 <li key={entry.id} className="grid gap-1 py-3 text-sm text-gray-700 sm:grid-cols-[7rem_minmax(0,1fr)_7rem_8rem] sm:gap-3">
-                  <span>{new Intl.DateTimeFormat("en-US", { dateStyle: "medium", timeZone: entry.kind === "bank" ? "America/New_York" : "UTC" }).format(new Date(entry.occurredAt))}</span>
+                  <span>{new Intl.DateTimeFormat("en-US", { dateStyle: "medium", timeZone: entry.kind === "bank" || entry.kind === "manual" ? "America/New_York" : "UTC" }).format(new Date(entry.occurredAt))}</span>
                   <span><span className="font-medium text-gray-900">{entry.label}</span><span className="block text-xs text-gray-500">{entry.detail}</span></span>
                   <span className={`font-semibold sm:text-right ${entry.amountCents < 0 ? "text-red-700" : "text-green-800"}`}>{entry.amountCents < 0 ? "−" : "+"}{money(Math.abs(entry.amountCents))}</span>
                   <span className="font-semibold text-gray-900 sm:text-right"><span className="font-normal text-gray-500 sm:hidden">Balance: </span>{money(entry.balanceCents)}</span>

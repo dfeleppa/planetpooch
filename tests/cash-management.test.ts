@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { buildMobileCashLedger, mobileGroomingCashSummary, petResortCashSummary } from "../src/lib/cash-management";
+import { buildMobileCashLedger, cashOnHandCents, mobileGroomingCashSummary, petResortCashSummary } from "../src/lib/cash-management";
 
 test("Mobile Grooming includes unclosed counted cash without counting closed weeks twice", async () => {
   const db = {
@@ -24,13 +24,30 @@ test("Mobile Grooming includes unclosed counted cash without counting closed wee
     financeCashBankDeposit: {
       findMany: async () => [],
     },
+    financeMobileGroomingCashAdjustment: {
+      findMany: async () => [{ id: "adjust-1", amountCents: 10_000, note: "Corrected count", recordedAt: new Date("2026-10-20T16:00:00Z") }],
+    },
   } as unknown as Parameters<typeof mobileGroomingCashSummary>[0];
 
   const summary = await mobileGroomingCashSummary(db);
   assert.equal(summary.pendingCountedCents, 339_600);
-  assert.equal(summary.onHandCents, 961_720);
+  assert.equal(summary.adjustmentCents, 10_000);
+  assert.equal(summary.onHandCents, 971_720);
   assert.equal(summary.ledger[0].balanceCents, summary.onHandCents);
-  assert.deepEqual(summary.ledger.map((entry) => entry.kind), ["counted", "completed"]);
+  assert.deepEqual(summary.ledger.map((entry) => entry.kind), ["manual", "counted", "completed"]);
+});
+
+test("signed cash adjustments change the balance and show their reasons in the ledger", () => {
+  const adjustments = [
+    { id: "add", amountCents: 2_000, note: "Cash found", recordedAt: new Date("2026-10-19T12:00:00Z") },
+    { id: "remove", amountCents: -500, note: "Count correction", recordedAt: new Date("2026-10-20T12:00:00Z") },
+  ];
+  const ledger = buildMobileCashLedger([], [], [], adjustments);
+  assert.deepEqual(ledger.map(({ amountCents, balanceCents, detail }) => ({ amountCents, balanceCents, detail })), [
+    { amountCents: -500, balanceCents: 1_500, detail: "Count correction" },
+    { amountCents: 2_000, balanceCents: 2_000, detail: "Cash found" },
+  ]);
+  assert.equal(cashOnHandCents(0, 0, 0, 1_500), ledger[0].balanceCents);
 });
 
 test("Mobile Grooming ledger shows net closeout, adjustment, bank removal, and balance after every entry", () => {
