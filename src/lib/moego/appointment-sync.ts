@@ -13,7 +13,7 @@ function date(value: string | undefined): Date | null {
   return Number.isNaN(parsed.getTime()) ? null : parsed;
 }
 
-async function upsertPage(rows: MoegoAppointmentRow[]): Promise<void> {
+export async function upsertAppointmentPage(rows: MoegoAppointmentRow[]): Promise<void> {
   if (!rows.length) return;
   const syncedAt = new Date();
   const values = rows.map((row) => Prisma.sql`(
@@ -89,7 +89,7 @@ export async function syncLeadAppointments(): Promise<{
     for await (const page of streamAppointments({
       lastUpdatedTime: { startTime: start.toISOString(), endTime: end.toISOString() },
     }, businessIds)) {
-      await upsertPage(page);
+      await upsertAppointmentPage(page);
       chunkCount += page.length;
     }
     await advanceWatermark(end, chunkCount);

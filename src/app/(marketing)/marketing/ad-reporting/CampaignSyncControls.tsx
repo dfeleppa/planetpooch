@@ -24,7 +24,7 @@ export function CampaignSyncControls({ from, to, isAdmin, metaSyncedAt, googleSy
   onUpdated: () => void;
 }) {
   const router = useRouter();
-  const [working, setWorking] = useState<Platform | "all" | null>(null);
+  const [working, setWorking] = useState<Platform | "LSA appointments" | "all" | null>(null);
   const [status, setStatus] = useState("");
   const [campaigns, setCampaigns] = useState<Campaign[] | null>(null);
 
@@ -59,6 +59,35 @@ export function CampaignSyncControls({ from, to, isAdmin, metaSyncedAt, googleSy
   async function syncMoeGo() {
     const result = await jsonRequest("/api/marketing/lead-outcomes/sync", { method: "POST" });
     return result.caughtUp ? "" : "MoeGo backfill is still running; update again to continue.";
+  }
+
+  async function backfillLsaAppointments() {
+    setWorking("LSA appointments");
+    setStatus("Backfilling LSA caller appointments from MoeGo…");
+    let offset = 0;
+    let fetched = 0;
+    try {
+      for (let batch = 0; batch < 100; batch++) {
+        const result = await jsonRequest("/api/marketing/google-lsa-appointments", {
+          method: "POST", headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ from, to, offset }),
+        }) as { customerCount: number; fetched: number; nextOffset: number; caughtUp: boolean };
+        fetched += result.fetched;
+        offset = result.nextOffset;
+        setStatus(`LSA appointments: ${offset} of ${result.customerCount} callers checked; ${fetched} appointments pulled…`);
+        if (result.caughtUp) {
+          setStatus(`LSA appointment backfill complete: ${offset} callers checked; ${fetched} appointments pulled.`);
+          onUpdated();
+          router.refresh();
+          return;
+        }
+      }
+      throw new Error("Backfill exceeded 100 batches.");
+    } catch (error) {
+      setStatus(`LSA appointment backfill stopped after ${offset} callers: ${error instanceof Error ? error.message : "Update failed."}`);
+    } finally {
+      setWorking(null);
+    }
   }
 
   async function update(platform: Platform | "all") {
@@ -110,6 +139,7 @@ export function CampaignSyncControls({ from, to, isAdmin, metaSyncedAt, googleSy
       <button type="button" className={buttonClass} disabled={working !== null} onClick={() => update("Meta")}>Update Meta</button>
       <button type="button" className={buttonClass} disabled={working !== null} onClick={() => update("Google Ads")}>Update Google Ads</button>
       {isAdmin && <button type="button" className={buttonClass} disabled={working !== null} onClick={() => update("MoeGo")}>Update MoeGo</button>}
+      {isAdmin && <button type="button" className={buttonClass} disabled={working !== null} onClick={backfillLsaAppointments}>Backfill LSA appointments</button>}
       {isAdmin && <button type="button" className={buttonClass} disabled={working !== null} onClick={() => update("all")}>Update all</button>}
     </div>
     <p className="mt-1 text-xs text-gray-500">Last updated (ET) · Meta: {dateTime(metaSyncedAt)} · Google Ads: {dateTime(googleSyncedAt)} · MoeGo appointments: {dateTime(moegoSyncedAt)}</p>
