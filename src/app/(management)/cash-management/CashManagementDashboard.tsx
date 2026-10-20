@@ -6,6 +6,7 @@ import { SafeBalanceVerification } from "./SafeBalanceVerification";
 import { PetResortCash, type PetResortSummary } from "./PetResortCash";
 
 type Deposit = { id: string; amountCents: number; depositedAt: string };
+type DailyCash = PetResortSummary["recentDailyCash"][number];
 type MobileSummary = {
   payrollCents: number;
   pendingCountedCents: number;
@@ -25,7 +26,51 @@ export function CashManagementDashboard({ mobile, petResort, safeCents, initialC
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [countedSafeCents, setCountedSafeCents] = useState(initialCountedCents);
+  const [editingCash, setEditingCash] = useState<DailyCash | null>(null);
+  const [editDate, setEditDate] = useState("");
+  const [editAmount, setEditAmount] = useState("");
+  const [editNote, setEditNote] = useState("");
+  const [editSaving, setEditSaving] = useState(false);
+  const [editError, setEditError] = useState("");
+  const [editMessage, setEditMessage] = useState("");
   const requestId = useRef<string | null>(null);
+
+  function beginCashEdit(entry: DailyCash) {
+    setEditingCash(entry);
+    setEditDate(entry.cashDate);
+    setEditAmount((entry.amountCents / 100).toFixed(2));
+    setEditNote(entry.note);
+    setEditError("");
+    setEditMessage("");
+  }
+
+  async function saveCashEdit(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!editingCash) return;
+    setEditError("");
+    if (!/^\d+(?:\.\d{1,2})?$/.test(editAmount)) {
+      setEditError("Enter an amount in dollars and cents."); return;
+    }
+    const amountCents = Math.round(Number(editAmount) * 100);
+    if (!Number.isSafeInteger(amountCents) || amountCents <= 0 || amountCents > 2_147_483_647) {
+      setEditError("Enter a cash amount above zero."); return;
+    }
+    setEditSaving(true);
+    try {
+      const response = await fetch("/api/cash-management/pet-resort-daily-cash", {
+        method: "PATCH", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: editingCash.id, cashDate: editDate, amountCents, note: editNote,
+          original: { cashDate: editingCash.cashDate, amountCents: editingCash.amountCents, note: editingCash.note } }),
+      });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error ?? "Unable to update daily cash.");
+      setEditingCash(null);
+      setEditMessage("Daily cash entry updated.");
+      router.refresh();
+    } catch (cause) {
+      setEditError(cause instanceof Error ? cause.message : "Unable to update daily cash.");
+    } finally { setEditSaving(false); }
+  }
 
   async function recordDeposit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -100,11 +145,25 @@ export function CashManagementDashboard({ mobile, petResort, safeCents, initialC
         <p className="mt-2 text-sm text-gray-600">{petResort.transactionCount} imported cash transactions · MoeGo cash: {money(petResort.receivedCents)} · Daily cash: {money(petResort.dailyCashCents)} · Banked: {money(petResort.bankedCents)}</p>
         <h3 className="mt-5 text-sm font-semibold text-gray-900">Daily cash log</h3>
         {petResort.recentDailyCash.length > 0 ? <ul className="mt-2 divide-y divide-pp-line">
-          {petResort.recentDailyCash.map((entry) => <li key={entry.id} className="flex flex-wrap justify-between gap-2 py-3 text-sm text-gray-700">
-            <span>{new Intl.DateTimeFormat("en-US", { dateStyle: "medium", timeZone: "UTC" }).format(new Date(`${entry.cashDate}T00:00:00Z`))}{entry.note && <span className="block whitespace-pre-wrap text-gray-500">{entry.note}</span>}</span>
-            <span className="font-semibold">+{money(entry.amountCents)}</span>
+          {petResort.recentDailyCash.map((entry) => <li key={entry.id} className="py-3 text-sm text-gray-700">
+            {editingCash?.id === entry.id ? <form onSubmit={saveCashEdit} className="space-y-3 rounded-lg border border-pp-line bg-gray-50 p-3">
+              <div className="grid gap-3 sm:grid-cols-2">
+                <label className="font-medium">Date<input type="date" required value={editDate} onChange={(event) => setEditDate(event.target.value)} className="mt-1 block w-full rounded-lg border border-pp-line bg-white px-3 py-2" /></label>
+                <label className="font-medium">Cash<input type="number" min="0.01" max="21474836.47" step="0.01" required value={editAmount} onChange={(event) => setEditAmount(event.target.value)} className="mt-1 block w-full rounded-lg border border-pp-line bg-white px-3 py-2" /></label>
+              </div>
+              <label className="block font-medium">Notes <span className="font-normal text-gray-500">(optional)</span><textarea rows={3} maxLength={2000} value={editNote} onChange={(event) => setEditNote(event.target.value)} className="mt-1 block w-full rounded-lg border border-pp-line bg-white px-3 py-2" /></label>
+              {editError && <p role="alert" className="text-red-700">{editError}</p>}
+              <div className="flex gap-2">
+                <button type="submit" disabled={editSaving} className="rounded-lg bg-pp-accent px-4 py-2 font-semibold text-white disabled:opacity-50">{editSaving ? "Saving…" : "Save changes"}</button>
+                <button type="button" disabled={editSaving} onClick={() => { setEditingCash(null); setEditError(""); }} className="rounded-lg border border-pp-line bg-white px-4 py-2 font-medium">Cancel</button>
+              </div>
+            </form> : <div className="flex flex-wrap items-start justify-between gap-2">
+              <span>{new Intl.DateTimeFormat("en-US", { dateStyle: "medium", timeZone: "UTC" }).format(new Date(`${entry.cashDate}T00:00:00Z`))}{entry.note && <span className="block whitespace-pre-wrap text-gray-500">{entry.note}</span>}</span>
+              <span className="flex items-center gap-3"><span className="font-semibold">+{money(entry.amountCents)}</span><button type="button" onClick={() => beginCashEdit(entry)} className="font-medium text-pp-accent underline underline-offset-2" aria-label={`Edit daily cash entry for ${entry.cashDate}`}>Edit</button></span>
+            </div>}
           </li>)}
         </ul> : <p className="mt-2 text-sm text-gray-500">No daily cash entries yet.</p>}
+        {editMessage && <p role="status" className="mt-2 text-sm text-green-700">{editMessage}</p>}
         <h3 className="mt-5 text-sm font-semibold text-gray-900">Bank deposits</h3>
         {petResort.recentDeposits.length > 0 ? <ul className="mt-4 divide-y divide-pp-line">
           {petResort.recentDeposits.map((deposit) => <li key={deposit.id} className="flex justify-between gap-4 py-3 text-sm text-gray-700">
