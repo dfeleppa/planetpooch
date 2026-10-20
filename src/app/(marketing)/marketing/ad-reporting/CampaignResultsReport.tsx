@@ -18,6 +18,7 @@ type LeadData = {
 };
 type Metric = {
   metaAdSpend: number | null; googleAdSpend: number | null; googleLsaAdSpend: number | null;
+  googleLsaLeadCount: number;
   metaSpendCampaigns: MetaSpendCampaign[] | null;
   googleSpendCampaigns: GoogleSpendCampaign[] | null;
   metaDataComplete: boolean; metaDataThrough: string | null;
@@ -131,12 +132,13 @@ export function CampaignResultsReport({ from, to, source, rangeLabel, outcomes }
 
     <div className="pp-marketing-campaign-table overflow-hidden rounded-xl border border-gray-200 bg-white">
       <div className="overflow-x-auto">
-        <table className="w-full min-w-[1100px] text-left text-sm">
+        <table className="w-full min-w-[1200px] text-left text-sm">
           <caption className="pp-marketing-print-period text-left">Reporting period: {reportDate(from)} – {reportDate(to)}</caption>
           <thead className="bg-gray-50 text-xs uppercase tracking-wide text-gray-600"><tr>
             <th scope="col" className="px-4 py-3 font-medium">Source / campaign</th>
             <th scope="col" className="px-4 py-3 text-right font-medium">Ad spend</th>
             <th scope="col" className="px-4 py-3 text-right font-medium">Website forms</th>
+            <th scope="col" className="px-4 py-3 text-right font-medium">LSA leads</th>
             <th scope="col" className="px-4 py-3 text-right font-medium">MoeGo linked</th>
             <th scope="col" className="px-4 py-3 text-right font-medium">Booked leads</th>
             <th scope="col" className="px-4 py-3 text-right font-medium">Appointments</th>
@@ -164,6 +166,7 @@ export function CampaignResultsReport({ from, to, source, rangeLabel, outcomes }
                     </form> : <>{dollars(spend)}{rowSource === "google-ads" && <button type="button" onClick={() => { setEditing(rowSource); setAmount(((spend ?? 0) / 100).toFixed(2)); setSaveError(""); }} className="ml-2 text-xs font-normal text-blue-700 underline print:hidden">Edit</button>}</>}
                   </td>
                   <td className="px-4 py-3 text-right">{number(forms)}</td>
+                  <td className="px-4 py-3 text-right">{rowSource === "google-lsa" && metric ? number(metric.googleLsaLeadCount) : "—"}</td>
                   <td className="px-4 py-3 text-right">{number(linked)}</td>
                   <td className="px-4 py-3 text-right">{number(outcomes.appointmentsAvailable ? booked : null)}</td>
                   <td className="px-4 py-3 text-right">{number(outcomes.appointmentsAvailable ? appointments : null)}</td>
@@ -189,13 +192,14 @@ export function CampaignResultsReport({ from, to, source, rangeLabel, outcomes }
                       </th>
                       <td className="px-4 py-3 text-right tabular-nums">{dollars(campaignSpend)}</td>
                       <td className="px-4 py-3 text-right">{number(leads ? campaign.formLeads : null)}</td>
+                      <td className="px-4 py-3 text-right">—</td>
                       <td className="px-4 py-3 text-right">{campaign.linked}</td>
                       <td className="px-4 py-3 text-right">{number(outcomes.appointmentsAvailable ? campaign.bookedLeads : null)}</td>
                       <td className="px-4 py-3 text-right">{number(outcomes.appointmentsAvailable ? campaign.appointments : null)}</td>
                       <td className="px-4 py-3 text-right">{dollars(outcomes.orderDataAvailable && metric?.moegoDataAvailable ? campaign.netPaidCents : null)}</td>
                       <td className="px-4 py-3 text-right">{campaignReturn}</td>
                     </tr>
-                    {expanded === campaignKey && <tr><td colSpan={8} className="bg-white px-8 py-4">
+                    {expanded === campaignKey && <tr><td colSpan={9} className="bg-white px-8 py-4">
                       {campaign.metaSpend && <div className="mb-4 space-y-3 text-sm">
                         <p className="text-xs font-medium text-gray-600">Meta spend by ad set and ad</p>
                         {campaign.metaSpend.adsets.map((adset) => <div key={adset.id ?? "unknown"}>
@@ -213,6 +217,7 @@ export function CampaignResultsReport({ from, to, source, rangeLabel, outcomes }
             {source === "all" && <tr className="border-t-2 border-gray-200 bg-gray-100 font-semibold text-gray-900">
               <th scope="row" className="px-4 py-3">Total</th><td className="px-4 py-3 text-right">{dollars(allSpend)}</td>
               <td className="px-4 py-3 text-right">{number(totalForms)}</td>
+              <td className="px-4 py-3 text-right">{metric ? number(metric.googleLsaLeadCount) : "—"}</td>
               <td className="px-4 py-3 text-right">{outcomes.linkedSubmissions}</td>
               <td className="px-4 py-3 text-right">{number(outcomes.appointmentsAvailable ? outcomes.totalBookedLeads : null)}</td>
               <td className="px-4 py-3 text-right">{number(outcomes.appointmentsAvailable ? outcomes.totalBooked : null)}</td>

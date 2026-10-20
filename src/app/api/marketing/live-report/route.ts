@@ -70,6 +70,7 @@ export async function GET(req: NextRequest) {
       googleAdSpend: manualGoogle?.amountCents ?? (google._count._all ? google._sum.costCents : googleWindow ? 0 : null),
       googleSpendCampaigns: manualGoogle ? null : aggregateGoogleSpend(googleRows),
       googleLsaAdSpend: lsa.length ? lsa.length * GOOGLE_LSA_LEAD_COST_CENTS : null,
+      googleLsaLeadCount: lsa.length,
       googleSpendOrigin: manualGoogle ? "manual" : google._count._all ? googleRows.every((row) => row.origin === "api") ? "api" : "csv" : googleWindow ? "api" : null,
       googleLsaSpendOrigin: lsa.length ? "csv" : null,
       metaRevenue: revenue?.totals.meta ?? null,
