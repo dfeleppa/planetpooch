@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSession, hasMarketingAccess } from "@/lib/auth-helpers";
 import { prisma } from "@/lib/prisma";
+import { getGoogleLsaLeads, GOOGLE_LSA_LEAD_COST_CENTS } from "@/lib/marketing/google-lsa-leads";
 
 const VALID_BUSINESSES = new Set([
   "all-businesses",
@@ -24,7 +25,7 @@ function canAccessAdReporting(
 function dateFromParam(value: string | null | undefined): Date | null {
   if (!value || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return null;
   const date = new Date(`${value}T00:00:00.000Z`);
-  return Number.isNaN(date.getTime()) ? null : date;
+  return Number.isNaN(date.getTime()) || date.toISOString().slice(0, 10) !== value ? null : date;
 }
 
 function cleanBusiness(value: string | null | undefined): string | null {
@@ -121,17 +122,15 @@ export async function GET(req: NextRequest) {
   const periodStart = dateFromParam(req.nextUrl.searchParams.get("from"));
   const periodEnd = dateFromParam(req.nextUrl.searchParams.get("to"));
 
-  if (!business || !periodStart || !periodEnd) {
+  if (!business || !periodStart || !periodEnd || periodStart > periodEnd) {
     return NextResponse.json(
       { error: "business, from, and to are required." },
       { status: 400 }
     );
   }
 
-  const rows = await prisma.financeGoogleLsaLeadReportRow.findMany({
-    where: { business, periodStart, periodEnd },
-    orderBy: { rowOrder: "asc" },
-  });
+  const rows = (await getGoogleLsaLeads([business], periodStart, periodEnd))
+    .map((row) => ({ ...row, leadCostCents: GOOGLE_LSA_LEAD_COST_CENTS }));
 
   return NextResponse.json({ rows });
 }

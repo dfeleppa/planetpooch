@@ -7,6 +7,7 @@ import { aggregateGoogleSpend } from "@/lib/marketing/campaign-results";
 import { leadRevenueBySource } from "@/lib/marketing/lead-revenue-report";
 import type { LeadAttributionSource } from "@/lib/marketing/lead-attribution";
 import { leadOutcomeWindow } from "@/lib/marketing/lead-outcomes";
+import { getGoogleLsaLeads, GOOGLE_LSA_LEAD_COST_CENTS } from "@/lib/marketing/google-lsa-leads";
 
 const DAY_MS = 86_400_000;
 
@@ -41,10 +42,7 @@ export async function GET(req: NextRequest) {
       where: { business: { in: ["pet-resort", "mobile-grooming"] }, periodStart: from, periodEnd: to },
       _sum: { costCents: true }, _count: { _all: true }, _max: { updatedAt: true },
     }),
-    prisma.financeGoogleLsaLeadReportRow.aggregate({
-      where: { business: { in: ["pet-resort", "mobile-grooming"] }, periodStart: from, periodEnd: to },
-      _sum: { totalPaidCents: true }, _count: { _all: true }, _max: { updatedAt: true },
-    }),
+    getGoogleLsaLeads(["pet-resort", "mobile-grooming"], from, to),
     prisma.marketingManualSpend.findMany({
       where: { business: "combined", periodStart: from, periodEnd: to },
       select: { source: true, amountCents: true, updatedAt: true },
@@ -56,7 +54,6 @@ export async function GET(req: NextRequest) {
     prisma.googleAdsSyncWindow.findUnique({ where: { from_to: { from, to } }, select: { syncedAt: true } }),
   ]);
   const manualGoogle = manualSpend.find((item) => item.source === "google-ads");
-  const manualLsa = manualSpend.find((item) => item.source === "google-lsa");
 
   const { staleBefore } = leadOutcomeWindow(1);
   const orderDataAvailable = Boolean(orderCursor && latestOrder._max.syncedAt && latestOrder._max.syncedAt >= staleBefore);
@@ -72,9 +69,9 @@ export async function GET(req: NextRequest) {
       metaSpendCampaigns: meta.complete ? metaSpendCampaigns : null,
       googleAdSpend: manualGoogle?.amountCents ?? (google._count._all ? google._sum.costCents : googleWindow ? 0 : null),
       googleSpendCampaigns: manualGoogle ? null : aggregateGoogleSpend(googleRows),
-      googleLsaAdSpend: manualLsa?.amountCents ?? (lsa._count._all ? lsa._sum.totalPaidCents : null),
+      googleLsaAdSpend: lsa.length ? lsa.length * GOOGLE_LSA_LEAD_COST_CENTS : null,
       googleSpendOrigin: manualGoogle ? "manual" : google._count._all ? googleRows.every((row) => row.origin === "api") ? "api" : "csv" : googleWindow ? "api" : null,
-      googleLsaSpendOrigin: manualLsa ? "manual" : lsa._count._all ? "csv" : null,
+      googleLsaSpendOrigin: lsa.length ? "csv" : null,
       metaRevenue: revenue?.totals.meta ?? null,
       googleRevenue: revenue?.totals["google-ads"] ?? null,
       googleLsaRevenue: revenue?.totals["google-lsa"] ?? null,
@@ -89,7 +86,7 @@ export async function GET(req: NextRequest) {
       moegoDataAvailable: orderDataAvailable,
       googleImportedAt: google._max.updatedAt ?? googleWindow?.syncedAt ?? null,
       googleSyncedAt: googleWindow?.syncedAt ?? null,
-      googleLsaImportedAt: lsa._max.updatedAt,
+      googleLsaImportedAt: lsa.reduce<Date | null>((latest, row) => !latest || row.updatedAt > latest ? row.updatedAt : latest, null),
     },
   });
 }

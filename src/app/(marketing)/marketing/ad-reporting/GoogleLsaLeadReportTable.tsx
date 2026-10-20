@@ -17,6 +17,7 @@ type GoogleLsaLeadRow = {
   leadReceived: string | null;
   lastActivity: string | null;
   totalPaidCents: number | null;
+  leadCostCents: number;
 };
 
 const COLUMNS = [
@@ -99,8 +100,8 @@ export function GoogleLsaLeadReportTable({
     const start = currentPage * ROWS_PER_PAGE;
     return rows.slice(start, start + ROWS_PER_PAGE);
   }, [currentPage, rows]);
-  const totalPaidCents = useMemo(
-    () => rows.reduce((sum, row) => sum + (row.totalPaidCents ?? 0), 0),
+  const totalLeadCostCents = useMemo(
+    () => rows.reduce((sum, row) => sum + row.leadCostCents, 0),
     [rows]
   );
 
@@ -130,10 +131,9 @@ export function GoogleLsaLeadReportTable({
         error?: string;
       };
       if (!response.ok) throw new Error(json.error ?? "Unable to import Google LSA leads.");
-      const nextRows = Array.isArray(json.rows) ? json.rows : [];
-      setRows(nextRows);
-      setPage(0);
-      setMessage(`${nextRows.length.toLocaleString("en-US")} Google LSA leads imported.`);
+      const imported = Array.isArray(json.rows) ? json.rows.length : 0;
+      await loadRows();
+      setMessage(`${imported.toLocaleString("en-US")} Google LSA leads imported.`);
       setFileName("");
       if (fileInputRef.current) fileInputRef.current.value = "";
     } catch (importError) {
@@ -153,7 +153,7 @@ export function GoogleLsaLeadReportTable({
         <div>
           <h2 className="text-base font-semibold text-gray-900">Google LSA Lead Report</h2>
           <p className="mt-1 text-xs text-gray-500">
-            {rows.length.toLocaleString("en-US")} leads · {formatMoney(totalPaidCents)} total paid
+            {rows.length.toLocaleString("en-US")} leads · {formatMoney(totalLeadCostCents)} estimated cost ($28 per lead)
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
@@ -202,7 +202,7 @@ export function GoogleLsaLeadReportTable({
                   {column.label}
                 </th>
               ))}
-              <th className="px-4 py-3 text-right">Total paid</th>
+              <th className="px-4 py-3 text-right">Lead cost</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-200 bg-white">
@@ -231,7 +231,7 @@ export function GoogleLsaLeadReportTable({
                     </td>
                   ))}
                   <td className="whitespace-nowrap px-4 py-3 text-right tabular-nums text-gray-900">
-                    {formatMoney(row.totalPaidCents)}
+                    {formatMoney(row.leadCostCents)}
                   </td>
                 </tr>
               ))

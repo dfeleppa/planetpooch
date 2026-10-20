@@ -21,7 +21,7 @@ export async function POST(req: NextRequest) {
   const to = day(body.to);
   const source = body.source;
   const amount = body.amount;
-  if (!from || !to || from > to || (source !== "google-ads" && source !== "google-lsa") ||
+  if (!from || !to || from > to || source !== "google-ads" ||
       typeof amount !== "string" || !/^(?:0|[1-9]\d*)(?:\.\d{1,2})?$/.test(amount) || Number(amount) > 21474836.47) {
     return NextResponse.json({ error: "Enter a valid nonnegative dollar amount and date range." }, { status: 400 });
   }

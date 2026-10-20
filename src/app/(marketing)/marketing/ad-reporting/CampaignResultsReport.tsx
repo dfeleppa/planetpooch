@@ -43,7 +43,7 @@ export function CampaignResultsReport({ from, to, source, rangeLabel, outcomes }
   const query = new URLSearchParams({ from, to, source }).toString();
   const [data, setData] = useState<{ query: string; leads: LeadData | null; metric: Metric | null; leadError: boolean; metricError: boolean } | null>(null);
   const [refresh, setRefresh] = useState(0);
-  const [editing, setEditing] = useState<"google-ads" | "google-lsa" | null>(null);
+  const [editing, setEditing] = useState<"google-ads" | null>(null);
   const [amount, setAmount] = useState("");
   const [saveError, setSaveError] = useState("");
   const [saving, setSaving] = useState(false);
@@ -161,7 +161,7 @@ export function CampaignResultsReport({ from, to, source, rangeLabel, outcomes }
                       <span>$</span><input aria-label={`${LABELS[rowSource]} spend in dollars`} type="number" min="0" max="21474836.47" step="0.01" required value={amount} onChange={(event) => setAmount(event.target.value)} className="w-24 rounded border border-gray-300 px-2 py-1 text-right" />
                       <button type="submit" disabled={saving} className="text-blue-700 underline print:hidden">{saving ? "Saving…" : "Save"}</button>
                       <button type="button" onClick={() => setEditing(null)} className="text-gray-600 underline print:hidden">Cancel</button>
-                    </form> : <>{dollars(spend)}{(rowSource === "google-ads" || rowSource === "google-lsa") && <button type="button" onClick={() => { setEditing(rowSource); setAmount(((spend ?? 0) / 100).toFixed(2)); setSaveError(""); }} className="ml-2 text-xs font-normal text-blue-700 underline print:hidden">Edit</button>}</>}
+                    </form> : <>{dollars(spend)}{rowSource === "google-ads" && <button type="button" onClick={() => { setEditing(rowSource); setAmount(((spend ?? 0) / 100).toFixed(2)); setSaveError(""); }} className="ml-2 text-xs font-normal text-blue-700 underline print:hidden">Edit</button>}</>}
                   </td>
                   <td className="px-4 py-3 text-right">{number(forms)}</td>
                   <td className="px-4 py-3 text-right">{number(linked)}</td>
@@ -230,6 +230,7 @@ export function CampaignResultsReport({ from, to, source, rangeLabel, outcomes }
     <div className="space-y-1 text-xs text-gray-600">
       <p>Website forms are actual submissions; Meta platform leads may differ. MoeGo outcomes can occur after the form date. Each appointment and order is assigned to the latest prior linked form. Observed return is net paid after form divided by known source spend; it does not prove the ad caused a purchase.</p>
       <p>Spend uses the selected calendar dates. Meta campaign, ad set, and ad amounts come from the same synced insight rows as the Meta source total. Google Ads campaign spend uses the saved campaign IDs for this range; campaigns with spend appear even without tagged website forms. Form tags with different campaign IDs remain separate until mapped. Google manual spend covers Pet Resort and Mobile Grooming together for this exact range and takes priority over campaign totals. A dash means unavailable, not zero.</p>
+      <p>Google LSA spend is estimated at $28 for each unique imported lead received in the selected dates, regardless of charge status. The CSV import is updated manually.</p>
       <p>{outcomes.linkedSubmissions} linked submissions ({outcomes.linkedCustomers} customers); {outcomes.duplicateProfileLeads} include verified duplicate MoeGo profiles. Appointments synced: {dateTime(outcomes.appointmentSyncedAt)}. Orders synced: {dateTime(outcomes.orderSyncedAt)}. Meta synced: {dateTime(metric?.metaSyncedAt ?? null)}.</p>
       {outcomes.incomplete && <p className="text-amber-700">Some MoeGo counts may be incomplete while a sync is behind.</p>}
       {metric && !metric.metaDataComplete && (source === "all" || source === "meta") && <p className="text-amber-700">Meta spend does not cover the full period{metric.metaDataThrough ? ` (latest available day: ${metric.metaDataThrough})` : ""}; spend and return are hidden.</p>}
