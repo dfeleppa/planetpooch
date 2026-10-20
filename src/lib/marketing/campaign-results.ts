@@ -37,7 +37,9 @@ export type CombinedCampaign = {
 export type SpendCampaign = CombinedCampaign & { metaSpend?: MetaSpendCampaign; spendMatchedByName?: boolean };
 
 export type GoogleSpendCampaign = { id: string | null; name: string; spendCents: number };
-export type CampaignWithSpend = SpendCampaign & { googleSpend?: GoogleSpendCampaign };
+export type CampaignWithSpend = SpendCampaign & { googleSpend?: GoogleSpendCampaign; googleSpendMatchedByName?: boolean };
+
+const normalizedGoogleName = (name: string) => name.trim().toLocaleLowerCase("en-US").replace(/[\s_-]+/g, " ");
 
 export function aggregateGoogleSpend(rows: { campaignId: string | null; campaign: string; costCents: number | null }[]): GoogleSpendCampaign[] {
   const byId = new Map<string, GoogleSpendCampaign>();
@@ -55,19 +57,50 @@ export function aggregateGoogleSpend(rows: { campaignId: string | null; campaign
   return [...byId.values(), ...(unmatchedCents ? [{ id: null, name: "Google Ads spend without a campaign ID", spendCents: unmatchedCents }] : [])];
 }
 
-/** Match Google Ads spend by campaign ID; form tags that use another name remain separate. */
+/** Match Google form tags to a unique Google Ads campaign ID or normalized campaign name. */
 export function attachGoogleSpendCampaigns(campaigns: SpendCampaign[], spend: GoogleSpendCampaign[] | null): CampaignWithSpend[] {
   if (spend === null) return campaigns;
   const byId = new Map<string, GoogleSpendCampaign>();
+  const byUniqueName = new Map<string, GoogleSpendCampaign | null>();
   for (const row of spend) {
-    if (row.id) byId.set(row.id, row);
+    if (!row.id) continue;
+    byId.set(row.id, row);
+    const name = normalizedGoogleName(row.name);
+    byUniqueName.set(name, byUniqueName.has(name) ? null : row);
   }
   const matched = new Set<string>();
-  const result: CampaignWithSpend[] = campaigns.map((campaign) => {
-    const googleSpend = campaign.source === "google-ads" && campaign.id ? byId.get(campaign.id) : undefined;
-    if (googleSpend?.id) matched.add(googleSpend.id);
-    return googleSpend ? { ...campaign, name: googleSpend.name, googleSpend } : campaign;
-  });
+  const result: CampaignWithSpend[] = [];
+  const resultBySpendId = new Map<string, CampaignWithSpend>();
+  for (const campaign of campaigns) {
+    if (campaign.source !== "google-ads") {
+      result.push(campaign);
+      continue;
+    }
+    const idMatch = campaign.id ? byId.get(campaign.id) : undefined;
+    const nameMatch = !campaign.id || !/^\d+$/.test(campaign.id)
+      ? byUniqueName.get(normalizedGoogleName(campaign.name)) ?? undefined : undefined;
+    const googleSpend = idMatch ?? nameMatch;
+    if (!googleSpend?.id) {
+      result.push(campaign);
+      continue;
+    }
+    matched.add(googleSpend.id);
+    const existing = resultBySpendId.get(googleSpend.id);
+    if (existing) {
+      existing.formLeads += campaign.formLeads;
+      existing.linked += campaign.linked;
+      existing.bookedLeads += campaign.bookedLeads;
+      existing.appointments += campaign.appointments;
+      existing.netPaidCents += campaign.netPaidCents;
+      existing.ads.push(...campaign.ads);
+      existing.googleSpendMatchedByName ||= !idMatch;
+    } else {
+      const merged = { ...campaign, id: googleSpend.id, name: googleSpend.name,
+        ads: [...campaign.ads], googleSpend, googleSpendMatchedByName: !idMatch };
+      resultBySpendId.set(googleSpend.id, merged);
+      result.push(merged);
+    }
+  }
   for (const googleSpend of spend) {
     if (googleSpend.spendCents <= 0 || (googleSpend.id && matched.has(googleSpend.id))) continue;
     result.push({ source: "google-ads", id: googleSpend.id, name: googleSpend.name,
