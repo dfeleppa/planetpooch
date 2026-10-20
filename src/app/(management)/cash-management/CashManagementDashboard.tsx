@@ -4,15 +4,15 @@ import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { SafeBalanceVerification } from "./SafeBalanceVerification";
 import { PetResortCash, type PetResortSummary } from "./PetResortCash";
+import type { MobileCashLedgerEntry } from "@/lib/cash-management";
 
-type Deposit = { id: string; amountCents: number; depositedAt: string };
 type DailyCash = PetResortSummary["recentDailyCash"][number];
 type MobileSummary = {
   payrollCents: number;
   pendingCountedCents: number;
   bankedCents: number;
   onHandCents: number;
-  recentDeposits: Deposit[];
+  ledger: MobileCashLedgerEntry[];
 };
 
 function money(cents: number) {
@@ -120,7 +120,7 @@ export function CashManagementDashboard({ mobile, petResort, safeCents, initialC
         <section className="rounded-xl border border-pp-line bg-white p-6 shadow-sm">
           <h2 className="text-lg font-semibold text-gray-900">Mobile Grooming Deposit</h2>
           <p className="mt-4 text-3xl font-bold text-gray-900">{money(mobile.onHandCents)}</p>
-          <p className="mt-2 text-sm text-gray-500">Completed payroll deposits plus counted cash awaiting closeout, less bank deposits recorded here.</p>
+          <p className="mt-2 text-sm text-gray-500">Completed week net cash and closeout adjustments, plus counted cash awaiting closeout, less bank deposits recorded here.</p>
           {mobile.pendingCountedCents > 0 && <p className="mt-1 text-sm text-amber-800">Includes {money(mobile.pendingCountedCents)} counted cash awaiting closeout; employee cash payouts are not yet deducted from that amount.</p>}
           <form onSubmit={recordDeposit} className="mt-5 space-y-3">
             <label htmlFor="mobile-deposit-amount" className="block text-sm font-medium text-gray-700">Amount to deposit at bank</label>
@@ -174,17 +174,24 @@ export function CashManagementDashboard({ mobile, petResort, safeCents, initialC
       </section>
       <section className="rounded-xl border border-pp-line bg-white p-6 shadow-sm">
         <h2 className="text-lg font-semibold text-gray-900">Mobile Grooming activity</h2>
-        <p className="mt-2 text-sm text-gray-600">Completed payroll deposits: {money(mobile.payrollCents)} · Counted cash awaiting closeout: {money(mobile.pendingCountedCents)} · Banked: {money(mobile.bankedCents)}</p>
-        {mobile.recentDeposits.length > 0 ? (
-          <ul className="mt-4 divide-y divide-pp-line">
-            {mobile.recentDeposits.map((deposit) => (
-              <li key={deposit.id} className="flex justify-between gap-4 py-3 text-sm text-gray-700">
-                <span>{new Intl.DateTimeFormat("en-US", { dateStyle: "medium", timeZone: "America/New_York" }).format(new Date(deposit.depositedAt))}</span>
-                <span className="font-semibold">Bank deposit · {money(deposit.amountCents)}</span>
-              </li>
-            ))}
-          </ul>
-        ) : <p className="mt-4 text-sm text-gray-500">No bank deposits recorded yet.</p>}
+        <p className="mt-2 text-sm text-gray-600">Completed week net + adjustments: {money(mobile.payrollCents)} · Counted cash awaiting closeout: {money(mobile.pendingCountedCents)} · Banked: {money(mobile.bankedCents)}</p>
+        {mobile.ledger.length > 0 ? (
+          <div className="mt-4">
+            <div className="hidden grid-cols-[7rem_minmax(0,1fr)_7rem_8rem] gap-3 border-b border-pp-line pb-2 text-xs font-semibold uppercase tracking-wide text-gray-500 sm:grid">
+              <span>Date</span><span>Activity</span><span className="text-right">Change</span><span className="text-right">Balance</span>
+            </div>
+            <ul className="divide-y divide-pp-line">
+              {mobile.ledger.map((entry) => (
+                <li key={entry.id} className="grid gap-1 py-3 text-sm text-gray-700 sm:grid-cols-[7rem_minmax(0,1fr)_7rem_8rem] sm:gap-3">
+                  <span>{new Intl.DateTimeFormat("en-US", { dateStyle: "medium", timeZone: entry.kind === "bank" ? "America/New_York" : "UTC" }).format(new Date(entry.occurredAt))}</span>
+                  <span><span className="font-medium text-gray-900">{entry.label}</span><span className="block text-xs text-gray-500">{entry.detail}</span></span>
+                  <span className={`font-semibold sm:text-right ${entry.amountCents < 0 ? "text-red-700" : "text-green-800"}`}>{entry.amountCents < 0 ? "−" : "+"}{money(Math.abs(entry.amountCents))}</span>
+                  <span className="font-semibold text-gray-900 sm:text-right"><span className="font-normal text-gray-500 sm:hidden">Balance: </span>{money(entry.balanceCents)}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        ) : <p className="mt-4 text-sm text-gray-500">No Mobile Grooming cash activity yet.</p>}
       </section>
     </div>
   );

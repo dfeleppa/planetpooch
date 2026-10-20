@@ -12,37 +12,95 @@ export function petResortOnHandCents(importedCents: number, dailyCashCents: numb
   return importedCents + dailyCashCents - bankedCents;
 }
 
+type PendingCount = {
+  id: string;
+  serviceDate: Date;
+  employeeName: string;
+  countedCashCents: number;
+  payrollWeek: { weekStart: Date; weekEnd: Date };
+};
+type CompletedWeek = {
+  id: string;
+  countedCashCents: number;
+  cashPayoutCents: number;
+  expectedDepositCents: number;
+  finalDepositCents: number;
+  note: string;
+  payrollWeek: { weekStart: Date; weekEnd: Date };
+};
+type BankDeposit = { id: string; amountCents: number; depositedAt: Date };
+
+export type MobileCashLedgerEntry = {
+  id: string;
+  kind: "counted" | "completed" | "adjustment" | "bank";
+  occurredAt: string;
+  amountCents: number;
+  balanceCents: number;
+  label: string;
+  detail: string;
+};
+
+function dateOnly(date: Date) { return date.toISOString().slice(0, 10); }
+function ledgerMoney(cents: number) {
+  return new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(cents / 100);
+}
+
+export function buildMobileCashLedger(pending: PendingCount[], completed: CompletedWeek[], deposits: BankDeposit[]): MobileCashLedgerEntry[] {
+  const entries: Omit<MobileCashLedgerEntry, "balanceCents">[] = [
+    ...pending.map((row) => ({
+      id: `counted-${row.id}`, kind: "counted" as const, occurredAt: row.serviceDate.toISOString(),
+      amountCents: row.countedCashCents, label: "Counted cash awaiting closeout",
+      detail: `${row.employeeName} · ${dateOnly(row.serviceDate)} · Week ${dateOnly(row.payrollWeek.weekStart)}–${dateOnly(row.payrollWeek.weekEnd)}`,
+    })),
+    ...completed.flatMap((week) => [
+      {
+        id: `completed-${week.id}`, kind: "completed" as const, occurredAt: week.payrollWeek.weekEnd.toISOString(),
+        amountCents: week.expectedDepositCents, label: "Completed week · net cash",
+        detail: `Week ${dateOnly(week.payrollWeek.weekStart)}–${dateOnly(week.payrollWeek.weekEnd)} · ${ledgerMoney(week.countedCashCents)} collected − ${ledgerMoney(week.cashPayoutCents)} employee payouts`,
+      },
+      ...(week.finalDepositCents === week.expectedDepositCents ? [] : [{
+        id: `adjustment-${week.id}`, kind: "adjustment" as const, occurredAt: week.payrollWeek.weekEnd.toISOString(),
+        amountCents: week.finalDepositCents - week.expectedDepositCents, label: "Closeout adjustment",
+        detail: `Week ${dateOnly(week.payrollWeek.weekStart)}–${dateOnly(week.payrollWeek.weekEnd)}${week.note ? ` · ${week.note}` : ""}`,
+      }]),
+    ]),
+    ...deposits.map((deposit) => ({
+      id: `bank-${deposit.id}`, kind: "bank" as const, occurredAt: deposit.depositedAt.toISOString(),
+      amountCents: -deposit.amountCents, label: "Removed for bank deposit", detail: "Bank deposit recorded",
+    })),
+  ];
+  const order = { counted: 0, completed: 1, adjustment: 2, bank: 3 };
+  entries.sort((a, b) => a.occurredAt.localeCompare(b.occurredAt) || order[a.kind] - order[b.kind] || a.id.localeCompare(b.id));
+  let balanceCents = 0;
+  return entries.map((entry) => ({ ...entry, balanceCents: balanceCents += entry.amountCents })).reverse();
+}
+
 export async function mobileGroomingCashSummary(db: Pick<typeof prisma, "financeMobileGroomingWeeklyCloseout" | "financeMobileGroomingDailyReconciliation" | "financeCashBankDeposit"> = prisma) {
-  const [payroll, pendingCounted, deposited, recentDeposits] = await Promise.all([
-    db.financeMobileGroomingWeeklyCloseout.aggregate({ _sum: { finalDepositCents: true } }),
-    db.financeMobileGroomingDailyReconciliation.aggregate({
-      where: { payrollWeek: { business: MOBILE_GROOMING_SOURCE, mobileGroomingCloseout: { is: null } } },
-      _sum: { countedCashCents: true },
+  const [completed, pending, deposits] = await Promise.all([
+    db.financeMobileGroomingWeeklyCloseout.findMany({
+      select: { id: true, countedCashCents: true, cashPayoutCents: true, expectedDepositCents: true,
+        finalDepositCents: true, note: true,
+        payrollWeek: { select: { weekStart: true, weekEnd: true } } },
     }),
-    db.financeCashBankDeposit.aggregate({
-      where: { source: MOBILE_GROOMING_SOURCE },
-      _sum: { amountCents: true },
+    db.financeMobileGroomingDailyReconciliation.findMany({
+      where: { payrollWeek: { business: MOBILE_GROOMING_SOURCE, mobileGroomingCloseout: { is: null } } },
+      select: { id: true, serviceDate: true, employeeName: true, countedCashCents: true,
+        payrollWeek: { select: { weekStart: true, weekEnd: true } } },
     }),
     db.financeCashBankDeposit.findMany({
       where: { source: MOBILE_GROOMING_SOURCE },
-      orderBy: { depositedAt: "desc" },
-      take: 10,
       select: { id: true, amountCents: true, depositedAt: true },
     }),
   ]);
-  const payrollCents = payroll._sum.finalDepositCents ?? 0;
-  const pendingCountedCents = pendingCounted._sum.countedCashCents ?? 0;
-  const bankedCents = deposited._sum.amountCents ?? 0;
+  const payrollCents = completed.reduce((sum, week) => sum + week.finalDepositCents, 0);
+  const pendingCountedCents = pending.reduce((sum, row) => sum + row.countedCashCents, 0);
+  const bankedCents = deposits.reduce((sum, deposit) => sum + deposit.amountCents, 0);
   return {
     payrollCents,
     pendingCountedCents,
     bankedCents,
     onHandCents: cashOnHandCents(payrollCents, pendingCountedCents, bankedCents),
-    recentDeposits: recentDeposits.map((deposit) => ({
-      id: deposit.id,
-      amountCents: deposit.amountCents,
-      depositedAt: deposit.depositedAt.toISOString(),
-    })),
+    ledger: buildMobileCashLedger(pending, completed, deposits),
   };
 }
 
