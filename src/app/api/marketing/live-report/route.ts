@@ -8,6 +8,7 @@ import { leadRevenueBySource } from "@/lib/marketing/lead-revenue-report";
 import type { LeadAttributionSource } from "@/lib/marketing/lead-attribution";
 import { leadOutcomeWindow } from "@/lib/marketing/lead-outcomes";
 import { getGoogleLsaLeads, GOOGLE_LSA_LEAD_COST_CENTS } from "@/lib/marketing/google-lsa-leads";
+import { getGoogleLsaCallOutcomes } from "@/lib/marketing/google-lsa-call-outcomes";
 
 const DAY_MS = 86_400_000;
 
@@ -33,10 +34,15 @@ export async function GET(req: NextRequest) {
   const source: LeadAttributionSource | "all" = sourceParam === "meta" || sourceParam === "google-ads" || sourceParam === "google-lsa"
     ? sourceParam : "all";
 
-  const [meta, metaSpendCampaigns, orderCursor, latestOrder, google, lsa, manualSpend, googleRows, googleWindow] = await Promise.all([
+  const [meta, metaSpendCampaigns, orderCursor, customerCursor, lsaBackfills, latestOrder, google, lsa, manualSpend, googleRows, googleWindow] = await Promise.all([
     getMetaPeriodMetrics("", from, toExclusive),
     source === "all" || source === "meta" ? getMetaSpendBreakdown(from, toExclusive) : Promise.resolve([]),
     prisma.moegoSyncState.findUnique({ where: { resource: "order" }, select: { lastSyncedAt: true } }),
+    prisma.moegoSyncState.findUnique({ where: { resource: "customer" }, select: { lastSyncedAt: true } }),
+    prisma.moegoSyncState.findMany({
+      where: { resource: { startsWith: "lsa-appointments:" } },
+      select: { resource: true, lastSyncedAt: true, lastRowCount: true },
+    }),
     prisma.moegoOrder.aggregate({ _max: { syncedAt: true } }),
     prisma.financeGoogleCampaignReportRow.aggregate({
       where: { business: { in: ["pet-resort", "mobile-grooming"] }, periodStart: from, periodEnd: to },
@@ -57,6 +63,17 @@ export async function GET(req: NextRequest) {
 
   const { staleBefore } = leadOutcomeWindow(1);
   const orderDataAvailable = Boolean(orderCursor && latestOrder._max.syncedAt && latestOrder._max.syncedAt >= staleBefore);
+  const lsaImportedAt = lsa.reduce<Date | null>((latest, row) => !latest || row.updatedAt > latest ? row.updatedAt : latest, null);
+  const lsaCallOutcomes = (source === "all" || source === "google-lsa") && customerCursor
+    ? await getGoogleLsaCallOutcomes(lsa) : null;
+  const fromDay = from.toISOString().slice(0, 10);
+  const toDay = to.toISOString().slice(0, 10);
+  const lsaAppointmentsBackfilled = Boolean(lsaCallOutcomes && lsaBackfills.some((backfill) => {
+    const match = /^lsa-appointments:(\d{4}-\d{2}-\d{2}):(\d{4}-\d{2}-\d{2})$/.exec(backfill.resource);
+    return match && match[1] <= fromDay && match[2] >= toDay &&
+      backfill.lastRowCount >= lsaCallOutcomes.matchedCustomers &&
+      (!lsaImportedAt || backfill.lastSyncedAt >= lsaImportedAt);
+  }));
   let revenue: Awaited<ReturnType<typeof leadRevenueBySource>> | null = null;
   if (orderDataAvailable) {
     revenue = await leadRevenueBySource(["RESORT", "GROOMING"], req.nextUrl.searchParams.get("from")!, req.nextUrl.searchParams.get("to")!, source);
@@ -71,6 +88,14 @@ export async function GET(req: NextRequest) {
       googleSpendCampaigns: manualGoogle ? null : aggregateGoogleSpend(googleRows),
       googleLsaAdSpend: lsa.length ? lsa.length * GOOGLE_LSA_LEAD_COST_CENTS : null,
       googleLsaLeadCount: lsa.length,
+      googleLsaCallOutcomes: lsaCallOutcomes && {
+        linked: lsaCallOutcomes.linked,
+        ambiguous: lsaCallOutcomes.ambiguous,
+        bookedLeads: lsaAppointmentsBackfilled ? lsaCallOutcomes.bookedLeads : null,
+        appointments: lsaAppointmentsBackfilled ? lsaCallOutcomes.appointments : null,
+        netPaidCents: orderDataAvailable ? lsaCallOutcomes.netPaidCents : null,
+        appointmentsBackfilled: lsaAppointmentsBackfilled,
+      },
       googleSpendOrigin: manualGoogle ? "manual" : google._count._all ? googleRows.every((row) => row.origin === "api") ? "api" : "csv" : googleWindow ? "api" : null,
       googleLsaSpendOrigin: lsa.length ? "csv" : null,
       metaRevenue: revenue?.totals.meta ?? null,
@@ -87,7 +112,7 @@ export async function GET(req: NextRequest) {
       moegoDataAvailable: orderDataAvailable,
       googleImportedAt: google._max.updatedAt ?? googleWindow?.syncedAt ?? null,
       googleSyncedAt: googleWindow?.syncedAt ?? null,
-      googleLsaImportedAt: lsa.reduce<Date | null>((latest, row) => !latest || row.updatedAt > latest ? row.updatedAt : latest, null),
+      googleLsaImportedAt: lsaImportedAt,
     },
   });
 }

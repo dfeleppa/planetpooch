@@ -2,6 +2,7 @@ import { Prisma } from "@prisma/client";
 import { getSession } from "@/lib/auth-helpers";
 import { prisma } from "@/lib/prisma";
 import { getGoogleLsaLeads } from "@/lib/marketing/google-lsa-leads";
+import { lsaAppointmentBackfillResource } from "@/lib/marketing/google-lsa-call-outcomes";
 import { normalizedPhone } from "@/lib/marketing/moego-client-history";
 import { upsertAppointmentPage } from "@/lib/moego/appointment-sync";
 import { listBusinesses, streamAppointments } from "@/lib/moego/client";
@@ -34,7 +35,14 @@ export async function POST(request: Request) {
   try {
     const leads = await getGoogleLsaLeads(["pet-resort", "mobile-grooming"], from, to);
     const phones = [...new Set(leads.map((lead) => normalizedPhone(lead.customer)).filter((phone): phone is string => Boolean(phone)))];
-    if (!phones.length) return Response.json({ customerCount: 0, fetched: 0, nextOffset: 0, caughtUp: true });
+    const resource = lsaAppointmentBackfillResource(body.from, body.to);
+    if (!phones.length) {
+      await prisma.moegoSyncState.upsert({
+        where: { resource }, create: { resource, lastSyncedAt: new Date(), lastRowCount: 0 },
+        update: { lastSyncedAt: new Date(), lastRowCount: 0 },
+      });
+      return Response.json({ customerCount: 0, fetched: 0, nextOffset: 0, caughtUp: true });
+    }
 
     const customers = await prisma.$queryRaw<{ moegoId: string }[]>`
       SELECT DISTINCT "moegoId" FROM "MoegoCustomer"
@@ -44,6 +52,11 @@ export async function POST(request: Request) {
     `;
     const customerIds = customers.slice(offset, offset + BATCH_SIZE).map((row) => row.moegoId);
     if (!customerIds.length) {
+      if (offset !== customers.length) return Response.json({ error: "Invalid backfill offset." }, { status: 400 });
+      await prisma.moegoSyncState.upsert({
+        where: { resource }, create: { resource, lastSyncedAt: new Date(), lastRowCount: customers.length },
+        update: { lastSyncedAt: new Date(), lastRowCount: customers.length },
+      });
       return Response.json({ customerCount: customers.length, fetched: 0, nextOffset: customers.length, caughtUp: true });
     }
 
@@ -57,6 +70,12 @@ export async function POST(request: Request) {
       fetched += page.length;
     }
     const nextOffset = offset + customerIds.length;
+    if (nextOffset >= customers.length) {
+      await prisma.moegoSyncState.upsert({
+        where: { resource }, create: { resource, lastSyncedAt: new Date(), lastRowCount: customers.length },
+        update: { lastSyncedAt: new Date(), lastRowCount: customers.length },
+      });
+    }
     return Response.json({
       customerCount: customers.length,
       fetched,

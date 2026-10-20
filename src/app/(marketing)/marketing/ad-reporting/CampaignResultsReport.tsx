@@ -19,6 +19,10 @@ type LeadData = {
 type Metric = {
   metaAdSpend: number | null; googleAdSpend: number | null; googleLsaAdSpend: number | null;
   googleLsaLeadCount: number;
+  googleLsaCallOutcomes: {
+    linked: number; ambiguous: number; bookedLeads: number | null; appointments: number | null;
+    netPaidCents: number | null; appointmentsBackfilled: boolean;
+  } | null;
   metaSpendCampaigns: MetaSpendCampaign[] | null;
   googleSpendCampaigns: GoogleSpendCampaign[] | null;
   metaDataComplete: boolean; metaDataThrough: string | null;
@@ -120,7 +124,7 @@ export function CampaignResultsReport({ from, to, source, rangeLabel, outcomes }
     <div className="flex flex-wrap items-start justify-between gap-3">
       <div>
         <h2 id="campaign-results-heading" className="text-lg font-semibold text-gray-900">Campaign results</h2>
-        <p className="mt-1 text-sm text-gray-600">One view of ad spend, submitted website forms, and outcomes observed after MoeGo-linked forms in {rangeLabel}.</p>
+        <p className="mt-1 text-sm text-gray-600">Ad spend, website forms, and MoeGo outcomes for {rangeLabel}. Google LSA source outcomes use imported calls.</p>
       </div>
       <div className="flex w-full items-start gap-2 print:hidden">
         <div className="min-w-0 flex-1"><CampaignSyncControls from={from} to={to} isAdmin={outcomes.isAdmin}
@@ -142,7 +146,7 @@ export function CampaignResultsReport({ from, to, source, rangeLabel, outcomes }
             <th scope="col" className="px-4 py-3 text-right font-medium">MoeGo linked</th>
             <th scope="col" className="px-4 py-3 text-right font-medium">Booked leads</th>
             <th scope="col" className="px-4 py-3 text-right font-medium">Appointments</th>
-            <th scope="col" className="px-4 py-3 text-right font-medium">Net paid after form</th>
+            <th scope="col" className="px-4 py-3 text-right font-medium">Net paid after lead</th>
             <th scope="col" className="px-4 py-3 text-right font-medium">Observed return</th>
           </tr></thead>
           <tbody className="divide-y divide-gray-100">
@@ -154,10 +158,17 @@ export function CampaignResultsReport({ from, to, source, rangeLabel, outcomes }
               const booked = sourceCampaigns.reduce((sum, row) => sum + row.bookedLeads, 0);
               const appointments = sourceCampaigns.reduce((sum, row) => sum + row.appointments, 0);
               const paid = outcomes.orderDataAvailable && metric?.moegoDataAvailable ? sourceCampaigns.reduce((sum, row) => sum + row.netPaidCents, 0) : null;
-              const ratio = spend && paid !== null ? `${(paid / spend).toFixed(2)}x` : "—";
+              const lsaCalls = rowSource === "google-lsa" ? metric?.googleLsaCallOutcomes : null;
+              const sourceLinked = rowSource === "google-lsa" ? lsaCalls?.linked ?? null : linked;
+              const sourceBooked = rowSource === "google-lsa" ? lsaCalls?.bookedLeads ?? null
+                : outcomes.appointmentsAvailable ? booked : null;
+              const sourceAppointments = rowSource === "google-lsa" ? lsaCalls?.appointments ?? null
+                : outcomes.appointmentsAvailable ? appointments : null;
+              const sourcePaid = rowSource === "google-lsa" ? lsaCalls?.netPaidCents ?? null : paid;
+              const ratio = spend && sourcePaid !== null ? `${(sourcePaid / spend).toFixed(2)}x` : "—";
               return <Fragment key={rowSource}>
                 <tr className="bg-slate-50 font-semibold text-gray-900">
-                  <th scope="row" className="px-4 py-3">{LABELS[rowSource]}{rowSource === "meta" && <span className="ml-1 text-xs font-normal text-gray-500">· connected</span>}</th>
+                  <th scope="row" className="px-4 py-3">{LABELS[rowSource]}{rowSource === "meta" && <span className="ml-1 text-xs font-normal text-gray-500">· connected</span>}{rowSource === "google-lsa" && <span className="ml-1 text-xs font-normal text-gray-500">· calls</span>}</th>
                   <td className="whitespace-nowrap px-4 py-3 text-right">
                     {editing === rowSource ? <form onSubmit={saveSpend} className="flex items-center justify-end gap-1">
                       <span>$</span><input aria-label={`${LABELS[rowSource]} spend in dollars`} type="number" min="0" max="21474836.47" step="0.01" required value={amount} onChange={(event) => setAmount(event.target.value)} className="w-24 rounded border border-gray-300 px-2 py-1 text-right" />
@@ -167,10 +178,10 @@ export function CampaignResultsReport({ from, to, source, rangeLabel, outcomes }
                   </td>
                   <td className="px-4 py-3 text-right">{number(forms)}</td>
                   <td className="px-4 py-3 text-right">{rowSource === "google-lsa" && metric ? number(metric.googleLsaLeadCount) : "—"}</td>
-                  <td className="px-4 py-3 text-right">{number(linked)}</td>
-                  <td className="px-4 py-3 text-right">{number(outcomes.appointmentsAvailable ? booked : null)}</td>
-                  <td className="px-4 py-3 text-right">{number(outcomes.appointmentsAvailable ? appointments : null)}</td>
-                  <td className="px-4 py-3 text-right">{dollars(paid)}</td>
+                  <td className="px-4 py-3 text-right">{number(sourceLinked)}</td>
+                  <td className="px-4 py-3 text-right">{number(sourceBooked)}</td>
+                  <td className="px-4 py-3 text-right">{number(sourceAppointments)}</td>
+                  <td className="px-4 py-3 text-right">{dollars(sourcePaid)}</td>
                   <td className="px-4 py-3 text-right">{ratio}</td>
                 </tr>
                 {sourceCampaigns.map((campaign) => {
@@ -187,6 +198,7 @@ export function CampaignResultsReport({ from, to, source, rangeLabel, outcomes }
                         <button type="button" aria-expanded={expanded === campaignKey} onClick={() => setExpanded(expanded === campaignKey ? null : campaignKey)} className="text-left hover:text-blue-700">
                           <span aria-hidden="true" className="mr-2 text-gray-400">{expanded === campaignKey ? "▾" : "▸"}</span>{campaign.name}
                         </button>
+                        {campaign.source === "google-lsa" && <span className="block pl-5 text-xs text-gray-500">Website form only</span>}
                         {campaign.id && campaign.id !== campaign.name && <span className="block pl-5 text-xs text-gray-400">ID: {campaign.id}</span>}
                         {campaign.spendMatchedByName && <span className="block pl-5 text-xs text-gray-500">Spend matched by unique campaign name · Meta ID: {campaign.metaSpend?.id ?? "unavailable"}</span>}
                       </th>
@@ -215,7 +227,7 @@ export function CampaignResultsReport({ from, to, source, rangeLabel, outcomes }
               </Fragment>;
             })}
             {source === "all" && <tr className="border-t-2 border-gray-200 bg-gray-100 font-semibold text-gray-900">
-              <th scope="row" className="px-4 py-3">Total</th><td className="px-4 py-3 text-right">{dollars(allSpend)}</td>
+              <th scope="row" className="px-4 py-3">Total · form outcomes</th><td className="px-4 py-3 text-right">{dollars(allSpend)}</td>
               <td className="px-4 py-3 text-right">{number(totalForms)}</td>
               <td className="px-4 py-3 text-right">{metric ? number(metric.googleLsaLeadCount) : "—"}</td>
               <td className="px-4 py-3 text-right">{outcomes.linkedSubmissions}</td>
@@ -233,7 +245,8 @@ export function CampaignResultsReport({ from, to, source, rangeLabel, outcomes }
     </div>
 
     <div className="space-y-1 text-xs text-gray-600">
-      <p>Website forms are actual submissions; Meta platform leads may differ. MoeGo outcomes can occur after the form date. Each appointment and order is assigned to the latest prior linked form. Observed return is net paid after form divided by known source spend; it does not prove the ad caused a purchase.</p>
+      <p>Website forms are actual submissions; Meta platform leads may differ. The Google LSA source row uses exact-phone matches to imported calls, including existing customers. Phones matching multiple MoeGo profiles are linked but excluded from LSA bookings and payments. Because the CSV has dates rather than call times, LSA outcomes exclude MoeGo activity on a call date and use later New York calendar dates. Each appointment and order is assigned to the latest qualifying LSA call once. Observed return is net paid divided by known source spend; it does not prove the ad caused a purchase.</p>
+      <p>Expanded campaign rows and the Total row show website-form outcomes. The Total row includes all ad spend but only website-form outcomes. LSA call outcomes can overlap with form outcomes, so the Total row does not add them together.{metric?.googleLsaCallOutcomes && !metric.googleLsaCallOutcomes.appointmentsBackfilled ? " Run Backfill LSA appointments for this date range to complete the call booking counts." : ""}</p>
       <p>Spend uses the selected calendar dates. Meta campaign, ad set, and ad amounts come from the same synced insight rows as the Meta source total. Google Ads campaign spend uses the saved campaign IDs for this range; campaigns with spend appear even without tagged website forms. Form tags with different campaign IDs remain separate until mapped. Google manual spend covers Pet Resort and Mobile Grooming together for this exact range and takes priority over campaign totals. A dash means unavailable, not zero.</p>
       <p>Google LSA spend is estimated at $28 for each unique imported lead received in the selected dates, regardless of charge status. The CSV import is updated manually.</p>
       <p>{outcomes.linkedSubmissions} linked submissions ({outcomes.linkedCustomers} customers); {outcomes.duplicateProfileLeads} include verified duplicate MoeGo profiles. Appointments synced: {dateTime(outcomes.appointmentSyncedAt)}. Orders synced: {dateTime(outcomes.orderSyncedAt)}. Meta synced: {dateTime(metric?.metaSyncedAt ?? null)}.</p>
