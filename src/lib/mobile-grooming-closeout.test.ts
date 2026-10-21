@@ -29,6 +29,52 @@ test("final deposit uses counted cash after the weekly groomer cash payouts", ()
   assert.deepEqual(preview.staleDays, []);
 });
 
+test("fixed Jose pay exists without appointments and Stacey's base adds to calculated pay", () => {
+  const staceyEntries = [{
+    ...entries[0], employeeName: "Stacey Conti",
+  }];
+  const staceyReconciliation = [{
+    ...reconciliations[0], employeeName: "Stacey Conti",
+  }];
+  const preview = mobileGroomingCloseoutPreview(
+    staceyEntries,
+    staceyReconciliation,
+    [
+      { employeeName: "Stacey Conti", amountCents: 71_700 },
+      { employeeName: "Jose", amountCents: 60_000 },
+    ],
+    [],
+    [],
+    [
+      { employeeName: "Stacey Conti", payKind: "additive", amountCents: 71_700 },
+      { employeeName: "Jose", payKind: "fixed", amountCents: 60_000 },
+    ]
+  );
+  const jose = preview.payouts.find((payout) => payout.employeeName === "Jose");
+  const stacey = preview.payouts.find((payout) => payout.employeeName === "Stacey Conti");
+  assert.equal(jose?.groomerPayCents, 60_000);
+  assert.equal(jose?.cashPayoutCents, 0);
+  assert.equal(jose?.varianceReviewed, true);
+  assert.equal(stacey?.commissionPayCents, 4_300);
+  assert.equal(stacey?.groomerPayCents, 76_000);
+  assert.equal(stacey?.cashPayoutCents, 4_300);
+  assert.deepEqual(preview.pendingVarianceReviews, ["Stacey Conti"]);
+});
+
+test("fixed weekly pay replaces appointment commission while preserving tips in the detail", () => {
+  const preview = mobileGroomingCloseoutPreview(
+    [{ ...entries[0], employeeName: "Jose" }],
+    [{ ...reconciliations[0], employeeName: "Jose" }],
+    [{ employeeName: "Jose", amountCents: 60_000 }],
+    [],
+    [],
+    [{ employeeName: "Jose", payKind: "fixed", amountCents: 60_000 }]
+  );
+  assert.equal(preview.payouts[0].commissionPayCents, 4_300);
+  assert.equal(preview.payouts[0].groomerPayCents, 60_000);
+  assert.equal(preview.payouts[0].cashPayoutCents, 0);
+});
+
 test("an unset deposit and a stale daily cash count remain visible before closeout", () => {
   const changedEntries = [{ ...entries[0], discountCents: 700 }, entries[1]];
   const preview = mobileGroomingCloseoutPreview(changedEntries, reconciliations, [
