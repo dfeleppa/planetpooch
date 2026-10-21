@@ -42,17 +42,25 @@ function payComponents(value: unknown): PayComponents | null {
 export function postPayoutBreakdown(baseline: unknown, revised: unknown, adjustmentCents: number, baselinePayCents?: number) {
   const before = payComponents(baseline);
   const after = payComponents(revised);
-  if (!before || !after || (baselinePayCents !== undefined && before.groomerPayCents !== baselinePayCents)) return null;
+  if (!after) return null;
   const commission = (value: PayComponents) => value.payKind === "fixed" ? 0 : value.commissionPayCents;
   const tips = (value: PayComponents) => value.payKind === "fixed" ? 0 : value.creditCardTipCents;
-  const lines = [
-    { reason: "Grooming commission", amountCents: (commission(after) - tips(after)) - (commission(before) - tips(before)) },
-    { reason: "Credit card tips", amountCents: tips(after) - tips(before) },
-    { reason: "Base pay", amountCents: after.basePayCents - before.basePayCents },
-  ].filter((line) => line.amountCents !== 0);
-  const carriedCents = adjustmentCents - lines.reduce((sum, line) => sum + line.amountCents, 0);
-  if (carriedCents !== 0) lines.push({ reason: "Correction already carried to another pay week", amountCents: carriedCents });
-  return lines;
+  const hasComparableSnapshot = before && (baselinePayCents === undefined || before.groomerPayCents === baselinePayCents);
+  if (!hasComparableSnapshot && (baselinePayCents === undefined || !Number.isSafeInteger(baselinePayCents))) return null;
+  const lines = hasComparableSnapshot ? [
+    { reason: "Grooming commission change", amountCents: (commission(after) - tips(after)) - (commission(before) - tips(before)) },
+    { reason: "Credit card tip change", amountCents: tips(after) - tips(before) },
+    { reason: "Base pay change", amountCents: after.basePayCents - before.basePayCents },
+  ] : [
+    { reason: "Current grooming commission", amountCents: commission(after) - tips(after) },
+    { reason: "Current credit card tips", amountCents: tips(after) },
+    { reason: "Current base pay", amountCents: after.basePayCents },
+    { reason: "Less earned pay already paid", amountCents: -(baselinePayCents ?? 0) },
+  ];
+  const nonzeroLines = lines.filter((line) => line.amountCents !== 0);
+  const carriedCents = adjustmentCents - nonzeroLines.reduce((sum, line) => sum + line.amountCents, 0);
+  if (carriedCents !== 0) nonzeroLines.push({ reason: "Correction already carried to another pay week", amountCents: carriedCents });
+  return nonzeroLines;
 }
 
 export function payoutSnapshot(snapshot: Prisma.JsonValue): Payout[] {

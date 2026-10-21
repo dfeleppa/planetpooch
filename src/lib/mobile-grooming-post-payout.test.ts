@@ -7,12 +7,19 @@ test("adjustment details itemize changed commission, tips, base pay, and earlier
   const before = { groomerPayCents: 10_000, commissionPayCents: 8_000, creditCardTipCents: 2_000, basePayCents: 2_000, payKind: "additive" };
   const after = { groomerPayCents: 12_000, commissionPayCents: 9_500, creditCardTipCents: 2_500, basePayCents: 2_500, payKind: "additive" };
   assert.deepEqual(postPayoutBreakdown(before, after, 1_200), [
-    { reason: "Grooming commission", amountCents: 1_000 },
-    { reason: "Credit card tips", amountCents: 500 },
-    { reason: "Base pay", amountCents: 500 },
+    { reason: "Grooming commission change", amountCents: 1_000 },
+    { reason: "Credit card tip change", amountCents: 500 },
+    { reason: "Base pay change", amountCents: 500 },
     { reason: "Correction already carried to another pay week", amountCents: -800 },
   ]);
   assert.equal(postPayoutBreakdown({ groomerPayCents: 10_000 }, after, 2_000), null);
+  assert.deepEqual(postPayoutBreakdown({ groomerPayCents: 10_000 }, after, 1_200, 10_000), [
+    { reason: "Current grooming commission", amountCents: 7_000 },
+    { reason: "Current credit card tips", amountCents: 2_500 },
+    { reason: "Current base pay", amountCents: 2_500 },
+    { reason: "Less earned pay already paid", amountCents: -10_000 },
+    { reason: "Correction already carried to another pay week", amountCents: -800 },
+  ]);
 });
 
 test("post-payout differences compare earned pay to the original closeout", () => {
