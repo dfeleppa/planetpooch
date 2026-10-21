@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { Prisma } from "@prisma/client";
 import { getSession, isSuperAdmin } from "@/lib/auth-helpers";
 import { mobileGroomingCloseoutPreview, type MobilePayRule } from "@/lib/mobile-grooming-closeout";
 import { lastCompletedPayrollWeekStart, normalizeEmployeeName } from "@/lib/payroll";
@@ -35,6 +36,7 @@ async function getWeek(weekStart: Date) {
         mobileGroomingPayoutAdjustments: true,
         mobileGroomingVarianceReviews: true,
         mobileGroomingCloseout: true,
+        mobileGroomingPayLocks: true,
       },
     }),
     prisma.financeMobileGroomingDirectDeposit.findMany({
@@ -78,12 +80,25 @@ async function getWeek(weekStart: Date) {
     postPayoutAdjustments
   );
   const preparedByName = new Map(preparations.map((row) => [normalizeEmployeeName(row.employeeName).toLocaleLowerCase(), row.prepared]));
+  const lockedByName = new Map((week?.mobileGroomingPayLocks ?? []).map((row) => [
+    normalizeEmployeeName(row.employeeName).toLocaleLowerCase(), row,
+  ]));
   return { week, preview: {
     ...preview,
-    payouts: preview.payouts.map((payout) => ({
-      ...payout,
-      payPrepared: preparedByName.get(normalizeEmployeeName(payout.employeeName).toLocaleLowerCase()) ?? false,
-    })),
+    payouts: preview.payouts.map((payout) => {
+      const key = normalizeEmployeeName(payout.employeeName).toLocaleLowerCase();
+      const lock = lockedByName.get(key);
+      return {
+        ...payout,
+        payPrepared: preparedByName.get(key) ?? false,
+        payLock: lock ? {
+          earnedPayCents: lock.earnedPayCents,
+          weeklyPayCents: lock.weeklyPayCents,
+          cashPayoutCents: lock.cashPayoutCents,
+          lockedAt: lock.lockedAt.toISOString(),
+        } : null,
+      };
+    }),
   } };
 }
 
@@ -98,6 +113,24 @@ function serializeCloseout(closeout: NonNullable<NonNullable<Awaited<ReturnType<
     note: closeout.note,
     closedAt: closeout.closedAt.toISOString(),
     sourceFingerprint: closeout.sourceFingerprint,
+  };
+}
+
+function payoutAtCloseout(snapshot: Prisma.JsonValue, employeeName: string) {
+  if (!Array.isArray(snapshot)) return null;
+  const payout = snapshot.find((item) => item && typeof item === "object" && !Array.isArray(item) &&
+    typeof item.employeeName === "string" &&
+    normalizeEmployeeName(item.employeeName).toLocaleLowerCase() === employeeName.toLocaleLowerCase());
+  if (!payout || typeof payout !== "object" || Array.isArray(payout) ||
+      typeof payout.groomerPayCents !== "number" || !Number.isSafeInteger(payout.groomerPayCents) ||
+      typeof payout.cashPayoutCents !== "number" || !Number.isSafeInteger(payout.cashPayoutCents)) return null;
+  const weeklyPayCents = typeof payout.weeklyPayCents === "number" && Number.isSafeInteger(payout.weeklyPayCents)
+    ? payout.weeklyPayCents : payout.groomerPayCents;
+  return {
+    earnedPayCents: payout.groomerPayCents,
+    weeklyPayCents,
+    cashPayoutCents: payout.cashPayoutCents,
+    snapshot: payout as Prisma.InputJsonObject,
   };
 }
 
@@ -219,6 +252,73 @@ export async function PUT(req: NextRequest) {
   });
 }
 
+async function lockEmployeePay(body: Record<string, unknown>) {
+  const weekStart = dateParam(body.weekStart);
+  const employeeName = normalizeEmployeeName(typeof body.employeeName === "string" ? body.employeeName : "");
+  if (!weekStart || !employeeName || employeeName.length > 200 || typeof body.sourceFingerprint !== "string") {
+    return NextResponse.json({ error: "A valid week, employee, and current payout are required." }, { status: 400 });
+  }
+  const result = await getWeek(weekStart);
+  if (!result.week) return NextResponse.json({ error: "No saved mobile grooming payroll exists for this week." }, { status: 404 });
+  if (body.sourceFingerprint !== result.preview.sourceFingerprint) {
+    return NextResponse.json({ error: "Payroll changed. Reload payouts before locking pay." }, { status: 409 });
+  }
+  const payout = result.preview.payouts.find((item) =>
+    normalizeEmployeeName(item.employeeName).toLocaleLowerCase() === employeeName.toLocaleLowerCase()
+  );
+  if (!payout) return NextResponse.json({ error: "Employee was not found in this week." }, { status: 404 });
+  if (payout.payLock) return NextResponse.json({ error: "This employee's paid amount is already locked." }, { status: 409 });
+  const closeout = result.week.mobileGroomingCloseout;
+  if (!closeout && (!payout.payPrepared || !payout.directDepositSet || !payout.varianceReviewed ||
+      payout.cashPayoutCents < 0 || result.preview.missingDays.some((day) => day.startsWith(`${payout.employeeName} — `)) ||
+      result.preview.staleDays.some((day) => day.startsWith(`${payout.employeeName} — `)))) {
+    return NextResponse.json({ error: "Prepare pay, complete this employee's reconciliation, and set direct deposit before locking." }, { status: 409 });
+  }
+  const paid = closeout
+    ? payoutAtCloseout(closeout.payoutSnapshot, payout.employeeName)
+    : {
+        earnedPayCents: payout.groomerPayCents,
+        weeklyPayCents: payout.weeklyPayCents,
+        cashPayoutCents: payout.cashPayoutCents,
+        snapshot: payout as Prisma.InputJsonObject,
+      };
+  if (!paid) return NextResponse.json({ error: "The original payout is unavailable for this employee." }, { status: 409 });
+  const payrollWeekId = result.week.id;
+  try {
+    const lock = await prisma.$transaction(async (tx) => {
+      const saved = await tx.financeMobileGroomingPayLock.create({
+        data: {
+          payrollWeekId,
+          employeeName: payout.employeeName,
+          earnedPayCents: paid.earnedPayCents,
+          weeklyPayCents: paid.weeklyPayCents,
+          cashPayoutCents: paid.cashPayoutCents,
+          sourceFingerprint: closeout?.sourceFingerprint ?? result.preview.sourceFingerprint,
+          payoutSnapshot: paid.snapshot,
+        },
+      });
+      await tx.financeMobileGroomingPayPreparation.upsert({
+        where: { weekStart_employeeName: { weekStart, employeeName: payout.employeeName } },
+        create: { weekStart, employeeName: payout.employeeName, prepared: true },
+        update: { prepared: true },
+      });
+      return saved;
+    });
+    return NextResponse.json({
+      employeeName: lock.employeeName,
+      earnedPayCents: lock.earnedPayCents,
+      weeklyPayCents: lock.weeklyPayCents,
+      cashPayoutCents: lock.cashPayoutCents,
+      lockedAt: lock.lockedAt.toISOString(),
+    });
+  } catch (error) {
+    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
+      return NextResponse.json({ error: "This employee's paid amount is already locked." }, { status: 409 });
+    }
+    throw error;
+  }
+}
+
 export async function PATCH(req: NextRequest) {
   if (!(await authorized())) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   let body: Record<string, unknown>;
@@ -227,6 +327,7 @@ export async function PATCH(req: NextRequest) {
   } catch {
     return NextResponse.json({ error: "Invalid JSON body." }, { status: 400 });
   }
+  if (body.action === "lock") return lockEmployeePay(body);
   const weekStart = dateParam(body.weekStart);
   const employeeName = normalizeEmployeeName(typeof body.employeeName === "string" ? body.employeeName : "");
   if (!weekStart || !employeeName || employeeName.length > 200 || typeof body.prepared !== "boolean") {

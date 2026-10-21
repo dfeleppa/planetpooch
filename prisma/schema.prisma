@@ -1459,6 +1459,7 @@ model FinancePayrollWeek {
   mobileGroomingPayoutAdjustments FinanceMobileGroomingPayoutAdjustment[]
   mobileGroomingVarianceReviews FinanceMobileGroomingVarianceReview[]
   mobileGroomingPostPayoutAdjustments FinanceMobileGroomingPostPayoutAdjustment[]
+  mobileGroomingPayLocks FinanceMobileGroomingPayLock[]
 
   @@unique([business, weekStart])
   @@index([business, weekStart, weekEnd])
@@ -1559,6 +1560,24 @@ model FinanceMobileGroomingPayPreparation {
 
   @@unique([weekStart, employeeName])
   @@index([weekStart])
+}
+
+/// An immutable record of what was paid to one groomer for a payroll week.
+model FinanceMobileGroomingPayLock {
+  id             String   @id @default(cuid())
+  payrollWeekId  String
+  employeeName   String
+  earnedPayCents Int
+  weeklyPayCents Int
+  cashPayoutCents Int
+  sourceFingerprint String
+  payoutSnapshot Json
+  lockedAt       DateTime @default(now())
+
+  payrollWeek FinancePayrollWeek @relation(fields: [payrollWeekId], references: [id], onDelete: Cascade)
+
+  @@unique([payrollWeekId, employeeName])
+  @@index([payrollWeekId])
 }
 
 /// A saved final cash closeout for one completed mobile grooming payroll week.

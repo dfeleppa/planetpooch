@@ -157,6 +157,12 @@ type PayoutPreview = {
     priorPeriodAdjustmentCents: number;
     weeklyPayCents: number;
     payPrepared: boolean;
+    payLock: {
+      earnedPayCents: number;
+      weeklyPayCents: number;
+      cashPayoutCents: number;
+      lockedAt: string;
+    } | null;
     directDepositCents: number;
     adjustmentCents: number;
     adjustmentNote: string;
@@ -729,6 +735,7 @@ export function PayrollDashboard({
   const [depositDraft, setDepositDraft] = useState("");
   const [savingDirectDeposit, setSavingDirectDeposit] = useState(false);
   const [savingPayPreparation, setSavingPayPreparation] = useState<string | null>(null);
+  const [savingPayLock, setSavingPayLock] = useState<string | null>(null);
   const [adjustmentEditEmployee, setAdjustmentEditEmployee] = useState<string | null>(null);
   const [adjustmentDraft, setAdjustmentDraft] = useState("");
   const [adjustmentNoteDraft, setAdjustmentNoteDraft] = useState("");
@@ -736,6 +743,8 @@ export function PayrollDashboard({
   const [closeoutData, setCloseoutData] = useState<CloseoutResponse | null>(null);
   const [postPayoutChanges, setPostPayoutChanges] = useState<PostPayoutChangesResponse | null>(null);
   const [loadingPostPayoutChanges, setLoadingPostPayoutChanges] = useState(false);
+  const [checkingPostPayout, setCheckingPostPayout] = useState(false);
+  const [postPayoutCheckResult, setPostPayoutCheckResult] = useState<string | null>(null);
   const [finalDepositDraft, setFinalDepositDraft] = useState("");
   const [closeoutNoteDraft, setCloseoutNoteDraft] = useState("");
   const [savingCloseout, setSavingCloseout] = useState(false);
@@ -1235,6 +1244,48 @@ export function PayrollDashboard({
       setError(error instanceof Error ? error.message : "Could not save pay preparation.");
     } finally {
       setSavingPayPreparation(null);
+    }
+  }
+
+  async function lockEmployeePay(employeeName: string) {
+    setSavingPayLock(employeeName);
+    setError(null);
+    try {
+      const response = await fetch("/api/finance/payroll/mobile-grooming/closeout", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "lock", weekStart, employeeName, sourceFingerprint: closeoutData?.preview.sourceFingerprint }),
+      });
+      const data = (await response.json()) as { error?: string };
+      if (!response.ok) throw new Error(data.error || "Could not lock employee pay.");
+      await loadPayouts(weekStart);
+      setMessage(`${employeeName}'s paid amount is locked for this week.`);
+    } catch (error) {
+      setError(error instanceof Error ? error.message : "Could not lock employee pay.");
+    } finally {
+      setSavingPayLock(null);
+    }
+  }
+
+  async function checkPostPayoutChanges() {
+    setCheckingPostPayout(true);
+    setPostPayoutCheckResult(null);
+    setError(null);
+    try {
+      const response = await fetch("/api/finance/payroll/mobile-grooming/post-payout-check", { method: "POST" });
+      const result = (await response.json()) as { checkedCount?: number; lockedCount?: number; discrepancyCount?: number; error?: string };
+      if (!response.ok) throw new Error(result.error || "Could not check locked pay.");
+      const ledgerResponse = await fetch("/api/finance/payroll/mobile-grooming/post-payout-changes");
+      const ledger = (await ledgerResponse.json()) as PostPayoutChangesResponse;
+      if (!ledgerResponse.ok) throw new Error(ledger.error || "Could not reload the pay ledger.");
+      setPostPayoutChanges(ledger);
+      setPostPayoutCheckResult(result.checkedCount
+        ? `Checked ${result.checkedCount} paid out employee payments (${result.lockedCount ?? 0} individually locked). ${result.discrepancyCount ?? 0} pay discrepancies found.`
+        : "No paid out employee pay has been locked or closed yet.");
+    } catch (error) {
+      setError(error instanceof Error ? error.message : "Could not check locked pay.");
+    } finally {
+      setCheckingPostPayout(false);
     }
   }
 
@@ -2562,6 +2613,7 @@ export function PayrollDashboard({
                             <TableHeader>Weekly over/short applied</TableHeader>
                             <TableHeader>Cash Payout</TableHeader>
                             <TableHeader>Pay Prepared</TableHeader>
+                            <TableHeader>Paid Pay Lock</TableHeader>
                             <TableHeader>Details</TableHeader>
                           </TableRow>
                         </TableHead>
@@ -2667,12 +2719,28 @@ export function PayrollDashboard({
                                     type="checkbox"
                                     checked={payout.payPrepared}
                                     onChange={(event) => void savePayPreparation(payout.employeeName, event.target.checked)}
-                                    disabled={Boolean(savingPayPreparation) || loadingDirectDeposits}
+                                    disabled={Boolean(savingPayPreparation) || loadingDirectDeposits || Boolean(payout.payLock)}
                                     aria-label={`Pay prepared for ${payout.employeeName}`}
                                     className="h-4 w-4 accent-[#315d64]"
                                   />
                                   {payout.payPrepared ? "Prepared" : "Pending"}
                                 </label>
+                              </TableCell>
+                              <TableCell>
+                                {payout.payLock ? (
+                                  <div className="min-w-32 text-sm">
+                                    <p className="font-semibold text-green-800">Locked {formatMoney(payout.payLock.weeklyPayCents / 100)}</p>
+                                    <p className="text-xs text-gray-600">Cash paid: {formatMoney(payout.payLock.cashPayoutCents / 100)}</p>
+                                    <p className="text-xs text-gray-500">{new Date(payout.payLock.lockedAt).toLocaleString("en-US", { timeZone: "America/New_York", month: "short", day: "numeric", year: "numeric", hour: "numeric", minute: "2-digit" })}</p>
+                                  </div>
+                                ) : (
+                                  <Button type="button" size="sm" variant="secondary"
+                                    onClick={() => void lockEmployeePay(payout.employeeName)}
+                                    disabled={Boolean(savingPayLock) || !closeoutData.closeout &&
+                                      (!payout.payPrepared || !payout.directDepositSet || !payout.varianceReviewed || payout.cashPayoutCents < 0)}>
+                                    {savingPayLock === payout.employeeName ? "Locking..." : "Lock in paid pay"}
+                                  </Button>
+                                )}
                               </TableCell>
                               <TableCell>
                                 {depositEditEmployee !== payout.employeeName && (
@@ -2700,6 +2768,7 @@ export function PayrollDashboard({
                             <TableCell className="font-semibold">{closeoutData.preview.missingDepositSettings.length === 0
                               ? formatMoney(closeoutData.preview.cashPayoutCents / 100) : "Pending"}</TableCell>
                             <TableCell className="font-semibold">{closeoutData.preview.payouts.filter((payout) => payout.payPrepared).length}/{closeoutData.preview.payouts.length}</TableCell>
+                            <TableCell className="font-semibold">{closeoutData.preview.payouts.filter((payout) => payout.payLock).length}/{closeoutData.preview.payouts.length}</TableCell>
                             <TableCell />
                           </TableRow>
                         </TableBody>
@@ -3108,7 +3177,14 @@ export function PayrollDashboard({
 
       {isMobileGrooming && mobilePayrollView === "changes" && (
         <Card>
-          <CardContent>
+          <CardContent className="space-y-3">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <p className="text-sm text-gray-600">Compare paid out groomer earnings with the latest saved payroll.</p>
+              <Button type="button" onClick={() => void checkPostPayoutChanges()} disabled={checkingPostPayout}>
+                {checkingPostPayout ? "Checking..." : "Check paid vs actual pay"}
+              </Button>
+            </div>
+            {postPayoutCheckResult && <p className="text-sm text-gray-700" role="status">{postPayoutCheckResult}</p>}
             {loadingPostPayoutChanges ? (
               <p className="text-sm text-gray-500">Loading changes...</p>
             ) : !postPayoutChanges?.changes.length ? (

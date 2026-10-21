@@ -56,7 +56,7 @@ export function currentEasternWeekStart(now: Date): Date {
   return new Date(date.getTime() - ((date.getUTCDay() + 1) % 7) * MS_PER_DAY);
 }
 
-/** Recalculate the unpaid difference against the immutable payout at original closeout. */
+/** Recalculate unpaid earned pay against employee locks and legacy weekly closeouts. */
 export async function reconcilePostPayoutChanges(
   tx: Prisma.TransactionClient,
   sourcePayrollWeekId: string,
@@ -64,10 +64,16 @@ export async function reconcilePostPayoutChanges(
   entries: PayrollEntry[],
   now = new Date()
 ) {
-  const closeout = await tx.financeMobileGroomingWeeklyCloseout.findUnique({
-    where: { payrollWeekId: sourcePayrollWeekId }, select: { payoutSnapshot: true },
-  });
-  if (!closeout) return;
+  const [closeout, locks] = await Promise.all([
+    tx.financeMobileGroomingWeeklyCloseout.findUnique({
+      where: { payrollWeekId: sourcePayrollWeekId }, select: { payoutSnapshot: true },
+    }),
+    tx.financeMobileGroomingPayLock.findMany({
+      where: { payrollWeekId: sourcePayrollWeekId },
+      select: { employeeName: true, earnedPayCents: true },
+    }),
+  ]);
+  if (!closeout && locks.length === 0) return { checkedCount: 0, lockedCount: 0, discrepancyCount: 0 };
 
   const rules = await tx.financeMobileGroomingPayRule.findMany({
     where: { effectiveWeekStart: { lte: sourceWeekStart } },
@@ -87,23 +93,19 @@ export async function reconcilePostPayoutChanges(
   const existing = await tx.financeMobileGroomingPostPayoutAdjustment.findMany({
     where: { sourcePayrollWeekId },
   });
+  const baseline = new Map((closeout ? payoutSnapshot(closeout.payoutSnapshot) : [])
+    .map((payout) => [keyFor(payout.employeeName), payout]));
+  for (const lock of locks) baseline.set(keyFor(lock.employeeName), {
+    employeeName: lock.employeeName, groomerPayCents: lock.earnedPayCents,
+  });
+  const revisedToCheck = closeout ? revised : revised.filter((payout) => baseline.has(keyFor(payout.employeeName)));
   const changes = earnedPayChanges(
-    payoutSnapshot(closeout.payoutSnapshot), revised, existing.map((row) => row.employeeName)
-  );
-  if (changes.every((change) => change.amountCents === 0) && existing.length === 0) return;
-
-  let targetWeekStart = currentEasternWeekStart(now);
-  if (targetWeekStart <= sourceWeekStart) {
-    targetWeekStart = new Date(sourceWeekStart.getTime() + 7 * MS_PER_DAY);
-  }
-  // A completed target is already paid; a later correction belongs in the next open week.
-  for (;;) {
-    const target = await tx.financePayrollWeek.findUnique({
-      where: { business_weekStart: { business: "mobile-grooming", weekStart: targetWeekStart } },
-      select: { mobileGroomingCloseout: { select: { id: true } } },
-    });
-    if (!target?.mobileGroomingCloseout) break;
-    targetWeekStart = new Date(targetWeekStart.getTime() + 7 * MS_PER_DAY);
+    [...baseline.values()], revisedToCheck,
+    existing.filter((row) => baseline.has(keyFor(row.employeeName))).map((row) => row.employeeName)
+  ).filter((change) => baseline.has(keyFor(change.employeeName)) || Boolean(closeout));
+  const discrepancyCount = changes.filter((change) => change.amountCents !== 0).length;
+  if (changes.every((change) => change.amountCents === 0) && existing.length === 0) {
+    return { checkedCount: baseline.size, lockedCount: locks.length, discrepancyCount };
   }
 
   for (const change of changes) {
@@ -112,6 +114,23 @@ export async function reconcilePostPayoutChanges(
       .reduce((sum, row) => sum + row.amountCents, 0);
     const delta = outstandingPayCorrection(change.amountCents, applied);
     if (delta === 0) continue;
+    let targetWeekStart = currentEasternWeekStart(now);
+    if (targetWeekStart <= sourceWeekStart) {
+      targetWeekStart = new Date(sourceWeekStart.getTime() + 7 * MS_PER_DAY);
+    }
+    // Do not change a pay week after this employee's payout was locked.
+    for (;;) {
+      const target = await tx.financePayrollWeek.findUnique({
+        where: { business_weekStart: { business: "mobile-grooming", weekStart: targetWeekStart } },
+        select: { id: true, mobileGroomingCloseout: { select: { id: true } } },
+      });
+      const payLocked = target && await tx.financeMobileGroomingPayLock.findFirst({
+        where: { payrollWeekId: target.id, employeeName: { equals: change.employeeName, mode: "insensitive" } },
+        select: { id: true },
+      });
+      if (!target?.mobileGroomingCloseout && !payLocked) break;
+      targetWeekStart = new Date(targetWeekStart.getTime() + 7 * MS_PER_DAY);
+    }
     const targetRow = existing.find((row) => keyFor(row.employeeName) === key &&
       row.targetWeekStart.getTime() === targetWeekStart.getTime());
     if (targetRow) {
@@ -133,4 +152,5 @@ export async function reconcilePostPayoutChanges(
       data: { prepared: false },
     });
   }
+  return { checkedCount: baseline.size, lockedCount: locks.length, discrepancyCount };
 }

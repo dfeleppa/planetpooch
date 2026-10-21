@@ -39,6 +39,7 @@ test("repeat imports do not duplicate a correction; a reversal updates the open 
   let currentTargetClosed = false;
   const tx = {
     financeMobileGroomingWeeklyCloseout: { findUnique: async () => ({ payoutSnapshot: [{ employeeName: "Andrea", groomerPayCents: 3_800 }] }) },
+    financeMobileGroomingPayLock: { findMany: async () => [], findFirst: async () => null },
     financeMobileGroomingPayRule: { findMany: async () => [] },
     financeMobileGroomingPostPayoutAdjustment: {
       findMany: async () => [...rows],
@@ -71,4 +72,56 @@ test("repeat imports do not duplicate a correction; a reversal updates the open 
   await reconcilePostPayoutChanges(tx, "source", sourceStart, entry(1_000), now);
   assert.equal(rows[1].targetWeekStart.toISOString().slice(0, 10), "2026-10-31");
   assert.equal(rows[1].amountCents, 1_000);
+});
+
+test("an employee lock detects later pay without a weekly closeout", async () => {
+  const rows: Array<{ id: string; targetWeekStart: Date; employeeName: string; amountCents: number }> = [];
+  const tx = {
+    financeMobileGroomingWeeklyCloseout: { findUnique: async () => null },
+    financeMobileGroomingPayLock: {
+      findMany: async () => [{ employeeName: "Andrea", earnedPayCents: 3_800 }],
+      findFirst: async () => null,
+    },
+    financeMobileGroomingPayRule: { findMany: async () => [] },
+    financeMobileGroomingPostPayoutAdjustment: {
+      findMany: async () => [...rows],
+      create: async ({ data }: { data: typeof rows[number] }) => { rows.push({ ...data, id: "one" }); },
+    },
+    financePayrollWeek: { findUnique: async () => null },
+    financeMobileGroomingPayPreparation: { updateMany: async () => {} },
+  } as unknown as Parameters<typeof reconcilePostPayoutChanges>[0];
+  const result = await reconcilePostPayoutChanges(tx, "source", new Date("2026-10-10T00:00:00.000Z"), [{
+    serviceDate: new Date("2026-10-10T00:00:00.000Z"), employeeName: "Andrea", paymentType: "credit",
+    dogs: 1, priceCents: 10_000, upgradeCents: 0, creditCardTipCents: 500, discountCents: 0,
+  }], new Date("2026-10-25T10:00:00.000Z"));
+  assert.deepEqual(result, { checkedCount: 1, lockedCount: 1, discrepancyCount: 1 });
+  assert.equal(rows[0].amountCents, 500);
+  assert.equal(rows[0].targetWeekStart.toISOString().slice(0, 10), "2026-10-24");
+});
+
+test("a correction skips a receiving week after that employee's pay is locked", async () => {
+  const rows: Array<{ targetWeekStart: Date; amountCents: number }> = [];
+  const tx = {
+    financeMobileGroomingWeeklyCloseout: { findUnique: async () => null },
+    financeMobileGroomingPayLock: {
+      findMany: async () => [{ employeeName: "Andrea", earnedPayCents: 3_800 }],
+      findFirst: async ({ where }: { where: { payrollWeekId: string } }) =>
+        where.payrollWeekId === "receiving-week" ? { id: "paid" } : null,
+    },
+    financeMobileGroomingPayRule: { findMany: async () => [] },
+    financeMobileGroomingPostPayoutAdjustment: {
+      findMany: async () => [],
+      create: async ({ data }: { data: typeof rows[number] }) => { rows.push(data); },
+    },
+    financePayrollWeek: { findUnique: async ({ where }: { where: { business_weekStart: { weekStart: Date } } }) =>
+      where.business_weekStart.weekStart.toISOString().slice(0, 10) === "2026-10-24"
+        ? { id: "receiving-week", mobileGroomingCloseout: null } : null },
+    financeMobileGroomingPayPreparation: { updateMany: async () => {} },
+  } as unknown as Parameters<typeof reconcilePostPayoutChanges>[0];
+  await reconcilePostPayoutChanges(tx, "source", new Date("2026-10-10T00:00:00.000Z"), [{
+    serviceDate: new Date("2026-10-10T00:00:00.000Z"), employeeName: "Andrea", paymentType: "credit",
+    dogs: 1, priceCents: 10_000, upgradeCents: 0, creditCardTipCents: 500, discountCents: 0,
+  }], new Date("2026-10-25T10:00:00.000Z"));
+  assert.equal(rows[0].targetWeekStart.toISOString().slice(0, 10), "2026-10-31");
+  assert.equal(rows[0].amountCents, 500);
 });
