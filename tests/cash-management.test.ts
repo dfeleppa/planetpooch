@@ -16,7 +16,7 @@ test("Mobile Grooming includes unclosed counted cash without counting closed wee
         assert.deepEqual(query.where, {
           payrollWeek: { business: "mobile-grooming", mobileGroomingCloseout: { is: null } },
         });
-        return [{ id: "open-1", serviceDate: new Date("2026-10-20"), employeeName: "Groomer",
+        return [{ id: "open-1", serviceDate: new Date("2026-10-20"), reconciledAt: new Date("2026-10-20T14:00:00Z"), employeeName: "Groomer",
           countedCashCents: 339_600,
           payrollWeek: { weekStart: new Date("2026-10-17"), weekEnd: new Date("2026-10-23") } }];
       },
@@ -52,7 +52,7 @@ test("signed cash adjustments change the balance and show their reasons in the l
 
 test("Mobile Grooming ledger shows net closeout, adjustment, bank removal, and balance after every entry", () => {
   const ledger = buildMobileCashLedger(
-    [{ id: "open", serviceDate: new Date("2026-10-20"), employeeName: "Groomer",
+    [{ id: "open", serviceDate: new Date("2026-10-20"), reconciledAt: new Date("2026-10-21T14:00:00Z"), employeeName: "Groomer",
       countedCashCents: 5_000, payrollWeek: { weekStart: new Date("2026-10-17"), weekEnd: new Date("2026-10-23") } }],
     [{ id: "closed", countedCashCents: 100_000, cashPayoutCents: 20_000,
       expectedDepositCents: 80_000, finalDepositCents: 79_000, note: "Short $10",
@@ -66,6 +66,8 @@ test("Mobile Grooming ledger shows net closeout, adjustment, bank removal, and b
     { kind: "completed", amountCents: 80_000, balanceCents: 80_000 },
   ]);
   assert.match(ledger[3].detail, /\$1,000\.00 collected − \$200\.00 employee payouts/);
+  assert.equal(ledger[0].occurredAt, "2026-10-21T14:00:00.000Z");
+  assert.match(ledger[0].detail, /Service date 2026-10-20/);
 });
 
 test("Pet Resort daily cash increases the available deposit and remains in the activity log", async () => {

@@ -15,6 +15,7 @@ export function petResortOnHandCents(importedCents: number, dailyCashCents: numb
 type PendingCount = {
   id: string;
   serviceDate: Date;
+  reconciledAt: Date;
   employeeName: string;
   countedCashCents: number;
   payrollWeek: { weekStart: Date; weekEnd: Date };
@@ -49,9 +50,9 @@ function ledgerMoney(cents: number) {
 export function buildMobileCashLedger(pending: PendingCount[], completed: CompletedWeek[], deposits: BankDeposit[], adjustments: ManualAdjustment[] = []): MobileCashLedgerEntry[] {
   const entries: Omit<MobileCashLedgerEntry, "balanceCents">[] = [
     ...pending.map((row) => ({
-      id: `counted-${row.id}`, kind: "counted" as const, occurredAt: row.serviceDate.toISOString(),
+      id: `counted-${row.id}`, kind: "counted" as const, occurredAt: row.reconciledAt.toISOString(),
       amountCents: row.countedCashCents, label: "Counted cash awaiting closeout",
-      detail: `${row.employeeName} · ${dateOnly(row.serviceDate)} · Week ${dateOnly(row.payrollWeek.weekStart)}–${dateOnly(row.payrollWeek.weekEnd)}`,
+      detail: `${row.employeeName} · Service date ${dateOnly(row.serviceDate)} · Week ${dateOnly(row.payrollWeek.weekStart)}–${dateOnly(row.payrollWeek.weekEnd)}`,
     })),
     ...completed.flatMap((week) => [
       {
@@ -89,7 +90,7 @@ export async function mobileGroomingCashSummary(db: Pick<typeof prisma, "finance
     }),
     db.financeMobileGroomingDailyReconciliation.findMany({
       where: { payrollWeek: { business: MOBILE_GROOMING_SOURCE, mobileGroomingCloseout: { is: null } } },
-      select: { id: true, serviceDate: true, employeeName: true, countedCashCents: true,
+      select: { id: true, serviceDate: true, reconciledAt: true, employeeName: true, countedCashCents: true,
         payrollWeek: { select: { weekStart: true, weekEnd: true } } },
     }),
     db.financeCashBankDeposit.findMany({

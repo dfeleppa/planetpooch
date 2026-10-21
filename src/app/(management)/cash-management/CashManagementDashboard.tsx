@@ -243,7 +243,7 @@ export function CashManagementDashboard({ mobile, petResort, safeCents, initialC
             <ul className="divide-y divide-pp-line">
               {mobile.ledger.map((entry) => (
                 <li key={entry.id} className="grid gap-1 py-3 text-sm text-gray-700 sm:grid-cols-[7rem_minmax(0,1fr)_7rem_8rem] sm:gap-3">
-                  <span>{new Intl.DateTimeFormat("en-US", { dateStyle: "medium", timeZone: entry.kind === "bank" || entry.kind === "manual" ? "America/New_York" : "UTC" }).format(new Date(entry.occurredAt))}</span>
+                  <span>{new Intl.DateTimeFormat("en-US", { dateStyle: "medium", timeZone: entry.kind === "bank" || entry.kind === "manual" || entry.kind === "counted" ? "America/New_York" : "UTC" }).format(new Date(entry.occurredAt))}</span>
                   <span><span className="font-medium text-gray-900">{entry.label}</span><span className="block text-xs text-gray-500">{entry.detail}</span></span>
                   <span className={`font-semibold sm:text-right ${entry.amountCents < 0 ? "text-red-700" : "text-green-800"}`}>{entry.amountCents < 0 ? "−" : "+"}{money(Math.abs(entry.amountCents))}</span>
                   <span className="font-semibold text-gray-900 sm:text-right"><span className="font-normal text-gray-500 sm:hidden">Balance: </span>{money(entry.balanceCents)}</span>
