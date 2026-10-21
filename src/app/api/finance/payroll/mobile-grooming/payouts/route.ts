@@ -30,7 +30,7 @@ export async function PUT(req: NextRequest) {
     return NextResponse.json({ error: "A valid employee and direct deposit amount are required." }, { status: 400 });
   }
 
-  const [payrollEntry, payRule] = await Promise.all([
+  const [payrollEntry, payRule, carriedAdjustment] = await Promise.all([
     prisma.financeMobileGroomingPayrollEntry.findFirst({
       where: { employeeName: { equals: employeeName, mode: "insensitive" }, payrollWeek: { business: "mobile-grooming", weekStart } },
       select: { employeeName: true },
@@ -40,12 +40,16 @@ export async function PUT(req: NextRequest) {
       orderBy: { effectiveWeekStart: "desc" },
       select: { employeeName: true },
     }),
+    prisma.financeMobileGroomingPostPayoutAdjustment.findFirst({
+      where: { employeeName: { equals: employeeName, mode: "insensitive" }, targetWeekStart: weekStart, amountCents: { not: 0 } },
+      select: { employeeName: true },
+    }),
   ]);
-  if (!payrollEntry && !payRule) {
+  if (!payrollEntry && !payRule && !carriedAdjustment) {
     return NextResponse.json({ error: "No mobile grooming payroll entry or base pay exists for this employee." }, { status: 404 });
   }
 
-  const canonicalName = normalizeEmployeeName(payRule?.employeeName ?? payrollEntry!.employeeName);
+  const canonicalName = normalizeEmployeeName(payRule?.employeeName ?? payrollEntry?.employeeName ?? carriedAdjustment!.employeeName);
   const setting = await prisma.financeMobileGroomingDirectDeposit.upsert({
     where: { employeeName_effectiveWeekStart: { employeeName: canonicalName, effectiveWeekStart: weekStart } },
     create: { employeeName: canonicalName, effectiveWeekStart: weekStart, amountCents },

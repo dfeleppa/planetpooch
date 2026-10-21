@@ -37,7 +37,7 @@ export async function PUT(req: NextRequest) {
     return NextResponse.json({ error: "Enter a signed adjustment and a note for any nonzero amount." }, { status: 400 });
   }
 
-  const [existingWeek, payRule] = await Promise.all([
+  const [existingWeek, payRule, carriedAdjustment] = await Promise.all([
     prisma.financePayrollWeek.findUnique({
       where: { business_weekStart: { business: "mobile-grooming", weekStart } },
       select: { id: true, mobileGroomingEntries: { select: { employeeName: true } } },
@@ -47,11 +47,15 @@ export async function PUT(req: NextRequest) {
       orderBy: { effectiveWeekStart: "desc" },
       select: { employeeName: true },
     }),
+    prisma.financeMobileGroomingPostPayoutAdjustment.findFirst({
+      where: { employeeName: { equals: employeeName, mode: "insensitive" }, targetWeekStart: weekStart, amountCents: { not: 0 } },
+      select: { employeeName: true },
+    }),
   ]);
   const matchingEntry = existingWeek?.mobileGroomingEntries.find((entry) =>
     normalizeEmployeeName(entry.employeeName).toLocaleLowerCase() === employeeName.toLocaleLowerCase()
   );
-  if (!matchingEntry && !payRule) {
+  if (!matchingEntry && !payRule && !carriedAdjustment) {
     return NextResponse.json({ error: "No saved mobile grooming payroll exists for this employee and week." }, { status: 404 });
   }
   const week = existingWeek ?? await prisma.financePayrollWeek.upsert({
@@ -65,7 +69,7 @@ export async function PUT(req: NextRequest) {
     select: { id: true },
   });
 
-  const canonicalName = normalizeEmployeeName(payRule?.employeeName ?? matchingEntry!.employeeName);
+  const canonicalName = normalizeEmployeeName(payRule?.employeeName ?? matchingEntry?.employeeName ?? carriedAdjustment!.employeeName);
   const normalizedNote = amountCents === 0 ? "" : note.trim();
   const adjustment = await prisma.financeMobileGroomingPayoutAdjustment.upsert({
     where: { payrollWeekId_employeeName: { payrollWeekId: week.id, employeeName: canonicalName } },

@@ -154,6 +154,8 @@ type PayoutPreview = {
     basePayCents: number;
     payKind: "fixed" | "additive" | null;
     groomerPayCents: number;
+    priorPeriodAdjustmentCents: number;
+    weeklyPayCents: number;
     payPrepared: boolean;
     directDepositCents: number;
     adjustmentCents: number;
@@ -194,6 +196,24 @@ type CloseoutResponse = {
   error?: string;
 };
 
+type PostPayoutChangesResponse = {
+  weekStart: string;
+  targetClosedAt: string | null;
+  totalCents: number;
+  changes: Array<{
+    id: string;
+    employeeName: string;
+    sourceWeekStart: string;
+    sourceWeekEnd: string;
+    sourceClosedAt: string | null;
+    baselinePayCents: number;
+    revisedPayCents: number;
+    amountCents: number;
+    detectedAt: string;
+  }>;
+  error?: string;
+};
+
 type EditableRow = {
   localId: string;
   employeeName: string;
@@ -222,7 +242,7 @@ export type PayrollEmployeeOption = {
 const EMPTY_EMPLOYEE_OPTIONS: PayrollEmployeeOption[] = [];
 
 type MobileSummaryView = "annual" | "weekly";
-type MobilePayrollView = "summary" | "employee" | "report" | "reconciliation";
+type MobilePayrollView = "summary" | "employee" | "report" | "reconciliation" | "changes";
 type ReconciliationView = "employee" | "weekly" | "payouts";
 type CloseoutStep = "idle" | "days" | "employees" | "deposit";
 
@@ -715,6 +735,8 @@ export function PayrollDashboard({
   const [adjustmentNoteDraft, setAdjustmentNoteDraft] = useState("");
   const [savingAdjustment, setSavingAdjustment] = useState(false);
   const [closeoutData, setCloseoutData] = useState<CloseoutResponse | null>(null);
+  const [postPayoutChanges, setPostPayoutChanges] = useState<PostPayoutChangesResponse | null>(null);
+  const [loadingPostPayoutChanges, setLoadingPostPayoutChanges] = useState(false);
   const [finalDepositDraft, setFinalDepositDraft] = useState("");
   const [closeoutNoteDraft, setCloseoutNoteDraft] = useState("");
   const [savingCloseout, setSavingCloseout] = useState(false);
@@ -740,6 +762,10 @@ export function PayrollDashboard({
   const weekEnd = addDaysParam(weekStart, 6);
   const currentMobileWeekStart = addDaysParam(lastCompletedWeekStart("mobile-grooming"), 7);
   const reconciliationWeeks = Array.from({ length: 4 }, (_, index) => {
+    const start = addDaysParam(currentMobileWeekStart, -index * 7);
+    return { weekStart: start, weekEnd: addDaysParam(start, 6) };
+  });
+  const postPayoutWeeks = Array.from({ length: 12 }, (_, index) => {
     const start = addDaysParam(currentMobileWeekStart, -index * 7);
     return { weekStart: start, weekEnd: addDaysParam(start, 6) };
   });
@@ -1177,6 +1203,26 @@ export function PayrollDashboard({
     void loadPayouts(weekStart);
   }, [mobilePayrollView, reconciliationView, weekStart, loadPayouts]);
 
+  useEffect(() => {
+    if (mobilePayrollView !== "changes") return;
+    const controller = new AbortController();
+    setPostPayoutChanges(null);
+    setLoadingPostPayoutChanges(true);
+    void fetch(`/api/finance/payroll/mobile-grooming/post-payout-changes?weekStart=${weekStart}`, { signal: controller.signal })
+      .then(async (response) => {
+        const data = (await response.json()) as PostPayoutChangesResponse;
+        if (!response.ok) throw new Error(data.error || "Could not load post-payout changes.");
+        if (!controller.signal.aborted) setPostPayoutChanges(data);
+      })
+      .catch((error: unknown) => {
+        if (!controller.signal.aborted) setError(error instanceof Error ? error.message : "Could not load post-payout changes.");
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) setLoadingPostPayoutChanges(false);
+      });
+    return () => controller.abort();
+  }, [mobilePayrollView, weekStart]);
+
   async function savePayPreparation(employeeName: string, prepared: boolean) {
     setSavingPayPreparation(employeeName);
     setError(null);
@@ -1392,6 +1438,10 @@ export function PayrollDashboard({
       setReconciliationEmployee("");
       setOpenReconciliationDay(null);
       void loadWeek(currentMobileWeekStart, "mobile-grooming");
+      return;
+    }
+    if (view === "changes") {
+      setWeekStart(currentMobileWeekStart);
       return;
     }
     if (view === "report") {
@@ -1842,7 +1892,7 @@ export function PayrollDashboard({
         <div>
           <p className="mb-1 text-sm font-medium text-gray-700">View</p>
           <div className="pp-tabs" role="tablist" aria-label="Mobile grooming payroll view">
-            {(["summary", "employee", "report", "reconciliation"] as const).map((view) => {
+            {(["summary", "employee", "report", "reconciliation", "changes"] as const).map((view) => {
               const active = mobilePayrollView === view;
               const label =
                 view === "summary"
@@ -1851,7 +1901,7 @@ export function PayrollDashboard({
                     ? "By Employee"
                     : view === "report"
                       ? "Weekly Report"
-                      : "Reconciliation";
+                      : view === "reconciliation" ? "Reconciliation" : "After Payout";
               return (
                 <button
                   key={view}
@@ -1875,6 +1925,7 @@ export function PayrollDashboard({
             {isMobileGrooming && mobilePayrollView === "reconciliation"
               ? reconciliationView === "employee" ? "Daily Reconciliation"
                 : reconciliationView === "weekly" ? "Weekly Reconciliation" : "Payouts"
+              : isMobileGrooming && mobilePayrollView === "changes" ? "Changes After Payout"
               : "Payroll"}
           </h2>
           <p className="mt-1 text-gray-500">
@@ -2500,7 +2551,7 @@ export function PayrollDashboard({
                       </Button>
                     </div>
                     <p className="mb-3 text-sm text-gray-600">
-                      Weekly pay includes commission, credit card tips, and any weekly base pay shown below. Fixed pay replaces calculated pay; added pay increases it. Cash payout = weekly pay − direct deposit + adjustment + any reviewed weekly over/short applied.
+                      Earned pay includes commission, credit card tips, and any weekly base pay shown below. Pay from closed weeks is carried separately. Cash payout = earned pay + prior-week correction − direct deposit + adjustment + any reviewed weekly over/short applied.
                     </p>
                     <div className="overflow-x-auto rounded-lg border border-gray-200">
                       <Table>
@@ -2508,7 +2559,8 @@ export function PayrollDashboard({
                           <TableRow>
                             <TableHeader>Employee</TableHeader>
                             <TableHeader>Base Pay</TableHeader>
-                            <TableHeader>Weekly Pay</TableHeader>
+                            <TableHeader>Earned Pay</TableHeader>
+                            <TableHeader>Prior-week correction</TableHeader>
                             <TableHeader>Direct Deposit</TableHeader>
                             <TableHeader>Adjustment</TableHeader>
                             <TableHeader>Weekly over/short applied</TableHeader>
@@ -2527,6 +2579,7 @@ export function PayrollDashboard({
                                   : "—"}
                               </TableCell>
                               <TableCell>{formatMoney(payout.groomerPayCents / 100)}</TableCell>
+                              <TableCell className={payout.priorPeriodAdjustmentCents < 0 ? "text-red-700" : payout.priorPeriodAdjustmentCents > 0 ? "text-green-700" : ""}>{formatSignedMoney(payout.priorPeriodAdjustmentCents)}</TableCell>
                               <TableCell>
                                 {depositEditEmployee === payout.employeeName ? (
                                   <div className="flex min-w-56 items-end gap-2">
@@ -2642,6 +2695,7 @@ export function PayrollDashboard({
                             <TableCell className="font-semibold">Total</TableCell>
                             <TableCell className="font-semibold">{formatMoney(closeoutData.preview.payouts.reduce((sum, payout) => sum + payout.basePayCents, 0) / 100)}</TableCell>
                             <TableCell className="font-semibold">{formatMoney(closeoutData.preview.payouts.reduce((sum, payout) => sum + payout.groomerPayCents, 0) / 100)}</TableCell>
+                            <TableCell className="font-semibold">{formatSignedMoney(closeoutData.preview.payouts.reduce((sum, payout) => sum + payout.priorPeriodAdjustmentCents, 0))}</TableCell>
                             <TableCell className="font-semibold">{closeoutData.preview.missingDepositSettings.length === 0
                               ? formatMoney(closeoutData.preview.payouts.reduce((sum, payout) => sum + payout.directDepositCents, 0) / 100)
                               : "Pending"}</TableCell>
@@ -3056,7 +3110,60 @@ export function PayrollDashboard({
         </Card>
       )}
 
-      {mobilePayrollView !== "reconciliation" && <Card className={cn(mobilePayrollView === "report" && "pp-mobile-weekly-report")}>
+      {isMobileGrooming && mobilePayrollView === "changes" && (
+        <Card>
+          <CardContent className="space-y-5">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+              <div>
+                <h3 className="text-lg font-semibold text-gray-900">Pay corrections from closed weeks</h3>
+                <p className="text-sm text-gray-600">When saved MoeGo payroll changes after a week is closed, the difference in earned groomer pay carries into the pay week shown here. Repeated pulls update the difference without adding it twice.</p>
+              </div>
+              <Select id="post-payout-week" label="Pay week receiving changes" value={weekStart}
+                onChange={(event) => setWeekStart(event.target.value)}>
+                {postPayoutWeeks.map((week) => (
+                  <option key={week.weekStart} value={week.weekStart}>{formatWeekRange(week.weekStart, week.weekEnd)}</option>
+                ))}
+              </Select>
+            </div>
+            {loadingPostPayoutChanges ? (
+              <p className="text-sm text-gray-500">Loading changes...</p>
+            ) : !postPayoutChanges?.changes.length ? (
+              <p className="rounded-lg border border-dashed border-gray-200 px-4 py-6 text-sm text-gray-600">No pay changes from closed weeks are assigned to this pay week.</p>
+            ) : (
+              <>
+                <div className="flex flex-wrap items-center gap-3 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm">
+                  <span className="font-semibold text-amber-950">Total carried into this pay week: {formatSignedMoney(postPayoutChanges.totalCents)}</span>
+                  <span className="text-amber-900">{postPayoutChanges.targetClosedAt ? "This pay week is closed." : "Included in current payout calculations and paystubs."}</span>
+                </div>
+                <div className="overflow-x-auto rounded-lg border border-gray-200">
+                  <Table>
+                    <TableHead><TableRow>
+                      <TableHeader>Groomer</TableHeader><TableHeader>Original week</TableHeader>
+                      <TableHeader>Pay at closeout</TableHeader><TableHeader>Revised pay</TableHeader>
+                      <TableHeader>Carried change</TableHeader><TableHeader>Detected</TableHeader>
+                    </TableRow></TableHead>
+                    <TableBody>{postPayoutChanges.changes.map((change) => (
+                      <TableRow key={change.id}>
+                        <TableCell className="font-medium">{change.employeeName}</TableCell>
+                        <TableCell>
+                          {formatWeekRange(change.sourceWeekStart, change.sourceWeekEnd)}
+                          {change.sourceClosedAt && <p className="text-xs text-gray-500">Closed {new Date(change.sourceClosedAt).toLocaleDateString("en-US", { timeZone: "America/New_York", month: "short", day: "numeric", year: "numeric" })}</p>}
+                        </TableCell>
+                        <TableCell>{formatMoney(change.baselinePayCents / 100)}</TableCell>
+                        <TableCell>{formatMoney(change.revisedPayCents / 100)}</TableCell>
+                        <TableCell className={change.amountCents < 0 ? "font-semibold text-red-700" : "font-semibold text-green-700"}>{formatSignedMoney(change.amountCents)}</TableCell>
+                        <TableCell>{new Date(change.detectedAt).toLocaleString("en-US", { timeZone: "America/New_York", month: "short", day: "numeric", year: "numeric", hour: "numeric", minute: "2-digit" })}</TableCell>
+                      </TableRow>
+                    ))}</TableBody>
+                  </Table>
+                </div>
+              </>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
+      {mobilePayrollView !== "reconciliation" && mobilePayrollView !== "changes" && <Card className={cn(mobilePayrollView === "report" && "pp-mobile-weekly-report")}>
         <CardContent className="space-y-3">
           <div
             className={cn(
@@ -3558,12 +3665,16 @@ function MobileGroomingPaystub({
               <span className="text-right">{formatMoney(payout.basePayCents / 100)}</span>
             </>
           )}
-          <span className="font-semibold">Weekly pay</span><span className="text-right font-semibold">{formatMoney(payout.groomerPayCents / 100)}</span>
+          <span>Earned pay for this week</span><span className="text-right">{formatMoney(payout.groomerPayCents / 100)}</span>
+          {payout.priorPeriodAdjustmentCents !== 0 && <>
+            <span>Correction from closed week(s)</span><span className="text-right">{formatSignedMoney(payout.priorPeriodAdjustmentCents)}</span>
+          </>}
+          <span className="font-semibold">Pay this week</span><span className="text-right font-semibold">{formatMoney(payout.weeklyPayCents / 100)}</span>
           <span>Direct deposit</span><span className="text-right">{payout.directDepositSet ? `− ${formatMoney(payout.directDepositCents / 100)}` : "Not set"}</span>
         </div>
         <div className="mt-2 flex justify-between border-t border-gray-400 pt-1 text-[9pt] font-bold">
-          <span>Weekly pay − direct deposit</span>
-          <span>{payout.directDepositSet ? formatMoney((payout.groomerPayCents - payout.directDepositCents) / 100) : "Pending direct deposit"}</span>
+          <span>Pay this week − direct deposit</span>
+          <span>{payout.directDepositSet ? formatMoney((payout.weeklyPayCents - payout.directDepositCents) / 100) : "Pending direct deposit"}</span>
         </div>
         {(payout.adjustmentCents !== 0 || appliedVarianceDays.length > 0) && (
           <div className="mt-2 grid grid-cols-2 gap-x-8 gap-y-1 text-[8pt]">

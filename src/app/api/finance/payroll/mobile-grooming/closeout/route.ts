@@ -52,6 +52,10 @@ async function getWeek(weekStart: Date) {
       select: { employeeName: true, prepared: true },
     }),
   ]);
+  const postPayoutAdjustments = await prisma.financeMobileGroomingPostPayoutAdjustment.findMany({
+    where: { targetWeekStart: weekStart, amountCents: { not: 0 } },
+    select: { employeeName: true, amountCents: true },
+  });
   const latestSettings = new Map<string, { employeeName: string; amountCents: number }>();
   for (const setting of settings) {
     const key = setting.employeeName.toLocaleLowerCase();
@@ -70,7 +74,8 @@ async function getWeek(weekStart: Date) {
     Array.from(latestSettings.values()),
     week?.mobileGroomingPayoutAdjustments ?? [],
     week?.mobileGroomingVarianceReviews ?? [],
-    Array.from(latestRules.values())
+    Array.from(latestRules.values()),
+    postPayoutAdjustments
   );
   const preparedByName = new Map(preparations.map((row) => [normalizeEmployeeName(row.employeeName).toLocaleLowerCase(), row.prepared]));
   return { week, preview: {
@@ -161,7 +166,16 @@ export async function POST(req: NextRequest) {
   const closeout = await prisma.financeMobileGroomingWeeklyCloseout.upsert({
     where: { payrollWeekId: week.id },
     create: { payrollWeekId: week.id, ...data },
-    update: data,
+    // The original payout is the baseline for all later pay corrections.
+    update: {
+      countedCashCents: data.countedCashCents,
+      cashPayoutCents: data.cashPayoutCents,
+      expectedDepositCents: data.expectedDepositCents,
+      finalDepositCents: data.finalDepositCents,
+      varianceCents: data.varianceCents,
+      note: data.note,
+      sourceFingerprint: data.sourceFingerprint,
+    },
   });
   return NextResponse.json({ closeout: serializeCloseout(closeout), preview, closeoutCurrent: true, weekCompleted: true });
 }

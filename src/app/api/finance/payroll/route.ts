@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getSession, isSuperAdmin } from "@/lib/auth-helpers";
+import { reconcilePostPayoutChanges } from "@/lib/mobile-grooming-post-payout";
 import {
   PAYROLL_CATEGORIES,
   PAYROLL_CATEGORY_LABELS,
@@ -867,6 +868,12 @@ async function savePayroll(req: NextRequest) {
           rowOrder: index,
         })),
       });
+    }
+
+    if (business === "mobile-grooming") {
+      await reconcilePostPayoutChanges(
+        tx, savedWeek.id, weekDates.weekStart, normalizedMobileEntries.entries
+      );
     }
 
     return tx.financePayrollWeek.findUnique({

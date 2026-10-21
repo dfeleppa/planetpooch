@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { mobileGroomingCronWeek } from "@/lib/mobile-grooming-payroll-cron";
+import { prisma } from "@/lib/prisma";
 
 export const maxDuration = 120;
 
@@ -47,7 +48,7 @@ export async function GET(
   const pull = (await pullResponse.json()) as {
     entries?: unknown[];
     totals?: unknown;
-    staffs?: unknown[];
+    staffs?: Array<{ name: string }>;
     unmatchedEmployeeNames?: string[];
     error?: string;
   };
@@ -61,6 +62,22 @@ export async function GET(
   if (pull.entries.length === 0) {
     return NextResponse.json(
       { ok: false, stage: "pull", offset, ...week, error: "MoeGo returned no appointments; saved payroll was preserved." },
+      { status: 409 }
+    );
+  }
+
+  // A former groomer can disappear from today's MoeGo staff list while their
+  // historical appointments remain payable. Never turn that into a pay cut.
+  const savedWeek = await prisma.financePayrollWeek.findUnique({
+    where: { business_weekStart: { business: "mobile-grooming", weekStart: new Date(`${week.weekStart}T00:00:00.000Z`) } },
+    select: { mobileGroomingEntries: { select: { employeeName: true } } },
+  });
+  const pulledNames = new Set((pull.staffs ?? []).map((staff) => staff.name.trim().toLocaleLowerCase()));
+  const missingStaff = [...new Set((savedWeek?.mobileGroomingEntries ?? []).map((entry) => entry.employeeName))]
+    .filter((name) => !pulledNames.has(name.trim().toLocaleLowerCase()));
+  if (missingStaff.length > 0) {
+    return NextResponse.json(
+      { ok: false, stage: "staff-check", offset, ...week, error: "Saved groomers are missing from the MoeGo pull; payroll was preserved.", missingStaff },
       { status: 409 }
     );
   }

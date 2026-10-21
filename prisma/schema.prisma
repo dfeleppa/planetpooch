@@ -1458,6 +1458,7 @@ model FinancePayrollWeek {
   mobileGroomingCloseout       FinanceMobileGroomingWeeklyCloseout?
   mobileGroomingPayoutAdjustments FinanceMobileGroomingPayoutAdjustment[]
   mobileGroomingVarianceReviews FinanceMobileGroomingVarianceReview[]
+  mobileGroomingPostPayoutAdjustments FinanceMobileGroomingPostPayoutAdjustment[]
 
   @@unique([business, weekStart])
   @@index([business, weekStart, weekEnd])
@@ -1576,6 +1577,25 @@ model FinanceMobileGroomingWeeklyCloseout {
   updatedAt            DateTime @updatedAt
 
   payrollWeek FinancePayrollWeek @relation(fields: [payrollWeekId], references: [id], onDelete: Cascade)
+}
+
+/// The difference in a groomer's earned pay after an earlier week was closed.
+/// A target week can be updated until it is closed; closed targets remain a permanent audit record.
+model FinanceMobileGroomingPostPayoutAdjustment {
+  id                  String   @id @default(cuid())
+  sourcePayrollWeekId String
+  targetWeekStart     DateTime @db.Date
+  employeeName        String
+  baselinePayCents    Int
+  revisedPayCents     Int
+  amountCents         Int
+  detectedAt          DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  sourcePayrollWeek FinancePayrollWeek @relation(fields: [sourcePayrollWeekId], references: [id], onDelete: Cascade)
+
+  @@unique([sourcePayrollWeekId, targetWeekStart, employeeName])
+  @@index([targetWeekStart, employeeName])
 }
 
 /// Cash physically taken to the bank. The source balance remains derived from payroll.

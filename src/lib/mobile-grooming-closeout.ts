@@ -22,6 +22,7 @@ type Reconciliation = {
 type Setting = { employeeName: string; amountCents: number };
 type Adjustment = { employeeName: string; amountCents: number; note: string; updatedAt?: Date };
 type VarianceReview = { employeeName: string; varianceCents: number; sourceFingerprint: string; applyToCashPayout: boolean };
+type PostPayoutAdjustment = { employeeName: string; amountCents: number };
 export type MobilePayRule = { employeeName: string; payKind: "fixed" | "additive"; amountCents: number };
 
 export function mobileGroomingCloseoutPreview(
@@ -30,7 +31,8 @@ export function mobileGroomingCloseoutPreview(
   settings: Setting[],
   adjustments: Adjustment[] = [],
   varianceReviews: VarianceReview[] = [],
-  payRules: MobilePayRule[] = []
+  payRules: MobilePayRule[] = [],
+  postPayoutAdjustments: PostPayoutAdjustment[] = []
 ) {
   const days = new Map<string, { employeeName: string; serviceDate: string; expectedCashCents: number }>();
   const employees = new Map<string, {
@@ -50,6 +52,14 @@ export function mobileGroomingCloseoutPreview(
   const ruleByName = new Map(payRules.map((rule) => [
     normalizeEmployeeName(rule.employeeName).toLocaleLowerCase(), rule,
   ]));
+  const priorAdjustmentByName = new Map<string, number>();
+  for (const adjustment of postPayoutAdjustments) {
+    const key = normalizeEmployeeName(adjustment.employeeName).toLocaleLowerCase();
+    priorAdjustmentByName.set(key, (priorAdjustmentByName.get(key) ?? 0) + adjustment.amountCents);
+    if (!employees.has(key)) {
+      employees.set(key, { employeeName: normalizeEmployeeName(adjustment.employeeName), commissionBaseCents: 0, creditCardTipCents: 0 });
+    }
+  }
 
   for (const rule of payRules) {
     const employeeName = normalizeEmployeeName(rule.employeeName);
@@ -103,6 +113,8 @@ export function mobileGroomingCloseoutPreview(
     const basePayCents = payRule?.amountCents ?? 0;
     const groomerPayCents = payRule?.payKind === "fixed"
       ? basePayCents : commissionPayCents + basePayCents;
+    const priorPeriodAdjustmentCents = priorAdjustmentByName.get(key) ?? 0;
+    const weeklyPayCents = groomerPayCents + priorPeriodAdjustmentCents;
     const directDepositCents = settingByName.get(key) ?? 0;
     const adjustment = adjustmentByName.get(key);
     const adjustmentCents = adjustment?.amountCents ?? 0;
@@ -126,6 +138,8 @@ export function mobileGroomingCloseoutPreview(
       basePayCents,
       payKind: payRule?.payKind ?? null,
       groomerPayCents,
+      priorPeriodAdjustmentCents,
+      weeklyPayCents,
       directDepositCents,
       adjustmentCents,
       adjustmentNote: adjustment?.note ?? "",
@@ -136,7 +150,7 @@ export function mobileGroomingCloseoutPreview(
       varianceReviewed: varianceReviewCurrent,
       applyVarianceToCashPayout: varianceReviewCurrent ? (review?.applyToCashPayout ?? false) : null,
       variancePayoutCents,
-      cashPayoutCents: groomerPayCents - directDepositCents + adjustmentCents + variancePayoutCents,
+      cashPayoutCents: weeklyPayCents - directDepositCents + adjustmentCents + variancePayoutCents,
       directDepositSet: settingByName.has(key),
     };
   }).sort((a, b) => a.employeeName.localeCompare(b.employeeName));
@@ -157,6 +171,9 @@ export function mobileGroomingCloseoutPreview(
       employeeName: payout.employeeName,
       ...(payout.payKind ? { payKind: payout.payKind, basePayCents: payout.basePayCents } : {}),
       groomerPayCents: payout.groomerPayCents,
+      ...(payout.priorPeriodAdjustmentCents !== 0
+        ? { priorPeriodAdjustmentCents: payout.priorPeriodAdjustmentCents }
+        : {}),
       directDepositCents: payout.directDepositCents,
       cashPayoutCents: payout.cashPayoutCents,
       directDepositSet: payout.directDepositSet,
