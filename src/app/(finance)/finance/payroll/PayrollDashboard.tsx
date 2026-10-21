@@ -2069,7 +2069,7 @@ export function PayrollDashboard({
         </div>
       )}
 
-      {isMobileGrooming && mobilePayrollView !== "report" && mobilePayrollView !== "reconciliation" && (
+      {isMobileGrooming && mobilePayrollView !== "report" && mobilePayrollView !== "reconciliation" && mobilePayrollView !== "changes" && (
         <Card>
           <CardContent className="space-y-4">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
