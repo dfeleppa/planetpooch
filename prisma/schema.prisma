@@ -1534,6 +1534,32 @@ model FinanceMobileGroomingDirectDeposit {
   @@index([effectiveWeekStart])
 }
 
+/// Weekly pay rules take effect from a Saturday payroll week forward.
+model FinanceMobileGroomingPayRule {
+  id                 String   @id @default(cuid())
+  employeeName       String
+  effectiveWeekStart DateTime @db.Date
+  payKind            String
+  amountCents        Int
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  @@unique([employeeName, effectiveWeekStart])
+  @@index([effectiveWeekStart])
+}
+
+/// A manual pay-preparation check for an employee in one payroll week.
+model FinanceMobileGroomingPayPreparation {
+  id           String   @id @default(cuid())
+  weekStart    DateTime @db.Date
+  employeeName String
+  prepared     Boolean  @default(false)
+  updatedAt    DateTime @updatedAt
+
+  @@unique([weekStart, employeeName])
+  @@index([weekStart])
+}
+
 /// A saved final cash closeout for one completed mobile grooming payroll week.
 model FinanceMobileGroomingWeeklyCloseout {
   id                   String   @id @default(cuid())

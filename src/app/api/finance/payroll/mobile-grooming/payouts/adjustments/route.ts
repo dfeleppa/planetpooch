@@ -37,18 +37,35 @@ export async function PUT(req: NextRequest) {
     return NextResponse.json({ error: "Enter a signed adjustment and a note for any nonzero amount." }, { status: 400 });
   }
 
-  const week = await prisma.financePayrollWeek.findUnique({
-    where: { business_weekStart: { business: "mobile-grooming", weekStart } },
-    select: { id: true, mobileGroomingEntries: { select: { employeeName: true } } },
-  });
-  const matchingEntry = week?.mobileGroomingEntries.find((entry) =>
+  const [existingWeek, payRule] = await Promise.all([
+    prisma.financePayrollWeek.findUnique({
+      where: { business_weekStart: { business: "mobile-grooming", weekStart } },
+      select: { id: true, mobileGroomingEntries: { select: { employeeName: true } } },
+    }),
+    prisma.financeMobileGroomingPayRule.findFirst({
+      where: { employeeName: { equals: employeeName, mode: "insensitive" }, effectiveWeekStart: { lte: weekStart } },
+      orderBy: { effectiveWeekStart: "desc" },
+      select: { employeeName: true },
+    }),
+  ]);
+  const matchingEntry = existingWeek?.mobileGroomingEntries.find((entry) =>
     normalizeEmployeeName(entry.employeeName).toLocaleLowerCase() === employeeName.toLocaleLowerCase()
   );
-  if (!week || !matchingEntry) {
+  if (!matchingEntry && !payRule) {
     return NextResponse.json({ error: "No saved mobile grooming payroll exists for this employee and week." }, { status: 404 });
   }
+  const week = existingWeek ?? await prisma.financePayrollWeek.upsert({
+    where: { business_weekStart: { business: "mobile-grooming", weekStart } },
+    create: {
+      business: "mobile-grooming",
+      weekStart,
+      weekEnd: new Date(weekStart.getTime() + 6 * 86_400_000),
+    },
+    update: {},
+    select: { id: true },
+  });
 
-  const canonicalName = normalizeEmployeeName(matchingEntry.employeeName);
+  const canonicalName = normalizeEmployeeName(payRule?.employeeName ?? matchingEntry!.employeeName);
   const normalizedNote = amountCents === 0 ? "" : note.trim();
   const adjustment = await prisma.financeMobileGroomingPayoutAdjustment.upsert({
     where: { payrollWeekId_employeeName: { payrollWeekId: week.id, employeeName: canonicalName } },

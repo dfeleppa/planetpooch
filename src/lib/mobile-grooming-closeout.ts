@@ -22,13 +22,15 @@ type Reconciliation = {
 type Setting = { employeeName: string; amountCents: number };
 type Adjustment = { employeeName: string; amountCents: number; note: string; updatedAt?: Date };
 type VarianceReview = { employeeName: string; varianceCents: number; sourceFingerprint: string; applyToCashPayout: boolean };
+export type MobilePayRule = { employeeName: string; payKind: "fixed" | "additive"; amountCents: number };
 
 export function mobileGroomingCloseoutPreview(
   entries: Entry[],
   reconciliations: Reconciliation[],
   settings: Setting[],
   adjustments: Adjustment[] = [],
-  varianceReviews: VarianceReview[] = []
+  varianceReviews: VarianceReview[] = [],
+  payRules: MobilePayRule[] = []
 ) {
   const days = new Map<string, { employeeName: string; serviceDate: string; expectedCashCents: number }>();
   const employees = new Map<string, {
@@ -45,6 +47,15 @@ export function mobileGroomingCloseoutPreview(
   const reviewByName = new Map(varianceReviews.map((review) => [
     normalizeEmployeeName(review.employeeName).toLocaleLowerCase(), review,
   ]));
+  const ruleByName = new Map(payRules.map((rule) => [
+    normalizeEmployeeName(rule.employeeName).toLocaleLowerCase(), rule,
+  ]));
+
+  for (const rule of payRules) {
+    const employeeName = normalizeEmployeeName(rule.employeeName);
+    const key = employeeName.toLocaleLowerCase();
+    employees.set(key, { employeeName, commissionBaseCents: 0, creditCardTipCents: 0 });
+  }
 
   for (const entry of entries) {
     const employeeName = normalizeEmployeeName(entry.employeeName);
@@ -87,7 +98,11 @@ export function mobileGroomingCloseoutPreview(
   }
 
   const payouts = Array.from(employees, ([key, employee]) => {
-    const groomerPayCents = Math.round(employee.commissionBaseCents * 0.4) + employee.creditCardTipCents;
+    const commissionPayCents = Math.round(employee.commissionBaseCents * 0.4) + employee.creditCardTipCents;
+    const payRule = ruleByName.get(key);
+    const basePayCents = payRule?.amountCents ?? 0;
+    const groomerPayCents = payRule?.payKind === "fixed"
+      ? basePayCents : commissionPayCents + basePayCents;
     const directDepositCents = settingByName.get(key) ?? 0;
     const adjustment = adjustmentByName.get(key);
     const adjustmentCents = adjustment?.amountCents ?? 0;
@@ -102,19 +117,24 @@ export function mobileGroomingCloseoutPreview(
         }))
     )).digest("hex");
     const review = reviewByName.get(key);
-    const varianceReviewCurrent = Boolean(review && review.varianceCents === varianceCents && review.sourceFingerprint === reconciliationFingerprint);
+    const hasWorkedDays = Array.from(days.keys()).some((dayKey) => dayKey.startsWith(`${key}|`));
+    const varianceReviewCurrent = !hasWorkedDays || Boolean(review && review.varianceCents === varianceCents && review.sourceFingerprint === reconciliationFingerprint);
     const variancePayoutCents = varianceReviewCurrent && review?.applyToCashPayout ? varianceCents : 0;
     return {
       employeeName: employee.employeeName,
+      commissionPayCents,
+      basePayCents,
+      payKind: payRule?.payKind ?? null,
       groomerPayCents,
       directDepositCents,
       adjustmentCents,
       adjustmentNote: adjustment?.note ?? "",
       adjustmentDate: adjustment?.updatedAt?.toISOString() ?? null,
       varianceCents,
+      hasWorkedDays,
       reconciliationFingerprint,
       varianceReviewed: varianceReviewCurrent,
-      applyVarianceToCashPayout: varianceReviewCurrent ? review!.applyToCashPayout : null,
+      applyVarianceToCashPayout: varianceReviewCurrent ? (review?.applyToCashPayout ?? false) : null,
       variancePayoutCents,
       cashPayoutCents: groomerPayCents - directDepositCents + adjustmentCents + variancePayoutCents,
       directDepositSet: settingByName.has(key),
@@ -135,6 +155,7 @@ export function mobileGroomingCloseoutPreview(
     })),
     payouts: payouts.map((payout) => ({
       employeeName: payout.employeeName,
+      ...(payout.payKind ? { payKind: payout.payKind, basePayCents: payout.basePayCents } : {}),
       groomerPayCents: payout.groomerPayCents,
       directDepositCents: payout.directDepositCents,
       cashPayoutCents: payout.cashPayoutCents,

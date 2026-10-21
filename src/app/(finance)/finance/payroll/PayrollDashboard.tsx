@@ -150,7 +150,11 @@ type PayoutPreview = {
   expectedDepositCents: number;
   payouts: Array<{
     employeeName: string;
+    commissionPayCents: number;
+    basePayCents: number;
+    payKind: "fixed" | "additive" | null;
     groomerPayCents: number;
+    payPrepared: boolean;
     directDepositCents: number;
     adjustmentCents: number;
     adjustmentNote: string;
@@ -158,6 +162,7 @@ type PayoutPreview = {
     cashPayoutCents: number;
     directDepositSet: boolean;
     varianceCents: number;
+    hasWorkedDays: boolean;
     varianceReviewed: boolean;
     applyVarianceToCashPayout: boolean | null;
     variancePayoutCents: number;
@@ -704,6 +709,7 @@ export function PayrollDashboard({
   const [depositEditEmployee, setDepositEditEmployee] = useState<string | null>(null);
   const [depositDraft, setDepositDraft] = useState("");
   const [savingDirectDeposit, setSavingDirectDeposit] = useState(false);
+  const [savingPayPreparation, setSavingPayPreparation] = useState<string | null>(null);
   const [adjustmentEditEmployee, setAdjustmentEditEmployee] = useState<string | null>(null);
   const [adjustmentDraft, setAdjustmentDraft] = useState("");
   const [adjustmentNoteDraft, setAdjustmentNoteDraft] = useState("");
@@ -1170,6 +1176,26 @@ export function PayrollDashboard({
     setCloseoutData(null);
     void loadPayouts(weekStart);
   }, [mobilePayrollView, reconciliationView, weekStart, loadPayouts]);
+
+  async function savePayPreparation(employeeName: string, prepared: boolean) {
+    setSavingPayPreparation(employeeName);
+    setError(null);
+    try {
+      const response = await fetch("/api/finance/payroll/mobile-grooming/closeout", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ weekStart, employeeName, prepared }),
+      });
+      const data = (await response.json()) as { error?: string };
+      if (!response.ok) throw new Error(data.error || "Could not save pay preparation.");
+      await loadPayouts(weekStart);
+      setMessage(`Pay for ${employeeName} marked ${prepared ? "prepared" : "not prepared"}.`);
+    } catch (error) {
+      setError(error instanceof Error ? error.message : "Could not save pay preparation.");
+    } finally {
+      setSavingPayPreparation(null);
+    }
+  }
 
   async function saveDirectDeposit(employeeName: string) {
     const trimmed = depositDraft.trim();
@@ -2463,7 +2489,7 @@ export function PayrollDashboard({
               loading || loadingDirectDeposits || !closeoutData ? (
                 <p className="text-sm text-gray-500">Loading payouts and closeout...</p>
               ) : closeoutData.preview.payouts.length === 0 ? (
-                <p className="text-sm text-gray-500">No saved mobile grooming appointments for this week.</p>
+                <p className="text-sm text-gray-500">No saved mobile grooming appointments or weekly base pay for this week.</p>
               ) : (
                 <div className="space-y-6">
                   <div>
@@ -2474,18 +2500,20 @@ export function PayrollDashboard({
                       </Button>
                     </div>
                     <p className="mb-3 text-sm text-gray-600">
-                      Groomer pay includes commission and credit card tips. Cash payout = groomer pay − direct deposit + adjustment + any reviewed weekly over/short applied.
+                      Weekly pay includes commission, credit card tips, and any weekly base pay shown below. Fixed pay replaces calculated pay; added pay increases it. Cash payout = weekly pay − direct deposit + adjustment + any reviewed weekly over/short applied.
                     </p>
                     <div className="overflow-x-auto rounded-lg border border-gray-200">
                       <Table>
                         <TableHead>
                           <TableRow>
                             <TableHeader>Employee</TableHeader>
-                            <TableHeader>Groomer Pay</TableHeader>
+                            <TableHeader>Base Pay</TableHeader>
+                            <TableHeader>Weekly Pay</TableHeader>
                             <TableHeader>Direct Deposit</TableHeader>
                             <TableHeader>Adjustment</TableHeader>
                             <TableHeader>Weekly over/short applied</TableHeader>
                             <TableHeader>Cash Payout</TableHeader>
+                            <TableHeader>Pay Prepared</TableHeader>
                             <TableHeader>Details</TableHeader>
                           </TableRow>
                         </TableHead>
@@ -2493,6 +2521,11 @@ export function PayrollDashboard({
                           {closeoutData.preview.payouts.map((payout) => (
                             <TableRow key={payout.employeeName}>
                               <TableCell className="font-medium">{payout.employeeName}</TableCell>
+                              <TableCell>
+                                {payout.payKind === "fixed" ? `${formatMoney(payout.basePayCents / 100)} fixed`
+                                  : payout.payKind === "additive" ? `${formatMoney(payout.basePayCents / 100)} added`
+                                  : "—"}
+                              </TableCell>
                               <TableCell>{formatMoney(payout.groomerPayCents / 100)}</TableCell>
                               <TableCell>
                                 {depositEditEmployee === payout.employeeName ? (
@@ -2580,6 +2613,19 @@ export function PayrollDashboard({
                                 {payout.directDepositSet ? formatMoney(payout.cashPayoutCents / 100) : "Pending"}
                               </TableCell>
                               <TableCell>
+                                <label className="inline-flex items-center gap-2 whitespace-nowrap text-sm">
+                                  <input
+                                    type="checkbox"
+                                    checked={payout.payPrepared}
+                                    onChange={(event) => void savePayPreparation(payout.employeeName, event.target.checked)}
+                                    disabled={Boolean(savingPayPreparation) || loadingDirectDeposits}
+                                    aria-label={`Pay prepared for ${payout.employeeName}`}
+                                    className="h-4 w-4 accent-[#315d64]"
+                                  />
+                                  {payout.payPrepared ? "Prepared" : "Pending"}
+                                </label>
+                              </TableCell>
+                              <TableCell>
                                 {depositEditEmployee !== payout.employeeName && (
                                   <Button type="button" size="sm" variant="secondary" onClick={() => {
                                     setAdjustmentEditEmployee(null);
@@ -2594,6 +2640,7 @@ export function PayrollDashboard({
                           ))}
                           <TableRow>
                             <TableCell className="font-semibold">Total</TableCell>
+                            <TableCell className="font-semibold">{formatMoney(closeoutData.preview.payouts.reduce((sum, payout) => sum + payout.basePayCents, 0) / 100)}</TableCell>
                             <TableCell className="font-semibold">{formatMoney(closeoutData.preview.payouts.reduce((sum, payout) => sum + payout.groomerPayCents, 0) / 100)}</TableCell>
                             <TableCell className="font-semibold">{closeoutData.preview.missingDepositSettings.length === 0
                               ? formatMoney(closeoutData.preview.payouts.reduce((sum, payout) => sum + payout.directDepositCents, 0) / 100)
@@ -2602,6 +2649,7 @@ export function PayrollDashboard({
                             <TableCell className="font-semibold">{formatSignedMoney(closeoutData.preview.payouts.reduce((sum, payout) => sum + payout.variancePayoutCents, 0))}</TableCell>
                             <TableCell className="font-semibold">{closeoutData.preview.missingDepositSettings.length === 0
                               ? formatMoney(closeoutData.preview.cashPayoutCents / 100) : "Pending"}</TableCell>
+                            <TableCell className="font-semibold">{closeoutData.preview.payouts.filter((payout) => payout.payPrepared).length}/{closeoutData.preview.payouts.length}</TableCell>
                             <TableCell />
                           </TableRow>
                         </TableBody>
@@ -2708,7 +2756,7 @@ export function PayrollDashboard({
                           {closeoutStep === "employees" && (
                             <div className="space-y-3">
                               <p className="font-medium">2. Review each employee’s over or short amount</p>
-                              <p className="text-sm text-gray-600">Choose whether each overage or shortage changes this week’s cash payout. Groomer pay remains unchanged.</p>
+                              <p className="text-sm text-gray-600">Choose whether each overage or shortage changes this week’s cash payout. Weekly pay remains unchanged.</p>
                               {closeoutData.preview.payouts.map((payout) => {
                                 const shortageDays = reconciliations.filter((record) =>
                                   record.employeeName.toLocaleLowerCase() === payout.employeeName.toLocaleLowerCase() &&
@@ -2725,7 +2773,7 @@ export function PayrollDashboard({
                                       <span>{formatCashDifference(payout.varianceCents)}</span>
                                       {payout.varianceReviewed && (
                                         <span className="rounded-full border border-green-200 bg-green-100 px-2 py-0.5 text-xs font-semibold text-green-800">
-                                          ✓ Reviewed
+                                          {payout.hasWorkedDays ? "✓ Reviewed" : "No cash days"}
                                         </span>
                                       )}
                                     </div>
@@ -3499,16 +3547,22 @@ function MobileGroomingPaystub({
       </div>
 
       <div className="pp-mobile-paystub-payout mt-4 border-t-2 border-[#315d64] pt-2">
-        <h2 className="mb-2 text-[10pt] font-bold">Cash payout calculation</h2>
+        <h2 className="mb-2 text-[10pt] font-bold">Weekly payout calculation</h2>
         <div className="grid grid-cols-2 gap-x-8 gap-y-1 text-[8pt]">
           <span>Commission base after $5 per pet</span><span className="text-right">{formatMoney(commissionBaseCents / 100)}</span>
           <span>Grooming commission (40%)</span><span className="text-right">{formatMoney(Math.round(commissionBaseCents * 0.4) / 100)}</span>
           <span>Credit card tips</span><span className="text-right">+ {formatMoney(creditCardTipsCents / 100)}</span>
-          <span className="font-semibold">Groomer pay</span><span className="text-right font-semibold">{formatMoney(payout.groomerPayCents / 100)}</span>
+          {payout.payKind && (
+            <>
+              <span>Weekly base pay ({payout.payKind === "fixed" ? "fixed total" : "added"})</span>
+              <span className="text-right">{formatMoney(payout.basePayCents / 100)}</span>
+            </>
+          )}
+          <span className="font-semibold">Weekly pay</span><span className="text-right font-semibold">{formatMoney(payout.groomerPayCents / 100)}</span>
           <span>Direct deposit</span><span className="text-right">{payout.directDepositSet ? `− ${formatMoney(payout.directDepositCents / 100)}` : "Not set"}</span>
         </div>
         <div className="mt-2 flex justify-between border-t border-gray-400 pt-1 text-[9pt] font-bold">
-          <span>Groomer pay − direct deposit</span>
+          <span>Weekly pay − direct deposit</span>
           <span>{payout.directDepositSet ? formatMoney((payout.groomerPayCents - payout.directDepositCents) / 100) : "Pending direct deposit"}</span>
         </div>
         {(payout.adjustmentCents !== 0 || appliedVarianceDays.length > 0) && (

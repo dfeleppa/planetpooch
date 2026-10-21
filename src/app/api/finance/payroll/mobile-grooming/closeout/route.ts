@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSession, isSuperAdmin } from "@/lib/auth-helpers";
-import { mobileGroomingCloseoutPreview } from "@/lib/mobile-grooming-closeout";
+import { mobileGroomingCloseoutPreview, type MobilePayRule } from "@/lib/mobile-grooming-closeout";
 import { lastCompletedPayrollWeekStart, normalizeEmployeeName } from "@/lib/payroll";
 import { prisma } from "@/lib/prisma";
 
@@ -26,7 +26,7 @@ function lastCompletedEasternWeekStart() {
 }
 
 async function getWeek(weekStart: Date) {
-  const [week, settings] = await Promise.all([
+  const [week, settings, rules, preparations] = await Promise.all([
     prisma.financePayrollWeek.findUnique({
       where: { business_weekStart: { business: "mobile-grooming", weekStart } },
       include: {
@@ -42,24 +42,47 @@ async function getWeek(weekStart: Date) {
       orderBy: { effectiveWeekStart: "desc" },
       select: { employeeName: true, amountCents: true },
     }),
+    prisma.financeMobileGroomingPayRule.findMany({
+      where: { effectiveWeekStart: { lte: weekStart } },
+      orderBy: { effectiveWeekStart: "desc" },
+      select: { employeeName: true, payKind: true, amountCents: true },
+    }),
+    prisma.financeMobileGroomingPayPreparation.findMany({
+      where: { weekStart },
+      select: { employeeName: true, prepared: true },
+    }),
   ]);
-  if (!week) return null;
   const latestSettings = new Map<string, { employeeName: string; amountCents: number }>();
   for (const setting of settings) {
     const key = setting.employeeName.toLocaleLowerCase();
     if (!latestSettings.has(key)) latestSettings.set(key, setting);
   }
+  const latestRules = new Map<string, MobilePayRule>();
+  for (const rule of rules) {
+    const key = normalizeEmployeeName(rule.employeeName).toLocaleLowerCase();
+    if (!latestRules.has(key) && (rule.payKind === "fixed" || rule.payKind === "additive")) {
+      latestRules.set(key, { employeeName: rule.employeeName, payKind: rule.payKind, amountCents: rule.amountCents });
+    }
+  }
   const preview = mobileGroomingCloseoutPreview(
-    week.mobileGroomingEntries,
-    week.mobileGroomingReconciliations,
+    week?.mobileGroomingEntries ?? [],
+    week?.mobileGroomingReconciliations ?? [],
     Array.from(latestSettings.values()),
-    week.mobileGroomingPayoutAdjustments,
-    week.mobileGroomingVarianceReviews
+    week?.mobileGroomingPayoutAdjustments ?? [],
+    week?.mobileGroomingVarianceReviews ?? [],
+    Array.from(latestRules.values())
   );
-  return { week, preview };
+  const preparedByName = new Map(preparations.map((row) => [normalizeEmployeeName(row.employeeName).toLocaleLowerCase(), row.prepared]));
+  return { week, preview: {
+    ...preview,
+    payouts: preview.payouts.map((payout) => ({
+      ...payout,
+      payPrepared: preparedByName.get(normalizeEmployeeName(payout.employeeName).toLocaleLowerCase()) ?? false,
+    })),
+  } };
 }
 
-function serializeCloseout(closeout: NonNullable<Awaited<ReturnType<typeof getWeek>>>["week"]["mobileGroomingCloseout"]) {
+function serializeCloseout(closeout: NonNullable<NonNullable<Awaited<ReturnType<typeof getWeek>>>["week"]>["mobileGroomingCloseout"]) {
   if (!closeout) return null;
   return {
     countedCashCents: closeout.countedCashCents,
@@ -78,11 +101,7 @@ export async function GET(req: NextRequest) {
   const weekStart = dateParam(req.nextUrl.searchParams.get("weekStart"));
   if (!weekStart) return NextResponse.json({ error: "A Saturday weekStart is required." }, { status: 400 });
   const result = await getWeek(weekStart);
-  if (!result) return NextResponse.json({
-    preview: mobileGroomingCloseoutPreview([], [], []), closeout: null,
-    closeoutCurrent: false, weekCompleted: weekStart <= lastCompletedEasternWeekStart(),
-  });
-  const closeout = serializeCloseout(result.week.mobileGroomingCloseout);
+  const closeout = serializeCloseout(result.week?.mobileGroomingCloseout ?? null);
   return NextResponse.json({
     preview: result.preview,
     closeout,
@@ -111,7 +130,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "The payroll week must be complete before closeout." }, { status: 400 });
   }
   const result = await getWeek(weekStart);
-  if (!result) return NextResponse.json({ error: "No saved mobile grooming payroll exists for this week." }, { status: 404 });
+  if (!result.week) return NextResponse.json({ error: "No saved mobile grooming payroll exists for this week." }, { status: 404 });
   const { preview, week } = result;
   if (body.sourceFingerprint !== preview.sourceFingerprint) {
     return NextResponse.json({ error: "Payroll or reconciliation changed. Reload payouts before closing the week." }, { status: 409 });
@@ -161,7 +180,7 @@ export async function PUT(req: NextRequest) {
     return NextResponse.json({ error: "A valid week, employee, and pay decision are required." }, { status: 400 });
   }
   const result = await getWeek(weekStart);
-  if (!result) return NextResponse.json({ error: "No saved payroll exists for this week." }, { status: 404 });
+  if (!result.week) return NextResponse.json({ error: "No saved payroll exists for this week." }, { status: 404 });
   const payout = result.preview.payouts.find((item) => item.employeeName.toLocaleLowerCase() === employeeName.toLocaleLowerCase());
   if (!payout) return NextResponse.json({ error: "Employee was not found in this week." }, { status: 404 });
   const employeeDays = result.week.mobileGroomingEntries
@@ -177,11 +196,38 @@ export async function PUT(req: NextRequest) {
     update: { varianceCents: payout.varianceCents, sourceFingerprint: payout.reconciliationFingerprint, applyToCashPayout: body.applyToCashPayout, reviewedAt: new Date() },
   });
   const updated = await getWeek(weekStart);
-  if (!updated) return NextResponse.json({ error: "Payroll week disappeared." }, { status: 409 });
+  if (!updated.week) return NextResponse.json({ error: "Payroll week disappeared." }, { status: 409 });
   const closeout = serializeCloseout(updated.week.mobileGroomingCloseout);
   return NextResponse.json({
     preview: updated.preview, closeout,
     closeoutCurrent: Boolean(closeout && closeout.sourceFingerprint === updated.preview.sourceFingerprint),
     weekCompleted: weekStart <= lastCompletedEasternWeekStart(),
   });
+}
+
+export async function PATCH(req: NextRequest) {
+  if (!(await authorized())) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  let body: Record<string, unknown>;
+  try {
+    body = (await req.json()) as Record<string, unknown>;
+  } catch {
+    return NextResponse.json({ error: "Invalid JSON body." }, { status: 400 });
+  }
+  const weekStart = dateParam(body.weekStart);
+  const employeeName = normalizeEmployeeName(typeof body.employeeName === "string" ? body.employeeName : "");
+  if (!weekStart || !employeeName || employeeName.length > 200 || typeof body.prepared !== "boolean") {
+    return NextResponse.json({ error: "A valid week, employee, and preparation status are required." }, { status: 400 });
+  }
+  const result = await getWeek(weekStart);
+  const payout = result.preview.payouts.find((item) =>
+    normalizeEmployeeName(item.employeeName).toLocaleLowerCase() === employeeName.toLocaleLowerCase()
+  );
+  if (!payout) return NextResponse.json({ error: "Employee was not found in this week." }, { status: 404 });
+  const prepared = body.prepared;
+  await prisma.financeMobileGroomingPayPreparation.upsert({
+    where: { weekStart_employeeName: { weekStart, employeeName: payout.employeeName } },
+    create: { weekStart, employeeName: payout.employeeName, prepared },
+    update: { prepared },
+  });
+  return NextResponse.json({ employeeName: payout.employeeName, prepared });
 }
