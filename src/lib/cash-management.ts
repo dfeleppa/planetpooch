@@ -1,6 +1,6 @@
 import { prisma } from "@/lib/prisma";
 
-export const SAFE_CENTS = 250_000;
+export const SAFE_CENTS = 150_000;
 export const MOBILE_GROOMING_SOURCE = "mobile-grooming";
 export const PET_RESORT_SOURCE = "pet-resort";
 
