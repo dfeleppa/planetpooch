@@ -146,10 +146,10 @@ export function CampaignResultsReport({ from, to, source, rangeLabel, outcomes }
             <th scope="col" className="px-4 py-3 text-right font-medium">Leads</th>
             <th scope="col" className="px-4 py-3 text-right font-medium">Cost per lead</th>
             <th scope="col" className="px-4 py-3 text-right font-medium">MoeGo linked</th>
-            <th scope="col" className="px-4 py-3 text-right font-medium">Booked leads</th>
+            <th scope="col" className="px-4 py-3 text-right font-medium">Booked</th>
             <th scope="col" className="px-4 py-3 text-right font-medium">Appointments</th>
             <th scope="col" className="px-4 py-3 text-right font-medium">Net paid after lead</th>
-            <th scope="col" className="px-4 py-3 text-right font-medium">Observed return</th>
+            <th scope="col" className="px-4 py-3 text-right font-medium">ROAS</th>
           </tr></thead>
           <tbody className="divide-y divide-gray-100">
             {visibleSources.map((rowSource) => {
@@ -248,7 +248,7 @@ export function CampaignResultsReport({ from, to, source, rangeLabel, outcomes }
     </div>
 
     <div className="space-y-1 text-xs text-gray-600">
-      <p>Website forms are actual submissions; Meta platform leads may differ. The Google LSA source row uses exact-phone matches to imported calls, including existing customers. Phones matching multiple MoeGo profiles are linked but excluded from LSA bookings and payments. Because the CSV has dates rather than call times, LSA outcomes exclude MoeGo activity on a call date and use later New York calendar dates. Each appointment and order is assigned to the latest qualifying LSA call once. Observed return is net paid divided by known source spend; it does not prove the ad caused a purchase.</p>
+      <p>Website forms are actual submissions; Meta platform leads may differ. The Google LSA source row uses exact-phone matches to imported calls, including existing customers. Phones matching multiple MoeGo profiles are linked but excluded from LSA bookings and payments. Because the CSV has dates rather than call times, LSA outcomes exclude MoeGo activity on a call date and use later New York calendar dates. Each appointment and order is assigned to the latest qualifying LSA call once. Booked counts leads with at least one qualifying appointment; Appointments counts all qualifying appointments. ROAS is net paid after the lead divided by known source spend; it does not prove the ad caused a purchase.</p>
       <p>Leads combine saved website submissions and unique imported LSA calls for the selected dates. Cost per lead is ad spend divided by leads; a dash means spend or lead count is unavailable, or there are no leads. LSA calls lack campaign attribution, so LSA campaign rows show only tagged submissions. The Total row includes all ad spend and leads but only website-form outcomes. LSA call outcomes can overlap with form outcomes, so the Total row does not add them together.{metric?.googleLsaCallOutcomes && !metric.googleLsaCallOutcomes.appointmentsBackfilled ? " Run Backfill LSA appointments for this date range to complete the call booking counts." : ""}</p>
       <p>Spend uses the selected calendar dates. Meta campaign, ad set, and ad amounts come from the same synced insight rows as the Meta source total. Google Ads campaign spend uses the saved campaign IDs for this range; campaigns with spend appear even without tagged website forms. Google Ads form tags join a spend row when its campaign name is unique after case, space, hyphen, and underscore normalization. Google manual spend covers Pet Resort and Mobile Grooming together for this exact range and takes priority over campaign totals. A dash means unavailable, not zero.</p>
       <p>Google LSA spend is estimated at $28 for each unique imported lead received in the selected dates, regardless of charge status. The CSV import is updated manually.</p>
