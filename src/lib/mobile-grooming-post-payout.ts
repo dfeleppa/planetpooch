@@ -5,7 +5,7 @@ import { normalizeEmployeeName } from "@/lib/payroll";
 const MS_PER_DAY = 86_400_000;
 const keyFor = (name: string) => normalizeEmployeeName(name).toLocaleLowerCase();
 
-type PayrollEntry = {
+export type PayrollEntry = {
   serviceDate: Date;
   employeeName: string;
   paymentType: string;
@@ -38,29 +38,80 @@ function payComponents(value: unknown): PayComponents | null {
   return components;
 }
 
-/** Itemize the pay difference from the immutable paid snapshot. */
-export function postPayoutBreakdown(baseline: unknown, revised: unknown, adjustmentCents: number, baselinePayCents?: number) {
+export function snapshotPayrollEntries(entries: PayrollEntry[]) {
+  return entries.map((entry) => ({
+    serviceDate: entry.serviceDate.toISOString().slice(0, 10),
+    dogs: entry.dogs,
+    priceCents: entry.priceCents,
+    upgradeCents: entry.upgradeCents,
+    creditCardTipCents: entry.creditCardTipCents,
+  }));
+}
+
+type SavedEntry = ReturnType<typeof snapshotPayrollEntries>[number];
+
+function savedEntries(value: unknown): SavedEntry[] | null {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return null;
+  const entries = (value as Record<string, unknown>).paidEntries;
+  if (!Array.isArray(entries)) return null;
+  if (!entries.every((entry) => entry && typeof entry === "object" && !Array.isArray(entry) &&
+    typeof entry.serviceDate === "string" && /^\d{4}-\d{2}-\d{2}$/.test(entry.serviceDate) &&
+    [entry.dogs, entry.priceCents, entry.upgradeCents, entry.creditCardTipCents]
+      .every((amount) => typeof amount === "number" && Number.isSafeInteger(amount)))) return null;
+  return entries as SavedEntry[];
+}
+
+/** Itemize dated pay differences against the immutable entries saved at payout. */
+export function postPayoutBreakdown(
+  baseline: unknown, revised: unknown, currentEntries: PayrollEntry[], adjustmentCents: number,
+  baselinePayCents: number, sourceWeekStart: string
+) {
   const before = payComponents(baseline);
   const after = payComponents(revised);
-  if (!after) return null;
-  const commission = (value: PayComponents) => value.payKind === "fixed" ? 0 : value.commissionPayCents;
-  const tips = (value: PayComponents) => value.payKind === "fixed" ? 0 : value.creditCardTipCents;
-  const hasComparableSnapshot = before && (baselinePayCents === undefined || before.groomerPayCents === baselinePayCents);
-  if (!hasComparableSnapshot && (baselinePayCents === undefined || !Number.isSafeInteger(baselinePayCents))) return null;
-  const lines = hasComparableSnapshot ? [
-    { reason: "Grooming commission change", amountCents: (commission(after) - tips(after)) - (commission(before) - tips(before)) },
-    { reason: "Credit card tip change", amountCents: tips(after) - tips(before) },
-    { reason: "Base pay change", amountCents: after.basePayCents - before.basePayCents },
-  ] : [
-    { reason: "Current grooming commission", amountCents: commission(after) - tips(after) },
-    { reason: "Current credit card tips", amountCents: tips(after) },
-    { reason: "Current base pay", amountCents: after.basePayCents },
-    { reason: "Less earned pay already paid", amountCents: -(baselinePayCents ?? 0) },
-  ];
-  const nonzeroLines = lines.filter((line) => line.amountCents !== 0);
-  const carriedCents = adjustmentCents - nonzeroLines.reduce((sum, line) => sum + line.amountCents, 0);
-  if (carriedCents !== 0) nonzeroLines.push({ reason: "Correction already carried to another pay week", amountCents: carriedCents });
-  return nonzeroLines;
+  const paid = savedEntries(baseline);
+  if (!before || !after || !paid || before.groomerPayCents !== baselinePayCents) return null;
+  const current = snapshotPayrollEntries(currentEntries);
+  const byDay = (entries: SavedEntry[]) => {
+    const days = new Map<string, { base: number; tips: number }>();
+    for (const entry of entries) {
+      const day = days.get(entry.serviceDate) ?? { base: 0, tips: 0 };
+      day.base += Math.max(0, entry.priceCents + entry.upgradeCents - entry.dogs * 500);
+      day.tips += entry.creditCardTipCents;
+      days.set(entry.serviceDate, day);
+    }
+    return days;
+  };
+  const oldDays = byDay(paid);
+  const newDays = byDay(current);
+  const dates = [...new Set([...oldDays.keys(), ...newDays.keys()])].sort();
+  const lines: Array<{ reason: string; amountCents: number }> = [];
+  const dateLabel = (date: string) => `${Number(date.slice(5, 7))}/${Number(date.slice(8, 10))}`;
+  if (before.payKind !== "fixed" && after.payKind !== "fixed") {
+    const baseChanges = dates.map((date) => ({ date, amount: (newDays.get(date)?.base ?? 0) - (oldDays.get(date)?.base ?? 0) }))
+      .filter((item) => item.amount !== 0);
+    const commissionByDate = new Map<string, number>();
+    let assignedCommission = 0;
+    const commissionDifference = (after.commissionPayCents - after.creditCardTipCents) -
+      (before.commissionPayCents - before.creditCardTipCents);
+    baseChanges.forEach((item, index) => {
+      const amountCents = index === baseChanges.length - 1
+        ? commissionDifference - assignedCommission : Math.round(item.amount * 0.4);
+      assignedCommission += amountCents;
+      if (amountCents) commissionByDate.set(item.date, amountCents);
+    });
+    for (const date of dates) {
+      const commissionCents = commissionByDate.get(date) ?? 0;
+      if (commissionCents) lines.push({ reason: `${dateLabel(date)} · Grooming commission`, amountCents: commissionCents });
+      const amountCents = (newDays.get(date)?.tips ?? 0) - (oldDays.get(date)?.tips ?? 0);
+      if (amountCents) lines.push({ reason: `${dateLabel(date)} · Tip`, amountCents });
+    }
+  }
+  const basePayChange = after.basePayCents - before.basePayCents;
+  if (basePayChange) lines.push({ reason: `${dateLabel(sourceWeekStart)} · Base pay`, amountCents: basePayChange });
+  if (lines.reduce((sum, line) => sum + line.amountCents, 0) !== after.groomerPayCents - baselinePayCents) return null;
+  const alreadyCarried = adjustmentCents - (after.groomerPayCents - baselinePayCents);
+  if (alreadyCarried) lines.push({ reason: "Less correction already carried", amountCents: alreadyCarried });
+  return lines;
 }
 
 export function payoutSnapshot(snapshot: Prisma.JsonValue): Payout[] {

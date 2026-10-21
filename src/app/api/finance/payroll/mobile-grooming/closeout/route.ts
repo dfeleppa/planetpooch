@@ -3,6 +3,7 @@ import { Prisma } from "@prisma/client";
 import { getSession, isSuperAdmin } from "@/lib/auth-helpers";
 import { mobileGroomingCloseoutPreview, type MobilePayRule } from "@/lib/mobile-grooming-closeout";
 import { postPayoutBreakdowns } from "@/lib/mobile-grooming-post-payout-details";
+import { snapshotPayrollEntries } from "@/lib/mobile-grooming-post-payout";
 import { lastCompletedPayrollWeekStart, normalizeEmployeeName } from "@/lib/payroll";
 import { prisma } from "@/lib/prisma";
 
@@ -217,7 +218,12 @@ export async function POST(req: NextRequest) {
     varianceCents,
     note: note.trim(),
     sourceFingerprint: preview.sourceFingerprint,
-    payoutSnapshot: preview.payouts,
+    payoutSnapshot: preview.payouts.map((payout) => ({
+      ...payout,
+      paidEntries: snapshotPayrollEntries(week.mobileGroomingEntries.filter((entry) =>
+        normalizeEmployeeName(entry.employeeName).toLocaleLowerCase() ===
+        normalizeEmployeeName(payout.employeeName).toLocaleLowerCase())),
+    })),
     closedAt: new Date(),
   };
   const closeout = await prisma.financeMobileGroomingWeeklyCloseout.upsert({
@@ -304,7 +310,12 @@ async function lockEmployeePay(body: Record<string, unknown>) {
         earnedPayCents: payout.groomerPayCents,
         weeklyPayCents: payout.weeklyPayCents,
         cashPayoutCents: payout.cashPayoutCents,
-        snapshot: payout as Prisma.InputJsonObject,
+        snapshot: {
+          ...payout,
+          paidEntries: snapshotPayrollEntries(result.week.mobileGroomingEntries.filter((entry) =>
+            normalizeEmployeeName(entry.employeeName).toLocaleLowerCase() ===
+            normalizeEmployeeName(payout.employeeName).toLocaleLowerCase())),
+        } as Prisma.InputJsonObject,
       };
   if (!paid) return NextResponse.json({ error: "The original payout is unavailable for this employee." }, { status: 409 });
   const payrollWeekId = result.week.id;

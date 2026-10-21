@@ -1,34 +1,23 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import { mobileGroomingCloseoutPreview } from "./mobile-grooming-closeout";
-import { currentEasternWeekStart, earnedPayChanges, outstandingPayCorrection, postPayoutBreakdown, reconcilePostPayoutChanges } from "./mobile-grooming-post-payout";
+import { currentEasternWeekStart, earnedPayChanges, outstandingPayCorrection, postPayoutBreakdown, reconcilePostPayoutChanges, snapshotPayrollEntries } from "./mobile-grooming-post-payout";
 
-test("adjustment details itemize changed commission, tips, base pay, and earlier corrections", () => {
-  const before = { groomerPayCents: 10_000, commissionPayCents: 8_000, creditCardTipCents: 2_000, basePayCents: 2_000, payKind: "additive" };
-  const after = { groomerPayCents: 12_000, commissionPayCents: 9_500, creditCardTipCents: 2_500, basePayCents: 2_500, payKind: "additive" };
-  assert.deepEqual(postPayoutBreakdown(before, after, 1_200), [
-    { reason: "Grooming commission change", amountCents: 1_000 },
-    { reason: "Credit card tip change", amountCents: 500 },
-    { reason: "Base pay change", amountCents: 500 },
-    { reason: "Correction already carried to another pay week", amountCents: -800 },
+test("adjustment details show the changed date, type, and amount", () => {
+  const entry = (date: string, priceCents: number, tipCents: number) => ({
+    serviceDate: new Date(`${date}T00:00:00Z`), employeeName: "Andrea Groomer", paymentType: "credit",
+    dogs: 1, priceCents, upgradeCents: 0, creditCardTipCents: tipCents, discountCents: 0,
+  });
+  const paidEntries = [entry("2026-10-05", 10_500, 500)];
+  const currentEntries = [entry("2026-10-05", 10_500, 2_600), entry("2026-10-06", 5_500, 0)];
+  const before = { ...mobileGroomingCloseoutPreview(paidEntries, [], [], [], [], []).payouts[0], paidEntries: snapshotPayrollEntries(paidEntries) };
+  const after = mobileGroomingCloseoutPreview(currentEntries, [], [], [], [], []).payouts[0];
+  assert.deepEqual(postPayoutBreakdown(before, after, currentEntries, 3_100, before.groomerPayCents, "2026-10-03"), [
+    { reason: "10/5 · Tip", amountCents: 2_100 },
+    { reason: "10/6 · Grooming commission", amountCents: 2_000 },
+    { reason: "Less correction already carried", amountCents: -1_000 },
   ]);
-  assert.equal(postPayoutBreakdown({ groomerPayCents: 10_000 }, after, 2_000), null);
-  assert.deepEqual(postPayoutBreakdown({ groomerPayCents: 10_000 }, after, 1_200, 10_000), [
-    { reason: "Current grooming commission", amountCents: 7_000 },
-    { reason: "Current credit card tips", amountCents: 2_500 },
-    { reason: "Current base pay", amountCents: 2_500 },
-    { reason: "Less earned pay already paid", amountCents: -10_000 },
-    { reason: "Correction already carried to another pay week", amountCents: -800 },
-  ]);
-  const actualPreview = mobileGroomingCloseoutPreview([{
-    serviceDate: new Date("2026-10-03T00:00:00Z"), employeeName: "Andrea Groomer", paymentType: "credit",
-    dogs: 1, priceCents: 10_500, upgradeCents: 0, creditCardTipCents: 500, discountCents: 0,
-  }], [], [], [], [], []).payouts[0];
-  assert.deepEqual(postPayoutBreakdown({ groomerPayCents: 3_800 }, actualPreview, 700, 3_800), [
-    { reason: "Current grooming commission", amountCents: 4_000 },
-    { reason: "Current credit card tips", amountCents: 500 },
-    { reason: "Less earned pay already paid", amountCents: -3_800 },
-  ]);
+  assert.equal(postPayoutBreakdown({ groomerPayCents: before.groomerPayCents }, after, currentEntries, 4_100, before.groomerPayCents, "2026-10-03"), null);
 });
 
 test("post-payout differences compare earned pay to the original closeout", () => {

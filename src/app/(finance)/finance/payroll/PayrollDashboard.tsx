@@ -3273,7 +3273,7 @@ export function PayrollDashboard({
                           </details>
                         ) : (
                           <p className="mt-1 max-w-56 text-xs font-normal text-gray-500">
-                            {change.breakdown ? "No component changes recorded." : "Details unavailable from the paid snapshot or payroll changed since this check. Recheck the paid week."}
+                            {change.breakdown ? "No dated changes recorded." : "Dated details unavailable: the original paid entries were not saved, or payroll changed since this check."}
                           </p>
                         )}
                       </TableCell>
@@ -3743,7 +3743,7 @@ function MobileGroomingPaystub({
                   <span className="whitespace-nowrap">{formatSignedMoney(line.amountCents)}</span>
                 </p>
               )) : (
-                <p className="ml-3 text-gray-600">Details unavailable from the paid snapshot or payroll changed since the last check.</p>
+                <p className="ml-3 text-gray-600">Dated details unavailable: the original paid entries were not saved, or payroll changed since the last check.</p>
               )}
             </div>
           )) : (

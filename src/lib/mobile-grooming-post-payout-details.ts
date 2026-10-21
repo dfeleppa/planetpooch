@@ -44,6 +44,8 @@ export async function postPayoutBreakdowns(rows: Adjustment[]) {
       }
     }
     return [week.id, {
+      weekStart: week.weekStart.toISOString().slice(0, 10),
+      entries: week.mobileGroomingEntries,
       baseline: new Map([
         ...(Array.isArray(week.mobileGroomingCloseout?.payoutSnapshot)
           ? week.mobileGroomingCloseout.payoutSnapshot.flatMap((item) =>
@@ -62,7 +64,11 @@ export async function postPayoutBreakdowns(rows: Adjustment[]) {
     const details = detailsByWeek.get(row.sourcePayrollWeekId);
     const revised = details?.revised.get(employeeKey(row.employeeName));
     breakdowns.set(row.id, revised?.groomerPayCents === row.revisedPayCents
-      ? postPayoutBreakdown(details?.baseline.get(employeeKey(row.employeeName)), revised, row.amountCents, row.baselinePayCents)
+      ? postPayoutBreakdown(
+          details?.baseline.get(employeeKey(row.employeeName)), revised,
+          details!.entries.filter((entry) => employeeKey(entry.employeeName) === employeeKey(row.employeeName)),
+          row.amountCents, row.baselinePayCents, details!.weekStart
+        )
       : null);
   }
   return breakdowns;
