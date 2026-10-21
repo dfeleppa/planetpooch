@@ -197,15 +197,14 @@ type CloseoutResponse = {
 };
 
 type PostPayoutChangesResponse = {
-  weekStart: string;
-  targetClosedAt: string | null;
-  totalCents: number;
   changes: Array<{
     id: string;
     employeeName: string;
     sourceWeekStart: string;
     sourceWeekEnd: string;
-    sourceClosedAt: string | null;
+    targetWeekStart: string;
+    targetWeekEnd: string;
+    targetClosedAt: string | null;
     baselinePayCents: number;
     revisedPayCents: number;
     amountCents: number;
@@ -765,10 +764,6 @@ export function PayrollDashboard({
     const start = addDaysParam(currentMobileWeekStart, -index * 7);
     return { weekStart: start, weekEnd: addDaysParam(start, 6) };
   });
-  const postPayoutWeeks = Array.from({ length: 12 }, (_, index) => {
-    const start = addDaysParam(currentMobileWeekStart, -index * 7);
-    return { weekStart: start, weekEnd: addDaysParam(start, 6) };
-  });
   const isMobileGrooming = business === "mobile-grooming";
   const payPeriod = payrollPayPeriodForBusiness(business);
   const employeeOptions = employeeOptionsByBusiness[business] ?? EMPTY_EMPLOYEE_OPTIONS;
@@ -1208,7 +1203,7 @@ export function PayrollDashboard({
     const controller = new AbortController();
     setPostPayoutChanges(null);
     setLoadingPostPayoutChanges(true);
-    void fetch(`/api/finance/payroll/mobile-grooming/post-payout-changes?weekStart=${weekStart}`, { signal: controller.signal })
+    void fetch("/api/finance/payroll/mobile-grooming/post-payout-changes", { signal: controller.signal })
       .then(async (response) => {
         const data = (await response.json()) as PostPayoutChangesResponse;
         if (!response.ok) throw new Error(data.error || "Could not load post-payout changes.");
@@ -1221,7 +1216,7 @@ export function PayrollDashboard({
         if (!controller.signal.aborted) setLoadingPostPayoutChanges(false);
       });
     return () => controller.abort();
-  }, [mobilePayrollView, weekStart]);
+  }, [mobilePayrollView]);
 
   async function savePayPreparation(employeeName: string, prepared: boolean) {
     setSavingPayPreparation(employeeName);
@@ -1929,8 +1924,9 @@ export function PayrollDashboard({
               : "Payroll"}
           </h2>
           <p className="mt-1 text-gray-500">
-            {isMobileGrooming ? "Weekly mobile grooming appointments" : "Weekly staff hours"}{" "}
-            ({payPeriod.rangeLabel})
+            {isMobileGrooming && mobilePayrollView === "changes"
+              ? "Changes to groomer pay after a week was paid out"
+              : <>{isMobileGrooming ? "Weekly mobile grooming appointments" : "Weekly staff hours"} ({payPeriod.rangeLabel})</>}
           </p>
         </div>
         {!isMobileGrooming ? (
@@ -3112,52 +3108,34 @@ export function PayrollDashboard({
 
       {isMobileGrooming && mobilePayrollView === "changes" && (
         <Card>
-          <CardContent className="space-y-5">
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-              <div>
-                <h3 className="text-lg font-semibold text-gray-900">Pay corrections from closed weeks</h3>
-                <p className="text-sm text-gray-600">When saved MoeGo payroll changes after a week is closed, the difference in earned groomer pay carries into the pay week shown here. Repeated pulls update the difference without adding it twice.</p>
-              </div>
-              <Select id="post-payout-week" label="Pay week receiving changes" value={weekStart}
-                onChange={(event) => setWeekStart(event.target.value)}>
-                {postPayoutWeeks.map((week) => (
-                  <option key={week.weekStart} value={week.weekStart}>{formatWeekRange(week.weekStart, week.weekEnd)}</option>
-                ))}
-              </Select>
-            </div>
+          <CardContent>
             {loadingPostPayoutChanges ? (
               <p className="text-sm text-gray-500">Loading changes...</p>
             ) : !postPayoutChanges?.changes.length ? (
-              <p className="rounded-lg border border-dashed border-gray-200 px-4 py-6 text-sm text-gray-600">No pay changes from closed weeks are assigned to this pay week.</p>
+              <p className="text-sm text-gray-600">No changes to paid out weeks have been recorded.</p>
             ) : (
-              <>
-                <div className="flex flex-wrap items-center gap-3 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm">
-                  <span className="font-semibold text-amber-950">Total carried into this pay week: {formatSignedMoney(postPayoutChanges.totalCents)}</span>
-                  <span className="text-amber-900">{postPayoutChanges.targetClosedAt ? "This pay week is closed." : "Included in current payout calculations and paystubs."}</span>
-                </div>
-                <div className="overflow-x-auto rounded-lg border border-gray-200">
-                  <Table>
-                    <TableHead><TableRow>
-                      <TableHeader>Groomer</TableHeader><TableHeader>Original week</TableHeader>
-                      <TableHeader>Pay at closeout</TableHeader><TableHeader>Revised pay</TableHeader>
-                      <TableHeader>Carried change</TableHeader><TableHeader>Detected</TableHeader>
-                    </TableRow></TableHead>
-                    <TableBody>{postPayoutChanges.changes.map((change) => (
-                      <TableRow key={change.id}>
-                        <TableCell className="font-medium">{change.employeeName}</TableCell>
-                        <TableCell>
-                          {formatWeekRange(change.sourceWeekStart, change.sourceWeekEnd)}
-                          {change.sourceClosedAt && <p className="text-xs text-gray-500">Closed {new Date(change.sourceClosedAt).toLocaleDateString("en-US", { timeZone: "America/New_York", month: "short", day: "numeric", year: "numeric" })}</p>}
-                        </TableCell>
-                        <TableCell>{formatMoney(change.baselinePayCents / 100)}</TableCell>
-                        <TableCell>{formatMoney(change.revisedPayCents / 100)}</TableCell>
-                        <TableCell className={change.amountCents < 0 ? "font-semibold text-red-700" : "font-semibold text-green-700"}>{formatSignedMoney(change.amountCents)}</TableCell>
-                        <TableCell>{new Date(change.detectedAt).toLocaleString("en-US", { timeZone: "America/New_York", month: "short", day: "numeric", year: "numeric", hour: "numeric", minute: "2-digit" })}</TableCell>
-                      </TableRow>
-                    ))}</TableBody>
-                  </Table>
-                </div>
-              </>
+              <div className="overflow-x-auto rounded-lg border border-gray-200">
+                <Table>
+                  <TableHead><TableRow>
+                    <TableHeader>Detected</TableHeader><TableHeader>Paid out week</TableHeader>
+                    <TableHeader>Groomer</TableHeader><TableHeader>Paid pay</TableHeader>
+                    <TableHeader>Latest earned pay</TableHeader><TableHeader>Adjustment</TableHeader>
+                    <TableHeader>Pay week</TableHeader><TableHeader>Status</TableHeader>
+                  </TableRow></TableHead>
+                  <TableBody>{postPayoutChanges.changes.map((change) => (
+                    <TableRow key={change.id}>
+                      <TableCell>{new Date(change.detectedAt).toLocaleString("en-US", { timeZone: "America/New_York", month: "short", day: "numeric", year: "numeric", hour: "numeric", minute: "2-digit" })}</TableCell>
+                      <TableCell>{formatWeekRange(change.sourceWeekStart, change.sourceWeekEnd)}</TableCell>
+                      <TableCell className="font-medium">{change.employeeName}</TableCell>
+                      <TableCell>{formatMoney(change.baselinePayCents / 100)}</TableCell>
+                      <TableCell>{formatMoney(change.revisedPayCents / 100)}</TableCell>
+                      <TableCell className={change.amountCents < 0 ? "font-semibold text-red-700" : "font-semibold text-green-700"}>{formatSignedMoney(change.amountCents)}</TableCell>
+                      <TableCell>{formatWeekRange(change.targetWeekStart, change.targetWeekEnd)}</TableCell>
+                      <TableCell>{change.targetClosedAt ? "Paid" : "Pending payout"}</TableCell>
+                    </TableRow>
+                  ))}</TableBody>
+                </Table>
+              </div>
             )}
           </CardContent>
         </Card>
