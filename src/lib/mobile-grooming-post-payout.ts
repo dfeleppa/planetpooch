@@ -18,6 +18,43 @@ type PayrollEntry = {
 
 type Payout = { employeeName: string; groomerPayCents: number };
 
+type PayComponents = {
+  groomerPayCents: number;
+  commissionPayCents: number;
+  creditCardTipCents: number;
+  basePayCents: number;
+  payKind: string | null;
+};
+
+function payComponents(value: unknown): PayComponents | null {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return null;
+  const row = value as Record<string, unknown>;
+  if (![row.groomerPayCents, row.commissionPayCents, row.creditCardTipCents, row.basePayCents]
+    .every((amount) => typeof amount === "number" && Number.isSafeInteger(amount))) return null;
+  if (row.payKind !== null && row.payKind !== "fixed" && row.payKind !== "additive") return null;
+  const components = row as PayComponents;
+  const commissionContribution = components.payKind === "fixed" ? 0 : components.commissionPayCents;
+  if (components.groomerPayCents !== commissionContribution + components.basePayCents) return null;
+  return components;
+}
+
+/** Itemize the pay difference from the immutable paid snapshot. */
+export function postPayoutBreakdown(baseline: unknown, revised: unknown, adjustmentCents: number, baselinePayCents?: number) {
+  const before = payComponents(baseline);
+  const after = payComponents(revised);
+  if (!before || !after || (baselinePayCents !== undefined && before.groomerPayCents !== baselinePayCents)) return null;
+  const commission = (value: PayComponents) => value.payKind === "fixed" ? 0 : value.commissionPayCents;
+  const tips = (value: PayComponents) => value.payKind === "fixed" ? 0 : value.creditCardTipCents;
+  const lines = [
+    { reason: "Grooming commission", amountCents: (commission(after) - tips(after)) - (commission(before) - tips(before)) },
+    { reason: "Credit card tips", amountCents: tips(after) - tips(before) },
+    { reason: "Base pay", amountCents: after.basePayCents - before.basePayCents },
+  ].filter((line) => line.amountCents !== 0);
+  const carriedCents = adjustmentCents - lines.reduce((sum, line) => sum + line.amountCents, 0);
+  if (carriedCents !== 0) lines.push({ reason: "Correction already carried to another pay week", amountCents: carriedCents });
+  return lines;
+}
+
 export function payoutSnapshot(snapshot: Prisma.JsonValue): Payout[] {
   if (!Array.isArray(snapshot)) throw new Error("The closed payroll payout snapshot is invalid.");
   return snapshot.map((value) => {

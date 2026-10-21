@@ -1,7 +1,19 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import { mobileGroomingCloseoutPreview } from "./mobile-grooming-closeout";
-import { currentEasternWeekStart, earnedPayChanges, outstandingPayCorrection, reconcilePostPayoutChanges } from "./mobile-grooming-post-payout";
+import { currentEasternWeekStart, earnedPayChanges, outstandingPayCorrection, postPayoutBreakdown, reconcilePostPayoutChanges } from "./mobile-grooming-post-payout";
+
+test("adjustment details itemize changed commission, tips, base pay, and earlier corrections", () => {
+  const before = { groomerPayCents: 10_000, commissionPayCents: 8_000, creditCardTipCents: 2_000, basePayCents: 2_000, payKind: "additive" };
+  const after = { groomerPayCents: 12_000, commissionPayCents: 9_500, creditCardTipCents: 2_500, basePayCents: 2_500, payKind: "additive" };
+  assert.deepEqual(postPayoutBreakdown(before, after, 1_200), [
+    { reason: "Grooming commission", amountCents: 1_000 },
+    { reason: "Credit card tips", amountCents: 500 },
+    { reason: "Base pay", amountCents: 500 },
+    { reason: "Correction already carried to another pay week", amountCents: -800 },
+  ]);
+  assert.equal(postPayoutBreakdown({ groomerPayCents: 10_000 }, after, 2_000), null);
+});
 
 test("post-payout differences compare earned pay to the original closeout", () => {
   const changes = earnedPayChanges(

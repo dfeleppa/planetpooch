@@ -220,6 +220,7 @@ type PostPayoutChangesResponse = {
     revisedPayCents: number;
     amountCents: number;
     detectedAt: string;
+    breakdown: Array<{ reason: string; amountCents: number }> | null;
   }>;
   error?: string;
 };
@@ -3253,7 +3254,26 @@ export function PayrollDashboard({
                       <TableCell className="font-medium">{change.employeeName}</TableCell>
                       <TableCell>{formatMoney(change.baselinePayCents / 100)}</TableCell>
                       <TableCell>{formatMoney(change.revisedPayCents / 100)}</TableCell>
-                      <TableCell className={change.amountCents < 0 ? "font-semibold text-red-700" : "font-semibold text-green-700"}>{formatSignedMoney(change.amountCents)}</TableCell>
+                      <TableCell>
+                        <span className={change.amountCents < 0 ? "font-semibold text-red-700" : "font-semibold text-green-700"}>{formatSignedMoney(change.amountCents)}</span>
+                        {change.breakdown?.length ? (
+                          <details className="mt-1 min-w-56 text-xs text-gray-700">
+                            <summary className="cursor-pointer font-medium text-blue-700">View adjustment details</summary>
+                            <div className="mt-2 space-y-1 border-t border-gray-200 pt-2">
+                              {change.breakdown.map((line) => (
+                                <div key={line.reason} className="flex items-start justify-between gap-3">
+                                  <span>{line.reason}</span>
+                                  <span className="whitespace-nowrap tabular-nums">{formatSignedMoney(line.amountCents)}</span>
+                                </div>
+                              ))}
+                            </div>
+                          </details>
+                        ) : (
+                          <p className="mt-1 max-w-56 text-xs font-normal text-gray-500">
+                            {change.breakdown ? "No component changes recorded." : "Details unavailable from the paid snapshot or payroll changed since this check. Recheck the paid week."}
+                          </p>
+                        )}
+                      </TableCell>
                       <TableCell>{formatWeekRange(change.targetWeekStart, change.targetWeekEnd)}</TableCell>
                       <TableCell>{change.targetClosedAt ? "Paid" : "Pending payout"}</TableCell>
                     </TableRow>
