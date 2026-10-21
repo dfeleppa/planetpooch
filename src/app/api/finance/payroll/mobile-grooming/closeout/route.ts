@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { Prisma } from "@prisma/client";
 import { getSession, isSuperAdmin } from "@/lib/auth-helpers";
 import { mobileGroomingCloseoutPreview, type MobilePayRule } from "@/lib/mobile-grooming-closeout";
+import { postPayoutBreakdowns } from "@/lib/mobile-grooming-post-payout-details";
 import { lastCompletedPayrollWeekStart, normalizeEmployeeName } from "@/lib/payroll";
 import { prisma } from "@/lib/prisma";
 
@@ -57,11 +58,12 @@ async function getWeek(weekStart: Date) {
   const postPayoutAdjustments = await prisma.financeMobileGroomingPostPayoutAdjustment.findMany({
     where: { targetWeekStart: weekStart, amountCents: { not: 0 } },
     select: {
-      employeeName: true,
-      amountCents: true,
+      id: true, sourcePayrollWeekId: true, employeeName: true,
+      baselinePayCents: true, revisedPayCents: true, amountCents: true,
       sourcePayrollWeek: { select: { weekStart: true, weekEnd: true } },
     },
   });
+  const correctionBreakdowns = await postPayoutBreakdowns(postPayoutAdjustments);
   const latestSettings = new Map<string, { employeeName: string; amountCents: number }>();
   for (const setting of settings) {
     const key = setting.employeeName.toLocaleLowerCase();
@@ -87,14 +89,19 @@ async function getWeek(weekStart: Date) {
   const lockedByName = new Map((week?.mobileGroomingPayLocks ?? []).map((row) => [
     normalizeEmployeeName(row.employeeName).toLocaleLowerCase(), row,
   ]));
-  const correctionsByName = new Map<string, Array<{ sourceWeekStart: string; sourceWeekEnd: string; amountCents: number }>>();
+  const correctionsByName = new Map<string, Array<{
+    id: string; sourceWeekStart: string; sourceWeekEnd: string; amountCents: number;
+    breakdown: Array<{ reason: string; amountCents: number }> | null;
+  }>>();
   for (const adjustment of postPayoutAdjustments) {
     const key = normalizeEmployeeName(adjustment.employeeName).toLocaleLowerCase();
     const corrections = correctionsByName.get(key) ?? [];
     corrections.push({
+      id: adjustment.id,
       sourceWeekStart: adjustment.sourcePayrollWeek.weekStart.toISOString().slice(0, 10),
       sourceWeekEnd: adjustment.sourcePayrollWeek.weekEnd.toISOString().slice(0, 10),
       amountCents: adjustment.amountCents,
+      breakdown: correctionBreakdowns.get(adjustment.id) ?? null,
     });
     correctionsByName.set(key, corrections);
   }

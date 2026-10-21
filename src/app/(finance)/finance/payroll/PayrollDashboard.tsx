@@ -156,9 +156,11 @@ type PayoutPreview = {
     groomerPayCents: number;
     priorPeriodAdjustmentCents: number;
     priorPeriodCorrections: Array<{
+      id: string;
       sourceWeekStart: string;
       sourceWeekEnd: string;
       amountCents: number;
+      breakdown: Array<{ reason: string; amountCents: number }> | null;
     }>;
     weeklyPayCents: number;
     payPrepared: boolean;
@@ -3725,14 +3727,24 @@ function MobileGroomingPaystub({
         <p className="text-right text-[9pt]">{formatWeekRange(weekStart, weekEnd)}<br />Saturday–Friday</p>
       </header>
 
-      {payout.priorPeriodAdjustmentCents !== 0 && (
+      {(payout.priorPeriodAdjustmentCents !== 0 || payout.priorPeriodCorrections.length > 0) && (
         <div className="mt-2 break-inside-avoid rounded-md border border-[#315d64] px-3 py-2 text-[8pt]">
           <p className="font-bold">Correction from an earlier paid week included in this pay</p>
           {payout.priorPeriodCorrections.length > 0 ? payout.priorPeriodCorrections.map((correction) => (
-            <p key={`${correction.sourceWeekStart}-${correction.sourceWeekEnd}`} className="mt-0.5 flex justify-between gap-4">
-              <span>Original week: {formatWeekRange(correction.sourceWeekStart, correction.sourceWeekEnd)}</span>
-              <span className="font-semibold">{formatSignedMoney(correction.amountCents)}</span>
-            </p>
+            <div key={correction.id} className="mt-1 border-t border-gray-200 pt-1">
+              <p className="flex justify-between gap-4 font-semibold">
+                <span>Original week: {formatWeekRange(correction.sourceWeekStart, correction.sourceWeekEnd)}</span>
+                <span>{formatSignedMoney(correction.amountCents)}</span>
+              </p>
+              {correction.breakdown?.length ? correction.breakdown.map((line) => (
+                <p key={line.reason} className="ml-3 flex justify-between gap-4">
+                  <span>{line.reason}</span>
+                  <span className="whitespace-nowrap">{formatSignedMoney(line.amountCents)}</span>
+                </p>
+              )) : (
+                <p className="ml-3 text-gray-600">Details unavailable from the paid snapshot or payroll changed since the last check.</p>
+              )}
+            </div>
           )) : (
             <p className="mt-0.5 flex justify-between gap-4">
               <span>Prior paid week correction</span>
@@ -3805,7 +3817,7 @@ function MobileGroomingPaystub({
             </>
           )}
           <span>Earned pay for this week</span><span className="text-right">{formatMoney(payout.groomerPayCents / 100)}</span>
-          {payout.priorPeriodAdjustmentCents !== 0 && <>
+          {(payout.priorPeriodAdjustmentCents !== 0 || payout.priorPeriodCorrections.length > 0) && <>
             <span>Correction from closed week(s)</span><span className="text-right">{formatSignedMoney(payout.priorPeriodAdjustmentCents)}</span>
           </>}
           <span className="font-semibold">Pay this week</span><span className="text-right font-semibold">{formatMoney(payout.weeklyPayCents / 100)}</span>
