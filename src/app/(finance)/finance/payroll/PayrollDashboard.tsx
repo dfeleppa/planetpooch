@@ -151,6 +151,7 @@ type PayoutPreview = {
   payouts: Array<{
     employeeName: string;
     commissionPayCents: number;
+    creditCardTipCents: number;
     basePayCents: number;
     payKind: "fixed" | "additive" | null;
     groomerPayCents: number;

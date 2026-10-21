@@ -20,6 +20,15 @@ test("adjustment details itemize changed commission, tips, base pay, and earlier
     { reason: "Less earned pay already paid", amountCents: -10_000 },
     { reason: "Correction already carried to another pay week", amountCents: -800 },
   ]);
+  const actualPreview = mobileGroomingCloseoutPreview([{
+    serviceDate: new Date("2026-10-03T00:00:00Z"), employeeName: "Andrea Groomer", paymentType: "credit",
+    dogs: 1, priceCents: 10_500, upgradeCents: 0, creditCardTipCents: 500, discountCents: 0,
+  }], [], [], [], [], []).payouts[0];
+  assert.deepEqual(postPayoutBreakdown({ groomerPayCents: 3_800 }, actualPreview, 700, 3_800), [
+    { reason: "Current grooming commission", amountCents: 4_000 },
+    { reason: "Current credit card tips", amountCents: 500 },
+    { reason: "Less earned pay already paid", amountCents: -3_800 },
+  ]);
 });
 
 test("post-payout differences compare earned pay to the original closeout", () => {

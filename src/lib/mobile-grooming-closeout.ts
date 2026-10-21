@@ -135,6 +135,7 @@ export function mobileGroomingCloseoutPreview(
     return {
       employeeName: employee.employeeName,
       commissionPayCents,
+      creditCardTipCents: employee.creditCardTipCents,
       basePayCents,
       payKind: payRule?.payKind ?? null,
       groomerPayCents,
