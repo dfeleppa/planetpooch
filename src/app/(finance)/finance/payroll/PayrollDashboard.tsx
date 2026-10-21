@@ -743,6 +743,9 @@ export function PayrollDashboard({
   const [closeoutData, setCloseoutData] = useState<CloseoutResponse | null>(null);
   const [postPayoutChanges, setPostPayoutChanges] = useState<PostPayoutChangesResponse | null>(null);
   const [loadingPostPayoutChanges, setLoadingPostPayoutChanges] = useState(false);
+  const [postPayoutCheckWeeks, setPostPayoutCheckWeeks] = useState<Array<{ weekStart: string; weekEnd: string }>>([]);
+  const [postPayoutCheckWeekStart, setPostPayoutCheckWeekStart] = useState("");
+  const [loadingPostPayoutCheckWeeks, setLoadingPostPayoutCheckWeeks] = useState(false);
   const [checkingPostPayout, setCheckingPostPayout] = useState(false);
   const [postPayoutCheckResult, setPostPayoutCheckResult] = useState<string | null>(null);
   const [finalDepositDraft, setFinalDepositDraft] = useState("");
@@ -1227,6 +1230,29 @@ export function PayrollDashboard({
     return () => controller.abort();
   }, [mobilePayrollView]);
 
+  useEffect(() => {
+    if (mobilePayrollView !== "changes") return;
+    const controller = new AbortController();
+    setLoadingPostPayoutCheckWeeks(true);
+    void fetch("/api/finance/payroll/mobile-grooming/post-payout-check", { signal: controller.signal })
+      .then(async (response) => {
+        const data = (await response.json()) as { weeks?: Array<{ weekStart: string; weekEnd: string }>; error?: string };
+        if (!response.ok) throw new Error(data.error || "Could not load paid out weeks.");
+        if (controller.signal.aborted) return;
+        const weeks = data.weeks ?? [];
+        setPostPayoutCheckWeeks(weeks);
+        setPostPayoutCheckWeekStart((selected) => weeks.some((week) => week.weekStart === selected)
+          ? selected : weeks[0]?.weekStart ?? "");
+      })
+      .catch((error: unknown) => {
+        if (!controller.signal.aborted) setError(error instanceof Error ? error.message : "Could not load paid out weeks.");
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) setLoadingPostPayoutCheckWeeks(false);
+      });
+    return () => controller.abort();
+  }, [mobilePayrollView]);
+
   async function savePayPreparation(employeeName: string, prepared: boolean) {
     setSavingPayPreparation(employeeName);
     setError(null);
@@ -1268,20 +1294,24 @@ export function PayrollDashboard({
   }
 
   async function checkPostPayoutChanges() {
+    if (!postPayoutCheckWeekStart) return;
     setCheckingPostPayout(true);
     setPostPayoutCheckResult(null);
     setError(null);
     try {
-      const response = await fetch("/api/finance/payroll/mobile-grooming/post-payout-check", { method: "POST" });
+      const response = await fetch("/api/finance/payroll/mobile-grooming/post-payout-check", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ weekStart: postPayoutCheckWeekStart }),
+      });
       const result = (await response.json()) as { checkedCount?: number; lockedCount?: number; discrepancyCount?: number; error?: string };
       if (!response.ok) throw new Error(result.error || "Could not check locked pay.");
       const ledgerResponse = await fetch("/api/finance/payroll/mobile-grooming/post-payout-changes");
       const ledger = (await ledgerResponse.json()) as PostPayoutChangesResponse;
       if (!ledgerResponse.ok) throw new Error(ledger.error || "Could not reload the pay ledger.");
       setPostPayoutChanges(ledger);
-      setPostPayoutCheckResult(result.checkedCount
-        ? `Checked ${result.checkedCount} paid out employee payments (${result.lockedCount ?? 0} individually locked). ${result.discrepancyCount ?? 0} pay discrepancies found.`
-        : "No paid out employee pay has been locked or closed yet.");
+      const selectedWeek = postPayoutCheckWeeks.find((week) => week.weekStart === postPayoutCheckWeekStart);
+      setPostPayoutCheckResult(`Checked ${formatWeekRange(postPayoutCheckWeekStart, selectedWeek?.weekEnd ?? addDaysParam(postPayoutCheckWeekStart, 6))}: ${result.checkedCount ?? 0} paid out employee payments, ${result.discrepancyCount ?? 0} pay discrepancies found.`);
     } catch (error) {
       setError(error instanceof Error ? error.message : "Could not check locked pay.");
     } finally {
@@ -3178,11 +3208,24 @@ export function PayrollDashboard({
       {isMobileGrooming && mobilePayrollView === "changes" && (
         <Card>
           <CardContent className="space-y-3">
-            <div className="flex flex-wrap items-center justify-between gap-3">
+            <div className="flex flex-wrap items-end justify-between gap-3">
               <p className="text-sm text-gray-600">Compare paid out groomer earnings with the latest saved payroll.</p>
-              <Button type="button" onClick={() => void checkPostPayoutChanges()} disabled={checkingPostPayout}>
-                {checkingPostPayout ? "Checking..." : "Check paid vs actual pay"}
-              </Button>
+              <div className="flex flex-wrap items-end gap-3">
+                <Select id="post-payout-check-week" label="Paid out week" value={postPayoutCheckWeekStart}
+                  onChange={(event) => {
+                    setPostPayoutCheckWeekStart(event.target.value);
+                    setPostPayoutCheckResult(null);
+                  }} disabled={loadingPostPayoutCheckWeeks || checkingPostPayout || postPayoutCheckWeeks.length === 0}>
+                  {postPayoutCheckWeeks.length === 0 && <option value="">No paid out weeks</option>}
+                  {postPayoutCheckWeeks.map((week) => (
+                    <option key={week.weekStart} value={week.weekStart}>{formatWeekRange(week.weekStart, week.weekEnd)}</option>
+                  ))}
+                </Select>
+                <Button type="button" onClick={() => void checkPostPayoutChanges()}
+                  disabled={checkingPostPayout || loadingPostPayoutCheckWeeks || !postPayoutCheckWeekStart}>
+                  {checkingPostPayout ? "Checking..." : "Check paid vs actual pay"}
+                </Button>
+              </div>
             </div>
             {postPayoutCheckResult && <p className="text-sm text-gray-700" role="status">{postPayoutCheckResult}</p>}
             {loadingPostPayoutChanges ? (
