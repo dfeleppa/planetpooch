@@ -1,10 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
-import { lastCompletedPayrollWeekStart } from "@/lib/payroll";
+import { mobileGroomingCronWeek } from "@/lib/mobile-grooming-payroll-cron";
 
 export const maxDuration = 120;
-
-const MS_PER_DAY = 86_400_000;
-const PAYROLL_TIME_ZONE = "America/New_York";
 
 function authError(req: NextRequest): NextResponse | null {
   const secret = process.env.CRON_SECRET;
@@ -17,47 +14,33 @@ function authError(req: NextRequest): NextResponse | null {
   return null;
 }
 
-function easternHour(now: Date): number {
-  return Number(
-    new Intl.DateTimeFormat("en-US", {
-      timeZone: PAYROLL_TIME_ZONE,
-      hour: "numeric",
-      hourCycle: "h23",
-    }).format(now)
-  );
-}
-
-function dateParam(date: Date): string {
-  return date.toISOString().slice(0, 10);
-}
-
-export async function GET(req: NextRequest) {
+export async function GET(
+  req: NextRequest,
+  { params }: { params: Promise<{ offset: string }> }
+) {
   const denied = authError(req);
   if (denied) return denied;
 
-  const now = new Date();
-  // Vercel cron is UTC. The paired 05:00/06:00 UTC schedules cover 01:00 ET
-  // across daylight-saving changes; only the matching invocation performs work.
-  if (easternHour(now) !== 1) {
-    return NextResponse.json({ ok: true, skipped: true, reason: "Not 1 AM Eastern." });
+  const { offset: offsetText } = await params;
+  if (!/^[0-3]$/.test(offsetText)) {
+    return NextResponse.json({ error: "Invalid week offset." }, { status: 400 });
+  }
+  const offset = Number(offsetText);
+  const week = mobileGroomingCronWeek(new Date(), offset);
+  if (!week) {
+    return NextResponse.json({ ok: true, skipped: true, reason: "Outside Sunday 6 AM Eastern." });
   }
 
-  const secret = process.env.CRON_SECRET!;
-  const weekStartDate = lastCompletedPayrollWeekStart("mobile-grooming", now);
-  const weekEndDate = new Date(weekStartDate.getTime() + 6 * MS_PER_DAY);
-  const weekStart = dateParam(weekStartDate);
-  const weekEnd = dateParam(weekEndDate);
   const headers = {
-    authorization: `Bearer ${secret}`,
+    authorization: `Bearer ${process.env.CRON_SECRET}`,
     "content-type": "application/json",
   };
-
   const pullResponse = await fetch(
     new URL("/api/finance/payroll/mobile-grooming/moego", req.nextUrl.origin),
     {
       method: "POST",
       headers,
-      body: JSON.stringify({ weekStart, weekEnd }),
+      body: JSON.stringify(week),
       cache: "no-store",
     }
   );
@@ -70,8 +53,15 @@ export async function GET(req: NextRequest) {
   };
   if (!pullResponse.ok || !pull.entries) {
     return NextResponse.json(
-      { ok: false, stage: "pull", weekStart, weekEnd, error: pull.error ?? "MoeGo pull failed." },
+      { ok: false, stage: "pull", offset, ...week, error: pull.error ?? "MoeGo pull failed." },
       { status: pullResponse.status || 500 }
+    );
+  }
+  // An empty import can be a transient MoeGo failure; never clear saved rows with it.
+  if (pull.entries.length === 0) {
+    return NextResponse.json(
+      { ok: false, stage: "pull", offset, ...week, error: "MoeGo returned no appointments; saved payroll was preserved." },
+      { status: 409 }
     );
   }
 
@@ -80,10 +70,9 @@ export async function GET(req: NextRequest) {
     headers,
     body: JSON.stringify({
       source: "moego-mobile-grooming-cron",
-      generatedAt: now.toISOString(),
+      generatedAt: new Date().toISOString(),
       business: "mobile-grooming",
-      weekStart,
-      weekEnd,
+      ...week,
       mobileEntries: pull.entries,
     }),
     cache: "no-store",
@@ -91,7 +80,7 @@ export async function GET(req: NextRequest) {
   const saved = (await saveResponse.json()) as { week?: { id?: string }; error?: string };
   if (!saveResponse.ok || !saved.week) {
     return NextResponse.json(
-      { ok: false, stage: "save", weekStart, weekEnd, error: saved.error ?? "Payroll save failed." },
+      { ok: false, stage: "save", offset, ...week, error: saved.error ?? "Payroll save failed." },
       { status: saveResponse.status || 500 }
     );
   }
@@ -99,8 +88,8 @@ export async function GET(req: NextRequest) {
   return NextResponse.json({
     ok: true,
     business: "mobile-grooming",
-    weekStart,
-    weekEnd,
+    offset,
+    ...week,
     payrollWeekId: saved.week.id,
     entries: pull.entries.length,
     staffs: pull.staffs?.length ?? null,

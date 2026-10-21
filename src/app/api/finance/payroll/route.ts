@@ -833,9 +833,11 @@ async function savePayroll(req: NextRequest) {
     await tx.financeMobileGroomingPayrollEntry.deleteMany({
       where: { payrollWeekId: savedWeek.id },
     });
-    await tx.financeMobileGroomingWeeklyOverride.deleteMany({
-      where: { payrollWeekId: savedWeek.id },
-    });
+    if (!isAutomatedMobileImport) {
+      await tx.financeMobileGroomingWeeklyOverride.deleteMany({
+        where: { payrollWeekId: savedWeek.id },
+      });
+    }
 
     if (normalized.rows.length > 0) {
       await tx.financePayrollEmployeeHours.createMany({
