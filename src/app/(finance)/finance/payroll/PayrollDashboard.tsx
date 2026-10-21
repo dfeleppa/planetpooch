@@ -155,6 +155,11 @@ type PayoutPreview = {
     payKind: "fixed" | "additive" | null;
     groomerPayCents: number;
     priorPeriodAdjustmentCents: number;
+    priorPeriodCorrections: Array<{
+      sourceWeekStart: string;
+      sourceWeekEnd: string;
+      amountCents: number;
+    }>;
     weeklyPayCents: number;
     payPrepared: boolean;
     payLock: {
@@ -3699,6 +3704,23 @@ function MobileGroomingPaystub({
         </div>
         <p className="text-right text-[9pt]">{formatWeekRange(weekStart, weekEnd)}<br />Saturday–Friday</p>
       </header>
+
+      {payout.priorPeriodAdjustmentCents !== 0 && (
+        <div className="mt-2 break-inside-avoid rounded-md border border-[#315d64] px-3 py-2 text-[8pt]">
+          <p className="font-bold">Correction from an earlier paid week included in this pay</p>
+          {payout.priorPeriodCorrections.length > 0 ? payout.priorPeriodCorrections.map((correction) => (
+            <p key={`${correction.sourceWeekStart}-${correction.sourceWeekEnd}`} className="mt-0.5 flex justify-between gap-4">
+              <span>Original week: {formatWeekRange(correction.sourceWeekStart, correction.sourceWeekEnd)}</span>
+              <span className="font-semibold">{formatSignedMoney(correction.amountCents)}</span>
+            </p>
+          )) : (
+            <p className="mt-0.5 flex justify-between gap-4">
+              <span>Prior paid week correction</span>
+              <span className="font-semibold">{formatSignedMoney(payout.priorPeriodAdjustmentCents)}</span>
+            </p>
+          )}
+        </div>
+      )}
 
       <div className="mt-3">
         <h2 className="mb-1 text-[10pt] font-bold">Weekly stops · cash and credit</h2>

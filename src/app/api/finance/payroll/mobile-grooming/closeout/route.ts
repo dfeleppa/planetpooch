@@ -56,7 +56,11 @@ async function getWeek(weekStart: Date) {
   ]);
   const postPayoutAdjustments = await prisma.financeMobileGroomingPostPayoutAdjustment.findMany({
     where: { targetWeekStart: weekStart, amountCents: { not: 0 } },
-    select: { employeeName: true, amountCents: true },
+    select: {
+      employeeName: true,
+      amountCents: true,
+      sourcePayrollWeek: { select: { weekStart: true, weekEnd: true } },
+    },
   });
   const latestSettings = new Map<string, { employeeName: string; amountCents: number }>();
   for (const setting of settings) {
@@ -83,6 +87,17 @@ async function getWeek(weekStart: Date) {
   const lockedByName = new Map((week?.mobileGroomingPayLocks ?? []).map((row) => [
     normalizeEmployeeName(row.employeeName).toLocaleLowerCase(), row,
   ]));
+  const correctionsByName = new Map<string, Array<{ sourceWeekStart: string; sourceWeekEnd: string; amountCents: number }>>();
+  for (const adjustment of postPayoutAdjustments) {
+    const key = normalizeEmployeeName(adjustment.employeeName).toLocaleLowerCase();
+    const corrections = correctionsByName.get(key) ?? [];
+    corrections.push({
+      sourceWeekStart: adjustment.sourcePayrollWeek.weekStart.toISOString().slice(0, 10),
+      sourceWeekEnd: adjustment.sourcePayrollWeek.weekEnd.toISOString().slice(0, 10),
+      amountCents: adjustment.amountCents,
+    });
+    correctionsByName.set(key, corrections);
+  }
   return { week, preview: {
     ...preview,
     payouts: preview.payouts.map((payout) => {
@@ -91,6 +106,8 @@ async function getWeek(weekStart: Date) {
       return {
         ...payout,
         payPrepared: preparedByName.get(key) ?? false,
+        priorPeriodCorrections: (correctionsByName.get(key) ?? []).sort((a, b) =>
+          a.sourceWeekStart.localeCompare(b.sourceWeekStart)),
         payLock: lock ? {
           earnedPayCents: lock.earnedPayCents,
           weeklyPayCents: lock.weeklyPayCents,
