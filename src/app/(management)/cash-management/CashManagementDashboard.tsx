@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { SafeBalanceVerification } from "./SafeBalanceVerification";
@@ -201,6 +202,9 @@ export function CashManagementDashboard({ mobile, petResort, safeCents, initialC
           <p className="mt-4 text-3xl font-bold text-gray-900">{money(mobile.onHandCents)}</p>
           <p className="mt-2 text-sm text-gray-500">Completed week net cash, closeout and cash adjustments, plus counted cash awaiting closeout, less bank deposits recorded here.</p>
           {mobile.pendingCountedCents > 0 && <p className="mt-1 text-sm text-amber-800">Includes {money(mobile.pendingCountedCents)} counted cash awaiting closeout; employee cash payouts are not yet deducted from that amount.</p>}
+          <Link href="/cash-management/mobile-grooming/reconciliation" className="mt-5 block rounded-lg border border-pp-accent-line bg-pp-accent-soft px-4 py-3 text-sm font-semibold text-pp-accent hover:underline">
+            Reconcile daily cash and close the week →
+          </Link>
           <form onSubmit={recordDeposit} className="mt-5 space-y-3">
             <label htmlFor="mobile-deposit-amount" className="block text-sm font-medium text-gray-700">Amount to deposit at bank</label>
             <div className="flex flex-wrap gap-2">

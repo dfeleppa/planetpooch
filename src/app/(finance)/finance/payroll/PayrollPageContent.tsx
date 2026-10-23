@@ -19,8 +19,12 @@ function employeeName(employee: {
 
 export async function PayrollPageContent({
   business,
+  cashManagementMode = false,
+  startOnPayouts = false,
 }: {
   business: PayrollBusinessValue;
+  cashManagementMode?: boolean;
+  startOnPayouts?: boolean;
 }) {
   await requireSuperAdmin();
 
@@ -57,6 +61,8 @@ export async function PayrollPageContent({
     <PayrollDashboard
       initialBusiness={business}
       employeeOptionsByBusiness={employeeOptionsByBusiness}
+      cashManagementMode={cashManagementMode}
+      startOnPayouts={startOnPayouts}
     />
   );
 }

@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { ChangeEvent, Fragment, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -706,13 +707,19 @@ function mobileGroomingPriceFromTotals(total: {
 export function PayrollDashboard({
   employeeOptionsByBusiness = {},
   initialBusiness = DEFAULT_PAYROLL_BUSINESS,
+  cashManagementMode = false,
+  startOnPayouts = false,
 }: {
   employeeOptionsByBusiness?: Partial<Record<PayrollBusinessValue, PayrollEmployeeOption[]>>;
   initialBusiness?: PayrollBusinessValue;
+  cashManagementMode?: boolean;
+  startOnPayouts?: boolean;
 }) {
   const [savedWeeks, setSavedWeeks] = useState<SavedWeekSummary[]>([]);
   const [business, setBusiness] = useState<PayrollBusinessValue>(initialBusiness);
-  const [weekStart, setWeekStart] = useState(() => lastCompletedWeekStart(initialBusiness));
+  const [weekStart, setWeekStart] = useState(() => cashManagementMode || startOnPayouts
+    ? addDaysParam(lastCompletedWeekStart("mobile-grooming"), 7)
+    : lastCompletedWeekStart(initialBusiness));
   const [automationStatus, setAutomationStatus] = useState<SavedPayrollWeek["automationStatus"]>("manual");
   const [reviewReasons, setReviewReasons] = useState<string[]>([]);
   const [rows, setRows] = useState<EditableRow[]>([]);
@@ -723,7 +730,7 @@ export function PayrollDashboard({
     WeeklyMobileGroomingTotals[]
   >([]);
   const [mobileSummaryView, setMobileSummaryView] = useState<MobileSummaryView>("annual");
-  const [mobilePayrollView, setMobilePayrollView] = useState<MobilePayrollView>("summary");
+  const [mobilePayrollView, setMobilePayrollView] = useState<MobilePayrollView>(cashManagementMode || startOnPayouts ? "reconciliation" : "summary");
   const [reportYear, setReportYear] = useState(() =>
     dateFromParam(addDaysParam(lastCompletedWeekStart("mobile-grooming"), 6)).getUTCFullYear()
   );
@@ -731,7 +738,7 @@ export function PayrollDashboard({
   const [weeklyTotalsEdit, setWeeklyTotalsEdit] = useState<WeeklyTotalsEdit | null>(null);
   const [savingWeeklyTotals, setSavingWeeklyTotals] = useState(false);
   const [selectedMobileEmployee, setSelectedMobileEmployee] = useState("");
-  const [reconciliationView, setReconciliationView] = useState<ReconciliationView>("employee");
+  const [reconciliationView, setReconciliationView] = useState<ReconciliationView>(startOnPayouts ? "payouts" : "employee");
   const [reconciliationEmployee, setReconciliationEmployee] = useState("");
   const [reconciliations, setReconciliations] = useState<DailyReconciliation[]>([]);
   const [openReconciliationDay, setOpenReconciliationDay] = useState<string | null>(null);
@@ -1165,8 +1172,11 @@ export function PayrollDashboard({
   }, []);
 
   useEffect(() => {
-    void loadWeek(lastCompletedWeekStart(initialBusiness), initialBusiness);
-  }, [initialBusiness, loadWeek]);
+    const initialWeek = cashManagementMode || startOnPayouts
+      ? addDaysParam(lastCompletedWeekStart("mobile-grooming"), 7)
+      : lastCompletedWeekStart(initialBusiness);
+    void loadWeek(initialWeek, initialBusiness);
+  }, [cashManagementMode, startOnPayouts, initialBusiness, loadWeek]);
 
   useEffect(() => {
     if (mobilePayrollView !== "reconciliation") return;
@@ -1519,7 +1529,7 @@ export function PayrollDashboard({
     setWeeklyTotalsEdit(null);
     if (view === "reconciliation") {
       setCloseoutStep("idle");
-      setReconciliationView("employee");
+      setReconciliationView(cashManagementMode ? "employee" : "payouts");
       setReconciliationEmployee("");
       setOpenReconciliationDay(null);
       void loadWeek(currentMobileWeekStart, "mobile-grooming");
@@ -1971,9 +1981,9 @@ export function PayrollDashboard({
         printingPaystubs && "pp-mobile-paystubs-active"
       )}
     >
-      <PayrollSubnav active={business} />
+      {!cashManagementMode && <PayrollSubnav active={business} />}
 
-      {isMobileGrooming && (
+      {isMobileGrooming && !cashManagementMode && (
         <div>
           <p className="mb-1 text-sm font-medium text-gray-700">View</p>
           <div className="pp-tabs" role="tablist" aria-label="Mobile grooming payroll view">
@@ -1984,9 +1994,9 @@ export function PayrollDashboard({
                   ? "All Staff"
                   : view === "employee"
                     ? "By Employee"
-                    : view === "report"
-                      ? "Weekly Report"
-                      : view === "reconciliation" ? "Reconciliation" : "After Payout";
+                      : view === "report"
+                        ? "Weekly Report"
+                        : view === "reconciliation" ? "Payouts" : "After Payout";
               return (
                 <button
                   key={view}
@@ -2003,20 +2013,28 @@ export function PayrollDashboard({
           </div>
         </div>
       )}
+      {isMobileGrooming && !cashManagementMode && (
+        <Link href="/cash-management/mobile-grooming/reconciliation" className="inline-block text-sm font-medium text-pp-accent hover:underline">
+          Daily and weekly cash reconciliation →
+        </Link>
+      )}
 
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h2 className="text-xl font-semibold text-gray-900">
             {isMobileGrooming && mobilePayrollView === "reconciliation"
-              ? reconciliationView === "employee" ? "Daily Reconciliation"
-                : reconciliationView === "weekly" ? "Weekly Reconciliation" : "Payouts"
+              ? cashManagementMode
+                ? reconciliationView === "employee" ? "Daily Reconciliation" : "Weekly Reconciliation"
+                : "Payouts"
               : isMobileGrooming && mobilePayrollView === "changes" ? "Changes After Payout"
               : "Payroll"}
           </h2>
           <p className="mt-1 text-gray-500">
             {isMobileGrooming && mobilePayrollView === "changes"
               ? "Changes to groomer pay after a week was paid out"
-              : <>{isMobileGrooming ? "Weekly mobile grooming appointments" : "Weekly staff hours"} ({payPeriod.rangeLabel})</>}
+              : cashManagementMode
+                ? `Cash for the selected Saturday–Friday week (${formatWeekRange(weekStart, weekEnd)})`
+                : <>{isMobileGrooming ? "Weekly mobile grooming appointments" : "Weekly staff hours"} ({payPeriod.rangeLabel})</>}
           </p>
         </div>
         {!isMobileGrooming ? (
@@ -2026,9 +2044,9 @@ export function PayrollDashboard({
         ) : null}
       </div>
 
-      {isMobileGrooming && mobilePayrollView === "reconciliation" && (
+      {isMobileGrooming && cashManagementMode && mobilePayrollView === "reconciliation" && (
         <div className="pp-tabs" role="tablist" aria-label="Reconciliation view">
-          {(["employee", "weekly", "payouts"] as const).map((view) => (
+          {(["employee", "weekly"] as const).map((view) => (
             <button
               key={view}
               type="button"
@@ -2042,7 +2060,7 @@ export function PayrollDashboard({
                 setAdjustmentEditEmployee(null);
               }}
             >
-              {view === "employee" ? "Employee" : view === "weekly" ? "Weekly" : "Payouts"}
+              {view === "employee" ? "Daily counts" : "Weekly closeout"}
             </button>
           ))}
         </div>
@@ -2845,6 +2863,9 @@ export function PayrollDashboard({
                 <p className="text-sm text-gray-500">No saved mobile grooming appointments for this week.</p>
               ) : (
                 <div className="space-y-4">
+                  <Link href="/finance/payroll/mobile-grooming?view=payouts" className="inline-block text-sm font-medium text-pp-accent hover:underline">
+                    Manage employee payouts in Payroll →
+                  </Link>
                   <div className="grid gap-3 sm:grid-cols-3">
                     <WeeklyMetric label="Weekly cash (expected)" value={formatMoney(allEmployeeExpectedCash)} />
                     <WeeklyMetric label="Weekly cash (counted)" value={formatMoney(allEmployeeCountedCashCents / 100)} />
@@ -2855,6 +2876,20 @@ export function PayrollDashboard({
                         : "Pending"}
                     />
                   </div>
+                  {closeoutData && (
+                    <div className="rounded-lg border border-pp-line bg-pp-surface p-4">
+                      <h3 className="mb-3 text-sm font-semibold text-gray-900">Cash available for deposit</h3>
+                      <div className="grid gap-3 sm:grid-cols-3">
+                        <WeeklyMetric label="Counted client cash" value={formatMoney(closeoutData.preview.countedCashCents / 100)} />
+                        <WeeklyMetric label="Employee cash payouts" value={closeoutData.preview.missingDepositSettings.length === 0 && closeoutData.preview.pendingVarianceReviews.length === 0
+                          ? formatMoney(closeoutData.preview.cashPayoutCents / 100) : "Pending"} />
+                        <WeeklyMetric label="Expected bank deposit" value={closeoutData.preview.missingDays.length === 0 && closeoutData.preview.staleDays.length === 0 &&
+                          closeoutData.preview.missingDepositSettings.length === 0 && closeoutData.preview.pendingVarianceReviews.length === 0 &&
+                          closeoutData.preview.negativeCashPayouts.length === 0 && closeoutData.preview.expectedDepositCents >= 0
+                          ? formatMoney(closeoutData.preview.expectedDepositCents / 100) : "Pending"} />
+                      </div>
+                    </div>
+                  )}
                   <p className="text-sm text-gray-600">
                     {allEmployeeReconciledDays} of {allEmployeeWorkedDays} employee days reconciled
                     {allEmployeeReconciledDays === allEmployeeWorkedDays && allEmployeeStaleDays === 0
@@ -2879,7 +2914,7 @@ export function PayrollDashboard({
                         </div>
                       ) : closeoutStep === "idle" ? (
                         <div className="flex flex-wrap items-center gap-3">
-                          <Button type="button" onClick={() => setCloseoutStep("days")}>Begin Reconciliation</Button>
+                          <Button type="button" onClick={() => setCloseoutStep("days")}>Begin weekly closeout</Button>
                           {closeoutData.closeout && <span className="text-sm text-amber-700">Previous closeout needs updating</span>}
                         </div>
                       ) : (
@@ -2998,7 +3033,7 @@ export function PayrollDashboard({
                                 <p className="text-sm text-amber-700">Resolve negative cash payouts for {closeoutData.preview.negativeCashPayouts.join(", ")}.</p>
                               )}
                               {(closeoutData.preview.missingDepositSettings.length > 0 || closeoutData.preview.negativeCashPayouts.length > 0) && (
-                                <Button type="button" size="sm" variant="secondary" onClick={() => setReconciliationView("payouts")}>Open Payouts</Button>
+                                <Link href="/finance/payroll/mobile-grooming?view=payouts" className="inline-flex rounded-lg border border-pp-line bg-white px-3 py-2 text-sm font-medium text-pp-accent hover:underline">Open Payouts in Payroll →</Link>
                               )}
                               <div className="flex flex-wrap items-end gap-3">
                                 <div className="w-56">
