@@ -15,6 +15,9 @@ type MobileSummary = {
   onHandCents: number;
   ledger: MobileCashLedgerEntry[];
 };
+type CashView = "pet-resort" | "mobile-grooming" | "safe";
+type DetailView = "actions" | "history";
+type MobileHistoryFilter = "all" | MobileCashLedgerEntry["kind"];
 
 function money(cents: number) {
   return new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(cents / 100);
@@ -22,6 +25,10 @@ function money(cents: number) {
 
 export function CashManagementDashboard({ mobile, petResort, safeCents, initialCountedCents }: { mobile: MobileSummary; petResort: PetResortSummary; safeCents: number; initialCountedCents: number | null }) {
   const router = useRouter();
+  const [cashView, setCashView] = useState<CashView>("pet-resort");
+  const [detailView, setDetailView] = useState<DetailView>("actions");
+  const [mobileHistoryFilter, setMobileHistoryFilter] = useState<MobileHistoryFilter>("all");
+  const [petHistoryFilter, setPetHistoryFilter] = useState<"all" | "daily" | "bank">("all");
   const [amount, setAmount] = useState("");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
@@ -42,6 +49,14 @@ export function CashManagementDashboard({ mobile, petResort, safeCents, initialC
   const [editMessage, setEditMessage] = useState("");
   const requestId = useRef<string | null>(null);
   const adjustmentRequestId = useRef<string | null>(null);
+  const visibleMobileLedger = mobileHistoryFilter === "all"
+    ? mobile.ledger
+    : mobile.ledger.filter((entry) => entry.kind === mobileHistoryFilter);
+
+  function selectCashView(nextView: CashView) {
+    setCashView(nextView);
+    setDetailView("actions");
+  }
 
   async function recordAdjustment(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -151,15 +166,38 @@ export function CashManagementDashboard({ mobile, petResort, safeCents, initialC
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-bold text-gray-900">Cash Management</h1>
-        <p className="mt-1 text-gray-500">Pet Resort and Mobile Grooming cash in one place</p>
+        <p className="mt-1 text-gray-500">Choose a cash area, then record an action or review its history.</p>
       </div>
-      <div className="grid gap-4 lg:grid-cols-3">
+      <nav aria-label="Cash areas" className="grid gap-3 sm:grid-cols-3">
+        {([
+          { id: "pet-resort", label: "Pet Resort", balance: petResort.onHandCents },
+          { id: "mobile-grooming", label: "Mobile Grooming", balance: mobile.onHandCents },
+          { id: "safe", label: "Safe", balance: countedSafeCents ?? safeCents },
+        ] as const).map((area) => (
+          <button key={area.id} type="button" onClick={() => selectCashView(area.id)} aria-pressed={cashView === area.id}
+            className={`rounded-xl border p-4 text-left shadow-sm transition-colors ${cashView === area.id ? "border-pp-accent bg-pp-mint text-pp-ink" : "border-pp-line bg-white text-gray-700 hover:border-pp-accent"}`}>
+            <span className="block text-sm font-semibold">{area.label}</span>
+            <span className="mt-1 block text-xl font-bold tabular-nums">{money(area.balance)}</span>
+          </button>
+        ))}
+      </nav>
+      <nav aria-label="Cash view" className="flex gap-2 border-b border-pp-line pb-3">
+        {(["actions", "history"] as const).map((section) => (
+          <button key={section} type="button" onClick={() => setDetailView(section)} aria-pressed={detailView === section}
+            className={`rounded-lg px-4 py-2 text-sm font-semibold ${detailView === section ? "bg-pp-accent text-white" : "bg-white text-gray-700 hover:bg-gray-100"}`}>
+            {section === "actions" ? cashView === "safe" ? "Verify safe" : "Record cash" : "History"}
+          </button>
+        ))}
+      </nav>
+      <div className={cashView === "pet-resort" && detailView === "actions" ? "block" : "hidden"}>
         <section className="rounded-xl border border-pp-line bg-white p-6 shadow-sm">
-          <h2 className="text-lg font-semibold text-gray-900">Pet Resort Deposit</h2>
+          <h2 className="text-lg font-semibold text-gray-900">Pet Resort cash</h2>
           <PetResortCash summary={petResort} />
         </section>
+      </div>
+      <div className={cashView === "mobile-grooming" && detailView === "actions" ? "block" : "hidden"}>
         <section className="rounded-xl border border-pp-line bg-white p-6 shadow-sm">
-          <h2 className="text-lg font-semibold text-gray-900">Mobile Grooming Deposit</h2>
+          <h2 className="text-lg font-semibold text-gray-900">Mobile Grooming cash</h2>
           <p className="mt-4 text-3xl font-bold text-gray-900">{money(mobile.onHandCents)}</p>
           <p className="mt-2 text-sm text-gray-500">Completed week net cash, closeout and cash adjustments, plus counted cash awaiting closeout, less bank deposits recorded here.</p>
           {mobile.pendingCountedCents > 0 && <p className="mt-1 text-sm text-amber-800">Includes {money(mobile.pendingCountedCents)} counted cash awaiting closeout; employee cash payouts are not yet deducted from that amount.</p>}
@@ -172,8 +210,9 @@ export function CashManagementDashboard({ mobile, petResort, safeCents, initialC
             {error && <p role="alert" className="text-sm text-red-700">{error}</p>}
             {success && <p role="status" className="text-sm text-green-700">{success}</p>}
           </form>
-          <form onSubmit={recordAdjustment} className="mt-5 space-y-3 border-t border-pp-line pt-5">
-            <h3 className="text-sm font-semibold text-gray-900">Adjust cash on hand</h3>
+          <details className="mt-5 border-t border-pp-line pt-5">
+            <summary className="cursor-pointer text-sm font-semibold text-pp-accent">Adjust cash on hand</summary>
+          <form onSubmit={recordAdjustment} className="mt-4 space-y-3">
             <div className="grid gap-3 sm:grid-cols-2">
               <label className="block text-sm font-medium text-gray-700">Adjustment
                 <select value={adjustDirection} onChange={(event) => { setAdjustDirection(event.target.value as "add" | "remove"); adjustmentRequestId.current = null; }} className="mt-1 block w-full rounded-lg border border-pp-line bg-white px-3 py-2 text-sm text-gray-900">
@@ -191,18 +230,27 @@ export function CashManagementDashboard({ mobile, petResort, safeCents, initialC
             {adjustError && <p role="alert" className="text-sm text-red-700">{adjustError}</p>}
             {adjustSuccess && <p role="status" className="text-sm text-green-700">{adjustSuccess}</p>}
           </form>
+          </details>
         </section>
+      </div>
+      <div className={cashView === "safe" ? "space-y-4" : "hidden"}>
         <section className="rounded-xl border border-pp-line bg-white p-6 shadow-sm">
           <h2 className="text-lg font-semibold text-gray-900">Safe</h2>
           <p className="mt-4 text-3xl font-bold text-gray-900">{money(countedSafeCents ?? safeCents)}</p>
           <p className="mt-2 text-sm text-gray-500">{countedSafeCents === null ? "Target safe balance" : `Last verified safe balance · Target ${money(safeCents)}`}</p>
           {countedSafeCents !== null && countedSafeCents !== safeCents && <p className="mt-1 text-sm font-medium text-amber-800">{money(Math.abs(countedSafeCents - safeCents))} {countedSafeCents > safeCents ? "over target" : "under target"}</p>}
         </section>
+        <SafeBalanceVerification expectedCents={safeCents} onLatestCountChange={setCountedSafeCents} mode={detailView} />
       </div>
-      <SafeBalanceVerification expectedCents={safeCents} onLatestCountChange={setCountedSafeCents} />
-      <section className="rounded-xl border border-pp-line bg-white p-6 shadow-sm">
+      <section className={cashView === "pet-resort" && detailView === "history" ? "rounded-xl border border-pp-line bg-white p-6 shadow-sm" : "hidden"}>
         <h2 className="text-lg font-semibold text-gray-900">Pet Resort activity</h2>
         <p className="mt-2 text-sm text-gray-600">{petResort.transactionCount} imported cash transactions · MoeGo cash: {money(petResort.receivedCents)} · Daily cash: {money(petResort.dailyCashCents)} · Banked: {money(petResort.bankedCents)}</p>
+        <label className="mt-5 block max-w-xs text-sm font-medium text-gray-700">Show activity
+          <select value={petHistoryFilter} onChange={(event) => setPetHistoryFilter(event.target.value as typeof petHistoryFilter)} className="mt-1 block w-full rounded-lg border border-pp-line bg-white px-3 py-2">
+            <option value="all">All activity</option><option value="daily">Daily cash</option><option value="bank">Bank deposits</option>
+          </select>
+        </label>
+        {petHistoryFilter !== "bank" && <>
         <h3 className="mt-5 text-sm font-semibold text-gray-900">Daily cash log</h3>
         {petResort.recentDailyCash.length > 0 ? <ul className="mt-2 divide-y divide-pp-line">
           {petResort.recentDailyCash.map((entry) => <li key={entry.id} className="py-3 text-sm text-gray-700">
@@ -224,6 +272,8 @@ export function CashManagementDashboard({ mobile, petResort, safeCents, initialC
           </li>)}
         </ul> : <p className="mt-2 text-sm text-gray-500">No daily cash entries yet.</p>}
         {editMessage && <p role="status" className="mt-2 text-sm text-green-700">{editMessage}</p>}
+        </>}
+        {petHistoryFilter !== "daily" && <>
         <h3 className="mt-5 text-sm font-semibold text-gray-900">Bank deposits</h3>
         {petResort.recentDeposits.length > 0 ? <ul className="mt-4 divide-y divide-pp-line">
           {petResort.recentDeposits.map((deposit) => <li key={deposit.id} className="flex justify-between gap-4 py-3 text-sm text-gray-700">
@@ -231,17 +281,23 @@ export function CashManagementDashboard({ mobile, petResort, safeCents, initialC
             <span className="font-semibold">Bank deposit · {money(deposit.amountCents)}</span>
           </li>)}
         </ul> : <p className="mt-4 text-sm text-gray-500">No Pet Resort bank deposits recorded yet.</p>}
+        </>}
       </section>
-      <section className="rounded-xl border border-pp-line bg-white p-6 shadow-sm">
+      <section className={cashView === "mobile-grooming" && detailView === "history" ? "rounded-xl border border-pp-line bg-white p-6 shadow-sm" : "hidden"}>
         <h2 className="text-lg font-semibold text-gray-900">Mobile Grooming activity</h2>
         <p className="mt-2 text-sm text-gray-600">Completed week net + closeout adjustments: {money(mobile.payrollCents)} · Counted cash awaiting closeout: {money(mobile.pendingCountedCents)} · Cash adjustments: {money(mobile.adjustmentCents)} · Banked: {money(mobile.bankedCents)}</p>
-        {mobile.ledger.length > 0 ? (
+        <label className="mt-5 block max-w-xs text-sm font-medium text-gray-700">Show activity
+          <select value={mobileHistoryFilter} onChange={(event) => setMobileHistoryFilter(event.target.value as MobileHistoryFilter)} className="mt-1 block w-full rounded-lg border border-pp-line bg-white px-3 py-2">
+            <option value="all">All activity</option><option value="counted">Counted cash</option><option value="completed">Completed weeks</option><option value="adjustment">Closeout adjustments</option><option value="manual">Cash adjustments</option><option value="bank">Bank deposits</option>
+          </select>
+        </label>
+        {visibleMobileLedger.length > 0 ? (
           <div className="mt-4">
             <div className="hidden grid-cols-[7rem_minmax(0,1fr)_7rem_8rem] gap-3 border-b border-pp-line pb-2 text-xs font-semibold uppercase tracking-wide text-gray-500 sm:grid">
               <span>Date</span><span>Activity</span><span className="text-right">Change</span><span className="text-right">Balance</span>
             </div>
             <ul className="divide-y divide-pp-line">
-              {mobile.ledger.map((entry) => (
+              {visibleMobileLedger.map((entry) => (
                 <li key={entry.id} className="grid gap-1 py-3 text-sm text-gray-700 sm:grid-cols-[7rem_minmax(0,1fr)_7rem_8rem] sm:gap-3">
                   <span>{new Intl.DateTimeFormat("en-US", { dateStyle: "medium", timeZone: entry.kind === "bank" || entry.kind === "manual" || entry.kind === "counted" ? "America/New_York" : "UTC" }).format(new Date(entry.occurredAt))}</span>
                   <span><span className="font-medium text-gray-900">{entry.label}</span><span className="block text-xs text-gray-500">{entry.detail}</span></span>
@@ -251,7 +307,7 @@ export function CashManagementDashboard({ mobile, petResort, safeCents, initialC
               ))}
             </ul>
           </div>
-        ) : <p className="mt-4 text-sm text-gray-500">No Mobile Grooming cash activity yet.</p>}
+        ) : <p className="mt-4 text-sm text-gray-500">No activity matches this filter.</p>}
       </section>
     </div>
   );

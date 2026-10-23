@@ -297,7 +297,7 @@ export function Sidebar() {
                 <div className="mx-1.5 h-px bg-pp-line" />
               )}
               <div className="-mt-2 flex flex-col gap-px">
-                {[{ href: "/admin/dashboard", label: "Dashboard", icon: "" }, ...businessFinanceNav, ...marketingNav, ...(isKnowledgeAccount ? [{ href: "/admin/knowledge", label: "Knowledge library", icon: "✦" }] : [])].map((item) => {
+                {[{ href: "/admin/dashboard", label: "Dashboard", icon: "" }, ...marketingNav, ...(isKnowledgeAccount ? [{ href: "/admin/knowledge", label: "Knowledge library", icon: "✦" }] : [])].map((item) => {
                   const active = item.href === "/admin/dashboard"
                     ? pathname === item.href
                     : isActive(item.href);
@@ -307,6 +307,23 @@ export function Sidebar() {
                       <span className={cn("text-[14px] w-4 text-center flex-shrink-0", active ? "text-pp-accent" : "text-pp-ink-3")} aria-hidden="true">
                         {sidebarIcon(item)}
                       </span>
+                      {!isCollapsed && <span className="truncate">{item.label}</span>}
+                    </Link>
+                  );
+                })}
+              </div>
+              {!isCollapsed ? (
+                <div className="px-2.5 pt-1 text-[10px] font-medium uppercase tracking-[0.08em] text-pp-ink-4">Money</div>
+              ) : (
+                <div className="mx-1.5 h-px bg-pp-line" />
+              )}
+              <div className="-mt-2 flex flex-col gap-px">
+                {businessFinanceNav.map((item) => {
+                  const active = isActive(item.href);
+                  return (
+                    <Link key={item.href} href={item.href} title={isCollapsed ? item.label : undefined} aria-current={active ? "page" : undefined} className={navItemClass(active)}>
+                      {activeRail(active)}
+                      <span className={cn("text-[14px] w-4 text-center flex-shrink-0", active ? "text-pp-accent" : "text-pp-ink-3")} aria-hidden="true">{sidebarIcon(item)}</span>
                       {!isCollapsed && <span className="truncate">{item.label}</span>}
                     </Link>
                   );

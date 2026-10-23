@@ -19,6 +19,7 @@ const money = (cents: number) => new Intl.NumberFormat("en-US", { style: "curren
 
 export function PetResortCash({ summary }: { summary: PetResortSummary }) {
   const router = useRouter();
+  const [action, setAction] = useState<"daily" | "bank" | "import">("daily");
   const [importFile, setImportFile] = useState<File | null>(null);
   const [amount, setAmount] = useState("");
   const [cashDate, setCashDate] = useState("");
@@ -116,8 +117,16 @@ export function PetResortCash({ summary }: { summary: PetResortSummary }) {
   return <>
     <p className="mt-4 text-3xl font-bold text-gray-900">{money(summary.onHandCents)}</p>
     <p className="mt-2 text-sm text-gray-500">MoeGo cash plus daily cash entries, less bank deposits recorded here.</p>
-    <form onSubmit={recordDailyCash} className="mt-5 space-y-3 border-t border-pp-line pt-5">
-      <h3 className="text-sm font-semibold text-gray-900">Daily cash deposit log</h3>
+    <div className="mt-5 flex flex-wrap gap-2 border-t border-pp-line pt-5" aria-label="Pet Resort cash actions">
+      {([
+        { id: "daily", label: "Cash received" },
+        { id: "bank", label: "Bank deposit" },
+        { id: "import", label: "Import from MoeGo" },
+      ] as const).map((item) => <button key={item.id} type="button" onClick={() => setAction(item.id)} aria-pressed={action === item.id}
+        className={`rounded-lg px-3 py-2 text-sm font-semibold ${action === item.id ? "bg-pp-accent text-white" : "border border-pp-line bg-white text-gray-700 hover:bg-gray-50"}`}>{item.label}</button>)}
+    </div>
+    <form onSubmit={recordDailyCash} className={action === "daily" ? "mt-5 space-y-3" : "hidden"}>
+      <h3 className="text-sm font-semibold text-gray-900">Record cash received</h3>
       <div className="grid gap-3 sm:grid-cols-2">
         <label className="block text-sm font-medium text-gray-700">Date
           <input type="date" required value={cashDate} onChange={(event) => { setCashDate(event.target.value); dailyRequestId.current = null; }} className="mt-1 block w-full rounded-lg border border-pp-line px-3 py-2 text-sm text-gray-900" />
@@ -129,15 +138,15 @@ export function PetResortCash({ summary }: { summary: PetResortSummary }) {
       <label className="block text-sm font-medium text-gray-700">Notes <span className="font-normal text-gray-500">(optional)</span>
         <textarea rows={2} maxLength={2000} value={dailyNote} onChange={(event) => { setDailyNote(event.target.value); dailyRequestId.current = null; }} className="mt-1 block w-full rounded-lg border border-pp-line px-3 py-2 text-sm text-gray-900" />
       </label>
-      <button type="submit" disabled={savingDaily || !cashDate || !dailyAmount} className="rounded-lg bg-pp-accent px-4 py-2 text-sm font-semibold text-white disabled:opacity-50">{savingDaily ? "Saving…" : "Add daily cash"}</button>
+      <button type="submit" disabled={savingDaily || !cashDate || !dailyAmount} className="rounded-lg bg-pp-accent px-4 py-2 text-sm font-semibold text-white disabled:opacity-50">{savingDaily ? "Saving…" : "Record cash received"}</button>
     </form>
-    <form onSubmit={importCash} className="mt-5 space-y-2">
-      <label htmlFor="pet-resort-cash-import" className="block text-sm font-medium text-gray-700">MoeGo cash import JSON</label>
+    <form onSubmit={importCash} className={action === "import" ? "mt-5 space-y-2" : "hidden"}>
+      <label htmlFor="pet-resort-cash-import" className="block text-sm font-medium text-gray-700">MoeGo cash import file (JSON)</label>
       <input id="pet-resort-cash-import" ref={importInput} type="file" accept=".json,application/json" required
         onChange={(event) => setImportFile(event.target.files?.[0] ?? null)} className="block w-full text-sm text-gray-700" />
       <button type="submit" disabled={saving || !importFile} className="rounded-lg bg-pp-accent px-4 py-2 text-sm font-semibold text-white disabled:opacity-50">Import cash transactions</button>
     </form>
-    <form onSubmit={recordDeposit} className="mt-5 space-y-2">
+    <form onSubmit={recordDeposit} className={action === "bank" ? "mt-5 space-y-2" : "hidden"}>
       <label htmlFor="pet-resort-deposit-amount" className="block text-sm font-medium text-gray-700">Amount taken to bank</label>
       <div className="flex flex-wrap gap-2">
         <input id="pet-resort-deposit-amount" type="number" min="0.01" max={Math.max(0, summary.onHandCents / 100)} step="0.01" required
