@@ -745,6 +745,8 @@ export function PayrollDashboard({
   const [selectedMobileEmployee, setSelectedMobileEmployee] = useState("");
   const [reconciliationView, setReconciliationView] = useState<ReconciliationView>(startOnPayouts ? "payouts" : startOnWeeklyCloseout ? "weekly" : "employee");
   const [reconciliationEmployee, setReconciliationEmployee] = useState("");
+  const verificationDetailsRef = useRef<HTMLDivElement>(null);
+  const closeoutDetailsRef = useRef<HTMLDivElement>(null);
   const [verificationDate, setVerificationDate] = useState<string | null>(null);
   const [reconciliations, setReconciliations] = useState<DailyReconciliation[]>([]);
   const [openReconciliationDay, setOpenReconciliationDay] = useState<string | null>(null);
@@ -1020,6 +1022,20 @@ export function PayrollDashboard({
     setReconciliationNoteDraft(record?.note ?? "");
     setReconciliationView("employee");
   }
+
+  useEffect(() => {
+    if (cashManagementMode && reconciliationView === "employee" && reconciliationEmployee) {
+      verificationDetailsRef.current?.focus({ preventScroll: true });
+      verificationDetailsRef.current?.scrollIntoView({ block: "start" });
+    }
+  }, [cashManagementMode, reconciliationView, reconciliationEmployee, verificationDate]);
+
+  useEffect(() => {
+    if (cashManagementMode && reconciliationView === "weekly" && closeoutStep !== "idle") {
+      closeoutDetailsRef.current?.focus({ preventScroll: true });
+      closeoutDetailsRef.current?.scrollIntoView({ block: "start" });
+    }
+  }, [cashManagementMode, reconciliationView, closeoutStep]);
 
   const selectedWeekMobileTotals = useMemo(
     () => mobileTotalsForEntries(visibleMobileEntries),
@@ -2079,14 +2095,15 @@ export function PayrollDashboard({
       </div>
 
       {isMobileGrooming && cashManagementMode && mobilePayrollView === "reconciliation" && (
-        <div className="pp-tabs" role="tablist" aria-label="Reconciliation view">
+        <div className="grid grid-cols-2 gap-2" role="tablist" aria-label="Reconciliation view">
           {(["employee", "weekly"] as const).map((view) => (
             <button
               key={view}
               type="button"
               role="tab"
               aria-selected={reconciliationView === view}
-              className={cn("pp-tab", reconciliationView === view && "is-on")}
+              disabled={savingReconciliation || savingCloseout || Boolean(savingVarianceReview)}
+              className={cn("min-h-11 cursor-pointer rounded-lg border px-3 py-2 text-sm font-semibold focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-pp-accent", reconciliationView === view ? "border-pp-accent bg-pp-accent text-white" : "border-pp-line bg-white text-pp-accent")}
               onClick={() => {
                 setReconciliationView(view);
                 setOpenReconciliationDay(null);
@@ -2677,10 +2694,10 @@ export function PayrollDashboard({
               )}
             </div>
             {cashManagementMode && reconciliationView === "employee" && !loading && !loadingReconciliations && (
-              <EmployeeVerificationQueue key={weekStart} days={verificationDays} selectedEmployee={reconciliationEmployee} initialDate={verificationDate}
+              <div hidden={Boolean(reconciliationEmployee)}><EmployeeVerificationQueue key={weekStart} days={verificationDays} selectedEmployee={reconciliationEmployee} initialDate={verificationDate}
                 busy={savingReconciliation} onSelect={openEmployeeVerification}
                 onDayChange={() => { setReconciliationEmployee(""); setVerificationDate(null); setOpenReconciliationDay(null); }}
-                onWeeklyReview={() => { setReconciliationView("weekly"); setCloseoutStep("idle"); }} />
+                onWeeklyReview={() => { setReconciliationView("weekly"); setCloseoutStep("idle"); }} /></div>
             )}
             {reconciliationView === "payouts" ? (
               loading || loadingDirectDeposits || !closeoutData ? (
@@ -2918,6 +2935,9 @@ export function PayrollDashboard({
                   <Link href={`/finance/payroll/mobile-grooming?view=payouts&week=${weekStart}`} className="inline-block text-sm font-medium text-pp-accent hover:underline">
                     Manage employee payouts in Payroll →
                   </Link>
+                  <details className="rounded-lg border border-pp-line p-3">
+                    <summary className="cursor-pointer text-sm font-semibold text-pp-accent">View weekly cash totals & deposit estimate</summary>
+                    <div className="mt-3 space-y-3">
                   <div className="grid gap-3 sm:grid-cols-3">
                     <WeeklyMetric label="Weekly cash (expected)" value={formatMoney(allEmployeeExpectedCash)} />
                     <WeeklyMetric label="Weekly cash (counted)" value={formatMoney(allEmployeeCountedCashCents / 100)} />
@@ -2950,10 +2970,12 @@ export function PayrollDashboard({
                     {allEmployeeStaleDays > 0 &&
                       ` ${allEmployeeStaleDays} day${allEmployeeStaleDays === 1 ? "" : "s"} need an update after payroll changed.`}
                   </p>
+                    </div>
+                  </details>
                   {loadingDirectDeposits || !closeoutData ? (
                     <p className="text-sm text-gray-500">Loading final weekly reconciliation...</p>
                   ) : (
-                    <div className="space-y-4 rounded-lg border border-gray-200 p-4">
+                    <div ref={closeoutDetailsRef} tabIndex={-1} className="scroll-mt-20 space-y-4 rounded-lg border border-gray-200 p-4 outline-none">
                       {closeoutData.closeoutCurrent && closeoutStep === "idle" ? (
                         <div className="flex flex-wrap items-center justify-between gap-3">
                           <div>
@@ -3152,7 +3174,20 @@ export function PayrollDashboard({
                       )}
                     </div>
                   )}
-                  <div className="overflow-x-auto rounded-lg border border-gray-200">
+                  <div className="space-y-2 md:hidden" aria-label="Employee weekly verification progress">
+                    {allEmployeeReconciliationGroups.map((group) => <div key={group.employeeName} className="rounded-lg border border-gray-200 p-3 text-sm">
+                      <p className="font-semibold text-gray-900">{group.employeeName}</p>
+                      <p className="mt-1 text-gray-600">{group.reconciledDays - group.staleDays} of {group.workedDays} days verified · {group.staleDays > 0 ? "Needs update" : group.reconciledDays === group.workedDays ? "Verified" : "Pending"}</p>
+                      <p className="mt-1 text-gray-600">Expected {formatMoney(group.expectedCash)} · Counted {formatMoney(group.countedCashCents / 100)}</p>
+                      <p className="mt-1 text-gray-600">{group.reconciledDays > 0 ? formatCashDifference(group.differenceCents) : "Cash count pending"}</p>
+                      <Button type="button" size="sm" variant="secondary" className="mt-3 min-h-11" onClick={() => {
+                        const days = verificationDays.filter((day) => day.employees.some((employee) => employee.name === group.employeeName));
+                        const nextDay = days.find((day) => day.employees.some((employee) => employee.name === group.employeeName && (!employee.record || employee.record.expectedCashCents !== employee.expectedCashCents))) ?? days[0];
+                        if (nextDay) openEmployeeVerification(group.employeeName, nextDay.date);
+                      }}>Review employee →</Button>
+                    </div>)}
+                  </div>
+                  <div className="hidden overflow-x-auto rounded-lg border border-gray-200 md:block">
                     <Table>
                       <TableHead>
                         <TableRow>
@@ -3203,14 +3238,19 @@ export function PayrollDashboard({
                 </div>
               )
             ) : !reconciliationEmployee ? (
-              <p className="text-sm text-gray-500" role="status">{loading || loadingReconciliations ? "Loading employee verification…" : "Select an employee above to verify their appointments and cash."}</p>
+              <p className="text-sm text-gray-500" role="status">{loading || loadingReconciliations ? "Loading employee verification…" : verificationDays.some((day) => day.employees.length > 0) ? "Select an employee above to verify their appointments and cash." : "No appointments are saved for this week yet. Choose a saved week to review earlier cash counts."}</p>
             ) : loading || loadingReconciliations ? (
               <p className="text-sm text-gray-500">Loading days worked...</p>
             ) : reconciliationDays.length === 0 ? (
               <p className="text-sm text-gray-500">No saved appointments for this employee and week.</p>
             ) : (
               <div className="space-y-3">
-                <div className="grid gap-3 sm:grid-cols-3">
+                <div ref={verificationDetailsRef} tabIndex={-1} className="scroll-mt-20 outline-none">
+                  {cashManagementMode && <Button type="button" variant="secondary" disabled={savingReconciliation} onClick={() => { setReconciliationEmployee(""); setOpenReconciliationDay(null); }}>← Back to employees for this day</Button>}
+                </div>
+                <details className="rounded-lg border border-pp-line p-3">
+                  <summary className="cursor-pointer text-sm font-semibold text-pp-accent">Employee’s weekly cash summary</summary>
+                <div className="mt-3 grid gap-3 sm:grid-cols-3">
                   <WeeklyMetric
                     label="Weekly cash (expected)"
                     value={formatMoney(reconciliationWeeklyExpectedCash)}
@@ -3231,6 +3271,7 @@ export function PayrollDashboard({
                   {reconciliationWeeklyRecords.length < reconciliationDays.length &&
                     " Counted cash and over / short include reconciled days only."}
                 </p>
+                </details>
                 {reconciliationDays.filter((day) => !cashManagementMode || !verificationDate || day.value === verificationDate).map((day) => {
                   const totals = mobileTotalsForEntries(day.entries);
                   const record = reconciliations.find(
@@ -3299,13 +3340,7 @@ export function PayrollDashboard({
                             <p className="pb-2 text-sm text-gray-600">Expected: {formatMoney(totals.cash)}
                               {/^\d+(?:\.\d{1,2})?$/.test(countedCashDraft.trim()) && <span className="ml-2 font-medium">· {formatCashDifference(Math.round(Number(countedCashDraft) * 100) - Math.round(totals.cash * 100))}</span>}
                             </p>
-                            <Button
-                              type="button"
-                              onClick={() => void saveDailyReconciliation(day.value)}
-                              disabled={savingReconciliation}
-                            >
-                              {savingReconciliation ? "Saving..." : "Save employee verification"}
-                            </Button>
+
                           </div>
                           <div>
                             <label htmlFor="reconciliation-note" className="mb-1 block text-sm font-medium text-gray-700">
@@ -3322,6 +3357,13 @@ export function PayrollDashboard({
                               placeholder="Explain why the cash count differs from the expected amount"
                             />
                           </div>
+                            <Button
+                              type="button"
+                              onClick={() => void saveDailyReconciliation(day.value)}
+                              disabled={savingReconciliation}
+                            >
+                              {savingReconciliation ? "Saving..." : "Save employee verification"}
+                            </Button>
                         </div>
                       )}
                     </div>
@@ -3987,7 +4029,16 @@ function MobileGroomingDailyTable({ entries }: { entries: EditableMobileGrooming
   }
 
   return (
-    <div className="overflow-x-auto rounded-lg border border-gray-200">
+    <>
+    <div className="space-y-2 md:hidden" aria-label="Daily appointments">
+      {entries.map((entry, index) => <div key={entry.localId} className="rounded-lg border border-gray-200 p-3 text-sm">
+        <div className="flex flex-wrap justify-between gap-2 font-semibold text-gray-900"><span>Appointment {index + 1} · <span className="capitalize">{entry.paymentType}</span></span><span>{formatMoney(mobileEntryTotalPrice(entry))}</span></div>
+        <dl className="mt-2 grid grid-cols-2 gap-x-4 gap-y-1 text-xs text-gray-600">
+          {[["Pets", mobileEntryDogCount(entry)], ["Grooming", formatMoney(mobileEntryGroomingPrice(entry))], ["Upgrades", formatMoney(moneyValue(entry.upgradeAmount))], ["CC tip", formatMoney(moneyValue(entry.creditCardTip))], ["Discount", formatMoney(moneyValue(entry.discount))], ["Groomer pay", formatMoney(mobileEntryGroomerPay(entry))]].map(([label, value]) => <div key={label} className="flex flex-wrap justify-between gap-x-2"><dt>{label}</dt><dd className="font-medium text-gray-900">{value}</dd></div>)}
+        </dl>
+      </div>)}
+    </div>
+    <div className="hidden overflow-x-auto rounded-lg border border-gray-200 md:block">
       <table className="min-w-full text-left text-sm">
         <thead className="bg-gray-50 text-xs uppercase tracking-wide text-gray-500">
           <tr>
@@ -4017,6 +4068,7 @@ function MobileGroomingDailyTable({ entries }: { entries: EditableMobileGrooming
         </tbody>
       </table>
     </div>
+    </>
   );
 }
 
