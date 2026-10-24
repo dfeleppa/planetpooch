@@ -33,6 +33,7 @@ import {
   type PayrollCategoryValue,
 } from "@/lib/payroll";
 import { cn } from "@/lib/utils";
+import { EmployeeVerificationQueue, type VerificationDay } from "./EmployeeVerificationQueue";
 import { PayrollSubnav } from "./PayrollSubnav";
 
 const MS_PER_DAY = 86_400_000;
@@ -259,7 +260,7 @@ const EMPTY_EMPLOYEE_OPTIONS: PayrollEmployeeOption[] = [];
 type MobileSummaryView = "annual" | "weekly";
 type MobilePayrollView = "summary" | "employee" | "report" | "reconciliation" | "changes";
 type ReconciliationView = "employee" | "weekly" | "payouts";
-type CloseoutStep = "idle" | "days" | "employees" | "deposit";
+type CloseoutStep = "idle" | "days" | "employees" | "payouts" | "deposit";
 
 type WeeklyTotalsEdit = {
   weekStart: string;
@@ -709,17 +710,21 @@ export function PayrollDashboard({
   initialBusiness = DEFAULT_PAYROLL_BUSINESS,
   cashManagementMode = false,
   startOnPayouts = false,
+  startOnWeeklyCloseout = false,
+  initialWeekStart,
 }: {
   employeeOptionsByBusiness?: Partial<Record<PayrollBusinessValue, PayrollEmployeeOption[]>>;
   initialBusiness?: PayrollBusinessValue;
   cashManagementMode?: boolean;
   startOnPayouts?: boolean;
+  startOnWeeklyCloseout?: boolean;
+  initialWeekStart?: string;
 }) {
   const [savedWeeks, setSavedWeeks] = useState<SavedWeekSummary[]>([]);
   const [business, setBusiness] = useState<PayrollBusinessValue>(initialBusiness);
-  const [weekStart, setWeekStart] = useState(() => cashManagementMode || startOnPayouts
+  const [weekStart, setWeekStart] = useState(() => initialWeekStart ?? (cashManagementMode && !startOnWeeklyCloseout || startOnPayouts
     ? addDaysParam(lastCompletedWeekStart("mobile-grooming"), 7)
-    : lastCompletedWeekStart(initialBusiness));
+    : lastCompletedWeekStart(initialBusiness)));
   const [automationStatus, setAutomationStatus] = useState<SavedPayrollWeek["automationStatus"]>("manual");
   const [reviewReasons, setReviewReasons] = useState<string[]>([]);
   const [rows, setRows] = useState<EditableRow[]>([]);
@@ -738,8 +743,9 @@ export function PayrollDashboard({
   const [weeklyTotalsEdit, setWeeklyTotalsEdit] = useState<WeeklyTotalsEdit | null>(null);
   const [savingWeeklyTotals, setSavingWeeklyTotals] = useState(false);
   const [selectedMobileEmployee, setSelectedMobileEmployee] = useState("");
-  const [reconciliationView, setReconciliationView] = useState<ReconciliationView>(startOnPayouts ? "payouts" : "employee");
+  const [reconciliationView, setReconciliationView] = useState<ReconciliationView>(startOnPayouts ? "payouts" : startOnWeeklyCloseout ? "weekly" : "employee");
   const [reconciliationEmployee, setReconciliationEmployee] = useState("");
+  const [verificationDate, setVerificationDate] = useState<string | null>(null);
   const [reconciliations, setReconciliations] = useState<DailyReconciliation[]>([]);
   const [openReconciliationDay, setOpenReconciliationDay] = useState<string | null>(null);
   const [countedCashDraft, setCountedCashDraft] = useState("");
@@ -767,6 +773,7 @@ export function PayrollDashboard({
   const [finalDepositDraft, setFinalDepositDraft] = useState("");
   const [closeoutNoteDraft, setCloseoutNoteDraft] = useState("");
   const [savingCloseout, setSavingCloseout] = useState(false);
+  const [closeoutConfirmed, setCloseoutConfirmed] = useState(false);
   const [closeoutStep, setCloseoutStep] = useState<CloseoutStep>("idle");
   const [savingVarianceReview, setSavingVarianceReview] = useState<string | null>(null);
   const [printingPaystubs, setPrintingPaystubs] = useState(false);
@@ -990,6 +997,30 @@ export function PayrollDashboard({
     (sum, group) => sum + group.staleDays, 0
   );
 
+  const verificationDays: VerificationDay[] = cashManagementMode ? weekDays.map((day) => ({
+    date: day.value,
+    label: day.label,
+    employees: allEmployeeReconciliationGroups.flatMap((group) => {
+      const entries = mobileEntries.filter((entry) => entry.serviceDate === day.value &&
+        normalizeEmployeeName(entry.employeeName).toLocaleLowerCase() === group.employeeName.toLocaleLowerCase());
+      if (entries.length === 0) return [];
+      return [{ name: group.employeeName, expectedCashCents: Math.round(mobileTotalsForEntries(entries).cash * 100),
+        record: reconciliations.find((record) => record.serviceDate === day.value &&
+          normalizeEmployeeName(record.employeeName).toLocaleLowerCase() === group.employeeName.toLocaleLowerCase()) }];
+    }),
+  })) : [];
+
+  function openEmployeeVerification(name: string, date: string) {
+    const record = reconciliations.find((item) => item.serviceDate === date &&
+      normalizeEmployeeName(item.employeeName).toLocaleLowerCase() === name.toLocaleLowerCase());
+    setReconciliationEmployee(name);
+    setVerificationDate(date);
+    setOpenReconciliationDay(date);
+    setCountedCashDraft(record ? (record.countedCashCents / 100).toFixed(2) : "");
+    setReconciliationNoteDraft(record?.note ?? "");
+    setReconciliationView("employee");
+  }
+
   const selectedWeekMobileTotals = useMemo(
     () => mobileTotalsForEntries(visibleMobileEntries),
     [visibleMobileEntries]
@@ -1172,11 +1203,11 @@ export function PayrollDashboard({
   }, []);
 
   useEffect(() => {
-    const initialWeek = cashManagementMode || startOnPayouts
+    const initialWeek = initialWeekStart ?? (cashManagementMode && !startOnWeeklyCloseout || startOnPayouts
       ? addDaysParam(lastCompletedWeekStart("mobile-grooming"), 7)
-      : lastCompletedWeekStart(initialBusiness);
+      : lastCompletedWeekStart(initialBusiness));
     void loadWeek(initialWeek, initialBusiness);
-  }, [cashManagementMode, startOnPayouts, initialBusiness, loadWeek]);
+  }, [cashManagementMode, startOnPayouts, startOnWeeklyCloseout, initialWeekStart, initialBusiness, loadWeek]);
 
   useEffect(() => {
     if (mobilePayrollView !== "reconciliation") return;
@@ -1212,6 +1243,7 @@ export function PayrollDashboard({
       if (!response.ok) throw new Error(data.error || "Could not load payouts.");
       if (requestId !== payoutRequestId.current) return;
       setCloseoutData(data);
+      setCloseoutConfirmed(false);
       setFinalDepositDraft(data.closeout ? (data.closeout.finalDepositCents / 100).toFixed(2) : "");
       setCloseoutNoteDraft(data.closeout?.note ?? "");
     } catch (error) {
@@ -1411,7 +1443,7 @@ export function PayrollDashboard({
     if (!/^\d+(?:\.\d{1,2})?$/.test(trimmed) ||
         !Number.isSafeInteger(Math.round(amount * 100)) ||
         Math.round(amount * 100) > 2_147_483_647) {
-      setError("Enter the final deposited cash amount with no more than two decimal places.");
+      setError("Enter the actual cash remaining with no more than two decimal places.");
       return;
     }
     setSavingCloseout(true);
@@ -1451,6 +1483,7 @@ export function PayrollDashboard({
       const data = (await response.json()) as CloseoutResponse;
       if (!response.ok) throw new Error(data.error || "Could not save the employee pay decision.");
       setCloseoutData(data);
+      setCloseoutConfirmed(false);
       setMessage(`Pay decision saved for ${employeeName}.`);
     } catch (error) {
       setError(error instanceof Error ? error.message : "Could not save the employee pay decision.");
@@ -1498,7 +1531,8 @@ export function PayrollDashboard({
         data.reconciliation!,
       ]);
       setOpenReconciliationDay(null);
-      setMessage("Daily reconciliation saved.");
+      setMessage(`Verification saved for ${reconciliationEmployee}. Select the next employee above.`);
+      if (cashManagementMode) setReconciliationEmployee("");
     } catch (error) {
       setError(error instanceof Error ? error.message : "Could not save the reconciliation.");
     } finally {
@@ -2014,8 +2048,8 @@ export function PayrollDashboard({
         </div>
       )}
       {isMobileGrooming && !cashManagementMode && (
-        <Link href="/cash-management/mobile-grooming/reconciliation" className="inline-block text-sm font-medium text-pp-accent hover:underline">
-          Daily and weekly cash reconciliation →
+        <Link href={`/cash-management/mobile-grooming/reconciliation?view=${startOnPayouts ? "weekly" : "employee"}&week=${weekStart}`} className="inline-block text-sm font-medium text-pp-accent hover:underline">
+          Employee verification & weekly closeout →
         </Link>
       )}
 
@@ -2024,7 +2058,7 @@ export function PayrollDashboard({
           <h2 className="text-xl font-semibold text-gray-900">
             {isMobileGrooming && mobilePayrollView === "reconciliation"
               ? cashManagementMode
-                ? reconciliationView === "employee" ? "Daily Reconciliation" : "Weekly Reconciliation"
+                ? reconciliationView === "employee" ? "Verify employees for the day" : "Review & close the week"
                 : "Payouts"
               : isMobileGrooming && mobilePayrollView === "changes" ? "Changes After Payout"
               : "Payroll"}
@@ -2060,7 +2094,7 @@ export function PayrollDashboard({
                 setAdjustmentEditEmployee(null);
               }}
             >
-              {view === "employee" ? "Daily counts" : "Weekly closeout"}
+              {view === "employee" ? "1. Employee verification" : "2. Weekly closeout"}
             </button>
           ))}
         </div>
@@ -2599,20 +2633,22 @@ export function PayrollDashboard({
       {isMobileGrooming && mobilePayrollView === "reconciliation" && (
         <Card>
           <CardContent className="space-y-5">
-            <div className={cn("grid gap-3", reconciliationView === "employee" && "md:grid-cols-2")}>
+            <div className={cn("grid gap-3", reconciliationView === "employee" && !cashManagementMode && "md:grid-cols-2")}>
               <Select
                 id="reconciliation-week"
                 label="Week"
                 value={weekStart}
                 onChange={(event) => {
                   setCloseoutStep("idle");
+                  setCloseoutConfirmed(false);
                   setReconciliationEmployee("");
+                  setVerificationDate(null);
                   setOpenReconciliationDay(null);
                   setDepositEditEmployee(null);
                   setAdjustmentEditEmployee(null);
                   void loadWeek(event.target.value, "mobile-grooming");
                 }}
-                disabled={loading}
+                disabled={loading || savingReconciliation || savingCloseout || Boolean(savingVarianceReview)}
               >
                 {reconciliationWeeks.map((week) => (
                   <option key={week.weekStart} value={week.weekStart}>
@@ -2620,7 +2656,7 @@ export function PayrollDashboard({
                   </option>
                 ))}
               </Select>
-              {reconciliationView === "employee" && (
+              {reconciliationView === "employee" && !cashManagementMode && (
                 <Select
                   id="reconciliation-employee"
                   label="Employee"
@@ -2640,6 +2676,12 @@ export function PayrollDashboard({
                 </Select>
               )}
             </div>
+            {cashManagementMode && reconciliationView === "employee" && !loading && !loadingReconciliations && (
+              <EmployeeVerificationQueue key={weekStart} days={verificationDays} selectedEmployee={reconciliationEmployee} initialDate={verificationDate}
+                busy={savingReconciliation} onSelect={openEmployeeVerification}
+                onDayChange={() => { setReconciliationEmployee(""); setVerificationDate(null); setOpenReconciliationDay(null); }}
+                onWeeklyReview={() => { setReconciliationView("weekly"); setCloseoutStep("idle"); }} />
+            )}
             {reconciliationView === "payouts" ? (
               loading || loadingDirectDeposits || !closeoutData ? (
                 <p className="text-sm text-gray-500">Loading payouts and closeout...</p>
@@ -2863,7 +2905,17 @@ export function PayrollDashboard({
                 <p className="text-sm text-gray-500">No saved mobile grooming appointments for this week.</p>
               ) : (
                 <div className="space-y-4">
-                  <Link href="/finance/payroll/mobile-grooming?view=payouts" className="inline-block text-sm font-medium text-pp-accent hover:underline">
+                  <div className="rounded-xl border border-pp-line bg-pp-surface p-4">
+                    <h3 className="font-semibold text-gray-900">Before you close this week</h3>
+                    <ol className="mt-2 list-decimal space-y-1 pl-5 text-sm text-gray-700">
+                      <li>Verify every employee’s daily cash: {allEmployeeReconciledDays - allEmployeeStaleDays} of {allEmployeeWorkedDays} employee days current.</li>
+                      <li>Review each employee’s weekly over / short amount.</li>
+                      <li>Confirm direct deposit and cash payout amounts.</li>
+                      <li>Count the cash remaining, explain any difference, and confirm closeout.</li>
+                    </ol>
+                    <p className="mt-3 text-sm text-gray-600">You can review progress during the week. Final closeout is available after Friday ends.</p>
+                  </div>
+                  <Link href={`/finance/payroll/mobile-grooming?view=payouts&week=${weekStart}`} className="inline-block text-sm font-medium text-pp-accent hover:underline">
                     Manage employee payouts in Payroll →
                   </Link>
                   <div className="grid gap-3 sm:grid-cols-3">
@@ -2905,9 +2957,9 @@ export function PayrollDashboard({
                       {closeoutData.closeoutCurrent && closeoutStep === "idle" ? (
                         <div className="flex flex-wrap items-center justify-between gap-3">
                           <div>
-                            <p className="font-semibold text-green-800">Weekly reconciliation completed</p>
+                            <p className="font-semibold text-green-800">Week closed</p>
                             <p className="text-sm text-gray-600">
-                              {formatMoney(closeoutData.closeout!.finalDepositCents / 100)} deposited · {formatCashDifference(closeoutData.closeout!.varianceCents)}
+                              {formatMoney(closeoutData.closeout!.finalDepositCents / 100)} cash remaining · {formatCashDifference(closeoutData.closeout!.varianceCents)}
                             </p>
                           </div>
                           <Button type="button" variant="secondary" onClick={() => setCloseoutStep("days")}>Review closeout</Button>
@@ -2923,6 +2975,9 @@ export function PayrollDashboard({
                             <h3 className="text-lg font-semibold text-gray-900">Final weekly reconciliation</h3>
                             <Button type="button" size="sm" variant="secondary" onClick={() => setCloseoutStep("idle")}>Collapse</Button>
                           </div>
+                          <ol aria-label="Weekly closeout progress" className="grid gap-2 text-sm sm:grid-cols-4">
+                            {([{ id: "days", label: "1. Verify days" }, { id: "employees", label: "2. Review differences" }, { id: "payouts", label: "3. Confirm payouts" }, { id: "deposit", label: "4. Count & close" }] as const).map((step) => <li key={step.id} aria-current={closeoutStep === step.id ? "step" : undefined} className={cn("rounded-lg border px-3 py-2", closeoutStep === step.id ? "border-pp-accent bg-pp-mint font-semibold" : "border-gray-200 text-gray-500")}>{step.label}</li>)}
+                          </ol>
                           {closeoutStep === "days" && (
                             <div className="space-y-3">
                               <p className="font-medium">1. Review employee days</p>
@@ -2933,8 +2988,8 @@ export function PayrollDashboard({
                                 <div key={day} className="flex items-center justify-between gap-3 rounded-md border border-amber-200 p-3 text-sm">
                                   <span>{day} · {closeoutData.preview.staleDays.includes(day) ? "Needs update" : "Pending"}</span>
                                   <Button type="button" size="sm" variant="secondary" onClick={() => {
-                                    setReconciliationEmployee(day.split(" — ")[0]);
-                                    setReconciliationView("employee");
+                                    const separator = day.lastIndexOf(" — ");
+                                    openEmployeeVerification(day.slice(0, separator), day.slice(separator + 3));
                                   }}>Review day</Button>
                                 </div>
                               ))}
@@ -2943,7 +2998,7 @@ export function PayrollDashboard({
                               )}
                               <Button type="button" onClick={() => setCloseoutStep("employees")} disabled={
                                 closeoutData.preview.missingDays.length > 0 || closeoutData.preview.staleDays.length > 0
-                              }>Continue to employees</Button>
+                              }>Continue to differences</Button>
                             </div>
                           )}
                           {closeoutStep === "employees" && (
@@ -3009,8 +3064,8 @@ export function PayrollDashboard({
                               })}
                               <div className="flex flex-wrap gap-2">
                                 <Button type="button" variant="secondary" onClick={() => setCloseoutStep("days")}>Back to days</Button>
-                                <Button type="button" onClick={() => setCloseoutStep("deposit")} disabled={closeoutData.preview.pendingVarianceReviews.length > 0}>
-                                  Continue to final cash
+                                <Button type="button" onClick={() => setCloseoutStep("payouts")} disabled={Boolean(savingVarianceReview) || closeoutData.preview.pendingVarianceReviews.length > 0}>
+                                  Continue to payout review
                                 </Button>
                               </div>
                               {closeoutData.preview.pendingVarianceReviews.length > 0 && (
@@ -3018,13 +3073,32 @@ export function PayrollDashboard({
                               )}
                             </div>
                           )}
+                          {closeoutStep === "payouts" && (
+                            <div className="space-y-3">
+                              <p className="font-medium">3. Confirm employee payouts</p>
+                              <p className="text-sm text-gray-600">Review the cash to pay each employee before counting the cash remaining. Set direct deposit amounts and resolve any negative payouts in Payroll; the link keeps this same week selected.</p>
+                              <ul className="divide-y divide-gray-200 rounded-lg border border-gray-200">
+                                {closeoutData.preview.payouts.map((payout) => <li key={payout.employeeName} className="flex flex-wrap justify-between gap-2 p-3 text-sm">
+                                  <span className="font-medium">{payout.employeeName}</span>
+                                  <span>{!payout.directDepositSet ? "Direct deposit amount needed" : payout.cashPayoutCents < 0 ? "Negative cash payout — review in Payroll" : `Cash: ${formatMoney(payout.cashPayoutCents / 100)} · Direct deposit: ${formatMoney(payout.directDepositCents / 100)}`}</span>
+                                </li>)}
+                              </ul>
+                              <Link href={`/finance/payroll/mobile-grooming?view=payouts&week=${weekStart}`} className="inline-block text-sm font-semibold text-pp-accent underline">Review / edit payouts in Payroll →</Link>
+                              {closeoutData.preview.expectedDepositCents < 0 && <p className="text-sm text-amber-800">Cash payouts exceed counted cash. Review counts and payouts before continuing.</p>}
+                              <div className="flex flex-wrap gap-2">
+                                <Button type="button" variant="secondary" onClick={() => setCloseoutStep("employees")}>Back to differences</Button>
+                                <Button type="button" onClick={() => setCloseoutStep("deposit")} disabled={closeoutData.preview.missingDepositSettings.length > 0 || closeoutData.preview.negativeCashPayouts.length > 0 || closeoutData.preview.pendingVarianceReviews.length > 0 || closeoutData.preview.expectedDepositCents < 0}>Continue to final cash count</Button>
+                              </div>
+                            </div>
+                          )}
                           {closeoutStep === "deposit" && (
                             <div className="space-y-4">
-                              <p className="font-medium">3. Enter the final cash deposited</p>
+                              <p className="font-medium">4. Count the cash remaining after employee payouts</p>
+                              <p className="text-sm text-gray-600">Enter the cash physically remaining for this week. Closing the week records this amount in cash on hand; it does not record a bank deposit. Record the bank deposit separately in Cash Management when the cash leaves.</p>
                               <div className="grid gap-3 sm:grid-cols-3">
                                 <WeeklyMetric label="Counted client cash" value={formatMoney(closeoutData.preview.countedCashCents / 100)} />
                                 <WeeklyMetric label="Cash payouts" value={formatMoney(closeoutData.preview.cashPayoutCents / 100)} />
-                                <WeeklyMetric label="Expected deposit" value={formatMoney(closeoutData.preview.expectedDepositCents / 100)} />
+                                <WeeklyMetric label="Expected cash remaining" value={formatMoney(closeoutData.preview.expectedDepositCents / 100)} />
                               </div>
                               {closeoutData.preview.missingDepositSettings.length > 0 && (
                                 <p className="text-sm text-amber-700">Set direct deposits for {closeoutData.preview.missingDepositSettings.join(", ")} in Payouts.</p>
@@ -3033,38 +3107,43 @@ export function PayrollDashboard({
                                 <p className="text-sm text-amber-700">Resolve negative cash payouts for {closeoutData.preview.negativeCashPayouts.join(", ")}.</p>
                               )}
                               {(closeoutData.preview.missingDepositSettings.length > 0 || closeoutData.preview.negativeCashPayouts.length > 0) && (
-                                <Link href="/finance/payroll/mobile-grooming?view=payouts" className="inline-flex rounded-lg border border-pp-line bg-white px-3 py-2 text-sm font-medium text-pp-accent hover:underline">Open Payouts in Payroll →</Link>
+                                <Link href={`/finance/payroll/mobile-grooming?view=payouts&week=${weekStart}`} className="inline-flex rounded-lg border border-pp-line bg-white px-3 py-2 text-sm font-medium text-pp-accent hover:underline">Open Payouts in Payroll →</Link>
                               )}
                               <div className="flex flex-wrap items-end gap-3">
                                 <div className="w-56">
-                                  <Input label="Final cash deposited" type="number" min="0" step="0.01"
-                                    value={finalDepositDraft} onChange={(event) => setFinalDepositDraft(event.target.value)}
+                                  <Input label="Actual cash remaining" type="number" min="0" step="0.01"
+                                    value={finalDepositDraft} onChange={(event) => { setFinalDepositDraft(event.target.value); setCloseoutConfirmed(false); }}
                                     disabled={savingCloseout || closeoutData.preview.missingDepositSettings.length > 0} />
                                 </div>
                                 <p className="pb-2 text-sm text-gray-600">
                                   Difference: {finalDepositDraft.trim() && Number.isFinite(Number(finalDepositDraft))
                                     ? formatCashDifference(Math.round(Number(finalDepositDraft) * 100) - closeoutData.preview.expectedDepositCents)
-                                    : "Enter final deposit"}
+                                    : "Enter actual cash remaining"}
                                 </p>
                               </div>
                               <div>
                                 <label htmlFor="closeout-note" className="mb-1 block text-sm font-medium text-gray-700">
-                                  Difference note (required when final deposit differs)
+                                  Difference note (required when actual cash differs)
                                 </label>
                                 <textarea id="closeout-note" value={closeoutNoteDraft}
-                                  onChange={(event) => setCloseoutNoteDraft(event.target.value)} maxLength={1000}
+                                  onChange={(event) => { setCloseoutNoteDraft(event.target.value); setCloseoutConfirmed(false); }} maxLength={1000}
                                   rows={2} disabled={savingCloseout}
                                   className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm text-gray-900 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 disabled:bg-gray-100" />
                               </div>
+                              <label className="flex items-start gap-2 rounded-lg border border-pp-line bg-pp-surface p-3 text-sm text-gray-800">
+                                <input type="checkbox" checked={closeoutConfirmed} disabled={savingCloseout} onChange={(event) => setCloseoutConfirmed(event.target.checked)} className="mt-1 h-4 w-4" />
+                                <span>I reviewed employee verification and payouts for {formatWeekRange(weekStart, weekEnd)} and counted the cash remaining.</span>
+                              </label>
                               <div className="flex flex-wrap gap-2">
-                                <Button type="button" variant="secondary" onClick={() => setCloseoutStep("employees")}>Back to employees</Button>
+                                <Button type="button" variant="secondary" onClick={() => setCloseoutStep("payouts")}>Back to payouts</Button>
                                 <Button type="button" onClick={() => void saveWeeklyCloseout()} disabled={
-                                  savingCloseout || !closeoutData.weekCompleted ||
+                                  savingCloseout || !closeoutConfirmed || !/^\d+(?:\.\d{1,2})?$/.test(finalDepositDraft.trim()) ||
+                                  (Math.round(Number(finalDepositDraft) * 100) !== closeoutData.preview.expectedDepositCents && !closeoutNoteDraft.trim()) || !closeoutData.weekCompleted ||
                                   closeoutData.preview.missingDays.length > 0 || closeoutData.preview.staleDays.length > 0 ||
                                   closeoutData.preview.pendingVarianceReviews.length > 0 ||
                                   closeoutData.preview.missingDepositSettings.length > 0 ||
                                   closeoutData.preview.negativeCashPayouts.length > 0 || closeoutData.preview.expectedDepositCents < 0
-                                }>{savingCloseout ? "Saving..." : "Complete week"}</Button>
+                                }>{savingCloseout ? "Saving..." : closeoutData.closeout ? "Update weekly closeout" : "Confirm & close week"}</Button>
                               </div>
                               {!closeoutData.weekCompleted && <p className="text-sm text-amber-700">The week must end before it can be closed.</p>}
                             </div>
@@ -3107,8 +3186,10 @@ export function PayrollDashboard({
                                 size="sm"
                                 variant="secondary"
                                 onClick={() => {
-                                  setReconciliationEmployee(group.employeeName);
-                                  setReconciliationView("employee");
+                                  const days = verificationDays.filter((day) => day.employees.some((employee) => employee.name === group.employeeName));
+                                  const pendingDay = days.find((day) => day.employees.some((employee) => employee.name === group.employeeName && (!employee.record || employee.record.expectedCashCents !== employee.expectedCashCents)));
+                                  const nextDay = pendingDay ?? days[0];
+                                  if (nextDay) openEmployeeVerification(group.employeeName, nextDay.date);
                                 }}
                               >
                                 Review
@@ -3122,7 +3203,7 @@ export function PayrollDashboard({
                 </div>
               )
             ) : !reconciliationEmployee ? (
-              <p className="text-sm text-gray-500">Choose a week and employee to view days worked.</p>
+              <p className="text-sm text-gray-500" role="status">{loading || loadingReconciliations ? "Loading employee verification…" : "Select an employee above to verify their appointments and cash."}</p>
             ) : loading || loadingReconciliations ? (
               <p className="text-sm text-gray-500">Loading days worked...</p>
             ) : reconciliationDays.length === 0 ? (
@@ -3150,7 +3231,7 @@ export function PayrollDashboard({
                   {reconciliationWeeklyRecords.length < reconciliationDays.length &&
                     " Counted cash and over / short include reconciled days only."}
                 </p>
-                {reconciliationDays.map((day) => {
+                {reconciliationDays.filter((day) => !cashManagementMode || !verificationDate || day.value === verificationDate).map((day) => {
                   const totals = mobileTotalsForEntries(day.entries);
                   const record = reconciliations.find(
                     (item) => item.serviceDate === day.value &&
@@ -3162,7 +3243,7 @@ export function PayrollDashboard({
                     <div key={day.value} className="overflow-hidden rounded-lg border border-gray-200">
                       <div className="flex flex-wrap items-center justify-between gap-3 bg-gray-50 px-4 py-3">
                         <div>
-                          <h3 className="font-semibold text-gray-900">{day.label}</h3>
+                          <h3 className="font-semibold text-gray-900">{reconciliationEmployee} · {day.label}</h3>
                           <p className="text-sm text-gray-600">
                             {totals.stops} appointments · {totals.dogs} pets ·{" "}
                             {formatMoney(totals.cash)} expected cash
@@ -3190,13 +3271,14 @@ export function PayrollDashboard({
                         <Button
                           type="button"
                           variant="secondary"
+                          disabled={savingReconciliation}
                           onClick={() => {
                             setOpenReconciliationDay(isOpen ? null : day.value);
                             setCountedCashDraft(record ? (record.countedCashCents / 100).toFixed(2) : "");
                             setReconciliationNoteDraft(record?.note ?? "");
                           }}
                         >
-                          {isOpen ? "Collapse" : record ? "Edit" : "Reconcile"}
+                          {isOpen ? "Collapse" : record ? "Edit verification" : "Verify employee"}
                         </Button>
                       </div>
                       {isOpen && (
@@ -3214,13 +3296,15 @@ export function PayrollDashboard({
                                 disabled={savingReconciliation}
                               />
                             </div>
-                            <p className="pb-2 text-sm text-gray-600">Expected: {formatMoney(totals.cash)}</p>
+                            <p className="pb-2 text-sm text-gray-600">Expected: {formatMoney(totals.cash)}
+                              {/^\d+(?:\.\d{1,2})?$/.test(countedCashDraft.trim()) && <span className="ml-2 font-medium">· {formatCashDifference(Math.round(Number(countedCashDraft) * 100) - Math.round(totals.cash * 100))}</span>}
+                            </p>
                             <Button
                               type="button"
                               onClick={() => void saveDailyReconciliation(day.value)}
                               disabled={savingReconciliation}
                             >
-                              {savingReconciliation ? "Saving..." : "Save reconciliation"}
+                              {savingReconciliation ? "Saving..." : "Save employee verification"}
                             </Button>
                           </div>
                           <div>

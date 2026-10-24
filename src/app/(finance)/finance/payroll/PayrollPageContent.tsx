@@ -1,6 +1,6 @@
 import { requireSuperAdmin } from "@/lib/auth-helpers";
 import { prisma } from "@/lib/prisma";
-import { normalizeEmployeeName, type PayrollBusinessValue } from "@/lib/payroll";
+import { isValidPayrollWeekStart, normalizeEmployeeName, type PayrollBusinessValue } from "@/lib/payroll";
 import { PayrollDashboard } from "./PayrollDashboard";
 
 type PayrollEmployeeOption = {
@@ -21,12 +21,20 @@ export async function PayrollPageContent({
   business,
   cashManagementMode = false,
   startOnPayouts = false,
+  startOnWeeklyCloseout = false,
+  requestedWeek,
 }: {
   business: PayrollBusinessValue;
   cashManagementMode?: boolean;
   startOnPayouts?: boolean;
+  startOnWeeklyCloseout?: boolean;
+  requestedWeek?: string;
 }) {
   await requireSuperAdmin();
+  const parsedWeek = requestedWeek ? new Date(`${requestedWeek}T00:00:00Z`) : null;
+  const initialWeekStart = requestedWeek && /^\d{4}-\d{2}-\d{2}$/.test(requestedWeek) && parsedWeek &&
+    Number.isFinite(parsedWeek.getTime()) && parsedWeek.toISOString().slice(0, 10) === requestedWeek &&
+    isValidPayrollWeekStart(parsedWeek, business) ? requestedWeek : undefined;
 
   const mobileGroomingEmployees =
     business === "mobile-grooming"
@@ -63,6 +71,8 @@ export async function PayrollPageContent({
       employeeOptionsByBusiness={employeeOptionsByBusiness}
       cashManagementMode={cashManagementMode}
       startOnPayouts={startOnPayouts}
+      startOnWeeklyCloseout={startOnWeeklyCloseout}
+      initialWeekStart={initialWeekStart}
     />
   );
 }

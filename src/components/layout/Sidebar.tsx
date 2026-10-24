@@ -121,7 +121,7 @@ export function Sidebar() {
   if (business.company === "GROOMING") {
     businessFinanceNav.push({
       href: "/cash-management/mobile-grooming/reconciliation",
-      label: "Cash Reconciliation",
+      label: "Employee Verification",
       icon: "✓",
     });
   }

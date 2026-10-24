@@ -169,6 +169,16 @@ export function CashManagementDashboard({ mobile, petResort, safeCents, initialC
         <h1 className="text-2xl font-bold text-gray-900">Cash Management</h1>
         <p className="mt-1 text-gray-500">Choose a cash area, then record an action or review its history.</p>
       </div>
+      <section aria-labelledby="employee-verification-heading" className="rounded-xl border border-pp-accent-line bg-pp-accent-soft p-5">
+        <p className="text-xs font-semibold uppercase tracking-wide text-pp-accent">Mobile Grooming</p>
+        <h2 id="employee-verification-heading" className="mt-1 text-lg font-semibold text-gray-900">Employee verification & weekly closeout</h2>
+        <p className="mt-2 text-sm text-gray-700">Each day, check every employee’s appointments and count their cash. At the end of the week, review differences, confirm payouts, and count the cash remaining.</p>
+        <div className="mt-4 flex flex-wrap gap-3">
+          <Link href="/cash-management/mobile-grooming/reconciliation" className="rounded-lg bg-pp-accent px-4 py-3 text-sm font-semibold text-white">1. Verify employees for the day →</Link>
+          <Link href="/cash-management/mobile-grooming/reconciliation?view=weekly" className="rounded-lg border border-pp-accent-line bg-white px-4 py-3 text-sm font-semibold text-pp-accent">2. Review & close a week →</Link>
+        </div>
+        <p className="mt-3 text-xs text-gray-600">Bank deposits are recorded separately below, when cash is taken to the bank.</p>
+      </section>
       <nav aria-label="Cash areas" className="grid gap-3 sm:grid-cols-3">
         {([
           { id: "pet-resort", label: "Pet Resort", balance: petResort.onHandCents },
@@ -203,7 +213,7 @@ export function CashManagementDashboard({ mobile, petResort, safeCents, initialC
           <p className="mt-2 text-sm text-gray-500">Completed week net cash, closeout and cash adjustments, plus counted cash awaiting closeout, less bank deposits recorded here.</p>
           {mobile.pendingCountedCents > 0 && <p className="mt-1 text-sm text-amber-800">Includes {money(mobile.pendingCountedCents)} counted cash awaiting closeout; employee cash payouts are not yet deducted from that amount.</p>}
           <Link href="/cash-management/mobile-grooming/reconciliation" className="mt-5 block rounded-lg border border-pp-accent-line bg-pp-accent-soft px-4 py-3 text-sm font-semibold text-pp-accent hover:underline">
-            Reconcile daily cash and close the week →
+            Verify employees & close the week →
           </Link>
           <form onSubmit={recordDeposit} className="mt-5 space-y-3">
             <label htmlFor="mobile-deposit-amount" className="block text-sm font-medium text-gray-700">Amount to deposit at bank</label>
