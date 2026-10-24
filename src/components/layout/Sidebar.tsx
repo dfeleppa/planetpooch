@@ -113,11 +113,18 @@ export function Sidebar() {
       ? item.href !== "/maintenance/vans"
       : item.href === "/maintenance/vans" || item.href === "/maintenance"
   );
-  const businessFinanceNav = financeNav.map((item) =>
+  const businessFinanceNav: NavItem[] = financeNav.map((item) =>
     item.href === "/finance/payroll" && business.company === "GROOMING"
       ? { ...item, href: "/finance/payroll/mobile-grooming" }
       : item
   );
+  if (business.company === "GROOMING") {
+    businessFinanceNav.push({
+      href: "/cash-management/mobile-grooming/reconciliation",
+      label: "Cash Reconciliation",
+      icon: "✓",
+    });
+  }
   const pathname = usePathname();
   const { data: session } = useSession();
   const role = session?.user?.role;
