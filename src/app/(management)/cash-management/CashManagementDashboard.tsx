@@ -26,7 +26,7 @@ function money(cents: number) {
 
 export function CashManagementDashboard({ mobile, petResort, safeCents, initialCountedCents }: { mobile: MobileSummary; petResort: PetResortSummary; safeCents: number; initialCountedCents: number | null }) {
   const router = useRouter();
-  const [cashView, setCashView] = useState<CashView>("pet-resort");
+  const [cashView, setCashView] = useState<CashView | null>(null);
   const [detailView, setDetailView] = useState<DetailView>("actions");
   const [mobileHistoryFilter, setMobileHistoryFilter] = useState<MobileHistoryFilter>("all");
   const [petHistoryFilter, setPetHistoryFilter] = useState<"all" | "daily" | "bank">("all");
@@ -167,22 +167,12 @@ export function CashManagementDashboard({ mobile, petResort, safeCents, initialC
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-bold text-gray-900">Cash Management</h1>
-        <p className="mt-1 text-gray-500">Verify employees, close the week, or manage cash and bank deposits.</p>
+        <p className="mt-1 text-gray-500">Choose Pet Resort, Mobile Grooming, or Safe to manage its cash.</p>
       </div>
-      <section aria-labelledby="employee-verification-heading" className="rounded-xl border border-pp-accent-line bg-pp-accent-soft p-5">
-        <p className="text-xs font-semibold uppercase tracking-wide text-pp-accent">Mobile Grooming</p>
-        <h2 id="employee-verification-heading" className="mt-1 text-lg font-semibold text-gray-900">Employee verification & weekly closeout</h2>
-        <p className="mt-2 text-sm text-gray-700">Verify each employee’s cash daily. Review payouts and count the remaining cash at the end of the week.</p>
-        <div className="mt-4 flex flex-wrap gap-3">
-          <Link href="/cash-management/mobile-grooming/reconciliation" className="rounded-lg bg-pp-accent px-4 py-3 text-sm font-semibold text-white">1. Verify employees for the day →</Link>
-          <Link href="/cash-management/mobile-grooming/reconciliation?view=weekly" className="rounded-lg border border-pp-accent-line bg-white px-4 py-3 text-sm font-semibold text-pp-accent">2. Review & close a week →</Link>
-        </div>
-        <p className="mt-3 text-xs text-gray-600">Bank deposits are recorded separately below, when cash is taken to the bank.</p>
-      </section>
       <section aria-labelledby="cash-areas-heading" className="space-y-3">
         <div>
           <h2 id="cash-areas-heading" className="text-lg font-semibold text-gray-900">Manage cash by location</h2>
-          <p className="mt-1 text-sm text-gray-600">Choose a location to open its cash actions and history below.</p>
+          <p className="mt-1 text-sm text-gray-600">Select a card to open its cash actions and history.</p>
         </div>
       <div className="grid gap-3 sm:grid-cols-3">
         {([
@@ -190,23 +180,32 @@ export function CashManagementDashboard({ mobile, petResort, safeCents, initialC
           { id: "mobile-grooming", label: "Mobile Grooming", balance: mobile.onHandCents },
           { id: "safe", label: "Safe", balance: countedSafeCents ?? safeCents },
         ] as const).map((area) => (
-          <div key={area.id} className={`flex flex-wrap items-center justify-between gap-3 rounded-xl border-2 bg-white p-4 sm:block ${cashView === area.id ? "border-pp-accent" : "border-pp-line"}`}>
-            <div>
-            <h3 className="text-sm font-semibold text-gray-900">{area.label}</h3>
-            <p className="mt-1 text-xl font-bold tabular-nums text-gray-900">{money(area.balance)}</p>
-            <p className="mt-1 text-xs text-gray-500">{area.id === "safe" ? countedSafeCents === null ? "Target safe balance" : "Last verified balance" : "Cash on hand"}</p>
-            </div>
-            <button type="button" onClick={() => selectCashView(area.id)} aria-pressed={cashView === area.id}
-              aria-label={`Manage ${area.label}${cashView === area.id ? " (selected)" : ""}`}
-              className={`flex min-h-11 cursor-pointer items-center justify-between gap-3 rounded-lg border px-3 py-2 text-sm font-semibold transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-pp-accent sm:mt-3 sm:w-full ${cashView === area.id ? "border-pp-accent bg-pp-accent text-white hover:brightness-110" : "border-pp-accent bg-white text-pp-accent hover:bg-pp-accent-soft"}`}>
-              <span>{cashView === area.id ? "Selected" : area.id === "safe" ? "Manage safe" : "Manage cash"}</span>
+          <button key={area.id} type="button" onClick={() => selectCashView(area.id)} aria-pressed={cashView === area.id}
+            className={`flex min-h-40 w-full cursor-pointer flex-col rounded-xl border-2 p-4 text-left transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-pp-accent ${cashView === area.id ? "border-pp-accent bg-pp-accent-soft" : "border-pp-line bg-white hover:border-pp-accent hover:bg-pp-accent-soft"}`}>
+            <span className="text-sm font-semibold text-gray-900">{area.label}</span>
+            <span className="mt-1 text-xl font-bold tabular-nums text-gray-900">{money(area.balance)}</span>
+            <span className="mt-1 text-xs text-gray-500">{area.id === "safe" ? countedSafeCents === null ? "Target safe balance" : "Last verified balance" : "Cash on hand"}</span>
+            <span className="mt-auto flex items-center justify-between pt-4 text-sm font-semibold text-pp-accent">
+              {cashView === area.id ? "Selected" : area.id === "safe" ? "Manage safe" : "Manage cash"}
               <span aria-hidden="true">{cashView === area.id ? "↓" : "→"}</span>
-            </button>
-          </div>
+            </span>
+          </button>
         ))}
       </div>
       </section>
-      <nav aria-label="Cash view" className="flex flex-wrap items-center gap-2 border-b border-pp-line pb-3">
+      {cashView === "mobile-grooming" && (
+        <section aria-labelledby="employee-verification-heading" className="rounded-xl border border-pp-accent-line bg-pp-accent-soft p-5">
+          <p className="text-xs font-semibold uppercase tracking-wide text-pp-accent">Mobile Grooming</p>
+          <h2 id="employee-verification-heading" className="mt-1 text-lg font-semibold text-gray-900">Employee verification & weekly closeout</h2>
+          <p className="mt-2 text-sm text-gray-700">Verify each employee’s cash daily. Review payouts and count the remaining cash at the end of the week.</p>
+          <div className="mt-4 flex flex-wrap gap-3">
+            <Link href="/cash-management/mobile-grooming/reconciliation" className="rounded-lg bg-pp-accent px-4 py-3 text-sm font-semibold text-white">1. Verify employees for the day →</Link>
+            <Link href="/cash-management/mobile-grooming/reconciliation?view=weekly" className="rounded-lg border border-pp-accent-line bg-white px-4 py-3 text-sm font-semibold text-pp-accent">2. Review & close a week →</Link>
+          </div>
+          <p className="mt-3 text-xs text-gray-600">Bank deposits are recorded separately below, when cash is taken to the bank.</p>
+        </section>
+      )}
+      {cashView && <nav aria-label="Cash view" className="flex flex-wrap items-center gap-2 border-b border-pp-line pb-3">
         <p className="mr-auto w-full text-sm font-semibold text-gray-900 sm:w-auto" role="status">{cashView === "pet-resort" ? "Pet Resort" : cashView === "mobile-grooming" ? "Mobile Grooming" : "Safe"} · {detailView === "actions" ? "Actions" : "History"}</p>
         {(["actions", "history"] as const).map((section) => (
           <button key={section} type="button" onClick={() => setDetailView(section)} aria-pressed={detailView === section}
@@ -214,7 +213,7 @@ export function CashManagementDashboard({ mobile, petResort, safeCents, initialC
             {section === "actions" ? cashView === "safe" ? "Verify safe" : "Record cash" : "History"}
           </button>
         ))}
-      </nav>
+      </nav>}
       <div className={cashView === "pet-resort" && detailView === "actions" ? "block" : "hidden"}>
         <section className="rounded-xl border border-pp-line bg-white p-6 shadow-sm">
           <h2 className="text-lg font-semibold text-gray-900">Pet Resort cash</h2>

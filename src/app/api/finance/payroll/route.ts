@@ -733,9 +733,11 @@ async function savePayroll(req: NextRequest) {
   }
 
   const isReviewedMoegoImport = payload.source === "moego-clock-inout" && business === "pet-resort";
-  const isAutomatedMobileImport =
-    payload.source === "moego-mobile-grooming-cron" && business === "mobile-grooming";
-  const isMoegoImport = isReviewedMoegoImport || isAutomatedMobileImport;
+  const isMoegoMobileImport =
+    (payload.source === "moego-mobile-grooming-cron" ||
+      payload.source === "moego-mobile-grooming-manual") &&
+    business === "mobile-grooming";
+  const isMoegoImport = isReviewedMoegoImport || isMoegoMobileImport;
   const automationReview = isReviewedMoegoImport
     ? validateMoegoClockInOutUpload(payload, weekDates.weekStart.toISOString().slice(0, 10), weekDates.weekEnd.toISOString().slice(0, 10))
     : null;
@@ -834,7 +836,7 @@ async function savePayroll(req: NextRequest) {
     await tx.financeMobileGroomingPayrollEntry.deleteMany({
       where: { payrollWeekId: savedWeek.id },
     });
-    if (!isAutomatedMobileImport) {
+    if (!isMoegoMobileImport) {
       await tx.financeMobileGroomingWeeklyOverride.deleteMany({
         where: { payrollWeekId: savedWeek.id },
       });

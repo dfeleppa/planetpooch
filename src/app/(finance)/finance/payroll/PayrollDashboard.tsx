@@ -1145,8 +1145,10 @@ export function PayrollDashboard({
   const showMobileAppointmentDetails =
     mobilePayrollView === "employee" && Boolean(mobileViewEmployeeName);
   const idlePullMoegoLabel =
-    mobilePayrollView === "summary" ? "Pull Entire Staff from MoeGo" : "Pull from MoeGo";
-  const pullMoegoLabel = pullingMoego ? "Pulling..." : idlePullMoegoLabel;
+    mobilePayrollView === "summary" || cashManagementMode
+      ? "Pull Entire Staff from MoeGo"
+      : "Pull from MoeGo";
+  const pullMoegoLabel = pullingMoego ? "Pulling and saving..." : idlePullMoegoLabel;
 
   const loadWeek = useCallback(async (
     selectedWeekStart: string | undefined,
@@ -1713,19 +1715,34 @@ export function PayrollDashboard({
           .map((name) => normalizeEmployeeName(name).toLocaleLowerCase())
           .filter(Boolean)
       );
-      setMobileEntries((current) =>
-        [
-          ...current.filter(
-            (entry) =>
-              !pulledEmployeeKeys.has(normalizeEmployeeName(entry.employeeName).toLocaleLowerCase())
-          ),
-          ...importedEntries,
-        ].sort((a, b) => {
-          const dateCompare = a.serviceDate.localeCompare(b.serviceDate);
-          if (dateCompare !== 0) return dateCompare;
-          return a.employeeName.localeCompare(b.employeeName, undefined, { sensitivity: "base" });
-        })
+      if (importedEntries.length === 0) {
+        throw new Error("MoeGo returned no finished appointments for this week. Nothing was saved.");
+      }
+      const savedResponse = await fetch(
+        `/api/finance/payroll?${new URLSearchParams({ business: "mobile-grooming", weekStart })}`
       );
+      const savedData = (await savedResponse.json()) as PayrollApiResponse & { error?: string };
+      if (!savedResponse.ok) {
+        throw new Error(savedData.error || "Could not load the saved week before importing.");
+      }
+      const savedEntries = savedMobileEntriesToEditable(
+        savedData.week?.mobileGroomingEntries ?? []
+      );
+      const mergedEntries = [
+        ...savedEntries.filter(
+          (entry) =>
+            !pulledEmployeeKeys.has(normalizeEmployeeName(entry.employeeName).toLocaleLowerCase())
+        ),
+        ...importedEntries,
+      ].sort((a, b) => {
+        const dateCompare = a.serviceDate.localeCompare(b.serviceDate);
+        if (dateCompare !== 0) return dateCompare;
+        return a.employeeName.localeCompare(b.employeeName, undefined, { sensitivity: "base" });
+      });
+      await persistMobileEntries(mergedEntries, "moego-mobile-grooming-manual");
+      if (mobilePayrollView === "reconciliation" && reconciliationView === "weekly") {
+        await loadPayouts(weekStart);
+      }
 
       const totals = data.totals;
       const skipped = data.statusCounts
@@ -1738,16 +1755,16 @@ export function PayrollDashboard({
         ? ` Could not match ${data.unmatchedEmployeeNames.join(", ")}.`
         : "";
       const staffLabel =
-        mobilePayrollView === "summary"
+        mobilePayrollView === "summary" || cashManagementMode
           ? `across ${data.staffs?.length ?? pulledEmployeeKeys.size} employees`
           : `for ${data.staff?.name ?? employeeName}`;
       setMessage(
-        `Pulled ${totals?.appointments ?? importedEntries.length} appointments and ${
+        `Pulled and saved ${totals?.appointments ?? importedEntries.length} appointments and ${
           totals?.pets ?? importedEntries.reduce((sum, entry) => sum + mobileEntryDogCount(entry), 0)
         } pets ${staffLabel}.${skipped ? ` Excluded ${skipped}.` : ""}${unmatched}`
       );
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Could not pull MoeGo payroll data.");
+      setError(err instanceof Error ? err.message : "Could not pull and save MoeGo payroll data.");
     } finally {
       setPullingMoego(false);
     }
@@ -1811,73 +1828,81 @@ export function PayrollDashboard({
     event.target.value = "";
   }
 
+  async function persistMobileEntries(
+    entries: EditableMobileGroomingEntry[],
+    source?: "moego-mobile-grooming-manual"
+  ) {
+    const cleanEntries = entries.map((entry) => ({
+      serviceDate: entry.serviceDate,
+      employeeName: normalizeEmployeeName(entry.employeeName),
+      paymentType: entry.paymentType,
+      dogs: mobileEntryDogCount(entry),
+      price: moneyValue(entry.price),
+      upgradeQuantity: Math.max(0, Math.round(Number(entry.upgradeQuantity) || 0)),
+      upgradesCents: Math.round(moneyValue(entry.upgradeAmount) * 100),
+      creditCardTip: moneyValue(entry.creditCardTip),
+      discount: moneyValue(entry.discount),
+    })).filter((entry) => entry.employeeName);
+
+    if (cleanEntries.length === 0) {
+      throw new Error("Add at least one mobile grooming appointment.");
+    }
+
+    const response = await fetch("/api/finance/payroll", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        weekStart,
+        weekEnd,
+        business,
+        ...(source ? { source } : {}),
+        mobileEntries: cleanEntries,
+      }),
+    });
+    const data = (await response.json()) as {
+      week?: SavedPayrollWeek;
+      annualTotals?: AnnualMobileGroomingTotals;
+      weeklyTotals?: WeeklyMobileGroomingTotals[];
+      error?: string;
+    };
+    if (!response.ok || !data.week) throw new Error(data.error || "Could not save payroll.");
+
+    setWeekStart(data.week.weekStart);
+    setAutomationStatus(data.week.automationStatus ?? "manual");
+    setReviewReasons(data.week.reviewReasons ?? []);
+    setBusiness(data.week.business);
+    setRows(savedRowsToEditable(data.week.rows));
+    setMobileEntries(savedMobileEntriesToEditable(data.week.mobileGroomingEntries));
+    if (mobileViewEmployeeKey) {
+      await loadMobileSummary(data.week.weekStart, mobileViewEmployeeName);
+    } else {
+      setAnnualMobileTotals(data.annualTotals ?? null);
+      setStoredWeeklyMobileTotals(data.weeklyTotals ?? []);
+    }
+    setSavedWeeks((current) => {
+      const summary = {
+        id: data.week!.id,
+        business: data.week!.business,
+        weekStart: data.week!.weekStart,
+        weekEnd: data.week!.weekEnd,
+        updatedAt: new Date().toISOString(),
+      };
+      return [
+        summary,
+        ...current.filter(
+          (week) => week.business !== summary.business || week.weekStart !== summary.weekStart
+        ),
+      ].sort((a, b) => b.weekStart.localeCompare(a.weekStart));
+    });
+  }
+
   async function savePayroll() {
     setSaving(true);
     setError(null);
     setMessage(null);
     try {
       if (isMobileGrooming) {
-        const cleanEntries = mobileEntries.map((entry) => ({
-          serviceDate: entry.serviceDate,
-          employeeName: normalizeEmployeeName(entry.employeeName),
-          paymentType: entry.paymentType,
-          dogs: mobileEntryDogCount(entry),
-          price: moneyValue(entry.price),
-          upgradeQuantity: Math.max(0, Math.round(Number(entry.upgradeQuantity) || 0)),
-          upgradesCents: Math.round(moneyValue(entry.upgradeAmount) * 100),
-          creditCardTip: moneyValue(entry.creditCardTip),
-          discount: moneyValue(entry.discount),
-        })).filter((entry) => entry.employeeName);
-
-        if (cleanEntries.length === 0) {
-          throw new Error("Add at least one mobile grooming appointment.");
-        }
-
-        const response = await fetch("/api/finance/payroll", {
-          method: "PUT",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            weekStart,
-            weekEnd,
-            business,
-            mobileEntries: cleanEntries,
-          }),
-        });
-        const data = (await response.json()) as {
-          week?: SavedPayrollWeek;
-          annualTotals?: AnnualMobileGroomingTotals;
-          weeklyTotals?: WeeklyMobileGroomingTotals[];
-          error?: string;
-        };
-        if (!response.ok || !data.week) throw new Error(data.error || "Could not save payroll.");
-
-        setWeekStart(data.week.weekStart);
-        setAutomationStatus(data.week.automationStatus ?? "manual");
-        setReviewReasons(data.week.reviewReasons ?? []);
-        setBusiness(data.week.business);
-        setRows(savedRowsToEditable(data.week.rows));
-        setMobileEntries(savedMobileEntriesToEditable(data.week.mobileGroomingEntries));
-        if (mobileViewEmployeeKey) {
-          await loadMobileSummary(data.week.weekStart, mobileViewEmployeeName);
-        } else {
-          setAnnualMobileTotals(data.annualTotals ?? null);
-          setStoredWeeklyMobileTotals(data.weeklyTotals ?? []);
-        }
-        setSavedWeeks((current) => {
-          const summary = {
-            id: data.week!.id,
-            business: data.week!.business,
-            weekStart: data.week!.weekStart,
-            weekEnd: data.week!.weekEnd,
-            updatedAt: new Date().toISOString(),
-          };
-          return [
-            summary,
-            ...current.filter(
-              (week) => week.business !== summary.business || week.weekStart !== summary.weekStart
-            ),
-          ].sort((a, b) => b.weekStart.localeCompare(a.weekStart));
-        });
+        await persistMobileEntries(mobileEntries);
         setMessage("Payroll saved.");
         return;
       }
@@ -2665,7 +2690,7 @@ export function PayrollDashboard({
                   setAdjustmentEditEmployee(null);
                   void loadWeek(event.target.value, "mobile-grooming");
                 }}
-                disabled={loading || savingReconciliation || savingCloseout || Boolean(savingVarianceReview)}
+                disabled={loading || pullingMoego || savingReconciliation || savingCloseout || Boolean(savingVarianceReview)}
               >
                 {reconciliationWeeks.map((week) => (
                   <option key={week.weekStart} value={week.weekStart}>
@@ -2698,6 +2723,16 @@ export function PayrollDashboard({
                 busy={savingReconciliation} onSelect={openEmployeeVerification}
                 onDayChange={() => { setReconciliationEmployee(""); setVerificationDate(null); setOpenReconciliationDay(null); }}
                 onWeeklyReview={() => { setReconciliationView("weekly"); setCloseoutStep("idle"); }} /></div>
+            )}
+            {cashManagementMode && (
+              <Button
+                type="button"
+                variant="secondary"
+                onClick={() => void pullMobileGroomingFromMoego()}
+                disabled={loading || saving || pullingMoego || savingReconciliation || savingCloseout || Boolean(savingVarianceReview)}
+              >
+                {pullMoegoLabel}
+              </Button>
             )}
             {reconciliationView === "payouts" ? (
               loading || loadingDirectDeposits || !closeoutData ? (
