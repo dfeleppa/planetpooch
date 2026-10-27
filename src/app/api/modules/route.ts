@@ -33,7 +33,7 @@ export async function GET(req: NextRequest) {
   } else {
     const active = await getActiveBusiness();
     const business = resolveBusiness(session.user, req.nextUrl.searchParams.get("company") ?? active.company);
-    Object.assign(where, moduleCompanyWhere(business.company));
+    Object.assign(where, await moduleCompanyWhere(business.company));
   }
 
   const modules = await prisma.module.findMany({

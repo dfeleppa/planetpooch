@@ -17,7 +17,7 @@ export default async function AdminModuleProgressPage() {
   });
 
   const modules = await prisma.module.findMany({
-    where: moduleCompanyWhere((await getActiveBusiness()).company),
+    where: await moduleCompanyWhere((await getActiveBusiness()).company),
     orderBy: { order: "asc" },
     include: {
       subsections: {
