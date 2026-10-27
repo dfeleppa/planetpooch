@@ -20,14 +20,17 @@ export async function GET(req: NextRequest) {
   }
   const date = new Date(dateParam);
 
+  const weekDate = new Date(date);
+  weekDate.setUTCDate(weekDate.getUTCDate() - weekDate.getUTCDay());
+
   const items = await prisma.dailyChecklistItem.findMany({
     where: {
-      OR: [{ isActive: true }, { completions: { some: { date } } }],
+      OR: [{ isActive: true }, { completions: { some: { date: { in: [date, weekDate] } } } }],
     },
     orderBy: [{ order: "asc" }, { createdAt: "asc" }],
     include: {
       completions: {
-        where: { date },
+        where: { date: { in: [date, weekDate] } },
         include: { completedBy: { select: { id: true, name: true } } },
       },
     },
@@ -35,8 +38,11 @@ export async function GET(req: NextRequest) {
 
   return NextResponse.json({
     date: dateParam,
-    items: items.map((item) => {
-      const completion = item.completions[0] ?? null;
+    items: items.filter((item) => item.isActive || item.completions.some((c) =>
+      c.date.getTime() === (item.period === "WEEKLY" ? weekDate : date).getTime()
+    )).map((item) => {
+      const targetDate = item.period === "WEEKLY" ? weekDate : date;
+      const completion = item.completions.find((c) => c.date.getTime() === targetDate.getTime()) ?? null;
       return {
         id: item.id,
         period: item.period,

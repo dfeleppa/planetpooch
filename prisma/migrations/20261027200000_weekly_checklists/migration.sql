@@ -1,0 +1,1 @@
+ALTER TYPE "ChecklistPeriod" ADD VALUE IF NOT EXISTS 'WEEKLY';

@@ -4,7 +4,7 @@ import { getSession, isManagerOrAbove } from "@/lib/auth-helpers";
 
 /**
  * POST /api/maintenance/checklists/items
- * Body: { period: "AM" | "PM", title: string }
+ * Body: { period: "AM" | "PM" | "WEEKLY", title: string }
  * Appends a new item to the end of that period's checklist. Managers only.
  */
 export async function POST(req: NextRequest) {
@@ -15,10 +15,10 @@ export async function POST(req: NextRequest) {
   }
 
   const body = await req.json().catch(() => null);
-  const period = body?.period === "AM" || body?.period === "PM" ? body.period : null;
+  const period = body?.period === "AM" || body?.period === "PM" || body?.period === "WEEKLY" ? body.period : null;
   const title = typeof body?.title === "string" ? body.title.trim() : "";
   if (!period || !title) {
-    return NextResponse.json({ error: "period (AM|PM) and title are required" }, { status: 400 });
+    return NextResponse.json({ error: "period (AM|PM|WEEKLY) and title are required" }, { status: 400 });
   }
 
   const last = await prisma.dailyChecklistItem.aggregate({

@@ -39,7 +39,7 @@ export async function GET(req: NextRequest) {
     const key = c.date.toISOString().slice(0, 10);
     days[key] ??= { amDone: 0, pmDone: 0 };
     if (c.item.period === "AM") days[key].amDone += 1;
-    else days[key].pmDone += 1;
+    else if (c.item.period === "PM") days[key].pmDone += 1;
   }
 
   return NextResponse.json({ amTotal, pmTotal, days });

@@ -4,7 +4,7 @@ import { getSession, isManagerOrAbove } from "@/lib/auth-helpers";
 
 /**
  * PUT /api/maintenance/checklists/items/reorder
- * Body: { period: "AM" | "PM", orderedIds: string[] }
+ * Body: { period: "AM" | "PM" | "WEEKLY", orderedIds: string[] }
  * Rewrites the order of a period's active items to match orderedIds.
  * Managers only.
  */
@@ -16,11 +16,11 @@ export async function PUT(req: NextRequest) {
   }
 
   const body = await req.json().catch(() => null);
-  const period = body?.period === "AM" || body?.period === "PM" ? body.period : null;
+  const period = body?.period === "AM" || body?.period === "PM" || body?.period === "WEEKLY" ? body.period : null;
   const orderedIds: unknown = body?.orderedIds;
   if (!period || !Array.isArray(orderedIds) || orderedIds.some((id) => typeof id !== "string")) {
     return NextResponse.json(
-      { error: "period (AM|PM) and orderedIds (string[]) are required" },
+      { error: "period (AM|PM|WEEKLY) and orderedIds (string[]) are required" },
       { status: 400 }
     );
   }

@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { SortableList, DragHandle, SortableHandleProps } from "@/components/SortableList";
 
-type Period = "AM" | "PM";
+type Period = "AM" | "PM" | "WEEKLY";
 
 interface Completion {
   completedAt: string;
@@ -85,7 +85,10 @@ const PERIODS: {
   },
 ];
 
-const STRIP_DAYS = 21;
+const WEEKLY_PERIOD = {
+  period: "WEEKLY" as const, label: "Weekly", sublabel: "Sign off once per week",
+  icon: "✓", iconClass: "bg-emerald-50 text-emerald-600",
+};
 
 export function ChecklistBoard({ canEdit }: { canEdit: boolean }) {
   const { data: session } = useSession();
@@ -93,46 +96,47 @@ export function ChecklistBoard({ canEdit }: { canEdit: boolean }) {
 
   const today = toDateStr(new Date());
   const [selectedDate, setSelectedDate] = useState(today);
+  const [tab, setTab] = useState<"daily" | "weekly">("daily");
   const [items, setItems] = useState<ChecklistItem[]>([]);
-  const [loaded, setLoaded] = useState(false);
+  const [loadedDate, setLoadedDate] = useState<string | null>(null);
+  const [loadError, setLoadError] = useState(false);
+  const requestId = useRef(0);
   const [fetching, setFetching] = useState(false);
   const [editMode, setEditMode] = useState(false);
   const [summary, setSummary] = useState<SummaryData | null>(null);
   const [pendingDelete, setPendingDelete] = useState<ChecklistItem | null>(null);
 
-  // The strip always ends today; picking an older date via the calendar
-  // extends it backwards so the selection is always visible in the strip.
-  const stripStart = useMemo(() => {
-    const defaultStart = addDays(today, -(STRIP_DAYS - 1));
-    return selectedDate < defaultStart ? selectedDate : defaultStart;
-  }, [selectedDate, today]);
-
-  const stripDates = useMemo(() => {
-    const dates: string[] = [];
-    for (let d = stripStart; d <= today; d = addDays(d, 1)) dates.push(d);
-    return dates;
-  }, [stripStart, today]);
+  const stripStart = useMemo(() => addDays(selectedDate, -parseDate(selectedDate).getDay()), [selectedDate]);
+  const stripEnd = addDays(stripStart, 6);
+  const stripDates = useMemo(() => Array.from({ length: 7 }, (_, i) => addDays(stripStart, i)), [stripStart]);
+  const checklistDate = tab === "weekly" ? stripStart : selectedDate;
+  const loaded = loadedDate === checklistDate;
 
   const loadItems = useCallback(async (date: string) => {
+    const id = ++requestId.current;
     setFetching(true);
+    setLoadError(false);
     try {
       const res = await fetch(`/api/maintenance/checklists?date=${date}`);
-      if (!res.ok) return;
+      if (!res.ok) throw new Error("Unable to load checklists");
       const data = await res.json();
+      if (id !== requestId.current) return;
       setItems(data.items);
-      setLoaded(true);
+      setLoadedDate(date);
+    } catch {
+      if (id === requestId.current) { setLoadError(true); setLoadedDate(null); }
     } finally {
-      setFetching(false);
+      if (id === requestId.current) setFetching(false);
     }
   }, []);
 
   useEffect(() => {
-    loadItems(selectedDate);
-  }, [selectedDate, loadItems]);
+    loadItems(checklistDate);
+  }, [checklistDate, loadItems]);
 
   useEffect(() => {
     let cancelled = false;
-    fetch(`/api/maintenance/checklists/summary?start=${stripStart}&end=${today}`)
+    fetch(`/api/maintenance/checklists/summary?start=${stripStart}&end=${stripEnd}`)
       .then((res) => (res.ok ? res.json() : null))
       .then((data) => {
         if (data && !cancelled) setSummary(data);
@@ -140,11 +144,11 @@ export function ChecklistBoard({ canEdit }: { canEdit: boolean }) {
     return () => {
       cancelled = true;
     };
-  }, [stripStart, today]);
+  }, [stripStart, stripEnd]);
 
   function bumpSummary(period: Period, delta: number) {
     setSummary((prev) => {
-      if (!prev) return prev;
+      if (!prev || period === "WEEKLY") return prev;
       const day = prev.days[selectedDate] ?? { amDone: 0, pmDone: 0 };
       const next = { ...day };
       if (period === "AM") next.amDone = Math.max(0, next.amDone + delta);
@@ -166,11 +170,11 @@ export function ChecklistBoard({ canEdit }: { canEdit: boolean }) {
     const res = await fetch("/api/maintenance/checklists/completions", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ itemId: item.id, date: selectedDate, completed }),
+      body: JSON.stringify({ itemId: item.id, date: checklistDate, completed }),
     });
     if (!res.ok) {
       // Revert by refetching the authoritative state.
-      loadItems(selectedDate);
+      loadItems(checklistDate);
       bumpSummary(item.period, completed ? -1 : 1);
       return;
     }
@@ -240,7 +244,7 @@ export function ChecklistBoard({ canEdit }: { canEdit: boolean }) {
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-5">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Dashboard</h1>
-          <p className="text-gray-500 mt-1">Pet Resort morning and evening sign-off</p>
+          <p className="text-gray-500 mt-1">{tab === "daily" ? "Pet Resort morning and evening sign-off" : "Pet Resort weekly sign-off"}</p>
         </div>
         {canEdit && (
           <Button
@@ -253,31 +257,50 @@ export function ChecklistBoard({ canEdit }: { canEdit: boolean }) {
         )}
       </div>
 
+      <div className="mb-5 flex gap-1 border-b border-gray-200" aria-label="Checklist frequency">
+        {(["daily", "weekly"] as const).map((value) => (
+          <button key={value} type="button" aria-pressed={tab === value}
+            onClick={() => { setTab(value); setEditMode(false); }}
+            className={cn("border-b-2 px-5 py-2.5 text-sm font-medium transition-colors",
+              tab === value ? "border-blue-600 text-blue-600" : "border-transparent text-gray-500 hover:text-gray-800")}>
+            {value === "daily" ? "Daily" : "Weekly"}
+          </button>
+        ))}
+      </div>
+
       <DateStrip
         dates={stripDates}
         selected={selectedDate}
         today={today}
-        summary={summary}
+        summary={tab === "daily" ? summary : null}
+        weekly={tab === "weekly"}
         onSelect={setSelectedDate}
       />
 
+      {loadError && (
+        <p role="alert" className="mt-4 text-sm text-red-600">
+          Unable to load checklists. <button className="underline" onClick={() => loadItems(checklistDate)}>Try again</button>
+        </p>
+      )}
       <div
         className={cn(
-          "mt-5 grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6 transition-opacity",
+          "mt-5 grid grid-cols-1 gap-4 md:gap-6 transition-opacity",
+          tab === "daily" && "lg:grid-cols-2",
           fetching && loaded && "opacity-60"
         )}
       >
-        {PERIODS.map((cfg) => (
+        {(tab === "daily" ? PERIODS : [WEEKLY_PERIOD]).map((cfg) => (
           <PeriodCard
             key={cfg.period}
             cfg={cfg}
-            items={items
+            items={(loaded ? items : [])
               .filter((i) => i.period === cfg.period)
               .sort((a, b) => a.order - b.order)}
             loaded={loaded}
-            editMode={editMode}
+            editMode={editMode && loaded}
             canEdit={canEdit}
             onToggle={toggleItem}
+            disabled={!loaded || fetching || checklistDate > today}
             onAdd={(title) => addItem(cfg.period, title)}
             onRename={renameItem}
             onDelete={setPendingDelete}
@@ -290,7 +313,7 @@ export function ChecklistBoard({ canEdit }: { canEdit: boolean }) {
         open={pendingDelete !== null}
         title="Remove checklist item"
         message={`Remove "${pendingDelete?.title}" from the ${
-          pendingDelete?.period === "AM" ? "morning" : "evening"
+          pendingDelete?.period === "WEEKLY" ? "weekly" : pendingDelete?.period === "AM" ? "morning" : "evening"
         } checklist? Days it was already signed off keep their records.`}
         confirmLabel="Remove"
         onConfirm={() => {
@@ -310,20 +333,17 @@ function DateStrip({
   selected,
   today,
   summary,
+  weekly,
   onSelect,
 }: {
   dates: string[];
   selected: string;
   today: string;
   summary: SummaryData | null;
+  weekly: boolean;
   onSelect: (date: string) => void;
 }) {
-  const selectedRef = useRef<HTMLButtonElement>(null);
   const pickerRef = useRef<HTMLInputElement>(null);
-
-  useEffect(() => {
-    selectedRef.current?.scrollIntoView({ inline: "center", block: "nearest" });
-  }, [selected]);
 
   function dayStatus(date: string): "complete" | "partial" | "none" {
     if (!summary) return "none";
@@ -335,15 +355,21 @@ function DateStrip({
     return done > 0 ? "partial" : "none";
   }
 
-  const monthLabel = parseDate(selected).toLocaleDateString("en-US", {
-    month: "long",
-    year: "numeric",
+  const formatDay = (date: string) => parseDate(date).toLocaleDateString("en-US", {
+    month: "short", day: "numeric", year: "numeric",
   });
+  const weekLabel = `${formatDay(dates[0])} – ${formatDay(dates[6])}`;
 
   return (
     <div className="rounded-xl border border-gray-200 bg-white shadow-sm px-3 py-3">
-      <div className="flex items-center justify-between px-1 mb-2">
-        <p className="text-sm font-medium text-gray-700">{monthLabel}</p>
+      <div className="flex flex-wrap items-center justify-between gap-2 px-1 mb-2">
+        <div className="flex items-center gap-1 sm:gap-2">
+          <button type="button" aria-label="Previous week" onClick={() => onSelect(addDays(selected, -7))}
+            className="rounded-md px-2 py-1.5 text-gray-600 hover:bg-gray-100">{"<"}</button>
+          <p className="text-xs sm:text-sm font-medium text-gray-700">{weekLabel}</p>
+          <button type="button" aria-label="Next week" onClick={() => onSelect(addDays(selected, 7))}
+            className="rounded-md px-2 py-1.5 text-gray-600 hover:bg-gray-100">{">"}</button>
+        </div>
         <div className="flex items-center gap-2">
           {selected !== today && (
             <button
@@ -375,10 +401,9 @@ function DateStrip({
           <input
             ref={pickerRef}
             type="date"
-            max={today}
             value={selected}
             onChange={(e) => {
-              if (e.target.value && e.target.value <= today) onSelect(e.target.value);
+              if (e.target.value) onSelect(e.target.value);
             }}
             className="sr-only"
             tabIndex={-1}
@@ -387,7 +412,7 @@ function DateStrip({
         </div>
       </div>
 
-      <div className="flex gap-1.5 overflow-x-auto pb-1 [scrollbar-width:thin]">
+      <div className="grid grid-cols-7 gap-1">
         {dates.map((date) => {
           const d = parseDate(date);
           const isSelected = date === selected;
@@ -396,11 +421,12 @@ function DateStrip({
           return (
             <button
               key={date}
-              ref={isSelected ? selectedRef : undefined}
               onClick={() => onSelect(date)}
+              aria-label={d.toLocaleDateString("en-US", { dateStyle: "full" })}
+              aria-pressed={weekly || isSelected}
               className={cn(
-                "flex w-12 flex-shrink-0 flex-col items-center rounded-lg border py-2 transition-colors",
-                isSelected
+                "flex min-w-0 flex-col items-center rounded-lg border py-2 transition-colors",
+                weekly ? "border-blue-100 bg-blue-50 text-blue-700" : isSelected
                   ? "border-blue-600 bg-blue-600 text-white"
                   : "border-transparent text-gray-600 hover:bg-gray-100"
               )}
@@ -408,7 +434,7 @@ function DateStrip({
               <span
                 className={cn(
                   "text-[10px] font-medium uppercase tracking-wide",
-                  isSelected ? "text-blue-100" : "text-gray-400"
+                  isSelected && !weekly ? "text-blue-100" : "text-gray-400"
                 )}
               >
                 {d.toLocaleDateString("en-US", { weekday: "short" })}
@@ -446,6 +472,7 @@ function PeriodCard({
   editMode,
   canEdit,
   onToggle,
+  disabled,
   onAdd,
   onRename,
   onDelete,
@@ -457,6 +484,7 @@ function PeriodCard({
   editMode: boolean;
   canEdit: boolean;
   onToggle: (item: ChecklistItem) => void;
+  disabled: boolean;
   onAdd: (title: string) => void;
   onRename: (itemId: string, title: string) => void;
   onDelete: (item: ChecklistItem) => void;
@@ -531,6 +559,8 @@ function PeriodCard({
               <li key={item.id}>
                 <button
                   onClick={() => onToggle(item)}
+                  disabled={disabled}
+                  aria-pressed={!!item.completion}
                   className="group flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left transition-colors hover:bg-gray-50"
                 >
                   <span

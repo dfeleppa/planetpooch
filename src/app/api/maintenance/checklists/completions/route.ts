@@ -37,6 +37,7 @@ export async function POST(req: NextRequest) {
   if (!item) return NextResponse.json({ error: "Item not found" }, { status: 404 });
 
   const date = new Date(dateParam);
+  if (item.period === "WEEKLY") date.setUTCDate(date.getUTCDate() - date.getUTCDay());
 
   if (!completed) {
     await prisma.dailyChecklistCompletion.deleteMany({ where: { itemId, date } });
