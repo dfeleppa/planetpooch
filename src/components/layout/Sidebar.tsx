@@ -342,6 +342,21 @@ export function Sidebar() {
               </div>
             </>
           )}
+          {/* Business groups are intentionally empty until links are assigned. */}
+          {isSuperAdmin && !isCollapsed && (
+            <>
+              <section aria-label="Pet Resort">
+                <h2 className="px-2.5 pt-1 text-[10px] font-medium uppercase tracking-[0.08em] text-pp-ink-4">
+                  Pet Resort
+                </h2>
+              </section>
+              <section aria-label="Mobile Grooming">
+                <h2 className="px-2.5 pt-1 text-[10px] font-medium uppercase tracking-[0.08em] text-pp-ink-4">
+                  Mobile Grooming
+                </h2>
+              </section>
+            </>
+          )}
           {/* Marketing section — visible to MARKETING role and SUPER_ADMIN */}
           {hasMarketingAccess && !isSuperAdmin && (
             <>
