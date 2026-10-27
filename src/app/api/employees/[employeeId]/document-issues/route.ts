@@ -1,6 +1,7 @@
+import { employeeCompanyFilter } from "@/lib/people-access";
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { getSession, getCompanyFilter, isManagerOrAbove } from "@/lib/auth-helpers";
+import { getSession, isManagerOrAbove } from "@/lib/auth-helpers";
 import { isValidCategory } from "@/lib/employee-documents";
 import { Company, Role } from "@prisma/client";
 
@@ -28,7 +29,7 @@ export async function PUT(
     return NextResponse.json({ error: "Employee not found" }, { status: 404 });
   }
 
-  const companyFilter = getCompanyFilter(sessionUser.role, sessionUser.company);
+  const companyFilter = employeeCompanyFilter(sessionUser.role, sessionUser.company);
   if (companyFilter.company && employee.company !== companyFilter.company) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
@@ -93,7 +94,7 @@ export async function DELETE(
     return NextResponse.json({ error: "Employee not found" }, { status: 404 });
   }
 
-  const companyFilter = getCompanyFilter(sessionUser.role, sessionUser.company);
+  const companyFilter = employeeCompanyFilter(sessionUser.role, sessionUser.company);
   if (companyFilter.company && employee.company !== companyFilter.company) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }

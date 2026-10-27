@@ -1,6 +1,8 @@
+import { canManageEmployeeLifecycle } from "@/lib/people-access";
+import { employeeCompanyFilter } from "@/lib/people-access";
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { getSession, getCompanyFilter, isManagerOrAbove } from "@/lib/auth-helpers";
+import { getSession, isManagerOrAbove } from "@/lib/auth-helpers";
 import { Company, Role } from "@prisma/client";
 
 /**
@@ -20,6 +22,9 @@ export async function POST(
   { params }: { params: Promise<{ employeeId: string }> }
 ) {
   const session = await getSession();
+  if (!canManageEmployeeLifecycle(session?.user)) {
+    return NextResponse.json({ error: "Only Corporate People can add or remove employees" }, { status: 403 });
+  }
   if (!session?.user || !isManagerOrAbove(session.user.role)) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
@@ -52,7 +57,7 @@ export async function POST(
     return NextResponse.json({ error: "Employee not found" }, { status: 404 });
   }
 
-  const companyFilter = getCompanyFilter(sessionUser.role, sessionUser.company);
+  const companyFilter = employeeCompanyFilter(sessionUser.role, sessionUser.company);
   if (companyFilter.company && target.company !== companyFilter.company) {
     return NextResponse.json({ error: "Employee not found" }, { status: 404 });
   }

@@ -1,4 +1,4 @@
-import { getEmployeeBusinessWhere } from "@/lib/business-server";
+import { employeeCompanyFilter } from "@/lib/people-access";
 import { requireEmployeeManager } from "@/lib/auth-helpers";
 import { prisma } from "@/lib/prisma";
 import Link from "next/link";
@@ -128,7 +128,9 @@ export default async function AdminEmployeesPage({
     progress?: string;
   }>;
 }) {
-  await requireEmployeeManager();
+  const session = await requireEmployeeManager();
+  const isCorporate = session.user.company === "CORPORATE";
+  const peoplePath = isCorporate ? "/admin/people" : "/admin/employees";
 
   const sp = await searchParams;
   const tab: Tab = sp.status === "terminated" ? "terminated" : "active";
@@ -142,7 +144,7 @@ export default async function AdminEmployeesPage({
       ? { terminatedAt: { not: null } }
       : { terminatedAt: null };
 
-  const companyWhere = await getEmployeeBusinessWhere();
+  const companyWhere = employeeCompanyFilter(session.user.role, session.user.company);
 
   const where: Prisma.UserWhereInput = {
     ...companyWhere,
@@ -377,19 +379,19 @@ export default async function AdminEmployeesPage({
           <p className="pp-sub">
             {tab === "terminated"
               ? "Past employees — records preserved for retention."
-              : "Track training progress for this business and shared corporate staff."}
+              : isCorporate ? "Manage employees across Pet Resort, Mobile Grooming, and Corporate." : "Track training progress for employees in this business."}
           </p>
         </div>
-        {tab === "active" && (
+        {tab === "active" && isCorporate && (
           <div className="flex flex-wrap items-start gap-3">
-            <Link href="/admin/employees/new" className="pp-btn pp-btn-primary">
+            <Link href={`${peoplePath}/new`} className="pp-btn pp-btn-primary">
               + Add Employee
             </Link>
           </div>
         )}
       </div>
 
-      <AdminPeopleNav active="employees" />
+      <AdminPeopleNav active="employees" corporate={isCorporate} />
 
       {/* KPI strip — only on active tab */}
       {tab === "active" && (
@@ -438,13 +440,13 @@ export default async function AdminEmployeesPage({
       {/* Tabs */}
       <div className="pp-tabs">
         <Link
-          href="/admin/employees"
+          href={peoplePath}
           className={`pp-tab ${tab === "active" ? "is-on" : ""}`}
         >
           Active <span className="pp-tab-count">{activeCount}</span>
         </Link>
         <Link
-          href="/admin/employees?status=terminated"
+          href={`${peoplePath}?status=terminated`}
           className={`pp-tab ${tab === "terminated" ? "is-on" : ""}`}
         >
           Past Employees <span className="pp-tab-count">{pastCount}</span>
@@ -453,6 +455,7 @@ export default async function AdminEmployeesPage({
 
       {/* Toolbar */}
       <EmployeeFilters
+        peoplePath={peoplePath}
         tab={tab}
         q={q}
         jobTitle={jobTitleParam}
@@ -493,7 +496,7 @@ export default async function AdminEmployeesPage({
               <div className="pp-rcol pp-rcol-name">
                 <div className="pp-name-line">
                   <Link
-                    href={`/admin/employees/${emp.id}`}
+                    href={`${peoplePath}/${emp.id}`}
                     className="pp-name pp-name-link"
                   >
                     {employeeDisplayName(emp)}
@@ -585,7 +588,7 @@ export default async function AdminEmployeesPage({
               </div>
               <div className="pp-rcol" style={{ textAlign: "right" }}>
                 <Link
-                  href={`/admin/employees/${emp.id}`}
+                  href={`${peoplePath}/${emp.id}`}
                   className="pp-row-link"
                 >
                   View →

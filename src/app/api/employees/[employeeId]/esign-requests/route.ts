@@ -1,6 +1,7 @@
+import { employeeCompanyFilter } from "@/lib/people-access";
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { getSession, getCompanyFilter, isManagerOrAbove } from "@/lib/auth-helpers";
+import { getSession, isManagerOrAbove } from "@/lib/auth-helpers";
 import { fileExists, parseDriveFileId } from "@/lib/drive";
 import { Company, Role } from "@prisma/client";
 
@@ -29,7 +30,7 @@ async function loadEmployeeForCaller(
   });
   if (!employee) return null;
 
-  const companyFilter = getCompanyFilter(callerRole, callerCompany);
+  const companyFilter = employeeCompanyFilter(callerRole, callerCompany);
   if (companyFilter.company && employee.company !== companyFilter.company) {
     return null;
   }

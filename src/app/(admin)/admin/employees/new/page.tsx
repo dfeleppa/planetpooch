@@ -1,4 +1,7 @@
-import { requireEmployeeManager, getCompanyFilter } from "@/lib/auth-helpers";
+import { employeeCompanyFilter } from "@/lib/people-access";
+import { redirect } from "next/navigation";
+import { canManageEmployeeLifecycle } from "@/lib/people-access";
+import { requireEmployeeManager } from "@/lib/auth-helpers";
 import { NewEmployeeForm } from "./NewEmployeeForm";
 import Link from "next/link";
 import { Company, Role } from "@prisma/client";
@@ -16,12 +19,13 @@ function addTitle(
 
 export default async function NewEmployeePage() {
   const session = await requireEmployeeManager();
+  if (!canManageEmployeeLifecycle(session.user)) redirect("/admin/employees");
   const user = session.user as {
     role: Role;
     company: Company;
     jobTitle: string | null;
   };
-  const companyFilter = getCompanyFilter(user.role, user.company, user.jobTitle);
+  const companyFilter = employeeCompanyFilter(user.role, user.company, user.jobTitle);
   const positionWhere = companyFilter.company
     ? { OR: [{ company: companyFilter.company }, { company: null }] }
     : {};
@@ -54,7 +58,7 @@ export default async function NewEmployeePage() {
     <div className="w-full">
       <div className="mb-6">
         <Link
-          href="/admin/employees"
+          href="/admin/people"
           className="text-sm text-gray-500 hover:text-gray-700"
         >
           ← Back to employees

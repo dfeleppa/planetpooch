@@ -1,7 +1,7 @@
+import { canManageEmployeeLifecycle } from "@/lib/people-access";
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getSession, isSuperAdmin } from "@/lib/auth-helpers";
-import { Role } from "@prisma/client";
 
 /**
  * POST — reactivate a terminated employee. Clears `terminatedAt`,
@@ -16,6 +16,9 @@ export async function POST(
   { params }: { params: Promise<{ employeeId: string }> }
 ) {
   const session = await getSession();
+  if (!canManageEmployeeLifecycle(session?.user)) {
+    return NextResponse.json({ error: "Only Corporate People can add or remove employees" }, { status: 403 });
+  }
   if (!session?.user || !isSuperAdmin(session.user.role)) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }

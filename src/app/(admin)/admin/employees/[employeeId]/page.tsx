@@ -1,4 +1,5 @@
-import { requireEmployeeManager, getCompanyFilter } from "@/lib/auth-helpers";
+import { employeeCompanyFilter } from "@/lib/people-access";
+import { requireEmployeeManager } from "@/lib/auth-helpers";
 import { prisma } from "@/lib/prisma";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -45,7 +46,7 @@ export default async function EmployeeDetailPage({ params }: { params: Promise<{
     company: Company;
     jobTitle: string | null;
   };
-  const companyFilter = getCompanyFilter(
+  const companyFilter = employeeCompanyFilter(
     sessionUser.role,
     sessionUser.company,
     sessionUser.jobTitle
@@ -261,7 +262,7 @@ export default async function EmployeeDetailPage({ params }: { params: Promise<{
   return (
     <div>
       <div className="flex items-center gap-2 text-sm text-gray-500 mb-4">
-        <Link href="/admin/employees" className="hover:text-blue-600">Employees</Link>
+        <Link href={sessionUser.company === "CORPORATE" ? "/admin/people" : "/admin/employees"} className="hover:text-blue-600">Employees</Link>
         <span>/</span>
         <span className="text-gray-900">{employee.name}</span>
       </div>
@@ -305,7 +306,7 @@ export default async function EmployeeDetailPage({ params }: { params: Promise<{
             phone: employee.phone,
             hireDate: employee.hireDate ? employee.hireDate.toISOString() : null,
           }}
-          canEditCompany={!callerIsScopedTier}
+          canEditCompany={!callerIsScopedTier && sessionUser.company === "CORPORATE"}
           canAssignSuperAdmin={sessionUser.role === "SUPER_ADMIN"}
           canEditRole={sessionUser.role === "SUPER_ADMIN"}
           jobTitleOptions={jobTitleOptions}
@@ -439,7 +440,7 @@ export default async function EmployeeDetailPage({ params }: { params: Promise<{
         </CardContent>
       </Card>
 
-      <div className="mt-6">
+      {sessionUser.company === "CORPORATE" && <div className="mt-6">
         <DangerZoneCard
           employeeId={employee.id}
           employeeName={employee.name}
@@ -447,7 +448,7 @@ export default async function EmployeeDetailPage({ params }: { params: Promise<{
           isSuperAdmin={sessionUser.role === "SUPER_ADMIN"}
           canEndEmployment={true}
         />
-      </div>
+      </div>}
     </div>
   );
 }

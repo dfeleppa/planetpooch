@@ -102,7 +102,7 @@ export function NewEmployeeForm({
     currentRole === "SUPER_ADMIN" || currentRole === "ADMIN";
   const isManager = currentRole === "MANAGER";
   // Scoped managers are locked to their own company.
-  const isScopedTier = isManager;
+  const isScopedTier = isManager && currentCompany !== "CORPORATE";
 
   const titleOptions = Array.from(
     new Set([...(jobTitleOptions[company] ?? []), ...DEFAULT_JOB_TITLES[company]])
@@ -202,7 +202,7 @@ export function NewEmployeeForm({
         const data = await res.json().catch(() => ({}));
         throw new Error(data.error || "Failed to reactivate");
       }
-      router.push(`/admin/employees/${terminatedMatch.id}`);
+      router.push(`/admin/people/${terminatedMatch.id}`);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to reactivate");
       setReactivating(false);
@@ -245,10 +245,10 @@ export function NewEmployeeForm({
           )}
 
           <div className="flex gap-3 pt-2">
-            <Link href="/admin/employees">
+            <Link href="/admin/people">
               <Button type="button">Back to employees</Button>
             </Link>
-            <Link href={`/admin/employees/${result.user.id}`}>
+            <Link href={`/admin/people/${result.user.id}`}>
               <Button type="button" variant="secondary">View employee</Button>
             </Link>
             <Button type="button" variant="secondary" onClick={resetForm}>

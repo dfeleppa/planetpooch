@@ -19,6 +19,7 @@ interface ProgressCounts {
 }
 
 interface Props {
+  peoplePath?: string;
   tab: Tab;
   q: string;
   jobTitle: string;
@@ -59,7 +60,7 @@ export function EmployeeFilters(props: Props) {
     if (next.sort && next.sort !== props.defaultSort) params.set("sort", next.sort);
     if (next.progress !== "all") params.set("progress", next.progress);
     startTransition(() => {
-      router.push(`/admin/employees?${params.toString()}`);
+      router.push(`${props.peoplePath ?? "/admin/employees"}?${params.toString()}`);
     });
   }
 
@@ -101,7 +102,7 @@ export function EmployeeFilters(props: Props) {
   }
 
   const resetHref =
-    props.tab === "terminated" ? "/admin/employees?status=terminated" : "/admin/employees";
+    props.tab === "terminated" ? `${props.peoplePath ?? "/admin/employees"}?status=terminated` : (props.peoplePath ?? "/admin/employees");
 
   const showProgressChips = props.tab === "active";
 

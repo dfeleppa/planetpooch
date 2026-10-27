@@ -1,6 +1,8 @@
+import { canManageEmployeeLifecycle } from "@/lib/people-access";
+import { employeeCompanyFilter } from "@/lib/people-access";
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { getSession, getCompanyFilter, hasEmployeeManagementAccess } from "@/lib/auth-helpers";
+import { getSession, hasEmployeeManagementAccess } from "@/lib/auth-helpers";
 import { createEmployeeFolder } from "@/lib/drive";
 import { isValidDayOfWeek, isValidTimeSlot } from "@/lib/availability";
 import { Company, DayOfWeek, Role } from "@prisma/client";
@@ -17,7 +19,7 @@ export async function GET(req: NextRequest) {
     company: Company | null;
     jobTitle: string | null;
   };
-  const companyFilter = getCompanyFilter(user.role, user.company, user.jobTitle);
+  const companyFilter = employeeCompanyFilter(user.role, user.company, user.jobTitle);
   // MANAGER is scoped and cannot request the `all` status, which mixes active
   // and terminated employees across every company.
   const isScopedTier = user.role === "MANAGER";
@@ -121,6 +123,9 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   const session = await getSession();
+  if (!canManageEmployeeLifecycle(session?.user)) {
+    return NextResponse.json({ error: "Only Corporate People can add or remove employees" }, { status: 403 });
+  }
   if (!session?.user || !hasEmployeeManagementAccess(session.user.role, session.user.jobTitle)) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
@@ -209,7 +214,7 @@ export async function POST(req: NextRequest) {
       company: Company;
       jobTitle: string | null;
     };
-    const callerIsScopedTier = sessionUser.role === "MANAGER";
+    const callerIsScopedTier = sessionUser.role === "MANAGER" && sessionUser.company !== "CORPORATE";
 
     // Scoped MANAGER users can only create employees in their own company.
     // SUPER_ADMIN must pick one of the three companies — there

@@ -1,6 +1,7 @@
+import { employeeCompanyFilter } from "@/lib/people-access";
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { getSession, getCompanyFilter, isManagerOrAbove } from "@/lib/auth-helpers";
+import { getSession, isManagerOrAbove } from "@/lib/auth-helpers";
 import { createEmployeeFolder, getFileWebLink } from "@/lib/drive";
 import { Company, Role } from "@prisma/client";
 
@@ -23,7 +24,7 @@ export async function POST(
   }
 
   const sessionUser = session.user as { role: Role; company: Company | null };
-  const companyFilter = getCompanyFilter(sessionUser.role, sessionUser.company);
+  const companyFilter = employeeCompanyFilter(sessionUser.role, sessionUser.company);
   const { employeeId } = await params;
 
   const employee = await prisma.user.findUnique({

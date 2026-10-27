@@ -65,7 +65,7 @@ const modulePaths = [
 ];
 
 function sidebarIcon(item: NavItem) {
-  if (item.href === "/admin/employees") {
+  if (item.href === "/admin/employees" || item.href === "/admin/people") {
     return (
       <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
         <circle cx="9" cy="8" r="3" />
@@ -159,6 +159,7 @@ export function Sidebar() {
   const isManagerOrAbove = isSuperAdmin || isManager;
   const canManageModules = isSuperAdmin || jobTitle === "CMO";
   const corporateNav: NavItem[] = [
+    ...(isManagerOrAbove ? [{ href: "/admin/people", label: "People", icon: "" }] : []),
     ...(isSuperAdmin
       ? [
           { href: "/admin/dashboard", label: "Dashboard", icon: "" },
@@ -366,7 +367,7 @@ export function Sidebar() {
               ...companyOperations,
               ...(showGroomingInventory && company.company === "GROOMING"
                 ? [{ href: "/maintenance/inventory", label: "Inventory", icon: "▤" }] : []),
-              ...(isAdminNav ? [...nav, ...(!canSeeCorporate ? [modulesNavItem] : [])] : []),
+              ...(isAdminNav ? [...nav.filter((item) => !canSeeCorporate || item.href !== "/admin/employees"), ...(!canSeeCorporate ? [modulesNavItem] : [])] : []),
             ];
             return (
               <section key={company.company} aria-label={company.label}>

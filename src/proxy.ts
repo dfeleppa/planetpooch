@@ -48,6 +48,17 @@ export async function proxy(req: NextRequest) {
     return NextResponse.redirect(loginUrl);
   }
 
+  if (token.company === "CORPORATE" && (pathname === "/admin/employees" || pathname.startsWith("/admin/employees/"))) {
+    const target = req.nextUrl.clone();
+    target.pathname = pathname.replace("/admin/employees", "/admin/people");
+    target.searchParams.delete("company");
+    return NextResponse.redirect(target);
+  }
+
+  if ((pathname === "/admin/people" || pathname.startsWith("/admin/people/")) && token.company !== "CORPORATE") {
+    return NextResponse.redirect(new URL("/admin/employees", req.url));
+  }
+
   const role = token.role as string;
   const jobTitle = (token.jobTitle as string | null | undefined) ?? null;
   const isManagerOrAbove =

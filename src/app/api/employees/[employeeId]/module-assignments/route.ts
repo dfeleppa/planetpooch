@@ -1,9 +1,9 @@
+import { employeeCompanyFilter } from "@/lib/people-access";
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import {
   getSession,
   hasEmployeeManagementAccess,
-  getCompanyFilter,
 } from "@/lib/auth-helpers";
 import { Company, Role } from "@prisma/client";
 import { getVisibleModuleIdsForUser } from "@/lib/module-visibility";
@@ -18,7 +18,7 @@ async function loadEmployeeOrForbidden(employeeId: string) {
     company: Company;
     jobTitle: string | null;
   };
-  const filter = getCompanyFilter(
+  const filter = employeeCompanyFilter(
     sessionUser.role,
     sessionUser.company,
     sessionUser.jobTitle

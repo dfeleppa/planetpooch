@@ -1,7 +1,9 @@
+import { canManageEmployeeLifecycle } from "@/lib/people-access";
+import { employeeCompanyFilter } from "@/lib/people-access";
 import { NextRequest, NextResponse } from "next/server";
 import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
-import { getSession, getCompanyFilter, hasEmployeeManagementAccess, isSuperAdmin } from "@/lib/auth-helpers";
+import { getSession, hasEmployeeManagementAccess, isSuperAdmin } from "@/lib/auth-helpers";
 import { Company, DayOfWeek, Role } from "@prisma/client";
 import { getVisibleModuleIdsForUser } from "@/lib/module-visibility";
 import { isValidDayOfWeek, isValidTimeSlot } from "@/lib/availability";
@@ -17,7 +19,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ empl
     company: Company | null;
     jobTitle: string | null;
   };
-  const companyFilter = getCompanyFilter(
+  const companyFilter = employeeCompanyFilter(
     sessionUser.role,
     sessionUser.company,
     sessionUser.jobTitle
@@ -140,7 +142,7 @@ export async function PATCH(
     company: Company | null;
     jobTitle: string | null;
   };
-  const companyFilter = getCompanyFilter(
+  const companyFilter = employeeCompanyFilter(
     sessionUser.role,
     sessionUser.company,
     sessionUser.jobTitle
@@ -259,6 +261,9 @@ export async function PATCH(
     if ("hireDate" in body) data.hireDate = body.hireDate ? new Date(body.hireDate) : null;
     if ("ssCardNotNeeded" in body) data.ssCardNotNeeded = !!body.ssCardNotNeeded;
 
+    if ("company" in body && body.company !== target.company && !canManageEmployeeLifecycle(session.user)) {
+      return NextResponse.json({ error: "Only Corporate People can transfer employees" }, { status: 403 });
+    }
     if ("company" in body && !callerIsScopedTier) {
       // Scoped MANAGER users cannot change company. SUPER_ADMIN
       // must pick one of the three valid Company values — null is no longer
@@ -351,6 +356,9 @@ export async function DELETE(
   { params }: { params: Promise<{ employeeId: string }> }
 ) {
   const session = await getSession();
+  if (!canManageEmployeeLifecycle(session?.user)) {
+    return NextResponse.json({ error: "Only Corporate People can add or remove employees" }, { status: 403 });
+  }
   if (!session?.user || !isSuperAdmin(session.user.role)) {
     return NextResponse.json(
       { error: "Only Super Admins can permanently delete employees" },
