@@ -151,10 +151,10 @@ export function Sidebar() {
       ? [
           { href: "/admin/dashboard", label: "Dashboard", icon: "" },
           ...marketingNav,
-          ...(isKnowledgeAccount ? [{ href: "/admin/knowledge", label: "Knowledge library", icon: "✦" }] : []),
         ]
       : []),
-    ...(isManagerOrAbove ? [{ href: "/admin/org-chart", label: "Org Chart", icon: "" }, ...businessFinanceNav] : []),
+    ...(isManagerOrAbove ? [...businessFinanceNav, { href: "/admin/org-chart", label: "Org Chart", icon: "" }] : []),
+    ...(isSuperAdmin && isKnowledgeAccount ? [{ href: "/admin/knowledge", label: "Knowledge library", icon: "✦" }] : []),
   ];
   const showGroomingInventory = !isManagerOrAbove && canEditGroomingCounts(session?.user);
   const hasMarketingAccess =
