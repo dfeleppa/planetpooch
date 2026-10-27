@@ -9,7 +9,7 @@ import { Card, CardContent } from "@/components/ui/card";
 
 function LoginForm() {
   const searchParams = useSearchParams();
-  const callbackUrl = searchParams.get("callbackUrl") || "/dashboard";
+  const callbackUrl = searchParams.get("callbackUrl") || "/";
   const [providers, setProviders] = useState<string[] | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
