@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { AvailabilityEditor, type AvailabilityEntry } from "@/components/AvailabilityEditor";
 import { OAuthInviteButton } from "../OAuthInviteButton";
 
-type Role = "SUPER_ADMIN" | "MANAGER" | "EMPLOYEE" | "MARKETING" | "ADMIN";
+type Role = "SUPER_ADMIN" | "MANAGER" | "EMPLOYEE" | "MARKETING" | "ADMIN" | "FRONT_DESK";
 type Company = "GROOMING" | "RESORT" | "CORPORATE";
 
 interface Props {

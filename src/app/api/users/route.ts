@@ -9,7 +9,7 @@ export async function GET() {
   // Pickers (assignees, manager selects, etc.) should never offer terminated
   // users as candidates.
   const users = await prisma.user.findMany({
-    where: activeUserWhere(),
+    where: { ...activeUserWhere(), role: { not: "FRONT_DESK" } },
     select: { id: true, name: true, email: true },
     orderBy: { name: "asc" },
   });

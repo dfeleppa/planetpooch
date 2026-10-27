@@ -11,7 +11,7 @@ export async function getAdminDashboard() {
   const business = await getActiveBusiness();
   const now = new Date();
   const periods = dashboardPeriods(business.company, now);
-  const employeeWhere = { ...await getEmployeeBusinessWhere(), ...activeUserWhere() };
+  const employeeWhere = { ...await getEmployeeBusinessWhere(), ...activeUserWhere(), role: { not: "FRONT_DESK" as const } };
   const openTasksWhere = {
     company: business.company,
     status: { in: ["PENDING", "IN_PROGRESS"] as ("PENDING" | "IN_PROGRESS")[] },
@@ -94,7 +94,7 @@ export async function getAdminDashboard() {
     (async () => {
       const [activeCount, companyCount, neverLoggedInCount] = await Promise.all([
         prisma.user.count({ where: employeeWhere }),
-        prisma.user.count({ where: { ...activeUserWhere(), company: business.company } }),
+        prisma.user.count({ where: { ...activeUserWhere(), role: { not: "FRONT_DESK" }, company: business.company } }),
         prisma.user.count({ where: { ...employeeWhere, lastLoginAt: null } }),
       ]);
       return { activeCount, companyCount, corporateCount: activeCount - companyCount, neverLoggedInCount };

@@ -1,3 +1,4 @@
+import { frontDeskCompanyWhere } from "@/lib/front-desk-access";
 import { getSession, isManagerOrAbove } from "@/lib/auth-helpers";
 import { prisma } from "@/lib/prisma";
 import { NextRequest, NextResponse } from "next/server";
@@ -15,7 +16,7 @@ export async function GET(req: NextRequest) {
     : null;
 
   const categories = await prisma.inventoryCategory.findMany({
-    where: company ? { company } : {},
+    where: { ...(company ? { company } : {}), ...frontDeskCompanyWhere(session.user) },
     orderBy: { name: "asc" },
   });
 
@@ -48,15 +49,15 @@ export async function POST(req: NextRequest) {
     });
 
     return NextResponse.json(category);
-  } catch (error: any) {
-    if (error.code === "P2002") {
+  } catch (error: unknown) {
+    if (error && typeof error === "object" && "code" in error && error.code === "P2002") {
       return NextResponse.json(
         { error: "Category with this name already exists for this company" },
         { status: 400 }
       );
     }
     return NextResponse.json(
-      { error: error.message || "Failed to create category" },
+      { error: error instanceof Error ? error.message : "Failed to create category" },
       { status: 500 }
     );
   }

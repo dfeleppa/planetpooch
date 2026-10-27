@@ -36,7 +36,7 @@ export async function GET() {
       },
     }),
     prisma.user.findMany({
-      where: { ...companyFilter, terminatedAt: null },
+      where: { ...companyFilter, role: { not: "FRONT_DESK" }, terminatedAt: null },
       orderBy: [{ company: "asc" }, { name: "asc" }],
       select: {
         id: true,

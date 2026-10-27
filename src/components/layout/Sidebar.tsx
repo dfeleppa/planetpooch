@@ -428,7 +428,7 @@ export function Sidebar() {
               </div>
             </>
           )}
-          {!isAdminNav && (
+          {!isAdminNav && role !== "FRONT_DESK" && (
             <div className="flex flex-col gap-px">
               {employeeNav.map((item) => (
                 <Link key={item.href} href={item.href} title={isCollapsed ? item.label : undefined}

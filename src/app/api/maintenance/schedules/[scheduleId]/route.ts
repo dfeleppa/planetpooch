@@ -1,3 +1,4 @@
+import { frontDeskCompanyWhere } from "@/lib/front-desk-access";
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getSession, isManagerOrAbove } from "@/lib/auth-helpers";
@@ -13,7 +14,7 @@ export async function GET(
   const { scheduleId } = await params;
 
   const schedule = await prisma.maintenanceSchedule.findUnique({
-    where: { id: scheduleId },
+    where: { id: scheduleId, ...frontDeskCompanyWhere(session.user) },
     include: {
       requirements: { include: { inventoryItem: true } },
       tasks: { orderBy: { dueDate: "desc" }, take: 20 },
@@ -42,7 +43,7 @@ export async function PUT(
 
   const schedule = await prisma.$transaction(async (tx) => {
     const updated = await tx.maintenanceSchedule.update({
-      where: { id: scheduleId },
+      where: { id: scheduleId, ...frontDeskCompanyWhere(session.user) },
       data: {
         ...(title !== undefined && { title }),
         ...(description !== undefined && { description }),

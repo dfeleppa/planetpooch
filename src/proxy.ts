@@ -3,6 +3,7 @@ import { getToken } from "next-auth/jwt";
 import type { NextRequest } from "next/server";
 import { businessCookieName, businessFor, resolveBusiness, sidebarBusiness } from "@/lib/business";
 import { isKnowledgeOwner } from "@/lib/knowledge-owner";
+import { FRONT_DESK_HOME, frontDeskRouteAllowed, isFrontDesk } from "@/lib/front-desk-access";
 
 export async function proxy(req: NextRequest) {
   const { pathname } = req.nextUrl;
@@ -40,6 +41,19 @@ export async function proxy(req: NextRequest) {
     secret: process.env.NEXTAUTH_SECRET,
     secureCookie: !!process.env.VERCEL,
   });
+
+  // Existing API handlers retain their own authentication (including public webhooks).
+  // A signed-in front desk account is additionally restricted to this allowlist.
+  if (pathname.startsWith("/api/")) {
+    if (isFrontDesk(token) && !frontDeskRouteAllowed(pathname, req.method)) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
+    return NextResponse.next();
+  }
+
+  if (isFrontDesk(token) && !frontDeskRouteAllowed(pathname, req.method)) {
+    return NextResponse.redirect(new URL(FRONT_DESK_HOME, req.url));
+  }
 
   // Not authenticated — redirect to login
   if (!token) {
@@ -133,6 +147,7 @@ export async function proxy(req: NextRequest) {
 
 export const config = {
   matcher: [
+    "/api/:path*",
     "/dashboard/:path*",
     "/career/:path*",
     "/modules/:path*",

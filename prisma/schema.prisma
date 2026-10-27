@@ -83,6 +83,7 @@ datasource db {
 }
 
 enum Role {
+  FRONT_DESK // Non-employee shared Pet Resort operations account
   SUPER_ADMIN
   MANAGER
   EMPLOYEE

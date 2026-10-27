@@ -1,3 +1,4 @@
+import { frontDeskCompanyWhere } from "@/lib/front-desk-access";
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/auth-helpers";
@@ -12,7 +13,7 @@ export async function GET(
   const { taskId } = await params;
 
   const task = await prisma.maintenanceTask.findUnique({
-    where: { id: taskId },
+    where: { id: taskId, ...frontDeskCompanyWhere(session.user) },
     include: {
       schedule: {
         include: {
@@ -42,7 +43,7 @@ export async function PUT(
   const { status, assignedToId, notes } = body;
 
   const task = await prisma.maintenanceTask.update({
-    where: { id: taskId },
+    where: { id: taskId, ...frontDeskCompanyWhere(session.user) },
     data: {
       ...(status !== undefined && { status }),
       ...(assignedToId !== undefined && { assignedToId }),

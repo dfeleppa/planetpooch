@@ -29,6 +29,7 @@ export default async function SchedulingPage() {
   const employees = await prisma.user.findMany({
     where: {
       terminatedAt: null,
+      role: { not: "FRONT_DESK" },
       AND: [{ company: business.company }, companyFilter],
     },
     orderBy: [{ firstName: "asc" }, { lastName: "asc" }],

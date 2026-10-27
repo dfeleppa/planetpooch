@@ -1,6 +1,6 @@
 import { BUSINESSES, type BusinessCompany } from "./business";
 
-type SidebarUser = { id?: string | null; company?: string | null } | null | undefined;
+type SidebarUser = { id?: string | null; company?: string | null; role?: string | null } | null | undefined;
 
 // Verified employee account IDs; names and job titles do not grant access.
 const PET_RESORT_USERS = new Set([
@@ -10,10 +10,12 @@ const PET_RESORT_USERS = new Set([
 const STACEY_CONTI_USER_ID = "cmobz2cwb0007k0041qnobqcz";
 
 export function canSeeCorporateSidebar(user: SidebarUser): boolean {
+  if (user?.role === "FRONT_DESK") return false;
   return user?.company === "CORPORATE";
 }
 
 export function canSeeBusinessSidebar(user: SidebarUser, company: BusinessCompany): boolean {
+  if (user?.role === "FRONT_DESK") return company === "RESORT";
   if (canSeeCorporateSidebar(user)) return true;
   if (!user?.id) return false;
   return company === "RESORT"

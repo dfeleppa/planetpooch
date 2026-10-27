@@ -82,7 +82,7 @@ export default async function InventoryPage({
             canManage={canManage}
             canEditCounts={canEditCounts}
           />
-        ) : <InventoryTable items={items} />
+        ) : <InventoryTable items={items} readOnly={user?.role === "FRONT_DESK"} />
       )}
     </div>
   );

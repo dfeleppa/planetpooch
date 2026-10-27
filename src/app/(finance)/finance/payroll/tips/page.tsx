@@ -10,7 +10,7 @@ export default async function ResortTipsPage() {
   await requireSuperAdmin();
   if ((await getActiveBusiness()).company !== "RESORT") redirect("/finance/payroll/mobile-grooming");
   const [employees, runs] = await Promise.all([
-    prisma.user.findMany({ where: { company: Company.RESORT, terminatedAt: null }, select: { id: true, name: true }, orderBy: { name: "asc" } }),
+    prisma.user.findMany({ where: { company: Company.RESORT, role: { not: "FRONT_DESK" }, terminatedAt: null }, select: { id: true, name: true }, orderBy: { name: "asc" } }),
     prisma.financeResortTipRun.findMany({ include: { allocations: { orderBy: { employeeName: "asc" } } }, orderBy: [{ payDate: "desc" }, { createdAt: "desc" }] }),
   ]);
   return <div className="space-y-5">

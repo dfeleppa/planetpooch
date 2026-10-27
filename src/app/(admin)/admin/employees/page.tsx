@@ -147,6 +147,7 @@ export default async function AdminEmployeesPage({
   const companyWhere = employeeCompanyFilter(session.user.role, session.user.company);
 
   const where: Prisma.UserWhereInput = {
+    role: { not: "FRONT_DESK" },
     ...companyWhere,
     ...terminationFilter,
     ...(jobTitleParam ? { jobTitle: jobTitleParam } : {}),
@@ -324,11 +325,11 @@ export default async function AdminEmployeesPage({
   }
 
   const pastCount = await prisma.user.count({
-    where: { ...companyWhere, terminatedAt: { not: null } },
+    where: { ...companyWhere, role: { not: "FRONT_DESK" }, terminatedAt: { not: null } },
   });
   const activeCount =
     tab === "active" ? kpiTotal : await prisma.user.count({
-      where: { ...companyWhere, terminatedAt: null },
+      where: { ...companyWhere, role: { not: "FRONT_DESK" }, terminatedAt: null },
     });
 
   const orgPositionWhere =

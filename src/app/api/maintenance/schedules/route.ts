@@ -1,3 +1,4 @@
+import { frontDeskCompanyWhere } from "@/lib/front-desk-access";
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getSession, isManagerOrAbove } from "@/lib/auth-helpers";
@@ -18,7 +19,7 @@ export async function GET(req: NextRequest) {
     : null;
 
   const schedules = await prisma.maintenanceSchedule.findMany({
-    where: company ? { company } : {},
+    where: { ...(company ? { company } : {}), ...frontDeskCompanyWhere(session.user) },
     orderBy: { nextDueDate: "asc" },
     include: {
       requirements: {

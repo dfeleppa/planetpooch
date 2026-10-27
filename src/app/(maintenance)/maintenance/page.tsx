@@ -6,9 +6,11 @@ import { getActiveBusiness } from "@/lib/business-server";
 import Link from "next/link";
 import { MaintenanceSubnav } from "@/components/maintenance/MaintenanceSubnav";
 import { redirect } from "next/navigation";
+import { isFrontDesk } from "@/lib/front-desk-access";
 
 export default async function MaintenanceDashboardPage() {
-  await requireAuth();
+  const session = await requireAuth();
+  const frontDesk = isFrontDesk(session.user);
 
   const active = (await getActiveBusiness()).company;
   if (active === "GROOMING") redirect("/maintenance/inventory?company=GROOMING");
@@ -203,7 +205,7 @@ export default async function MaintenanceDashboardPage() {
           </CardHeader>
           <CardContent className="pt-0">
             <div className="space-y-2">
-              <Link
+              {!frontDesk && <><Link
                 href={`/maintenance/schedules/new${qs}`}
                 className="block p-3 rounded-lg border border-gray-200 hover:bg-gray-50 transition-colors"
               >
@@ -216,7 +218,7 @@ export default async function MaintenanceDashboardPage() {
               >
                 <p className="text-sm font-medium text-gray-900">+ Add Inventory Item</p>
                 <p className="text-xs text-gray-500">Track a new supply or material</p>
-              </Link>
+              </Link></>}
               <Link
                 href={`/maintenance/tasks${qs}`}
                 className="block p-3 rounded-lg border border-gray-200 hover:bg-gray-50 transition-colors"

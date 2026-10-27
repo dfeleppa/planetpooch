@@ -29,6 +29,7 @@ export function businessFor(value: unknown): Business | undefined {
 }
 
 export function availableBusinesses(user: BusinessUser): readonly Business[] {
+  if (user.role === "FRONT_DESK") return [BUSINESSES[0]];
   const assigned = businessFor(user.company);
   if (assigned && (user.role === "MANAGER" || user.role === "EMPLOYEE") && user.jobTitle !== "CMO") {
     return [assigned];

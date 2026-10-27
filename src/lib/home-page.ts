@@ -5,8 +5,8 @@ const RESORT_DASHBOARD_USERS = new Set([
   "cmoc0283w000jjr04200pulk3",
 ]);
 
-export function homePageFor(user: { id?: string | null } | null | undefined): string {
-  return user?.id && RESORT_DASHBOARD_USERS.has(user.id)
+export function homePageFor(user: { id?: string | null; role?: string | null } | null | undefined): string {
+  return user?.role === "FRONT_DESK" || user?.id && RESORT_DASHBOARD_USERS.has(user.id)
     ? "/maintenance/checklists?company=RESORT"
     : "/dashboard";
 }

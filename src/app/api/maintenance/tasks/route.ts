@@ -1,3 +1,4 @@
+import { frontDeskCompanyWhere } from "@/lib/front-desk-access";
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/auth-helpers";
@@ -17,6 +18,7 @@ export async function GET(req: NextRequest) {
       ...(status && { status: status as never }),
       ...(assignedToId && { assignedToId }),
       ...(company && { company }),
+      ...frontDeskCompanyWhere(session.user),
     },
     orderBy: { dueDate: "asc" },
     include: {

@@ -45,6 +45,17 @@ function fixture() {
 }
 const profile = { email: "Person@Example.com", email_verified: true };
 
+test("non-employee front desk can connect Google but cannot connect Apple", async () => {
+  const google = fixture();
+  google.users[0].role = "FRONT_DESK";
+  assert.equal((await resolveOAuthUser(google.db, "google", "desk-google", profile))?.id, "existing");
+  assert.equal(google.identities[0].provider, "google");
+  const apple = fixture();
+  apple.users[0].role = "FRONT_DESK";
+  assert.equal(await resolveOAuthUser(apple.db, "apple", "desk-apple", profile), null);
+  assert.equal(apple.identities.length, 0);
+});
+
 test("requires an explicitly verified, real email for initial matching", () => {
   assert.equal(verifiedOAuthEmail(profile), "person@example.com");
   for (const email_verified of [false, "false", undefined, 1]) {

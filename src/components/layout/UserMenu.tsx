@@ -5,6 +5,7 @@ import { signOut, useSession } from "next-auth/react";
 import Image from "next/image";
 
 const ROLE_LABELS: Record<string, string> = {
+  FRONT_DESK: "Front Desk",
   SUPER_ADMIN: "Super Admin",
   MANAGER: "Manager",
   EMPLOYEE: "Employee",

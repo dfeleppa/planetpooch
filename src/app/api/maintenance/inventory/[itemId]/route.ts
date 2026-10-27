@@ -1,3 +1,4 @@
+import { frontDeskCompanyWhere } from "@/lib/front-desk-access";
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getSession, isManagerOrAbove } from "@/lib/auth-helpers";
@@ -12,7 +13,7 @@ export async function GET(
   const { itemId } = await params;
 
   const item = await prisma.inventoryItem.findUnique({
-    where: { id: itemId },
+    where: { id: itemId, ...frontDeskCompanyWhere(session.user) },
     include: {
       adjustments: {
         orderBy: { createdAt: "desc" },
@@ -58,7 +59,7 @@ export async function PUT(
   }
 
   const item = await prisma.inventoryItem.update({
-    where: { id: itemId },
+    where: { id: itemId, ...frontDeskCompanyWhere(session.user) },
     data: {
       ...(name !== undefined && { name }),
       ...(description !== undefined && { description }),

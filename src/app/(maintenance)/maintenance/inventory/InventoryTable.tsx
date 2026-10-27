@@ -17,7 +17,7 @@ interface InventoryRow {
   category: { name: string; color: string };
 }
 
-export function InventoryTable({ items }: { items: InventoryRow[] }) {
+export function InventoryTable({ items, readOnly = false }: { items: InventoryRow[]; readOnly?: boolean }) {
   const router = useRouter();
   const [editing, setEditing] = useState(false);
   const [quantities, setQuantities] = useState<Record<string, string>>(() =>
@@ -116,7 +116,7 @@ export function InventoryTable({ items }: { items: InventoryRow[] }) {
   return (
     <>
       <div className="mb-3 flex items-center justify-end gap-2">
-        {!editing ? (
+        {readOnly ? null : !editing ? (
           <Button variant="secondary" size="sm" onClick={startEditing}>
             Adjust Stock
           </Button>

@@ -42,6 +42,7 @@ export async function resolveOAuthUser(
       if (await tx.oAuthIdentity.count({ where: { userId: user.id } })) return null;
     }
     if (user.terminatedAt) return null;
+    if (user.role === "FRONT_DESK" && provider !== "google") return null;
     if (invited) {
       const consumed = await tx.user.updateMany({
         where: { id: invited.id, oauthInviteHash: hashLink(invite!), oauthInviteExpiresAt: { gt: new Date() }, terminatedAt: null },

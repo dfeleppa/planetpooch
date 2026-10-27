@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { AvailabilityEditor, type AvailabilityEntry } from "@/components/AvailabilityEditor";
 import { DAYS_OF_WEEK } from "@/lib/availability";
 
-type Role = "SUPER_ADMIN" | "MANAGER" | "EMPLOYEE" | "MARKETING" | "ADMIN";
+type Role = "SUPER_ADMIN" | "MANAGER" | "EMPLOYEE" | "MARKETING" | "ADMIN" | "FRONT_DESK";
 type Company = "GROOMING" | "RESORT" | "CORPORATE";
 
 interface Props {
