@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { BUSINESSES, availableBusinesses, businessCookieName, businessFor, businessSwitchPath, employeeBusinessWhere, resolveBusiness, isBusinessSwitchOriginAllowed } from "../src/lib/business";
+import { BUSINESSES, availableBusinesses, businessCookieName, businessFor, businessSwitchPath, employeeBusinessWhere, resolveBusiness, isBusinessSwitchOriginAllowed, isCompanySidebarPath, sidebarBusiness } from "../src/lib/business";
 
 test("switching accepts the public origin behind Next's internal host and rejects other origins", () => {
   assert.equal(isBusinessSwitchOriginAllowed("http://127.0.0.1:3210", "127.0.0.1:3210"), true);
@@ -12,6 +12,26 @@ test("switching accepts the public origin behind Next's internal host and reject
 });
 
 const admin = Object.freeze({ id: "admin", role: "SUPER_ADMIN", company: "CORPORATE" });
+
+test("Operations and HR sidebar links select their company while Corporate retains its preference", () => {
+  for (const path of ["/maintenance", "/maintenance/inventory/new", "/maintenance/vans/1", "/maintenance/checklists",
+    "/operations/daycare", "/admin", "/admin/employees", "/admin/employees/new", "/admin/scheduling",
+    "/admin/modules", "/admin/modules/id", "/admin/module-progress", "/admin/audit-log"]) {
+    assert.equal(isCompanySidebarPath(path), true);
+    for (const company of ["RESORT", "GROOMING"]) {
+      const selected = sidebarBusiness(new URL(`${path}?company=${company}`, "https://portal.invalid"));
+      assert.equal(selected?.company, company);
+      assert.equal(resolveBusiness(admin, selected?.company ?? "RESORT").company, company);
+      assert.equal(resolveBusiness({ id: "manager", role: "MANAGER", company: "RESORT" }, selected?.company).company, "RESORT");
+    }
+  }
+  for (const path of ["/admin/dashboard", "/admin/org-chart", "/admin/knowledge", "/finance", "/marketing", "/maintenance-other", "/admin/employees-other"]) {
+    assert.equal(isCompanySidebarPath(path), false);
+    assert.equal(sidebarBusiness(new URL(`${path}?company=GROOMING`, "https://portal.invalid")), undefined);
+  }
+  assert.equal(sidebarBusiness(new URL("https://portal.invalid/maintenance?company=CORPORATE")), undefined);
+  assert.equal(sidebarBusiness(new URL("https://portal.invalid/maintenance")), undefined);
+});
 
 test("the selector has exactly the existing two businesses and stable integration keys", () => {
   assert.deepEqual(BUSINESSES.map(({ company, key, moegoId }) => ({ company, key, moegoId })), [

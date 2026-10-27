@@ -7,6 +7,7 @@ import { useSession } from "next-auth/react";
 import { cn } from "@/lib/utils";
 import { useState, useEffect } from "react";
 import { useBusiness } from "@/components/business/BusinessProvider";
+import { availableBusinesses } from "@/lib/business";
 import { isKnowledgeOwner } from "@/lib/knowledge-owner";
 import { hasAskPoochAccess } from "@/lib/knowledge-access";
 import { canEditGroomingCounts } from "@/lib/grooming-inventory-access";
@@ -64,6 +65,15 @@ const modulePaths = [
 ];
 
 function sidebarIcon(item: NavItem) {
+  if (item.href === "/admin/employees") {
+    return (
+      <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+        <circle cx="9" cy="8" r="3" />
+        <path d="M3 19v-1a6 6 0 0 1 12 0v1H3Z" />
+        <path d="M17 11a3 3 0 1 0-1.2-5.75M17 14a5 5 0 0 1 4 5h-3" />
+      </svg>
+    );
+  }
   if (item.href === "/admin/org-chart") {
     return (
       <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
@@ -342,21 +352,40 @@ export function Sidebar() {
               </div>
             </>
           )}
-          {/* Business groups are intentionally empty until links are assigned. */}
-          {isSuperAdmin && !isCollapsed && (
-            <>
-              <section aria-label="Pet Resort">
-                <h2 className="px-2.5 pt-1 text-[10px] font-medium uppercase tracking-[0.08em] text-pp-ink-4">
-                  Pet Resort
-                </h2>
+          {session?.user && availableBusinesses(session.user).map((company) => {
+            const companyOperations = sharedNav.filter((item) => company.company === "RESORT"
+              ? item.href !== "/maintenance/vans"
+              : item.href === "/maintenance/vans" || item.href === "/maintenance");
+            const items = [
+              ...companyOperations,
+              ...(showGroomingInventory && company.company === "GROOMING"
+                ? [{ href: "/maintenance/inventory", label: "Inventory", icon: "▤" }] : []),
+              ...(isAdminNav ? nav : []),
+            ];
+            return (
+              <section key={company.company} aria-label={company.label}>
+                {!isCollapsed ? (
+                  <h2 className="mb-2 px-2.5 pt-1 text-[10px] font-medium uppercase tracking-[0.08em] text-pp-ink-4">{company.label}</h2>
+                ) : <div className="mx-1.5 mb-2 h-px bg-pp-line" />}
+                <div className="flex flex-col gap-px">
+                  {items.map((item) => {
+                    const active = business.company === company.company && isActive(item.href);
+                    return (
+                      // Full navigation resets company-specific forms and cached client state.
+                      <a key={item.href} href={`${item.href}?company=${company.company}`}
+                        title={isCollapsed ? `${company.label}: ${item.label}` : undefined}
+                        aria-label={`${company.label}: ${item.label}`}
+                        aria-current={active ? "page" : undefined} className={navItemClass(active)}>
+                        {activeRail(active)}
+                        <span className={cn("text-[14px] w-4 text-center flex-shrink-0", active ? "text-pp-accent" : "text-pp-ink-3")} aria-hidden="true">{sidebarIcon(item)}</span>
+                        {!isCollapsed && <span className="truncate">{item.label}</span>}
+                      </a>
+                    );
+                  })}
+                </div>
               </section>
-              <section aria-label="Mobile Grooming">
-                <h2 className="px-2.5 pt-1 text-[10px] font-medium uppercase tracking-[0.08em] text-pp-ink-4">
-                  Mobile Grooming
-                </h2>
-              </section>
-            </>
-          )}
+            );
+          })}
           {/* Marketing section — visible to MARKETING role and SUPER_ADMIN */}
           {hasMarketingAccess && !isSuperAdmin && (
             <>
@@ -383,61 +412,18 @@ export function Sidebar() {
               </div>
             </>
           )}
-          {/* Operations */}
-          {!isCollapsed ? (
-            <div className="px-2.5 pt-1 text-[10px] font-medium uppercase tracking-[0.08em] text-pp-ink-4">Operations</div>
-          ) : (
-            <div className="mx-1.5 h-px bg-pp-line" />
-          )}
-          <div className="-mt-2 flex flex-col gap-px">
-            {operationsNav.map((item) => {
-              const active = isActive(item.href);
-              return (
-                <Link key={item.href} href={item.href} title={isCollapsed ? item.label : undefined} className={navItemClass(active)}>
-                  {activeRail(active)}
-                  <span className={cn("text-[14px] w-4 text-center flex-shrink-0", active ? "text-pp-accent" : "text-pp-ink-3")}>
-                    {item.icon}
-                  </span>
+          {!isAdminNav && (
+            <div className="flex flex-col gap-px">
+              {employeeNav.map((item) => (
+                <Link key={item.href} href={item.href} title={isCollapsed ? item.label : undefined}
+                  aria-current={isActive(item.href) ? "page" : undefined} className={navItemClass(isActive(item.href))}>
+                  {activeRail(isActive(item.href))}
+                  <span className="text-[14px] w-4 text-center flex-shrink-0" aria-hidden="true">{sidebarIcon(item)}</span>
                   {!isCollapsed && <span className="truncate">{item.label}</span>}
                 </Link>
-              );
-            })}
-            {showGroomingInventory && (
-              <Link href="/maintenance/inventory?company=GROOMING" title={isCollapsed ? "Inventory" : undefined} className={navItemClass(pathname === "/maintenance/inventory")}>
-                {activeRail(pathname === "/maintenance/inventory")}
-                <span className="text-[14px] w-4 text-center flex-shrink-0" aria-hidden="true">▤</span>
-                {!isCollapsed && <span className="truncate">Inventory</span>}
-              </Link>
-            )}
-          </div>
-
-          {/* Human Resources — admin navs only (plain employee nav has no header) */}
-          {isAdminNav && !isCollapsed && (
-            <div className="px-2.5 pt-1 text-[10px] font-medium uppercase tracking-[0.08em] text-pp-ink-4">
-              Human Resources
+              ))}
             </div>
           )}
-          <div className={cn("flex flex-col gap-px", isAdminNav && !isCollapsed && "-mt-2")}>
-            {nav.map((item) => {
-              const active = isActive(item.href);
-              return (
-                <Link key={item.href} href={item.href} title={isCollapsed ? item.label : undefined} className={navItemClass(active)}>
-                  {activeRail(active)}
-                  <span className={cn("text-[14px] w-4 text-center flex-shrink-0", active ? "text-pp-accent" : "text-pp-ink-3")}>
-                    {item.href === "/admin/employees" ? (
-                      <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                        <circle cx="9" cy="8" r="3" />
-                        <path d="M3 19v-1a6 6 0 0 1 12 0v1H3Z" />
-                        <path d="M17 11a3 3 0 1 0-1.2-5.75M17 14a5 5 0 0 1 4 5h-3" />
-                      </svg>
-                    ) : sidebarIcon(item)}
-                  </span>
-                  {!isCollapsed && <span className="truncate">{item.label}</span>}
-                </Link>
-              );
-            })}
-          </div>
-
           {/* Manager/Admin: Employee View section */}
           {isManagerOrAbove && (
             <>

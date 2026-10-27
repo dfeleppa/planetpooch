@@ -8,6 +8,18 @@ export type Business = (typeof BUSINESSES)[number];
 export type BusinessCompany = Business["company"];
 export type BusinessUser = { id: string; role?: string; company?: string | null; jobTitle?: string | null };
 
+/** Operations and HR are opened from company-specific sidebar links. */
+export function isCompanySidebarPath(pathname: string): boolean {
+  return pathname === "/admin" || [
+    "/maintenance", "/operations", "/admin/employees", "/admin/scheduling",
+    "/admin/modules", "/admin/module-progress", "/admin/audit-log",
+  ].some((path) => pathname === path || pathname.startsWith(`${path}/`));
+}
+
+export function sidebarBusiness(url: URL): Business | undefined {
+  return isCompanySidebarPath(url.pathname) ? businessFor(url.searchParams.get("company")) : undefined;
+}
+
 export function businessFor(value: unknown): Business | undefined {
   return BUSINESSES.find((business) =>
     business.company === value || business.key === value || business.moegoId === value ||

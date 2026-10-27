@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { getToken } from "next-auth/jwt";
 import type { NextRequest } from "next/server";
-import { businessCookieName, businessFor, resolveBusiness } from "@/lib/business";
+import { businessCookieName, businessFor, resolveBusiness, sidebarBusiness } from "@/lib/business";
 import { isKnowledgeOwner } from "@/lib/knowledge-owner";
 
 export async function proxy(req: NextRequest) {
@@ -113,12 +113,15 @@ export async function proxy(req: NextRequest) {
   requestHeaders.set("x-portal-url", req.nextUrl.toString());
   const response = NextResponse.next({ request: { headers: requestHeaders } });
   const preferenceName = businessCookieName(token.id as string);
-  if (!req.cookies.has(preferenceName)) {
+  const selectedBusiness = sidebarBusiness(req.nextUrl);
+  // Prefetching a link must never change the user's company preference.
+  const isPrefetch = req.headers.has("next-router-prefetch") || req.headers.get("purpose") === "prefetch";
+  if (!isPrefetch && (!req.cookies.has(preferenceName) || selectedBusiness)) {
     const legacy = businessFor(req.nextUrl.searchParams.get("company"))
       ?? businessFor(req.nextUrl.searchParams.get("business"))
       ?? businessFor(req.nextUrl.searchParams.get("segment"))
       ?? (pathname.startsWith("/finance/payroll/mobile-grooming") ? businessFor("GROOMING") : undefined);
-    const business = resolveBusiness({ id: token.id as string, role, company: token.company, jobTitle }, legacy?.company);
+    const business = resolveBusiness({ id: token.id as string, role, company: token.company, jobTitle }, selectedBusiness?.company ?? legacy?.company);
     response.cookies.set(preferenceName, business.company, {
       httpOnly: true, sameSite: "lax", secure: req.nextUrl.protocol === "https:", path: "/", maxAge: 60 * 60 * 24 * 365,
     });
