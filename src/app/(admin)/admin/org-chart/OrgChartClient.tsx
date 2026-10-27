@@ -614,7 +614,7 @@ function CompanySection({
             No positions for this company yet. Click &quot;+ Add Position&quot;.
           </p>
         ) : (
-          <PanZoomViewport zoom={zoom} setZoom={setZoom}>
+          <PanZoomViewport zoom={zoom} setZoom={setZoom} centered={layout === "CHART"}>
           {layout === "LIST" ? (
           <div className="space-y-2">
             {roots.map((root) => (
@@ -999,7 +999,7 @@ function ChartNode({
           setDragOverId(null);
         }}
         onDrop={(e) => onDropOnPosition(e, node.id)}
-        className={`group relative w-48 px-3 py-2 rounded-lg border cursor-move transition-all ${cardBg} ${
+        className={`group relative w-52 shrink-0 px-3 py-2 rounded-lg border cursor-move transition-all ${cardBg} ${
           isDragging ? "opacity-40" : ""
         } ${isDragOver ? "ring-2 ring-blue-500 ring-offset-1" : ""}`}
       >
@@ -1034,16 +1034,15 @@ function ChartNode({
             🗑️
           </IconButton>
         </div>
+        {showNames && isExpanded && hasPeople && (
+          <div className="mt-2 flex flex-col items-center gap-1">
+            {people.map((user) => <EmployeeChip key={user.id} user={user} />)}
+          </div>
+        )}
       </div>
 
-      {hasExpandableContent && isExpanded && (
+      {children.length > 0 && isExpanded && (
         <ul>
-          {showNames &&
-            people.map((u) => (
-              <li key={`emp-${u.id}`}>
-                <EmployeeChip user={u} />
-              </li>
-            ))}
           {children.map((child) => (
             <ChartNode
               key={child.id}
@@ -1080,10 +1079,12 @@ function ChartNode({
 function PanZoomViewport({
   zoom,
   setZoom,
+  centered,
   children,
 }: {
   zoom: number;
   setZoom: (z: number | ((z: number) => number)) => void;
+  centered: boolean;
   children: React.ReactNode;
 }) {
   const [pan, setPan] = useState({ x: 0, y: 0 });
@@ -1130,9 +1131,12 @@ function PanZoomViewport({
     >
       <div
         style={{
-          transform: `translate(${pan.x}px, ${pan.y}px) scale(${zoom})`,
-          transformOrigin: "0 0",
+          position: "relative",
+          left: centered ? "50%" : 0,
+          transform: `${centered ? "translateX(-50%) " : ""}translate(${pan.x}px, ${pan.y}px) scale(${zoom})`,
+          transformOrigin: centered ? "top center" : "0 0",
           display: "inline-block",
+          width: centered ? "max-content" : undefined,
           minWidth: "100%",
         }}
       >
