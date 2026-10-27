@@ -14,6 +14,7 @@ export function BusinessSelector({ options }: { options: readonly Business[] }) 
     || pathname === "/cash-management" || pathname.startsWith("/cash-management/")
     || pathname === "/marketing"
     || pathname === "/admin/knowledge"
+    || pathname === "/admin/org-chart"
     || ["/marketing/ad-reporting", "/marketing/evaluate", "/marketing/performance", "/marketing/website-attribution"].some((path) => pathname === path || pathname.startsWith(`${path}/`))) return null;
 
   async function switchBusiness(company: string) {

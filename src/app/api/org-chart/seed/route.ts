@@ -38,7 +38,7 @@ export async function POST(req: Request) {
   const ceo = await prisma.orgPosition.create({
     data: { title: "CEO", company: null, order: 0 },
   });
-  await prisma.orgPosition.create({
+  const dos = await prisma.orgPosition.create({
     data: {
       title: "DOS",
       company: null,
@@ -47,22 +47,22 @@ export async function POST(req: Request) {
     },
   });
 
+  // Shared corporate chain sits above both divisions.
+  const cmo = await prisma.orgPosition.create({
+    data: {
+      title: "CMO",
+      company: null,
+      parentPositionId: dos.id,
+      order: 2,
+    },
+  });
   // Grooming
   const coo = await prisma.orgPosition.create({
     data: {
       title: "COO",
       company: Company.GROOMING,
-      parentPositionId: ceo.id,
+      parentPositionId: cmo.id,
       order: 0,
-    },
-  });
-  // CMO is cross-company (serves both Grooming and Resort)
-  await prisma.orgPosition.create({
-    data: {
-      title: "CMO",
-      company: null,
-      parentPositionId: ceo.id,
-      order: 2,
     },
   });
   await prisma.orgPosition.create({
@@ -73,7 +73,7 @@ export async function POST(req: Request) {
       order: 1,
     },
   });
-  // Office Staff reports to COO (CMO is marketing, not ops)
+  // Office Staff reports to the Grooming operations leader.
   await prisma.orgPosition.create({
     data: {
       title: "Office Staff",
@@ -88,7 +88,7 @@ export async function POST(req: Request) {
     data: {
       title: "Facility Manager",
       company: Company.RESORT,
-      parentPositionId: ceo.id,
+      parentPositionId: cmo.id,
       order: 0,
     },
   });

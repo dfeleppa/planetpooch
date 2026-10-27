@@ -1,5 +1,4 @@
-import { getActiveBusiness, getEmployeeBusinessWhere } from "@/lib/business-server";
-import { requireManager } from "@/lib/auth-helpers";
+import { getCompanyFilter, requireManager } from "@/lib/auth-helpers";
 import { prisma } from "@/lib/prisma";
 import { Company, Role } from "@prisma/client";
 import { OrgChartClient } from "./OrgChartClient";
@@ -7,8 +6,7 @@ import { OrgChartClient } from "./OrgChartClient";
 export default async function OrgChartPage() {
   const session = await requireManager();
   const sessionUser = session.user as { role: Role; company: Company | null };
-  const business = await getActiveBusiness();
-  const companyFilter = await getEmployeeBusinessWhere();
+  const companyFilter = getCompanyFilter(sessionUser.role, sessionUser.company);
 
   // MANAGERs see their own company's positions + cross-company leadership
   const positionWhere = companyFilter.company
@@ -42,7 +40,7 @@ export default async function OrgChartPage() {
     }),
   ]);
 
-  const canViewBothCompanies = false;
+  const canViewBothCompanies = !companyFilter.company;
   const isSuperAdmin =
     sessionUser.role === "SUPER_ADMIN" ||
     (sessionUser.role as string) === "ADMIN";
@@ -60,7 +58,7 @@ export default async function OrgChartPage() {
         initialPositions={positions}
         initialUsers={users}
         canViewBothCompanies={canViewBothCompanies}
-        lockedCompany={business.company}
+        lockedCompany={companyFilter.company ?? null}
         isSuperAdmin={isSuperAdmin}
       />
     </div>

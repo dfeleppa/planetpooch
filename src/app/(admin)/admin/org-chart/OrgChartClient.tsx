@@ -34,11 +34,9 @@ interface Props {
   isSuperAdmin: boolean;
 }
 
-type CompanyView = "BOTH" | "GROOMING" | "RESORT";
-
 const COMPANY_LABELS: Record<CompanyVal, string> = {
-  GROOMING: "Planet Pooch Grooming",
-  RESORT: "Planet Pooch Resort",
+  GROOMING: "Mobile Grooming",
+  RESORT: "Pet Resort",
   CORPORATE: "Planet Pooch Corporate",
 };
 
@@ -51,9 +49,8 @@ export function OrgChartClient({
 }: Props) {
   const [positions, setPositions] = useState<Position[]>(initialPositions);
   const [users, setUsers] = useState<UserOption[]>(initialUsers);
-  const [view, setView] = useState<CompanyView>(
-    canViewBothCompanies ? "BOTH" : (lockedCompany as CompanyView) ?? "BOTH"
-  );
+  const [showResort, setShowResort] = useState(canViewBothCompanies || lockedCompany === "RESORT");
+  const [showGrooming, setShowGrooming] = useState(canViewBothCompanies || lockedCompany === "GROOMING");
   const [showNames, setShowNames] = useState(true);
   const [layout, setLayout] = useState<"LIST" | "CHART">("CHART");
   const [zoom, setZoom] = useState(1);
@@ -89,9 +86,14 @@ export function OrgChartClient({
     return m;
   }, [users]);
 
-  const crossPositions = useMemo(() => positions.filter((p) => p.company === null), [positions]);
-  const groomingPositions = useMemo(() => positions.filter((p) => p.company === "GROOMING"), [positions]);
-  const resortPositions = useMemo(() => positions.filter((p) => p.company === "RESORT"), [positions]);
+  const visiblePositions = useMemo(
+    () => positions.filter((position) =>
+      position.company === null || position.company === "CORPORATE" ||
+      (position.company === "RESORT" && showResort) ||
+      (position.company === "GROOMING" && showGrooming)
+    ),
+    [positions, showResort, showGrooming]
+  );
 
   if (positions.length === 0) {
     return (
@@ -285,25 +287,24 @@ export function OrgChartClient({
       <Card>
         <CardContent className="py-4">
           <div className="flex flex-wrap items-center gap-4">
-            {canViewBothCompanies && (
-              <div className="flex items-center gap-2">
-                <span className="text-sm font-medium text-gray-700">View:</span>
-                <div className="inline-flex rounded-lg border border-gray-300 bg-white p-1">
-                  {(["BOTH", "GROOMING", "RESORT"] as CompanyView[]).map((v) => (
-                    <button
-                      key={v}
-                      type="button"
-                      onClick={() => setView(v)}
-                      className={`px-3 py-1 text-sm rounded-md transition-colors ${
-                        view === v ? "bg-blue-600 text-white" : "text-gray-600 hover:bg-gray-100"
-                      }`}
-                    >
-                      {v === "BOTH" ? "Both" : v === "GROOMING" ? "Grooming" : "Resort"}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
+            <fieldset className="flex flex-wrap items-center gap-3">
+              <legend className="sr-only">Show divisions</legend>
+              <span className="text-sm font-medium text-gray-700" aria-hidden="true">Show:</span>
+              <label className="flex items-center gap-2 text-sm text-gray-700">
+                <input type="checkbox" checked={showResort}
+                  disabled={!canViewBothCompanies && lockedCompany !== "RESORT"}
+                  onChange={(event) => setShowResort(event.target.checked)}
+                  className="h-4 w-4 accent-pp-ink" />
+                Pet Resort
+              </label>
+              <label className="flex items-center gap-2 text-sm text-gray-700">
+                <input type="checkbox" checked={showGrooming}
+                  disabled={!canViewBothCompanies && lockedCompany !== "GROOMING"}
+                  onChange={(event) => setShowGrooming(event.target.checked)}
+                  className="h-4 w-4 accent-pp-ink" />
+                Mobile Grooming
+              </label>
+            </fieldset>
 
             <div className="flex items-center gap-2">
               <span className="text-sm font-medium text-gray-700">Layout:</span>
@@ -374,88 +375,32 @@ export function OrgChartClient({
         </CardContent>
       </Card>
 
-      {view === "BOTH" ? (
-        <CompanySection
-          title="Planet Pooch Org Chart"
-          subtitle="CEO and DOS lead both companies. CMO serves both divisions. Grooming and Resort have dedicated operations leaders."
-          positions={positions}
-          userById={userById}
-          usersByPositionKey={usersByPositionKey}
-          showNames={showNames}
-          draggingId={draggingId}
-          dragOverId={dragOverId}
-          setDragOverId={setDragOverId}
-          dragOverRoot={dragOverRoot === "CROSS"}
-          setDragOverRoot={(b) => setDragOverRoot(b ? "CROSS" : null)}
-          onDragStart={handleDragStart}
-          onDragEnd={handleDragEnd}
-          onDropOnPosition={handleDropOnPosition}
-          onDropOnRoot={handleDropOnRoot}
-          onAssign={(pos) => setAssignModalFor(pos)}
-          onEdit={(pos) => setEditingPos(pos)}
-          onDelete={deletePosition}
-          layout={layout}
-          zoom={zoom}
-          setZoom={setZoom}
-          onAdd={() => setCreateModalCompany("CROSS")}
-          collapsedPositionIds={collapsedPositionIds}
-          onToggleExpanded={togglePositionExpanded}
-        />
-      ) : view === "GROOMING" ? (
-        <CompanySection
-          title={COMPANY_LABELS.GROOMING}
-          subtitle="Grooming division (includes shared cross-company leadership)"
-          positions={[...crossPositions, ...groomingPositions]}
-          userById={userById}
-          usersByPositionKey={usersByPositionKey}
-          showNames={showNames}
-          draggingId={draggingId}
-          dragOverId={dragOverId}
-          setDragOverId={setDragOverId}
-          dragOverRoot={dragOverRoot === "GROOMING"}
-          setDragOverRoot={(b) => setDragOverRoot(b ? "GROOMING" : null)}
-          onDragStart={handleDragStart}
-          onDragEnd={handleDragEnd}
-          onDropOnPosition={handleDropOnPosition}
-          onDropOnRoot={handleDropOnRoot}
-          onAssign={(pos) => setAssignModalFor(pos)}
-          onEdit={(pos) => setEditingPos(pos)}
-          onDelete={deletePosition}
-          layout={layout}
-          zoom={zoom}
-          setZoom={setZoom}
-          onAdd={() => setCreateModalCompany("GROOMING")}
-          collapsedPositionIds={collapsedPositionIds}
-          onToggleExpanded={togglePositionExpanded}
-        />
-      ) : (
-        <CompanySection
-          title={COMPANY_LABELS.RESORT}
-          subtitle="Pet resort division (includes shared cross-company leadership)"
-          positions={[...crossPositions, ...resortPositions]}
-          userById={userById}
-          usersByPositionKey={usersByPositionKey}
-          showNames={showNames}
-          draggingId={draggingId}
-          dragOverId={dragOverId}
-          setDragOverId={setDragOverId}
-          dragOverRoot={dragOverRoot === "RESORT"}
-          setDragOverRoot={(b) => setDragOverRoot(b ? "RESORT" : null)}
-          onDragStart={handleDragStart}
-          onDragEnd={handleDragEnd}
-          onDropOnPosition={handleDropOnPosition}
-          onDropOnRoot={handleDropOnRoot}
-          onAssign={(pos) => setAssignModalFor(pos)}
-          onEdit={(pos) => setEditingPos(pos)}
-          onDelete={deletePosition}
-          layout={layout}
-          zoom={zoom}
-          setZoom={setZoom}
-          onAdd={() => setCreateModalCompany("RESORT")}
-          collapsedPositionIds={collapsedPositionIds}
-          onToggleExpanded={togglePositionExpanded}
-        />
-      )}
+      <CompanySection
+        title="Planet Pooch Org Chart"
+        subtitle="Corporate leadership oversees Pet Resort and Mobile Grooming. Use the checkboxes to show either division or both."
+        positions={visiblePositions}
+        userById={userById}
+        usersByPositionKey={usersByPositionKey}
+        showNames={showNames}
+        draggingId={draggingId}
+        dragOverId={dragOverId}
+        setDragOverId={setDragOverId}
+        dragOverRoot={dragOverRoot === "CROSS"}
+        setDragOverRoot={(b) => setDragOverRoot(b ? "CROSS" : null)}
+        onDragStart={handleDragStart}
+        onDragEnd={handleDragEnd}
+        onDropOnPosition={handleDropOnPosition}
+        onDropOnRoot={handleDropOnRoot}
+        onAssign={(pos) => setAssignModalFor(pos)}
+        onEdit={(pos) => setEditingPos(pos)}
+        onDelete={deletePosition}
+        layout={layout}
+        zoom={zoom}
+        setZoom={setZoom}
+        onAdd={() => setCreateModalCompany(canViewBothCompanies ? "CROSS" : lockedCompany ?? "CROSS")}
+        collapsedPositionIds={collapsedPositionIds}
+        onToggleExpanded={togglePositionExpanded}
+      />
 
       <p className="text-xs text-gray-400 text-center">
         Drag a position onto another to reassign reporting. Drop on the title area to make it top-level.
@@ -1257,21 +1202,21 @@ function CompanyTag({ company }: { company: CompanyVal | null }) {
   if (company === null) {
     return (
       <span className="text-[10px] bg-purple-100 text-purple-700 px-1.5 py-0.5 rounded font-medium">
-        Both
+        Corporate
       </span>
     );
   }
   if (company === "GROOMING") {
     return (
       <span className="text-[10px] bg-sky-100 text-sky-700 px-1.5 py-0.5 rounded font-medium">
-        Grooming
+        Mobile Grooming
       </span>
     );
   }
   if (company === "RESORT") {
     return (
       <span className="text-[10px] bg-amber-100 text-amber-800 px-1.5 py-0.5 rounded font-medium">
-        Resort
+        Pet Resort
       </span>
     );
   }
