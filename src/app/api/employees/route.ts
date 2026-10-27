@@ -1,8 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
 import { getSession, getCompanyFilter, hasEmployeeManagementAccess } from "@/lib/auth-helpers";
-import { generateTempPassword } from "@/lib/onboarding";
 import { createEmployeeFolder } from "@/lib/drive";
 import { isValidDayOfWeek, isValidTimeSlot } from "@/lib/availability";
 import { Company, DayOfWeek, Role } from "@prisma/client";
@@ -280,21 +278,15 @@ export async function POST(req: NextRequest) {
       assignedRole = "MANAGER";
     }
 
-    // Seed with a random password the admin never sees. Super admins can
-    // generate a temporary password after creation when portal access is needed.
-    const seedPassword = generateTempPassword();
-    const passwordHash = await bcrypt.hash(seedPassword, 10);
-
     const user = await prisma.user.create({
       data: {
         name: fullName,
         firstName: trimmedFirst,
         lastName: trimmedLast,
         email: normalizedEmail,
-        passwordHash,
         role: assignedRole,
         company: assignedCompany,
-        mustChangePassword: true,
+        mustChangePassword: false,
         jobTitle: jobTitle?.trim() || null,
         department: department?.trim() || null,
         phone: phone?.trim() || null,

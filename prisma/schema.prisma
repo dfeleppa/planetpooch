@@ -271,7 +271,10 @@ enum EmotionalRegister {
 model User {
   id                 String    @id @default(cuid())
   email              String    @unique
-  passwordHash       String
+  passwordHash       String    @default("")
+  oauthInviteHash     String?   @unique
+  oauthInviteExpiresAt DateTime?
+  oauthIdentities    OAuthIdentity[]
   name               String
   firstName          String
   lastName           String
@@ -292,7 +295,7 @@ model User {
   terminationReason String?
   terminatedById    String?
 
-  // Last successful sign-in. Stamped by the credentials authorize() callback.
+  // Last successful sign-in. Stamped when resolving an OAuth identity.
   // Null until the user has logged in for the first time.
   lastLoginAt DateTime?
 
@@ -2052,5 +2055,17 @@ model EmployeeAvailability {
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([userId, dayOfWeek])
+  @@index([userId])
+}
+
+/// Provider identity only; no access or refresh tokens stored.
+model OAuthIdentity {
+  id String @id @default(cuid())
+  provider String
+  subject String
+  userId String
+  createdAt DateTime @default(now())
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  @@unique([provider, subject])
   @@index([userId])
 }

@@ -48,15 +48,6 @@ export async function proxy(req: NextRequest) {
     return NextResponse.redirect(loginUrl);
   }
 
-  // Force password change before accessing anything else
-  if (
-    token.mustChangePassword &&
-    !pathname.startsWith("/change-password") &&
-    !pathname.startsWith("/api/auth")
-  ) {
-    return NextResponse.redirect(new URL("/change-password", req.url));
-  }
-
   const role = token.role as string;
   const jobTitle = (token.jobTitle as string | null | undefined) ?? null;
   const isManagerOrAbove =

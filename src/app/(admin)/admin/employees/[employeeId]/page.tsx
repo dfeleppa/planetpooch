@@ -10,7 +10,7 @@ import { EditEmployeeForm } from "./EditEmployeeForm";
 import { EsignRequestsCard } from "./EsignRequestsCard";
 import { DriveFolderCard } from "./DriveFolderCard";
 import { CollapsibleSectionCard } from "./CollapsibleSectionCard";
-import { RevealTempPasswordButton } from "../RevealTempPasswordButton";
+import { OAuthInviteButton } from "../OAuthInviteButton";
 import { EmployeeDocumentsCard } from "@/components/EmployeeDocumentsCard";
 import { DangerZoneCard } from "./DangerZoneCard";
 import { EmployeeModuleAssignments } from "./EmployeeModuleAssignments";
@@ -75,6 +75,7 @@ export default async function EmployeeDetailPage({ params }: { params: Promise<{
       ssCardNotNeeded: true,
       createdAt: true,
       lastLoginAt: true,
+      oauthIdentities: { select: { provider: true } },
       terminatedAt: true,
       terminationReason: true,
       terminatedBy: { select: { id: true, name: true } },
@@ -329,11 +330,11 @@ export default async function EmployeeDetailPage({ params }: { params: Promise<{
           {sessionUser.role === "SUPER_ADMIN" && (
             <div className="border-t border-gray-100 pt-4">
               <p className="text-sm text-gray-700 mb-3">
-                <span className="font-medium">Generate a temp password.</span>{" "}
-                Use this to set up or recover portal access. Generating
-                invalidates any previously issued temp password.
+                Connected sign-in: {employee.oauthIdentities.length
+                  ? [...new Set(employee.oauthIdentities.map((identity) => identity.provider === "google" ? "Google" : "Apple"))].join(", ")
+                  : "No Google or Apple account connected yet"}.
               </p>
-              <RevealTempPasswordButton employeeId={employee.id} />
+              <OAuthInviteButton employeeId={employee.id} />
             </div>
           )}
         </CollapsibleSectionCard>

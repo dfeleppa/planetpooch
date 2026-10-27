@@ -1,67 +1,54 @@
 import { NextAuthOptions } from "next-auth";
-import CredentialsProvider from "next-auth/providers/credentials";
-import bcrypt from "bcryptjs";
+import GoogleProvider from "next-auth/providers/google";
+import AppleProvider from "next-auth/providers/apple";
+import { cookies } from "next/headers";
+import { LINK_COOKIE, resolveOAuthUser } from "./oauth-identity";
 import { prisma } from "./prisma";
 import { Company, Role } from "@prisma/client";
 
 export const authOptions: NextAuthOptions = {
   secret: process.env.NEXTAUTH_SECRET,
   providers: [
-    CredentialsProvider({
-      name: "credentials",
-      credentials: {
-        email: { label: "Email", type: "email" },
-        password: { label: "Password", type: "password" },
-      },
-      async authorize(credentials) {
-        if (!credentials?.email || !credentials?.password) {
-          return null;
-        }
-
-        const user = await prisma.user.findUnique({
-          where: { email: credentials.email },
-        });
-
-        if (!user) return null;
-
-        const isValid = await bcrypt.compare(credentials.password, user.passwordHash);
-        if (!isValid) return null;
-
-        // Terminated employees cannot log in. We return the same null as a
-        // wrong-password failure so we don't leak account state to attackers.
-        if (user.terminatedAt) return null;
-
-        // Stamp the last successful sign-in. Best-effort — a transient DB
-        // hiccup here shouldn't block authentication for the user.
-        try {
-          await prisma.user.update({
-            where: { id: user.id },
-            data: { lastLoginAt: new Date() },
-          });
-        } catch (err) {
-          console.error("[auth.authorize] lastLoginAt update failed:", err);
-        }
-
-        return {
-          id: user.id,
-          email: user.email,
-          name: user.name,
-          role: user.role,
-          company: user.company,
-          jobTitle: user.jobTitle,
-          mustChangePassword: user.mustChangePassword,
-        };
-      },
-    }),
+    ...(process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET ? [GoogleProvider({
+      clientId: process.env.GOOGLE_CLIENT_ID, clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+      authorization: { params: { prompt: "select_account" } },
+    })] : []),
+    ...(process.env.APPLE_ID && process.env.APPLE_SECRET ? [AppleProvider({
+      clientId: process.env.APPLE_ID, clientSecret: process.env.APPLE_SECRET,
+      checks: ["pkce", "state"],
+    })] : []),
   ],
+  // Apple's cross-site POST callback requires SameSite=None OAuth cookies.
+  ...(process.env.NEXTAUTH_URL?.startsWith("https://") || process.env.VERCEL ? {
+    cookies: Object.fromEntries(["state", "pkceCodeVerifier", "nonce"].map((key) => [key, {
+      name: `__Secure-next-auth.${key === "pkceCodeVerifier" ? "pkce.code_verifier" : key}`,
+      options: { httpOnly: true, sameSite: "none" as const, path: "/", secure: true, maxAge: 900 },
+    }])),
+  } : {}),
   session: {
     strategy: "jwt",
   },
   pages: {
     signIn: "/login",
+    error: "/login",
   },
   callbacks: {
-    async jwt({ token, user, trigger }) {
+    async signIn({ account }) {
+      return !!account && ["google", "apple"].includes(account.provider);
+    },
+    async jwt({ token, user, account, profile, trigger }) {
+      if (account) {
+        const jar = await cookies();
+        const invite = jar.get(LINK_COOKIE)?.value;
+        jar.delete(LINK_COOKIE);
+        const existing = await resolveOAuthUser(prisma, account.provider, account.providerAccountId,
+          (profile ?? {}) as Record<string, unknown>, invite);
+        if (!existing) throw new Error("OAuthAccountNotLinked");
+        user = { ...existing, mustChangePassword: false };
+        token.sub = existing.id;
+        token.email = existing.email;
+        token.name = existing.name;
+      }
       if (user) {
         token.id = user.id;
         token.role = (user as { role: Role }).role;
@@ -73,7 +60,7 @@ export const authOptions: NextAuthOptions = {
       }
 
       // Refresh from DB when:
-      //   1. The client called update() (e.g. after /change-password), OR
+      //   1. The client called update(), OR
       //   2. The token hasn't been checked in 60s — needed because terminated
       //      users would otherwise keep an active session until JWT expiry.
       const STALENESS_MS = 60_000;
@@ -104,7 +91,7 @@ export const authOptions: NextAuthOptions = {
               console.error("[auth.jwt] lastLoginAt backfill failed:", err);
             }
           }
-          token.mustChangePassword = fresh.mustChangePassword;
+          token.mustChangePassword = false;
           token.role = fresh.role;
           token.company = fresh.company;
           token.jobTitle = fresh.jobTitle;
@@ -126,7 +113,7 @@ export const authOptions: NextAuthOptions = {
       // Terminated tokens produce an empty session — middleware / page guards
       // will redirect to /login. We don't throw here because NextAuth's session
       // contract expects a session object.
-      if (token.terminatedAt) {
+      if (token.terminatedAt || !token.id) {
         return { ...session, user: undefined as unknown as typeof session.user };
       }
 

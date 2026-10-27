@@ -7,7 +7,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { AvailabilityEditor, type AvailabilityEntry } from "@/components/AvailabilityEditor";
-import { RevealTempPasswordButton } from "../RevealTempPasswordButton";
+import { OAuthInviteButton } from "../OAuthInviteButton";
 
 type Role = "SUPER_ADMIN" | "MANAGER" | "EMPLOYEE" | "MARKETING" | "ADMIN";
 type Company = "GROOMING" | "RESORT" | "CORPORATE";
@@ -238,15 +238,8 @@ export function NewEmployeeForm({
 
           {isSuperAdmin && (
             <div className="rounded-lg border border-gray-200 bg-gray-50 p-4">
-              <p className="text-sm font-medium text-gray-900">
-                Generate a temp password
-              </p>
-              <p className="text-xs text-gray-600 mt-1">
-                Share the password securely. Generating again invalidates the
-                previous temp password.
-              </p>
               <div className="mt-3">
-                <RevealTempPasswordButton employeeId={result.user.id} />
+                <OAuthInviteButton employeeId={result.user.id} />
               </div>
             </div>
           )}

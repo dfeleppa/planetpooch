@@ -10,7 +10,7 @@ type Field = Model["fields"][number];
 type Row = Record<string, unknown>;
 
 const BLOCKED_FIELDS: Record<string, Set<string>> = {
-  User: new Set(["passwordHash"]),
+  User: new Set(["passwordHash", "oauthInviteHash", "oauthInviteExpiresAt"]),
   WebsiteFormSubmission: new Set(["payload", "requestMetadata"]),
   WebsiteFormSubmissionEvent: new Set(["metadata"]),
 };
@@ -54,7 +54,7 @@ function allowedField(model: Model, field: Field): boolean {
     && !BLOCKED_FIELDS[model.name]?.has(field.name);
 }
 
-const MODELS = Prisma.dmmf.datamodel.models.map((model) => ({
+const MODELS = Prisma.dmmf.datamodel.models.filter((model) => model.name !== "OAuthIdentity").map((model) => ({
   model,
   fields: model.fields.filter((field) => allowedField(model, field)),
 }));
