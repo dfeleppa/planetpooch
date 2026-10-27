@@ -37,7 +37,7 @@ const managerNav: NavItem[] = [
 
 const sharedNav: NavItem[] = [
   { href: "/maintenance/checklists", label: "Daily Checklists", icon: "✓" },
-  { href: "/operations/daycare", label: "Daycare", icon: "☀" },
+  { href: "/operations/daycare", label: "Daycare Reports", icon: "☀" },
   { href: "/maintenance/vans", label: "Vans", icon: "▣" },
   { href: "/maintenance", label: "Maintenance", icon: "⚙" },
 ];
