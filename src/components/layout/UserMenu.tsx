@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { signOut, useSession } from "next-auth/react";
+import Image from "next/image";
 
 const ROLE_LABELS: Record<string, string> = {
   SUPER_ADMIN: "Super Admin",
@@ -14,10 +15,12 @@ const ROLE_LABELS: Record<string, string> = {
 export function UserMenu({ compact = false }: { compact?: boolean }) {
   const { data: session } = useSession();
   const [open, setOpen] = useState(false);
+  const [failedImage, setFailedImage] = useState<string | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
   const name = session?.user?.name || "Account";
   const role = session?.user?.role;
+  const image = session?.user?.image;
 
   useEffect(() => {
     if (!open) return;
@@ -52,8 +55,11 @@ export function UserMenu({ compact = false }: { compact?: boolean }) {
         onClick={() => setOpen((value) => !value)}
         className="flex items-center gap-2.5 rounded-full p-1 text-pp-ink transition-colors hover:bg-black/[0.04] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-pp-accent"
       >
-        <span className="grid size-9 shrink-0 place-items-center rounded-full bg-pp-accent text-sm font-semibold text-white" aria-hidden="true">
-          {name.charAt(0)}
+        <span className="grid size-9 shrink-0 place-items-center overflow-hidden rounded-full bg-pp-accent text-sm font-semibold text-white" aria-hidden="true">
+          {image && image !== failedImage ? (
+            <Image src={image} alt="" width={36} height={36} unoptimized
+              className="size-9 object-cover" onError={() => setFailedImage(image)} />
+          ) : name.charAt(0)}
         </span>
         {!compact && <span className="max-w-36 truncate pr-2 text-sm font-medium">{name}</span>}
       </button>
