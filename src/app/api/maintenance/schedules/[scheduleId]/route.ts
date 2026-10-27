@@ -1,8 +1,8 @@
-import { frontDeskCompanyWhere } from "@/lib/front-desk-access";
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getSession, isManagerOrAbove } from "@/lib/auth-helpers";
 import { checkInventorySufficiency } from "@/lib/maintenance";
+import { maintenanceCompanyWhere } from "@/lib/maintenance-access";
 
 export async function GET(
   _req: NextRequest,
@@ -14,7 +14,7 @@ export async function GET(
   const { scheduleId } = await params;
 
   const schedule = await prisma.maintenanceSchedule.findUnique({
-    where: { id: scheduleId, ...frontDeskCompanyWhere(session.user) },
+    where: { id: scheduleId, ...maintenanceCompanyWhere(session.user) },
     include: {
       requirements: { include: { inventoryItem: true } },
       tasks: { orderBy: { dueDate: "desc" }, take: 20 },
@@ -38,12 +38,14 @@ export async function PUT(
   }
 
   const { scheduleId } = await params;
+  const existing = await prisma.maintenanceSchedule.findUnique({ where: { id: scheduleId, ...maintenanceCompanyWhere(session.user) } });
+  if (!existing) return NextResponse.json({ error: "Not found" }, { status: 404 });
   const body = await req.json();
   const { title, description, isActive, requirements } = body;
 
   const schedule = await prisma.$transaction(async (tx) => {
     const updated = await tx.maintenanceSchedule.update({
-      where: { id: scheduleId, ...frontDeskCompanyWhere(session.user) },
+      where: { id: scheduleId, ...maintenanceCompanyWhere(session.user) },
       data: {
         ...(title !== undefined && { title }),
         ...(description !== undefined && { description }),
@@ -58,7 +60,7 @@ export async function PUT(
           where: { id: { in: ids } },
           select: { id: true, company: true },
         });
-        if (items.some((i) => i.company !== updated.company)) {
+        if (items.length !== new Set(ids).size || items.some((i) => i.company !== updated.company)) {
           throw new Error("Inventory item does not belong to this schedule's company");
         }
       }
@@ -90,6 +92,8 @@ export async function DELETE(
   }
 
   const { scheduleId } = await params;
-  await prisma.maintenanceSchedule.delete({ where: { id: scheduleId } });
+  const existing = await prisma.maintenanceSchedule.findUnique({ where: { id: scheduleId, ...maintenanceCompanyWhere(session.user) } });
+  if (!existing) return NextResponse.json({ error: "Not found" }, { status: 404 });
+  await prisma.maintenanceSchedule.delete({ where: { id: scheduleId, ...maintenanceCompanyWhere(session.user) } });
   return NextResponse.json({ success: true });
 }

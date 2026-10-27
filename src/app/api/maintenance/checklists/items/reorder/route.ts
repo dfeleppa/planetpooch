@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getSession, isManagerOrAbove } from "@/lib/auth-helpers";
+import { canAccessMaintenanceCompany } from "@/lib/maintenance-access";
 
 /**
  * PUT /api/maintenance/checklists/items/reorder
@@ -11,6 +12,7 @@ import { getSession, isManagerOrAbove } from "@/lib/auth-helpers";
 export async function PUT(req: NextRequest) {
   const session = await getSession();
   if (!session?.user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  if (!canAccessMaintenanceCompany(session.user, "RESORT")) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   if (!isManagerOrAbove((session.user as { role?: string }).role)) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }

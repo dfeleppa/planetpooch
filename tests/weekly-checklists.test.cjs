@@ -4,6 +4,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 const vm = require('node:vm');
 const ts = require('typescript');
+require('tsx/cjs');
 
 function load(file, prisma = {}, manager = true) {
   const js = ts.transpileModule(fs.readFileSync(path.join(__dirname, '..', file), 'utf8'), {
@@ -12,7 +13,8 @@ function load(file, prisma = {}, manager = true) {
   const deps = {
     'next/server': { NextResponse: { json: (body, options) => ({ body, status: options?.status ?? 200 }) } },
     '@/lib/prisma': { prisma },
-    '@/lib/auth-helpers': { getSession: async () => ({ user: { id: 'staff' } }), isManagerOrAbove: () => manager },
+    '@/lib/auth-helpers': { getSession: async () => ({ user: { id: 'staff', company: 'RESORT', role: manager ? 'MANAGER' : 'EMPLOYEE' } }), isManagerOrAbove: () => manager },
+    '@/lib/maintenance-access': require('../src/lib/maintenance-access.ts'),
   };
   const context = { exports: {}, require: (name) => deps[name] ?? require(name), Date };
   vm.runInNewContext(js, context);

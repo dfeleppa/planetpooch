@@ -1,9 +1,9 @@
-import { frontDeskCompanyWhere } from "@/lib/front-desk-access";
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getSession, isManagerOrAbove } from "@/lib/auth-helpers";
 import { calculateNextDueDate } from "@/lib/maintenance";
 import { Company, RecurrenceInterval } from "@prisma/client";
+import { canAccessMaintenanceCompany, maintenanceCompanyWhere } from "@/lib/maintenance-access";
 
 const COMPANIES: Company[] = ["RESORT", "GROOMING"];
 
@@ -19,7 +19,7 @@ export async function GET(req: NextRequest) {
     : null;
 
   const schedules = await prisma.maintenanceSchedule.findMany({
-    where: { ...(company ? { company } : {}), ...frontDeskCompanyWhere(session.user) },
+    where: maintenanceCompanyWhere(session.user, company),
     orderBy: { nextDueDate: "asc" },
     include: {
       requirements: {
@@ -49,6 +49,9 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "company must be RESORT or GROOMING" }, { status: 400 });
   }
 
+  if (!canAccessMaintenanceCompany(session.user, company)) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
   const start = new Date(startDate);
   const nextDueDate = calculateNextDueDate(start, recurrenceInterval as RecurrenceInterval, customIntervalDays);
 

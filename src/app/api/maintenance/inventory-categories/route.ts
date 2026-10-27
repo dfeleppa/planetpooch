@@ -1,8 +1,8 @@
-import { frontDeskCompanyWhere } from "@/lib/front-desk-access";
 import { getSession, isManagerOrAbove } from "@/lib/auth-helpers";
 import { prisma } from "@/lib/prisma";
 import { NextRequest, NextResponse } from "next/server";
 import { Company } from "@prisma/client";
+import { canAccessMaintenanceCompany, maintenanceCompanyWhere } from "@/lib/maintenance-access";
 
 const COMPANIES: Company[] = ["RESORT", "GROOMING"];
 
@@ -16,7 +16,7 @@ export async function GET(req: NextRequest) {
     : null;
 
   const categories = await prisma.inventoryCategory.findMany({
-    where: { ...(company ? { company } : {}), ...frontDeskCompanyWhere(session.user) },
+    where: maintenanceCompanyWhere(session.user, company),
     orderBy: { name: "asc" },
   });
 
@@ -40,6 +40,9 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "company must be RESORT or GROOMING" }, { status: 400 });
     }
 
+    if (!canAccessMaintenanceCompany(session.user, company)) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
     const category = await prisma.inventoryCategory.create({
       data: {
         name: name.trim(),
@@ -57,7 +60,7 @@ export async function POST(req: NextRequest) {
       );
     }
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : "Failed to create category" },
+      { error: "Failed to create category" },
       { status: 500 }
     );
   }

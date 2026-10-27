@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSession, isManagerOrAbove } from "@/lib/auth-helpers";
 import { generateMaintenanceTask } from "@/lib/maintenance";
+import { maintenanceCompanyWhere } from "@/lib/maintenance-access";
 
 export async function POST(
   _req: NextRequest,
@@ -12,7 +13,7 @@ export async function POST(
   }
 
   const { scheduleId } = await params;
-  const task = await generateMaintenanceTask(scheduleId);
+  const task = await generateMaintenanceTask(scheduleId, maintenanceCompanyWhere(session.user));
 
   if (!task) {
     return NextResponse.json({ error: "Schedule not found or inactive" }, { status: 404 });

@@ -1,7 +1,7 @@
-import { frontDeskCompanyWhere } from "@/lib/front-desk-access";
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getSession, isManagerOrAbove } from "@/lib/auth-helpers";
+import { maintenanceCompanyWhere } from "@/lib/maintenance-access";
 
 export async function GET(
   _req: NextRequest,
@@ -13,7 +13,7 @@ export async function GET(
   const { itemId } = await params;
 
   const item = await prisma.inventoryItem.findUnique({
-    where: { id: itemId, ...frontDeskCompanyWhere(session.user) },
+    where: { id: itemId, ...maintenanceCompanyWhere(session.user) },
     include: {
       adjustments: {
         orderBy: { createdAt: "desc" },
@@ -43,6 +43,8 @@ export async function PUT(
   }
 
   const { itemId } = await params;
+  const existing = await prisma.inventoryItem.findUnique({ where: { id: itemId, ...maintenanceCompanyWhere(session.user) } });
+  if (!existing) return NextResponse.json({ error: "Not found" }, { status: 404 });
   const body = await req.json();
   const { name, description, unit, minimumThreshold, categoryId } = body;
 
@@ -59,7 +61,7 @@ export async function PUT(
   }
 
   const item = await prisma.inventoryItem.update({
-    where: { id: itemId, ...frontDeskCompanyWhere(session.user) },
+    where: { id: itemId, ...maintenanceCompanyWhere(session.user) },
     data: {
       ...(name !== undefined && { name }),
       ...(description !== undefined && { description }),
@@ -82,6 +84,8 @@ export async function DELETE(
   }
 
   const { itemId } = await params;
-  await prisma.inventoryItem.delete({ where: { id: itemId } });
+  const existing = await prisma.inventoryItem.findUnique({ where: { id: itemId, ...maintenanceCompanyWhere(session.user) } });
+  if (!existing) return NextResponse.json({ error: "Not found" }, { status: 404 });
+  await prisma.inventoryItem.delete({ where: { id: itemId, ...maintenanceCompanyWhere(session.user) } });
   return NextResponse.json({ success: true });
 }

@@ -1,8 +1,8 @@
-import { frontDeskCompanyWhere } from "@/lib/front-desk-access";
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getSession, isManagerOrAbove } from "@/lib/auth-helpers";
 import { Company } from "@prisma/client";
+import { canAccessMaintenanceCompany, maintenanceCompanyWhere } from "@/lib/maintenance-access";
 
 const COMPANIES: Company[] = ["RESORT", "GROOMING"];
 
@@ -16,7 +16,7 @@ export async function GET(req: NextRequest) {
     : null;
 
   const items = await prisma.inventoryItem.findMany({
-    where: { ...(company ? { company } : {}), ...frontDeskCompanyWhere(session.user) },
+    where: maintenanceCompanyWhere(session.user, company),
     orderBy: { name: "asc" },
     include: {
       category: true,
@@ -49,6 +49,9 @@ export async function POST(req: NextRequest) {
   }
 
   const category = await prisma.inventoryCategory.findUnique({ where: { id: categoryId } });
+  if (!canAccessMaintenanceCompany(session.user, company)) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
   if (!category || category.company !== company) {
     return NextResponse.json(
       { error: "Category does not belong to the selected company" },

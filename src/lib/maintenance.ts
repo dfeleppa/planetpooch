@@ -1,4 +1,4 @@
-import { RecurrenceInterval } from "@prisma/client";
+import { RecurrenceInterval, type Company } from "@prisma/client";
 import { prisma } from "./prisma";
 
 export function calculateNextDueDate(
@@ -27,9 +27,9 @@ export function calculateNextDueDate(
   return next;
 }
 
-export async function generateMaintenanceTask(scheduleId: string) {
+export async function generateMaintenanceTask(scheduleId: string, scope: { company: { in: Company[] } }) {
   const schedule = await prisma.maintenanceSchedule.findUnique({
-    where: { id: scheduleId },
+    where: { id: scheduleId, ...scope },
   });
   if (!schedule || !schedule.isActive) return null;
 
