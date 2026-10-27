@@ -11,6 +11,7 @@ import { SortableList, DragHandle, SortableHandleProps } from "@/components/Sort
 type Period = "AM" | "PM" | "WEEKLY";
 
 interface Completion {
+  canUncheck: boolean;
   completedAt: string;
   completedByName: string | null;
 }
@@ -159,9 +160,10 @@ export function ChecklistBoard({ canEdit }: { canEdit: boolean }) {
   }
 
   async function toggleItem(item: ChecklistItem) {
+    if (item.completion && !item.completion.canUncheck) return;
     const completed = !item.completion;
     const optimistic: Completion | null = completed
-      ? { completedAt: new Date().toISOString(), completedByName: myName }
+      ? { completedAt: new Date().toISOString(), completedByName: myName, canUncheck: true }
       : null;
     setItems((prev) =>
       prev.map((i) => (i.id === item.id ? { ...i, completion: optimistic } : i))
@@ -552,7 +554,8 @@ function PeriodCard({
               <li key={item.id}>
                 <button
                   onClick={() => onToggle(item)}
-                  disabled={disabled}
+                  disabled={disabled || (!!item.completion && !item.completion.canUncheck)}
+                  title={item.completion && !item.completion.canUncheck ? "Only the employee who completed this task can uncheck it" : undefined}
                   aria-pressed={!!item.completion}
                   className="group flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left transition-colors hover:bg-gray-50"
                 >

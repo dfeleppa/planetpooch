@@ -53,6 +53,7 @@ export async function GET(req: NextRequest) {
           ? {
               completedAt: completion.completedAt.toISOString(),
               completedByName: completion.completedBy?.name ?? null,
+              canUncheck: completion.completedById === (session.user as { id: string }).id,
             }
           : null,
       };

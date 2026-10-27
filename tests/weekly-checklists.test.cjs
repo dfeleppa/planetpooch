@@ -28,7 +28,7 @@ test('weekly sign-offs and unchecks use Sunday; daily sign-offs retain their sel
       const route = load(base + 'completions/route.ts', {
         dailyChecklistItem: { findUnique: async () => ({ period }) },
         dailyChecklistCompletion: {
-          deleteMany: async (args) => { saved = args.where; },
+          deleteMany: async (args) => { saved = args.where; return { count: 1 }; },
           upsert: async (args) => {
             saved = args.create;
             return { completedAt: new Date(), completedBy: { name: 'Staff' } };
@@ -116,6 +116,32 @@ test('date strip renders exactly Sunday through Saturday across year and dayligh
       assert.ok(html.indexOf('>Sun<') < html.indexOf('>Sat<'));
       assert.ok(!html.includes('overflow-x-auto'));
       assert.ok(!html.includes('text-white') || !weekly);
+    }
+  }
+});
+
+test('only the signer can uncheck daily and weekly tasks, including orphaned sign-offs', async () => {
+  for (const period of ['AM', 'PM', 'WEEKLY']) {
+    for (const owner of ['staff', 'other', null, 'absent']) {
+      let remaining = owner === 'absent' ? null : { completedById: owner };
+      const route = load(base + 'completions/route.ts', {
+        dailyChecklistItem: { findUnique: async () => ({ period }) },
+        dailyChecklistCompletion: {
+          deleteMany: async ({ where }) => {
+            assert.equal(where.completedById, 'staff');
+            assert.equal(where.date.toISOString().slice(0, 10), period === 'WEEKLY' ? '2026-10-25' : '2026-10-27');
+            if (remaining?.completedById === where.completedById) {
+              remaining = null;
+              return { count: 1 };
+            }
+            return { count: 0 };
+          },
+          findUnique: async () => remaining,
+        },
+      });
+      const result = await route.POST(request({ itemId: 'task', date: '2026-10-27', completed: false }));
+      assert.equal(result.status, owner === 'staff' || owner === 'absent' ? 200 : 403);
+      assert.equal(remaining === null, owner === 'staff' || owner === 'absent');
     }
   }
 });

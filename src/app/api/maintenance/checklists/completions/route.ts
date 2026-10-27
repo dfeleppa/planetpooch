@@ -7,8 +7,7 @@ const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 /**
  * POST /api/maintenance/checklists/completions
  * Body: { itemId: string, date: "YYYY-MM-DD", completed: boolean }
- * Checks or unchecks one item for one day. Any authenticated employee can
- * do this; the completion records who and when.
+ * Any authenticated employee can check an item; only its signer can uncheck it.
  */
 export async function POST(req: NextRequest) {
   const session = await getSession();
@@ -40,7 +39,19 @@ export async function POST(req: NextRequest) {
   if (item.period === "WEEKLY") date.setUTCDate(date.getUTCDate() - date.getUTCDay());
 
   if (!completed) {
-    await prisma.dailyChecklistCompletion.deleteMany({ where: { itemId, date } });
+    // Enforce ownership in the delete itself so concurrent requests cannot
+    // remove a replacement sign-off belonging to another employee.
+    const removed = await prisma.dailyChecklistCompletion.deleteMany({
+      where: { itemId, date, completedById: userId },
+    });
+    if (removed.count === 0) {
+      const existing = await prisma.dailyChecklistCompletion.findUnique({
+        where: { itemId_date: { itemId, date } },
+      });
+      if (existing) {
+        return NextResponse.json({ error: "Only the employee who completed this task can uncheck it" }, { status: 403 });
+      }
+    }
     return NextResponse.json({ itemId, date: dateParam, completion: null });
   }
 
@@ -58,6 +69,7 @@ export async function POST(req: NextRequest) {
     completion: {
       completedAt: completion.completedAt.toISOString(),
       completedByName: completion.completedBy?.name ?? null,
+      canUncheck: completion.completedById === userId,
     },
   });
 }
