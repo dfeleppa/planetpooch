@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -344,7 +344,7 @@ export function OrgChartClient({
               <div className="inline-flex rounded-lg border border-gray-300 bg-white overflow-hidden">
                 <button
                   type="button"
-                  onClick={() => setZoom((z) => Math.max(0.4, +(z - 0.1).toFixed(2)))}
+                  onClick={() => setZoom((z) => Math.max(0.05, +(z - 0.1).toFixed(2)))}
                   className="px-2 py-1 text-sm text-gray-700 hover:bg-gray-100"
                   title="Zoom out"
                 >
@@ -1088,8 +1088,44 @@ function PanZoomViewport({
   children: React.ReactNode;
 }) {
   const [pan, setPan] = useState({ x: 0, y: 0 });
+  const viewportRef = useRef<HTMLDivElement>(null);
+  const contentRef = useRef<HTMLDivElement>(null);
   const panStart = useRef<{ x: number; y: number; panX: number; panY: number } | null>(null);
   const [isPanning, setIsPanning] = useState(false);
+
+  const fitToScreen = useCallback(() => {
+    const viewport = viewportRef.current;
+    const content = contentRef.current;
+    if (!viewport || !content) return;
+
+    // Leave room for the controls above and keep the entire canvas on screen.
+    viewport.style.height = `${Math.max(160, window.innerHeight - viewport.getBoundingClientRect().top - 20)}px`;
+    const scale = centered
+      ? Math.min(1, (viewport.clientWidth - 32) / content.offsetWidth,
+          (viewport.clientHeight - 56) / content.offsetHeight)
+      : 1;
+    if (!Number.isFinite(scale) || scale <= 0) return;
+    setZoom(scale);
+    setPan({ x: centered ? 0 : 12, y: 12 });
+  }, [centered, setZoom]);
+
+  useEffect(() => {
+    let frame = 0;
+    const scheduleFit = () => {
+      cancelAnimationFrame(frame);
+      frame = requestAnimationFrame(fitToScreen);
+    };
+    const observer = new ResizeObserver(scheduleFit);
+    if (viewportRef.current) observer.observe(viewportRef.current);
+    if (contentRef.current) observer.observe(contentRef.current);
+    window.addEventListener("resize", scheduleFit);
+    scheduleFit();
+    return () => {
+      observer.disconnect();
+      window.removeEventListener("resize", scheduleFit);
+      cancelAnimationFrame(frame);
+    };
+  }, [fitToScreen]);
 
   function onMouseDown(e: React.MouseEvent) {
     // Let card drags pass through — HTML5 DnD sets draggable=true on cards.
@@ -1114,11 +1150,12 @@ function PanZoomViewport({
     if (!(e.ctrlKey || e.metaKey)) return;
     e.preventDefault();
     const delta = e.deltaY > 0 ? -0.1 : 0.1;
-    setZoom((z) => Math.min(2, Math.max(0.4, +(z + delta).toFixed(2))));
+    setZoom((z) => Math.min(2, Math.max(0.05, +(z + delta).toFixed(2))));
   }
 
   return (
     <div
+      ref={viewportRef}
       onMouseDown={onMouseDown}
       onMouseMove={onMouseMove}
       onMouseUp={endPan}
@@ -1130,6 +1167,7 @@ function PanZoomViewport({
       style={{ height: "70vh" }}
     >
       <div
+        ref={contentRef}
         style={{
           position: "relative",
           left: centered ? "50%" : 0,
@@ -1142,6 +1180,10 @@ function PanZoomViewport({
       >
         {children}
       </div>
+      <button type="button" onClick={fitToScreen}
+        className="absolute bottom-2 left-3 rounded-md border border-pp-line bg-white px-2.5 py-1 text-xs font-medium text-pp-ink shadow-sm hover:bg-pp-mint">
+        Fit to screen
+      </button>
       <div className="absolute bottom-2 right-3 text-[11px] text-gray-400 pointer-events-none">
         Drag to pan · Ctrl/⌘ + scroll to zoom
       </div>
