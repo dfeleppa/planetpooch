@@ -65,7 +65,8 @@ test("assigned managers see their own company and employees do not gain HR navig
 
 test("all Operations and HR views hide the dropdown while Corporate finance retains it", () => {
   for (const path of ["/maintenance", "/maintenance/checklists", "/maintenance/inventory", "/maintenance/vans",
-    "/operations/daycare", "/admin/employees", "/admin/scheduling", "/admin/modules", "/admin/module-progress", "/admin/audit-log"]) {
+    "/operations/daycare", "/admin/employees", "/admin/scheduling", "/admin/modules", "/admin/module-progress", "/admin/audit-log",
+    "/admin/onboarding", "/admin/onboarding/templates", "/admin/onboarding/templates/new", "/admin/onboarding/templates/template-id"]) {
     assert.ok(!renderNavigation("RESORT", "SUPER_ADMIN", "CORPORATE", path).includes('id="business-selector"'));
   }
   assert.ok(renderNavigation("RESORT", "SUPER_ADMIN", "CORPORATE", "/finance/kpis").includes('id="business-selector"'));

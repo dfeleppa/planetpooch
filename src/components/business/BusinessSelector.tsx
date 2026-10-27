@@ -11,7 +11,7 @@ export function BusinessSelector({ options }: { options: readonly Business[] }) 
   const business = useBusiness();
   const [switching, setSwitching] = useState(false);
   const [error, setError] = useState("");
-  if (isCompanySidebarPath(pathname) || ["/dashboard", "/modules", "/career", "/knowledge", "/search"].some((path) => pathname === path || pathname.startsWith(`${path}/`))
+  if (isCompanySidebarPath(pathname) || ["/dashboard", "/modules", "/career", "/knowledge", "/search", "/admin/onboarding"].some((path) => pathname === path || pathname.startsWith(`${path}/`))
     || pathname === "/cash-management" || pathname.startsWith("/cash-management/")
     || pathname === "/marketing"
     || pathname === "/admin/knowledge"
