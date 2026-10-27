@@ -2,6 +2,16 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import type { PrismaClient } from "@prisma/client";
 import { hashLink, resolveOAuthUser, verifiedOAuthEmail } from "../src/lib/oauth-identity";
+import { isSameOriginRequest } from "../src/lib/request-origin";
+
+test("OAuth requests validate the public host behind the deployment proxy", () => {
+  assert.equal(isSameOriginRequest("https://app.planet-pooch.com", "app.planet-pooch.com"), true);
+  assert.equal(isSameOriginRequest("http://localhost:3000", "localhost:3000"), true);
+  for (const origin of [null, "null", "https://attacker.example", "https://app.planet-pooch.com.attacker.example", "file://app.planet-pooch.com"]) {
+    assert.equal(isSameOriginRequest(origin, "app.planet-pooch.com"), false);
+  }
+  assert.equal(isSameOriginRequest("http://localhost:3001", "localhost:3000"), false);
+});
 
 function fixture() {
   const users = [{ id: "existing", email: "person@example.com", terminatedAt: null as Date | null,
