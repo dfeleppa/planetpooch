@@ -35,3 +35,17 @@ test("checklist disables day and employee changes while verification is saving",
   assert.match(html, /<select[^>]*disabled/);
   assert.equal((html.match(/<button[^>]*disabled/g) ?? []).length, 4);
 });
+
+test("verified cards show color coded cash overage and shortage while pending cards show expected cash", () => {
+  const varianceDays: VerificationDay[] = [{ date: "2026-10-17", label: "Saturday, Oct 17", employees: [
+    { name: "Over", expectedCashCents: 10000, record: { expectedCashCents: 10000, countedCashCents: 12500, note: "" } },
+    { name: "Short", expectedCashCents: 10000, record: { expectedCashCents: 10000, countedCashCents: 7500, note: "" } },
+    { name: "Even", expectedCashCents: 10000, record: { expectedCashCents: 10000, countedCashCents: 10000, note: "" } },
+    { name: "Pending", expectedCashCents: 10000 },
+  ] }];
+  const html = renderToStaticMarkup(<EmployeeVerificationQueue days={varianceDays} selectedEmployee="" busy={false} onSelect={() => {}} onDayChange={() => {}} onWeeklyReview={() => {}} />);
+  assert.match(html, /text-green-800[^>]*>Over: \$25\.00/);
+  assert.match(html, /text-red-700[^>]*>Short: \$25\.00/);
+  assert.match(html, /Even: \$0\.00/);
+  assert.match(html, /Expected cash: \$100\.00/);
+});
