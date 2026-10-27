@@ -4,14 +4,12 @@ import { cn } from "@/lib/utils";
 type AdminPeopleView =
   | "employees"
   | "scheduling"
-  | "guidelines"
-  | "org-chart";
+  | "guidelines";
 
 const adminPeopleNav: { href: string; label: string; view: AdminPeopleView }[] = [
   { href: "/admin/employees", label: "Employees", view: "employees" },
   { href: "/admin/scheduling", label: "Scheduling", view: "scheduling" },
   { href: "/admin/scheduling/guidelines", label: "Guidelines", view: "guidelines" },
-  { href: "/admin/org-chart", label: "Org Chart", view: "org-chart" },
 ];
 
 export function AdminPeopleNav({ active }: { active: AdminPeopleView }) {

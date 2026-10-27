@@ -54,7 +54,6 @@ const peoplePaths = [
   "/admin",
   "/admin/employees",
   "/admin/scheduling",
-  "/admin/org-chart",
 ];
 
 const modulePaths = [
@@ -64,6 +63,16 @@ const modulePaths = [
 ];
 
 function sidebarIcon(item: NavItem) {
+  if (item.href === "/admin/org-chart") {
+    return (
+      <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+        <rect x="9" y="3" width="6" height="5" rx="1" />
+        <path d="M12 8v4M5 16v-4h14v4" />
+        <rect x="2" y="16" width="6" height="5" rx="1" />
+        <rect x="16" y="16" width="6" height="5" rx="1" />
+      </svg>
+    );
+  }
   if (item.href === "/admin/dashboard") {
     return (
       <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
@@ -135,6 +144,16 @@ export function Sidebar() {
   // "Manager-tier admin UI" — controls visibility of the Employee View
   // section.
   const isManagerOrAbove = isSuperAdmin || isManager;
+  const corporateNav: NavItem[] = [
+    ...(isSuperAdmin
+      ? [
+          { href: "/admin/dashboard", label: "Dashboard", icon: "" },
+          ...marketingNav,
+          ...(isKnowledgeAccount ? [{ href: "/admin/knowledge", label: "Knowledge library", icon: "✦" }] : []),
+        ]
+      : []),
+    ...(isManagerOrAbove ? [{ href: "/admin/org-chart", label: "Org Chart", icon: "" }] : []),
+  ];
   const showGroomingInventory = !isManagerOrAbove && canEditGroomingCounts(session?.user);
   const hasMarketingAccess =
     role === "MARKETING" || isSuperAdmin || jobTitle === "CMO";
@@ -202,7 +221,7 @@ export function Sidebar() {
     if (href === "/admin") return pathname === href;
     if (pathname !== href && !pathname.startsWith(href + "/")) return false;
     // Longest-prefix wins: don't highlight /maintenance when on /maintenance/inventory.
-    const candidates = [...nav, ...operationsNav, ...marketingNav, ...businessFinanceNav]
+    const candidates = [...nav, ...corporateNav, ...operationsNav, ...marketingNav, ...businessFinanceNav]
       .map((n) => n.href)
       .filter((h) => h !== "/dashboard" && h !== "/admin")
       .filter((h) => pathname === h || pathname.startsWith(h + "/"));
@@ -293,8 +312,8 @@ export function Sidebar() {
         )}
 
         <nav className="pp-sidebar-nav mt-4 flex flex-1 flex-col gap-4 overflow-y-auto">
-          {/* Corporate section — SUPER_ADMIN only */}
-          {isSuperAdmin && (
+          {/* Corporate navigation preserves each page's existing role access. */}
+          {corporateNav.length > 0 && (
             <>
               {!isCollapsed ? (
                 <div className="px-2.5 pt-1 text-[10px] font-medium uppercase tracking-[0.08em] text-pp-ink-4">
@@ -304,7 +323,7 @@ export function Sidebar() {
                 <div className="mx-1.5 h-px bg-pp-line" />
               )}
               <div className="-mt-2 flex flex-col gap-px">
-                {[{ href: "/admin/dashboard", label: "Dashboard", icon: "" }, ...marketingNav, ...(isKnowledgeAccount ? [{ href: "/admin/knowledge", label: "Knowledge library", icon: "✦" }] : [])].map((item) => {
+                {corporateNav.map((item) => {
                   const active = item.href === "/admin/dashboard"
                     ? pathname === item.href
                     : isActive(item.href);

@@ -3,7 +3,6 @@ import { requireManager } from "@/lib/auth-helpers";
 import { prisma } from "@/lib/prisma";
 import { Company, Role } from "@prisma/client";
 import { OrgChartClient } from "./OrgChartClient";
-import { AdminPeopleNav } from "../AdminPeopleNav";
 
 export default async function OrgChartPage() {
   const session = await requireManager();
@@ -56,9 +55,6 @@ export default async function OrgChartPage() {
           Visualize your org structure with positions — vacant or filled. Drag a position onto
           another to change who it reports to. Assign employees to positions, or leave them vacant.
         </p>
-      </div>
-      <div className="mb-6">
-        <AdminPeopleNav active="org-chart" />
       </div>
       <OrgChartClient
         initialPositions={positions}
