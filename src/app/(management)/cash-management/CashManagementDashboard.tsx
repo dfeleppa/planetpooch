@@ -19,12 +19,13 @@ type MobileSummary = {
 type CashView = "pet-resort" | "mobile-grooming" | "safe";
 type DetailView = "actions" | "history";
 type MobileHistoryFilter = "all" | MobileCashLedgerEntry["kind"];
+type LatestSafeVerification = { countedCents: number; verifiedAt: string } | null;
 
 function money(cents: number) {
   return new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(cents / 100);
 }
 
-export function CashManagementDashboard({ mobile, petResort, safeCents, initialCountedCents }: { mobile: MobileSummary; petResort: PetResortSummary; safeCents: number; initialCountedCents: number | null }) {
+export function CashManagementDashboard({ mobile, petResort, safeCents, initialSafeVerification }: { mobile: MobileSummary; petResort: PetResortSummary; safeCents: number; initialSafeVerification: LatestSafeVerification }) {
   const router = useRouter();
   const [cashView, setCashView] = useState<CashView | null>(null);
   const [detailView, setDetailView] = useState<DetailView>("actions");
@@ -40,7 +41,8 @@ export function CashManagementDashboard({ mobile, petResort, safeCents, initialC
   const [savingAdjustment, setSavingAdjustment] = useState(false);
   const [adjustError, setAdjustError] = useState("");
   const [adjustSuccess, setAdjustSuccess] = useState("");
-  const [countedSafeCents, setCountedSafeCents] = useState(initialCountedCents);
+  const [latestSafeVerification, setLatestSafeVerification] = useState(initialSafeVerification);
+  const countedSafeCents = latestSafeVerification?.countedCents ?? null;
   const [editingCash, setEditingCash] = useState<DailyCash | null>(null);
   const [editDate, setEditDate] = useState("");
   const [editAmount, setEditAmount] = useState("");
@@ -265,10 +267,11 @@ export function CashManagementDashboard({ mobile, petResort, safeCents, initialC
         <section className="rounded-xl border border-pp-line bg-white p-6 shadow-sm">
           <h2 className="text-lg font-semibold text-gray-900">Safe</h2>
           <p className="mt-4 text-3xl font-bold text-gray-900">{money(countedSafeCents ?? safeCents)}</p>
-          <p className="mt-2 text-sm text-gray-500">{countedSafeCents === null ? "Target safe balance" : `Last verified safe balance · Target ${money(safeCents)}`}</p>
+          <p className="mt-2 text-sm text-gray-500">{latestSafeVerification ? `Last verified ${new Intl.DateTimeFormat("en-US", { dateStyle: "medium", timeStyle: "short", timeZone: "America/New_York" }).format(new Date(latestSafeVerification.verifiedAt))} ET · Target ${money(safeCents)}` : "Target safe balance · No verifications yet"}</p>
           {countedSafeCents !== null && countedSafeCents !== safeCents && <p className="mt-1 text-sm font-medium text-amber-800">{money(Math.abs(countedSafeCents - safeCents))} {countedSafeCents > safeCents ? "over target" : "under target"}</p>}
+          <button type="button" onClick={() => setDetailView((current) => current === "history" ? "actions" : "history")} aria-expanded={detailView === "history"} className="mt-4 text-sm font-semibold text-pp-accent underline underline-offset-2">{detailView === "history" ? "Hide verification history" : "View verification history"}</button>
         </section>
-        <SafeBalanceVerification expectedCents={safeCents} onLatestCountChange={setCountedSafeCents} mode={detailView} />
+        <SafeBalanceVerification expectedCents={safeCents} onLatestVerificationChange={setLatestSafeVerification} mode={detailView} />
       </div>
       <section className={cashView === "pet-resort" && detailView === "history" ? "rounded-xl border border-pp-line bg-white p-6 shadow-sm" : "hidden"}>
         <h2 className="text-lg font-semibold text-gray-900">Pet Resort activity</h2>

@@ -14,13 +14,13 @@ export default async function CashManagementPage() {
     petResortCashSummary(),
     prisma.safeBalanceVerification.findFirst({
       orderBy: [{ verifiedAt: "desc" }, { id: "desc" }],
-      select: { countedCents: true },
+      select: { countedCents: true, verifiedAt: true },
     }),
   ]);
 
   return (
     <AppShell>
-      <CashManagementDashboard mobile={mobile} petResort={petResort} safeCents={SAFE_CENTS} initialCountedCents={latestSafeVerification?.countedCents ?? null} />
+      <CashManagementDashboard mobile={mobile} petResort={petResort} safeCents={SAFE_CENTS} initialSafeVerification={latestSafeVerification ? { countedCents: latestSafeVerification.countedCents, verifiedAt: latestSafeVerification.verifiedAt.toISOString() } : null} />
     </AppShell>
   );
 }
