@@ -3,6 +3,7 @@ import { requireEmployeeManager } from "@/lib/auth-helpers";
 import { prisma } from "@/lib/prisma";
 import { DAYS_OF_WEEK, formatTimeLabel } from "@/lib/availability";
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { AdminPeopleNav } from "../AdminPeopleNav";
 import { SchedulingPrintButton } from "./SchedulingPrintButton";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
@@ -22,6 +23,7 @@ function formatAvailability(startTime: string, endTime: string): string {
 export default async function SchedulingPage() {
   await requireEmployeeManager();
   const business = await getActiveBusiness();
+  if (business.company === "GROOMING") redirect("/admin/employees");
   const companyFilter = await getEmployeeBusinessWhere();
 
   const employees = await prisma.user.findMany({

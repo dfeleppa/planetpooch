@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { cn } from "@/lib/utils";
+import { getActiveBusiness } from "@/lib/business-server";
 
 type AdminPeopleView =
   | "employees"
@@ -12,10 +13,15 @@ const adminPeopleNav: { href: string; label: string; view: AdminPeopleView }[] =
   { href: "/admin/scheduling/guidelines", label: "Guidelines", view: "guidelines" },
 ];
 
-export function AdminPeopleNav({ active }: { active: AdminPeopleView }) {
+export async function AdminPeopleNav({ active }: { active: AdminPeopleView }) {
+  const business = await getActiveBusiness();
+  const visibleItems = adminPeopleNav.filter((item) =>
+    business.company !== "GROOMING" || (item.view !== "scheduling" && item.view !== "guidelines"),
+  );
+
   return (
     <nav className="pp-tabs" aria-label="Dashboard sections">
-      {adminPeopleNav.map((item) => (
+      {visibleItems.map((item) => (
         <Link
           key={item.view}
           href={item.href}
