@@ -356,7 +356,10 @@ export function Sidebar() {
           {sidebarBusinesses(session?.user).map((company) => {
             const companyOperations = sharedNav.filter((item) => company.company === "RESORT"
               ? item.href !== "/maintenance/vans"
-              : item.href === "/maintenance/vans" || item.href === "/maintenance");
+              : item.href === "/maintenance/vans" || item.href === "/maintenance")
+              .map((item) => company.company === "GROOMING" && item.href === "/maintenance"
+                ? { ...item, label: "Inventory" }
+                : item);
             const items = [
               ...companyOperations,
               ...(showGroomingInventory && company.company === "GROOMING"
