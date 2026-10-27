@@ -84,7 +84,16 @@ function sidebarIcon(item: NavItem) {
       </svg>
     );
   }
-  if (item.href === "/admin/dashboard") {
+  if (item.href === "/maintenance/vans") {
+    return (
+      <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+        <path d="M5 18H3V6h12l6 6v6h-2M9 18h6M15 6v7h6" />
+        <circle cx="7" cy="18" r="2" />
+        <circle cx="17" cy="18" r="2" />
+      </svg>
+    );
+  }
+  if (item.href === "/admin/dashboard" || item.href === "/maintenance/checklists") {
     return (
       <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
         <rect x="3" y="3" width="18" height="18" rx="2" />
