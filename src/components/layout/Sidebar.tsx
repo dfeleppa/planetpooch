@@ -293,12 +293,12 @@ export function Sidebar() {
         )}
 
         <nav className="pp-sidebar-nav mt-4 flex flex-1 flex-col gap-4 overflow-y-auto">
-          {/* Management section — SUPER_ADMIN only */}
+          {/* Corporate section — SUPER_ADMIN only */}
           {isSuperAdmin && (
             <>
               {!isCollapsed ? (
                 <div className="px-2.5 pt-1 text-[10px] font-medium uppercase tracking-[0.08em] text-pp-ink-4">
-                  Management
+                  Corporate
                 </div>
               ) : (
                 <div className="mx-1.5 h-px bg-pp-line" />
