@@ -151,7 +151,8 @@ body {
 .pp-sidebar, .pp-mobile-bar { background: #324953; color: #fff; }
 .pp-sidebar { border-right: 1px solid #263d45; }
 .pp-sidebar img, .pp-mobile-bar img { filter: brightness(0) invert(1); }
-.pp-sidebar nav div[class*="uppercase"] { color: #bfe8c9; }
+.pp-sidebar nav div[class*="uppercase"],
+.pp-sidebar nav h2[class*="uppercase"] { color: #bfe8c9; }
 .pp-sidebar nav a:not(.bg-pp-mint) { color: rgba(255,255,255,.82); }
 .pp-sidebar nav a:not(.bg-pp-mint) span { color: rgba(255,255,255,.82); }
 .pp-sidebar nav a.bg-pp-mint, .pp-sidebar nav a.bg-pp-mint span { color: #213640; }
