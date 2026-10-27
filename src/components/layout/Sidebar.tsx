@@ -7,7 +7,7 @@ import { useSession } from "next-auth/react";
 import { cn } from "@/lib/utils";
 import { useState, useEffect } from "react";
 import { useBusiness } from "@/components/business/BusinessProvider";
-import { availableBusinesses } from "@/lib/business";
+import { canSeeCorporateSidebar, sidebarBusinesses } from "@/lib/sidebar-access";
 import { isKnowledgeOwner } from "@/lib/knowledge-owner";
 import { hasAskPoochAccess } from "@/lib/knowledge-access";
 import { canEditGroomingCounts } from "@/lib/grooming-inventory-access";
@@ -148,6 +148,7 @@ export function Sidebar() {
   const pathname = usePathname();
   const { data: session } = useSession();
   const role = session?.user?.role;
+  const canSeeCorporate = canSeeCorporateSidebar(session?.user);
   const jobTitle = session?.user?.jobTitle;
   const isSuperAdmin = role === "SUPER_ADMIN" || role === "ADMIN";
   const canAskPooch = hasAskPoochAccess(session?.user);
@@ -324,8 +325,8 @@ export function Sidebar() {
         )}
 
         <nav className="pp-sidebar-nav mt-4 flex flex-1 flex-col gap-4 overflow-y-auto">
-          {/* Corporate navigation preserves each page's existing role access. */}
-          {corporateNav.length > 0 && (
+          {/* Corporate assignment is required in addition to each page's role access. */}
+          {canSeeCorporate && corporateNav.length > 0 && (
             <>
               {!isCollapsed ? (
                 <div className="px-2.5 pt-1 text-[10px] font-medium uppercase tracking-[0.08em] text-pp-ink-4">
@@ -352,7 +353,7 @@ export function Sidebar() {
               </div>
             </>
           )}
-          {session?.user && availableBusinesses(session.user).map((company) => {
+          {sidebarBusinesses(session?.user).map((company) => {
             const companyOperations = sharedNav.filter((item) => company.company === "RESORT"
               ? item.href !== "/maintenance/vans"
               : item.href === "/maintenance/vans" || item.href === "/maintenance");
@@ -387,7 +388,7 @@ export function Sidebar() {
             );
           })}
           {/* Marketing section — visible to MARKETING role and SUPER_ADMIN */}
-          {hasMarketingAccess && !isSuperAdmin && (
+          {canSeeCorporate && hasMarketingAccess && !isSuperAdmin && (
             <>
               {!isCollapsed ? (
                 <div className="px-2.5 pt-1 text-[10px] font-medium uppercase tracking-[0.08em] text-pp-ink-4">
