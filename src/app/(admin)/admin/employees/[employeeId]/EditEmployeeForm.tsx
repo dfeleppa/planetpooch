@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { AvailabilityEditor, type AvailabilityEntry } from "@/components/AvailabilityEditor";
 import { DAYS_OF_WEEK } from "@/lib/availability";
 
-type Role = "SUPER_ADMIN" | "MANAGER" | "EMPLOYEE" | "MARKETING" | "ADMIN" | "FRONT_DESK";
+type Role = "SUPER_ADMIN" | "MANAGER" | "EMPLOYEE" | "FRONT_DESK";
 type Company = "GROOMING" | "RESORT" | "CORPORATE";
 
 interface Props {
@@ -248,7 +248,6 @@ export function EditEmployeeForm({
                 >
                   <option value="EMPLOYEE">Employee</option>
                   <option value="MANAGER">Manager</option>
-                  {canAssignSuperAdmin && <option value="MARKETING">Marketing</option>}
                   {canAssignSuperAdmin && <option value="SUPER_ADMIN">Super Admin</option>}
                 </select>
               ) : (

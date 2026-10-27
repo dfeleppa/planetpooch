@@ -15,7 +15,7 @@ test("sidebar category access follows Corporate assignment and the three named a
   ];
   for (const { user, corporate, businesses } of cases) {
     // Elevated roles or job titles must never bypass the category allowlist.
-    for (const role of ["EMPLOYEE", "MANAGER", "ADMIN", "SUPER_ADMIN", "MARKETING"]) {
+    for (const role of ["EMPLOYEE", "MANAGER", "SUPER_ADMIN"]) {
       const identity = user ? { ...user, role, jobTitle: "CMO" } : user;
       assert.equal(canSeeCorporateSidebar(identity), corporate);
       assert.deepEqual(sidebarBusinesses(identity).map(({ company }) => company), businesses);

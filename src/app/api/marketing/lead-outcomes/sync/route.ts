@@ -5,7 +5,7 @@ export const maxDuration = 300;
 
 export async function POST() {
   const session = await getSession();
-  if (!session?.user || !["SUPER_ADMIN", "ADMIN"].includes(session.user.role)) {
+  if (!session?.user || !["SUPER_ADMIN"].includes(session.user.role)) {
     return Response.json({ error: "Forbidden" }, { status: 403 });
   }
   try {

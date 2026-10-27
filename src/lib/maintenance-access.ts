@@ -9,7 +9,7 @@ export function maintenanceCompanyWhere(user: MaintenanceUser, requested?: unkno
   // Shared front-desk accounts always operate in Resort, including when a
   // stale URL asks for another business. They never gain manager permissions.
   if (user.role === "FRONT_DESK") return { company: { in: ["RESORT" as Company] } };
-  const allowed = user.company === "CORPORATE" || user.role === "SUPER_ADMIN" || user.role === "ADMIN"
+  const allowed = user.company === "CORPORATE" || user.role === "SUPER_ADMIN"
     ? COMPANIES
     : COMPANIES.filter((company) => company === user.company);
   return { company: { in: requested == null ? allowed : allowed.filter((company) => company === requested) } };
@@ -20,7 +20,7 @@ export function canAccessMaintenanceCompany(user: MaintenanceUser, company: unkn
 }
 
 export function canManageMaintenance(user: MaintenanceUser): boolean {
-  return ["MANAGER", "SUPER_ADMIN", "ADMIN"].includes(user.role ?? "");
+  return ["MANAGER", "SUPER_ADMIN"].includes(user.role ?? "");
 }
 
 export function canUpdateMaintenanceTask(user: MaintenanceUser, task: { assignedToId: string | null }): boolean {

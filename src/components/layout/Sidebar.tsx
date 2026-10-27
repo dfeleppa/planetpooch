@@ -159,7 +159,7 @@ export function Sidebar() {
   const role = session?.user?.role;
   const canSeeCorporate = canSeeCorporateSidebar(session?.user);
   const jobTitle = session?.user?.jobTitle;
-  const isSuperAdmin = role === "SUPER_ADMIN" || role === "ADMIN";
+  const isSuperAdmin = role === "SUPER_ADMIN";
   const canAskPooch = hasAskPoochAccess(session?.user);
   const isKnowledgeAccount = canAskPooch && isKnowledgeOwner({ email: session?.user?.email, role });
   const isManager = role === "MANAGER";
@@ -181,7 +181,7 @@ export function Sidebar() {
   ];
   const showGroomingInventory = !isManagerOrAbove && canEditGroomingCounts(session?.user);
   const hasMarketingAccess =
-    role === "MARKETING" || isSuperAdmin || jobTitle === "CMO";
+    isSuperAdmin || jobTitle === "CMO";
 
   const baseNav = canManageModules
     ? superAdminNav
@@ -402,7 +402,7 @@ export function Sidebar() {
               </section>
             );
           })}
-          {/* Marketing section — visible to MARKETING role and SUPER_ADMIN */}
+          {/* Marketing section — visible to Super Admins and the CMO */}
           {canSeeCorporate && hasMarketingAccess && !isSuperAdmin && (
             <>
               {!isCollapsed ? (

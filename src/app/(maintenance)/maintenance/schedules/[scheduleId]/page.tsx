@@ -18,7 +18,7 @@ export default async function ScheduleDetailPage({
 }) {
   await requireAuth();
   const session = await getServerSession(authOptions);
-  const isAdmin = (session?.user as { role?: string })?.role === "ADMIN";
+  const isAdmin = (session?.user as { role?: string })?.role === "SUPER_ADMIN";
 
   const { scheduleId } = await params;
 

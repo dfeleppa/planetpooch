@@ -5,7 +5,7 @@ import Link from "next/link";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 
-type RoleVal = "SUPER_ADMIN" | "MANAGER" | "EMPLOYEE" | "MARKETING" | "ADMIN" | "FRONT_DESK";
+type RoleVal = "SUPER_ADMIN" | "MANAGER" | "EMPLOYEE" | "FRONT_DESK";
 type CompanyVal = "GROOMING" | "RESORT" | "CORPORATE";
 
 interface Position {

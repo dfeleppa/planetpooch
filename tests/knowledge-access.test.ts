@@ -40,13 +40,13 @@ test("drafts are hidden, including from super admins on the employee page", () =
 });
 
 test("authorized admins can read drafts and all company articles", () => {
-  const article = { isPublished: false, company: "GROOMING" as const, allowedRoles: ["MARKETING" as const] };
+  const article = { isPublished: false, company: "GROOMING" as const, allowedRoles: ["MANAGER" as const] };
   assert.equal(canReadKnowledgeArticle(article, { ...employee, email: "dfeleppa@gmail.com", role: "SUPER_ADMIN" }), true);
   assert.equal(canReadKnowledgeArticle(article, { ...employee, email: "agonzaga91@gmail.com", role: "SUPER_ADMIN" }), true);
 });
 
 test("super admins can review published articles regardless of article roles", () => {
-  const article = { isPublished: true, company: "GROOMING" as const, allowedRoles: ["MARKETING" as const] };
+  const article = { isPublished: true, company: "GROOMING" as const, allowedRoles: ["MANAGER" as const] };
   assert.equal(canReadKnowledgeArticle(article, { ...employee, role: "SUPER_ADMIN" }), true);
 });
 

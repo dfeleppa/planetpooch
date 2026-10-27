@@ -38,7 +38,7 @@ const request = () => new Request("https://app.planet-pooch.com/api/knowledge/ch
 });
 
 test("Corporate assignment grants access independently of role; other companies and missing assignments do not", () => {
-  for (const role of ["EMPLOYEE", "MANAGER", "MARKETING", "SUPER_ADMIN", "ADMIN"]) {
+  for (const role of ["EMPLOYEE", "MANAGER", "SUPER_ADMIN"]) {
     assert.equal(access.hasAskPoochAccess({ company: "CORPORATE", role }), true);
     for (const company of ["RESORT", "GROOMING", null, undefined]) {
       assert.equal(access.hasAskPoochAccess({ company, role }), false);

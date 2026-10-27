@@ -20,7 +20,7 @@ export function AdminModulesNav({ active }: { active: AdminModulesView }) {
   const { data: session } = useSession();
   const business = useBusiness();
   const role = session?.user?.role;
-  const canManageModules = role === "SUPER_ADMIN" || role === "ADMIN" || session?.user?.jobTitle === "CMO";
+  const canManageModules = role === "SUPER_ADMIN" || session?.user?.jobTitle === "CMO";
 
   return (
     <div className="flex flex-col gap-3">

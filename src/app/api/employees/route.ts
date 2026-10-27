@@ -268,17 +268,17 @@ export async function POST(req: NextRequest) {
       normalizedEmail = `${slug}-${suffix}@placeholder.local`;
     }
 
-    // Only top-tier callers (SUPER_ADMIN / legacy ADMIN) can create
+    // Only top-tier callers (SUPER_ADMIN) can create
     // top-tier accounts. MANAGERs can also create MANAGERs within their own
     // company, scoped above.
     const callerIsTopTier =
-      sessionUser.role === "SUPER_ADMIN" ||
-      sessionUser.role === "ADMIN";
+      sessionUser.role === "SUPER_ADMIN";
+    if (role !== undefined && !["SUPER_ADMIN", "MANAGER", "EMPLOYEE"].includes(role)) {
+      return NextResponse.json({ error: "Invalid employee role" }, { status: 400 });
+    }
     let assignedRole: Role = "EMPLOYEE";
     if (role === "SUPER_ADMIN" && callerIsTopTier) {
       assignedRole = role;
-    } else if (role === "MARKETING" && callerIsTopTier) {
-      assignedRole = "MARKETING";
     } else if (role === "MANAGER" && (callerIsTopTier || sessionUser.role === "MANAGER")) {
       assignedRole = "MANAGER";
     }

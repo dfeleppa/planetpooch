@@ -123,7 +123,7 @@ export async function loadLeadOutcomes({ from, to, source }: { from: string; to:
   const campaignRows = [...campaignGroups.values()].sort((a, b) =>
     b.netPaidCents - a.netPaidCents || b.appointments - a.appointments || b.leads - a.leads || a.campaignName.localeCompare(b.campaignName));
   const totalBookedLeads = outcomes.filter((row) => row.result.booked > 0).length;
-  const isAdmin = ["SUPER_ADMIN", "ADMIN"].includes(session?.user?.role ?? "");
+  const isAdmin = ["SUPER_ADMIN"].includes(session?.user?.role ?? "");
   // The general MoeGo sync can advance its order cursor when API permission is
   // denied, so a cursor alone cannot establish that paid totals are current.
   const orderDataAvailable = Boolean(orderSync && latestOrder._max.syncedAt && latestOrder._max.syncedAt >= staleBefore);

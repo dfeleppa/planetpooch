@@ -17,7 +17,7 @@ import {
 export const maxDuration = 120;
 
 function isSuperAdmin(role: string) {
-  return role === Role.SUPER_ADMIN || role === Role.ADMIN;
+  return role === Role.SUPER_ADMIN;
 }
 
 function numericYear(value: string | null, fallback: number): number {

@@ -278,13 +278,15 @@ export async function PATCH(
       data.company = body.company;
     }
 
-    if ("role" in body && body.role) {
+    if ("role" in body) {
+      if (!["SUPER_ADMIN", "MANAGER", "EMPLOYEE"].includes(body.role)) {
+        return NextResponse.json({ error: "Invalid employee role" }, { status: 400 });
+      }
       const desired = body.role as Role;
       const callerIsTopTier =
-        sessionUser.role === "SUPER_ADMIN" ||
-        sessionUser.role === "ADMIN";
+        sessionUser.role === "SUPER_ADMIN";
       if (
-        (desired === "SUPER_ADMIN" || desired === "MARKETING") &&
+        desired === "SUPER_ADMIN" &&
         !callerIsTopTier
       ) {
         return NextResponse.json(
@@ -295,8 +297,7 @@ export async function PATCH(
       if (
         desired === "MANAGER" ||
         desired === "EMPLOYEE" ||
-        desired === "SUPER_ADMIN" ||
-        desired === "MARKETING"
+        desired === "SUPER_ADMIN"
       ) {
         data.role = desired;
       }

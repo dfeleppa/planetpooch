@@ -8,10 +8,7 @@ const ROLE_LABELS: Record<string, string> = {
   FRONT_DESK: "Front Desk",
   SUPER_ADMIN: "Super Admin",
   MANAGER: "Manager",
-  EMPLOYEE: "Employee",
-  MARKETING: "Marketing",
-  ADMIN: "Admin",
-};
+  EMPLOYEE: "Employee",};
 
 export function UserMenu({ compact = false }: { compact?: boolean }) {
   const { data: session } = useSession();

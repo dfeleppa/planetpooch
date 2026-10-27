@@ -62,7 +62,7 @@ export default function AdminModulesPage() {
   const role = session?.user?.role;
   const jobTitle = session?.user?.jobTitle;
   const canDeleteModules =
-    role === "SUPER_ADMIN" || role === "ADMIN" || jobTitle === "CMO";
+    role === "SUPER_ADMIN" || jobTitle === "CMO";
 
   const [modules, setModules] = useState<Module[]>([]);
   const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());

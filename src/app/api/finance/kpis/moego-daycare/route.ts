@@ -11,7 +11,7 @@ import { MoegoApiError, MoegoConfigError } from "@/lib/moego/client";
 export const maxDuration = 120;
 
 function isAdmin(role: string) {
-  return role === Role.SUPER_ADMIN || role === Role.ADMIN;
+  return role === Role.SUPER_ADMIN;
 }
 
 export async function POST(req: NextRequest) {

@@ -24,9 +24,7 @@ const COMPANY_SHORT: Record<Company, string> = {
 
 const ROLE_LABELS: Partial<Record<Role, string>> = {
   SUPER_ADMIN: "Super Admin",
-  MANAGER: "Manager",
-  ADMIN: "Admin",
-};
+  MANAGER: "Manager",};
 
 type Tab = "active" | "terminated";
 

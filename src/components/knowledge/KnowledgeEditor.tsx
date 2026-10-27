@@ -5,7 +5,7 @@ import MarkdownIt from "markdown-it";
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import styles from "./KnowledgeEditor.module.css";
 
-type Role = "SUPER_ADMIN" | "ADMIN" | "MANAGER" | "EMPLOYEE" | "MARKETING";
+type Role = "SUPER_ADMIN" | "MANAGER" | "EMPLOYEE";
 type Article = {
   id: string;
   title: string;
@@ -36,7 +36,6 @@ function formatArticleDateTime(value: string | null) {
 const roleOptions: { role: Role; label: string }[] = [
   { role: "EMPLOYEE", label: "Employee role" },
   { role: "MANAGER", label: "Manager role" },
-  { role: "MARKETING", label: "Marketing role" },
   { role: "SUPER_ADMIN", label: "Super admins" },
 ];
 

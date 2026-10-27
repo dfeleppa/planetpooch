@@ -15,14 +15,13 @@ export async function requireAuth() {
   return session;
 }
 
-/** Requires MANAGER or SUPER_ADMIN (or legacy ADMIN). Use for most admin pages. */
+/** Requires MANAGER or SUPER_ADMIN. Use for most admin pages. */
 export async function requireManager() {
   const session = await requireAuth();
   const role = (session.user as { role: Role }).role;
   if (
     role !== "MANAGER" &&
-    role !== "SUPER_ADMIN" &&
-    role !== "ADMIN"
+    role !== "SUPER_ADMIN"
   ) {
     redirect("/dashboard");
   }
@@ -43,19 +42,19 @@ export async function requireEmployeeManager() {
 }
 
 /**
- * Requires SUPER_ADMIN (or legacy ADMIN). Use for module/lesson management
+ * Requires SUPER_ADMIN. Use for module/lesson management
  * and other top-tier admin actions.
  */
 export async function requireSuperAdmin() {
   const session = await requireAuth();
   const role = (session.user as { role: Role }).role;
-  if (role !== "SUPER_ADMIN" && role !== "ADMIN") {
+  if (role !== "SUPER_ADMIN") {
     redirect("/admin");
   }
   return session;
 }
 
-/** Requires MARKETING or SUPER_ADMIN, or the CMO job title. Use for /marketing pages. */
+/** Requires SUPER_ADMIN, or the CMO job title. Use for /marketing pages. */
 export async function requireMarketing() {
   const session = await requireAuth();
   const user = session.user as { role: Role; jobTitle: string | null };
@@ -89,18 +88,17 @@ export function getCompanyFilter(
 // `getSession()` + a 403 JSON response.
 // ──────────────────────────────────────────────────────────────────────────────
 
-/** True if the role has manager-level access (MANAGER, SUPER_ADMIN, or legacy ADMIN). */
+/** True if the role has manager-level access (MANAGER, SUPER_ADMIN). */
 export function isManagerOrAbove(role: string | undefined | null): boolean {
   return (
     role === "MANAGER" ||
-    role === "SUPER_ADMIN" ||
-    role === "ADMIN"
+    role === "SUPER_ADMIN"
   );
 }
 
-/** True if the role is SUPER_ADMIN or legacy ADMIN — the top tier. */
+/** True if the role is SUPER_ADMIN — the top tier. */
 export function isSuperAdmin(role: string | undefined | null): boolean {
-  return role === "SUPER_ADMIN" || role === "ADMIN";
+  return role === "SUPER_ADMIN";
 }
 
 /**
@@ -112,7 +110,7 @@ export function hasModuleManagementAccess(
   role: string | undefined | null,
   jobTitle?: string | undefined | null
 ): boolean {
-  if (role === "SUPER_ADMIN" || role === "ADMIN") return true;
+  if (role === "SUPER_ADMIN") return true;
   return jobTitle === "CMO";
 }
 
@@ -141,15 +139,14 @@ export function hasEmployeeManagementAccess(
 }
 
 /**
- * True if the user can access /marketing. Grants access to the MARKETING role,
- * to top-tier admins (SUPER_ADMIN / legacy ADMIN), and to anyone with the CMO
+ * True if the user can access /marketing. Grants access to Super Admins and anyone with the CMO
  * job title regardless of role.
  */
 export function hasMarketingAccess(
   role: string | undefined | null,
   jobTitle?: string | undefined | null
 ): boolean {
-  if (role === "MARKETING" || role === "SUPER_ADMIN" || role === "ADMIN") {
+  if (role === "SUPER_ADMIN") {
     return true;
   }
   return jobTitle === "CMO";

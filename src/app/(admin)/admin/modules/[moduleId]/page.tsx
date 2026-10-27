@@ -42,7 +42,7 @@ export default function AdminModuleDetailPage() {
   // Front Desk can edit subsections/lessons but not delete them — hide the
   // destructive controls so they don't get a 403 on click.
   const canDeleteContent =
-    role === "SUPER_ADMIN" || role === "ADMIN" || jobTitle === "CMO";
+    role === "SUPER_ADMIN" || jobTitle === "CMO";
   const moduleId = params.moduleId as string;
   const [mod, setMod] = useState<ModuleData | null>(null);
   const [loading, setLoading] = useState(true);

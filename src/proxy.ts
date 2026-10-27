@@ -77,19 +77,16 @@ export async function proxy(req: NextRequest) {
   const jobTitle = (token.jobTitle as string | null | undefined) ?? null;
   const isManagerOrAbove =
     role === "MANAGER" ||
-    role === "SUPER_ADMIN" ||
-    role === "ADMIN";
+    role === "SUPER_ADMIN";
   // CMO job title gets full marketing and module-management access regardless of role.
   const hasMarketingAccess =
-    role === "MARKETING" ||
     role === "SUPER_ADMIN" ||
-    role === "ADMIN" ||
     jobTitle === "CMO";
   const canManageModules =
-    role === "SUPER_ADMIN" || role === "ADMIN" || jobTitle === "CMO";
+    role === "SUPER_ADMIN" || jobTitle === "CMO";
   const canEditModules = canManageModules;
   const canAccessAdmin = isManagerOrAbove;
-  const canAccessFinance = role === "SUPER_ADMIN" || role === "ADMIN";
+  const canAccessFinance = role === "SUPER_ADMIN";
 
   if ((pathname.startsWith("/admin/knowledge") || pathname.startsWith("/knowledge")) &&
     !isKnowledgeOwner({ email: token.email, role })) {
@@ -115,7 +112,7 @@ export async function proxy(req: NextRequest) {
     return NextResponse.redirect(new URL("/dashboard", req.url));
   }
 
-  // Marketing section requires MARKETING or SUPER_ADMIN
+  // Marketing section requires SUPER_ADMIN
   if (pathname.startsWith("/marketing") && !hasMarketingAccess) {
     return NextResponse.redirect(new URL("/dashboard", req.url));
   }

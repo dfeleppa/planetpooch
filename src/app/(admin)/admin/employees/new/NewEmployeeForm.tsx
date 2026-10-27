@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { AvailabilityEditor, type AvailabilityEntry } from "@/components/AvailabilityEditor";
 import { OAuthInviteButton } from "../OAuthInviteButton";
 
-type Role = "SUPER_ADMIN" | "MANAGER" | "EMPLOYEE" | "MARKETING" | "ADMIN" | "FRONT_DESK";
+type Role = "SUPER_ADMIN" | "MANAGER" | "EMPLOYEE" | "FRONT_DESK";
 type Company = "GROOMING" | "RESORT" | "CORPORATE";
 
 interface Props {
@@ -99,7 +99,7 @@ export function NewEmployeeForm({
   const [availability, setAvailability] = useState<AvailabilityEntry[]>([]);
 
   const isSuperAdmin =
-    currentRole === "SUPER_ADMIN" || currentRole === "ADMIN";
+    currentRole === "SUPER_ADMIN";
   const isManager = currentRole === "MANAGER";
   // Scoped managers are locked to their own company.
   const isScopedTier = isManager && currentCompany !== "CORPORATE";
@@ -320,7 +320,6 @@ export function NewEmployeeForm({
             <SelectField label="Role" value={role} onChange={(v) => setRole(v as Role)}>
               <option value="EMPLOYEE">Employee</option>
               <option value="MANAGER">Manager</option>
-              {isSuperAdmin && <option value="MARKETING">Marketing</option>}
               {isSuperAdmin && <option value="SUPER_ADMIN">Super Admin</option>}
             </SelectField>
           </div>

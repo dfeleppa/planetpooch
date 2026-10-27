@@ -87,8 +87,6 @@ enum Role {
   SUPER_ADMIN
   MANAGER
   EMPLOYEE
-  MARKETING
-  ADMIN // legacy — existing rows only, use SUPER_ADMIN for new admins
 }
 
 enum Company {

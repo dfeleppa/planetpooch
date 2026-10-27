@@ -13,7 +13,7 @@ import { fromWeekParam } from "@/lib/week";
 import { resolveStandingAmount, type StandingRow } from "@/lib/kpi-standing";
 
 function isSuperAdmin(role: string) {
-  return role === Role.SUPER_ADMIN || role === Role.ADMIN;
+  return role === Role.SUPER_ADMIN;
 }
 
 const scaledInt = z.number().int().nullable();

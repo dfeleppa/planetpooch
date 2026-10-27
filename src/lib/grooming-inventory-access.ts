@@ -7,6 +7,6 @@ export function canEditGroomingCounts(user: {
   role?: string | null;
   company?: string | null;
 } | null | undefined): boolean {
-  return user?.role === "MANAGER" || user?.role === "SUPER_ADMIN" || user?.role === "ADMIN" ||
+  return user?.role === "MANAGER" || user?.role === "SUPER_ADMIN" ||
     (user?.id === STACEY_CONTI_USER_ID && user.company === "GROOMING");
 }
