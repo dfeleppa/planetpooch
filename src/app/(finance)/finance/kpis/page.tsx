@@ -1,4 +1,5 @@
 import { getActiveBusiness } from "@/lib/business-server";
+import { redirect } from "next/navigation";
 import { requireSuperAdmin } from "@/lib/auth-helpers";
 import { prisma } from "@/lib/prisma";
 import { KpiSegment } from "@prisma/client";
@@ -306,13 +307,18 @@ export default async function KpisPage({
   await requireSuperAdmin();
   const params = await searchParams;
 
+  if (params.segment === PET_RESORT_TAB) {
+    const week = isValidWeekParam(params.week) ? `&week=${params.week}` : "";
+    redirect(`/finance/kpis?segment=${PET_RESORT_COPY_TAB}${week}`);
+  }
+
   // Report source links can open the named business without changing the saved preference.
   const business = params.segment === "MOBILE_GROOMING" || params.segment === MOBILE_GROOMING_QUARTERLY_TAB ? { company: "GROOMING" as const }
     : params.segment === PET_RESORT_TAB || params.segment === PET_RESORT_COPY_TAB || params.segment === PET_RESORT_ANNUAL_TAB
       ? { company: "RESORT" as const } : await getActiveBusiness();
   const activeTab = business.company === "GROOMING" ? (params.segment === MOBILE_GROOMING_QUARTERLY_TAB ? MOBILE_GROOMING_QUARTERLY_TAB : "MOBILE_GROOMING")
-    : params.segment === PET_RESORT_TAB ? PET_RESORT_TAB : params.segment === PET_RESORT_ANNUAL_TAB ? PET_RESORT_ANNUAL_TAB : PET_RESORT_COPY_TAB;
-  const showPetResort = activeTab === PET_RESORT_TAB || activeTab === PET_RESORT_COPY_TAB || activeTab === PET_RESORT_ANNUAL_TAB;
+    : params.segment === PET_RESORT_ANNUAL_TAB ? PET_RESORT_ANNUAL_TAB : PET_RESORT_COPY_TAB;
+  const showPetResort = activeTab === PET_RESORT_COPY_TAB || activeTab === PET_RESORT_ANNUAL_TAB;
   const segment: KpiSegment = "MOBILE_GROOMING";
 
   let weekStart: Date;

@@ -863,7 +863,6 @@ export function KpiView({
   const tabs = [
     { id: PET_RESORT_COPY_TAB, label: "Quarterly" },
     { id: PET_RESORT_ANNUAL_TAB, label: "Annual" },
-    { id: PET_RESORT_TAB, label: "Weekly (legacy)" },
   ];
 
   if (isPetResortAnnual && annualHeadlineSummary) {

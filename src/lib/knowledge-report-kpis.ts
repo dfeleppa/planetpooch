@@ -51,7 +51,7 @@ async function findDaycareVisitsPerStaffHour(question: string): Promise<Knowledg
   const latest = rows.reduce((at, row) => row.updatedAt > at ? row.updatedAt : at, new Date(0));
   return [{ id: `record:report:kpi:daycare-visits-per-hour:${period.start}`, kind: "record",
     title: `Daycare visits per staff hour, ${period.start}–${period.end}`,
-    url: `/finance/kpis?week=${period.start}&segment=PET_RESORT`, excerpt: answer, answer,
+    url: `/finance/kpis?week=${period.start}&segment=PET_RESORT_COPY`, excerpt: answer, answer,
     updatedAt: latest.getTime() ? latest.toISOString() : new Date().toISOString(), dateKind: "entry" }];
 }
 
@@ -85,7 +85,7 @@ async function findServiceRevenueTarget(question: string): Promise<KnowledgeSour
   const latest = actuals.reduce((at, row) => row.updatedAt > at ? row.updatedAt : at, new Date(0));
   return [{ id: `record:report:kpi:revenue-targets:${period.start}`, kind: "record",
     title: `Pet Resort service revenue targets, ${period.start}–${period.end}`,
-    url: `/finance/kpis?week=${period.start}&segment=PET_RESORT`, excerpt: answer, answer,
+    url: `/finance/kpis?week=${period.start}&segment=PET_RESORT_COPY`, excerpt: answer, answer,
     updatedAt: latest.getTime() ? latest.toISOString() : new Date().toISOString(), dateKind: "entry" }];
 }
 
@@ -136,7 +136,7 @@ async function findBoardingOccupancyTrend(count: number): Promise<KnowledgeSourc
   return [{
     id: `record:report:kpi:boarding-trend:${weeks[0].start}:${weeks.at(-1)!.end}`,
     kind: "record", title: `Boarding occupancy, ${count} completed weeks through ${weeks.at(-1)!.end}`,
-    url: `/finance/kpis?week=${weeks.at(-1)!.start}&segment=PET_RESORT`,
+    url: `/finance/kpis?week=${weeks.at(-1)!.start}&segment=PET_RESORT_COPY`,
     excerpt: answer, answer,
     updatedAt: latestUpdate.getTime() ? latestUpdate.toISOString() : new Date().toISOString(), dateKind: "entry",
   }];
