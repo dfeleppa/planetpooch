@@ -1,4 +1,5 @@
-import { getEmployeeBusinessWhere } from "@/lib/business-server";
+import { getActiveBusiness, getEmployeeBusinessWhere } from "@/lib/business-server";
+import { moduleCompanyWhere } from "@/lib/module-company";
 import { requireAdmin, activeUserWhere } from "@/lib/auth-helpers";
 import { prisma } from "@/lib/prisma";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
@@ -16,6 +17,7 @@ export default async function AdminModuleProgressPage() {
   });
 
   const modules = await prisma.module.findMany({
+    where: moduleCompanyWhere((await getActiveBusiness()).company),
     orderBy: { order: "asc" },
     include: {
       subsections: {

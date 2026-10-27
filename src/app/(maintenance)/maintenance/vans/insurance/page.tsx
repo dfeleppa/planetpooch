@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { VanSubnav } from "@/components/maintenance/VanSubnav";
 import { redirect } from "next/navigation";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
@@ -18,10 +19,7 @@ export default async function VanInsurancePage() {
     <div className="mb-3 text-sm text-gray-500"><Link href="/maintenance/vans?company=GROOMING" className="hover:text-blue-600">Vans</Link> / Insurance</div>
     <h1 className="text-2xl font-bold text-gray-900">Van insurance</h1>
     <p className="mt-1 mb-6 text-gray-500">Insurance coverage details for the Mobile Grooming fleet</p>
-    <nav aria-label="Van pages" className="mb-5 flex gap-4 border-b border-gray-200 text-sm font-medium">
-      <Link href="/maintenance/vans?company=GROOMING" className="pb-3 text-gray-500 hover:text-gray-900">Fleet</Link>
-      <span aria-current="page" className="border-b-2 border-pp-accent pb-3 text-pp-accent">Insurance</span>
-    </nav>
+    <VanSubnav active="insurance" />
     <InsuranceTable canEdit={isManagerOrAbove(session?.user?.role)} vans={vans.map(van => ({
       number: van.number, year: van.year, make: van.make ?? "", model: van.model ?? "", vin: van.vin ?? "",
       carrier: van.insuranceCarrier ?? "", deductible: van.insuranceDeductible?.toString() ?? "",

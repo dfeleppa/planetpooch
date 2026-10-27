@@ -2,14 +2,18 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getSession, isManagerOrAbove, hasModuleEditAccess } from "@/lib/auth-helpers";
 import { getVisibleModuleIdsForUser } from "@/lib/module-visibility";
+import { getActiveBusiness } from "@/lib/business-server";
+import { resolveBusiness } from "@/lib/business";
+import { moduleCompanyWhere } from "@/lib/module-company";
+import type { Prisma } from "@prisma/client";
 
-export async function GET() {
+export async function GET(req: NextRequest) {
   const session = await getSession();
   if (!session?.user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const where: { id?: { in: string[] } } = {};
+  const where: Prisma.ModuleWhereInput = {};
   // Manager-tier users see all modules in the picker; everyone else sees only
   // modules visible to them.
   if (
@@ -26,6 +30,10 @@ export async function GET() {
       me?.company ?? null,
     );
     where.id = { in: [...ids] };
+  } else {
+    const active = await getActiveBusiness();
+    const business = resolveBusiness(session.user, req.nextUrl.searchParams.get("company") ?? active.company);
+    Object.assign(where, moduleCompanyWhere(business.company));
   }
 
   const modules = await prisma.module.findMany({

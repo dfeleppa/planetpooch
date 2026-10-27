@@ -83,7 +83,7 @@ export default async function SchedulesPage({
             );
 
             return (
-              <Link key={schedule.id} href={`/maintenance/schedules/${schedule.id}`}>
+              <Link key={schedule.id} href={`/maintenance/schedules/${schedule.id}?company=${active}`}>
                 <Card className="hover:shadow-md transition-shadow cursor-pointer">
                   <CardContent className="py-4">
                     <div className="flex items-start justify-between gap-4">

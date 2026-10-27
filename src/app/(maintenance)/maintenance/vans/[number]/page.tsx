@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { VanSubnav } from "@/components/maintenance/VanSubnav";
 import { notFound, redirect } from "next/navigation";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
@@ -33,10 +34,7 @@ export default async function VanPage({ params }: { params: Promise<{ number: st
         <h1 className="text-2xl font-bold text-gray-900">Van {number}</h1>
         <p className="mt-1 text-gray-500">Vehicle profile, documents, and maintenance records</p>
       </div>
-      <nav aria-label="Van pages" className="mb-5 flex gap-4 border-b border-gray-200 text-sm font-medium">
-        <Link href="/maintenance/vans?company=GROOMING" className="pb-3 text-gray-500 hover:text-gray-900">Fleet</Link>
-        <Link href="/maintenance/vans/insurance?company=GROOMING" className="pb-3 text-gray-500 hover:text-gray-900">Insurance</Link>
-      </nav>
+      <VanSubnav active="fleet" />
       <VehicleDocuments number={number} canEdit={canEdit} documents={documents} />
       <VanEditor
         key={`${van.updatedAt.toISOString()}-${van.year}-${van.make}-${van.model}-${van.vin}`}

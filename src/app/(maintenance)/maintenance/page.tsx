@@ -5,11 +5,13 @@ import { Badge } from "@/components/ui/badge";
 import { getActiveBusiness } from "@/lib/business-server";
 import Link from "next/link";
 import { MaintenanceSubnav } from "@/components/maintenance/MaintenanceSubnav";
+import { redirect } from "next/navigation";
 
 export default async function MaintenanceDashboardPage() {
   await requireAuth();
 
   const active = (await getActiveBusiness()).company;
+  if (active === "GROOMING") redirect("/maintenance/inventory?company=GROOMING");
 
   const now = new Date();
   const sevenDaysFromNow = new Date(now);

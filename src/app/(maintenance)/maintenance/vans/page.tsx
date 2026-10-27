@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { VanSubnav } from "@/components/maintenance/VanSubnav";
 import { redirect } from "next/navigation";
 import { requireAuth } from "@/lib/auth-helpers";
 import { getActiveBusiness } from "@/lib/business-server";
@@ -24,10 +25,7 @@ export default async function VansPage() {
         <h1 className="text-2xl font-bold text-gray-900">Vans</h1>
         <p className="mt-1 text-gray-500">Mobile Grooming vehicle details and maintenance history</p>
       </div>
-      <nav aria-label="Van pages" className="mb-5 flex gap-4 border-b border-gray-200 text-sm font-medium">
-        <span aria-current="page" className="border-b-2 border-pp-accent pb-3 text-pp-accent">Fleet</span>
-        <Link href="/maintenance/vans/insurance?company=GROOMING" className="pb-3 text-gray-500 hover:text-gray-900">Insurance</Link>
-      </nav>
+      <VanSubnav active="fleet" />
       <div className="overflow-x-auto rounded-xl border border-gray-200 bg-white shadow-sm">
         <table className="w-full min-w-[1000px] divide-y divide-gray-200 text-sm">
           <thead className="bg-gray-50 text-left text-gray-700">

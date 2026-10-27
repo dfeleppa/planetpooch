@@ -26,6 +26,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { DragHandle } from "@/components/SortableList";
 import { AdminModulesNav } from "../AdminModulesNav";
+import { useBusiness } from "@/components/business/BusinessProvider";
 
 interface Lesson {
   id: string;
@@ -56,6 +57,7 @@ const MODULE_DROP_PREFIX = "module-drop:";
 const LESSON_DROP_PREFIX = "lesson-drop:";
 
 export default function AdminModulesPage() {
+  const business = useBusiness();
   const { data: session } = useSession();
   const role = session?.user?.role;
   const jobTitle = session?.user?.jobTitle;
@@ -80,7 +82,7 @@ export default function AdminModulesPage() {
   const moduleIds = useMemo(() => modules.map((mod) => mod.id), [modules]);
 
   async function loadModules() {
-    const res = await fetch("/api/modules");
+    const res = await fetch(`/api/modules?company=${business.company}`);
     const data = await res.json();
     setModules(data);
     setExpandedIds(new Set());
@@ -104,7 +106,7 @@ export default function AdminModulesPage() {
     let ignore = false;
 
     async function loadInitialModules() {
-      const res = await fetch("/api/modules");
+      const res = await fetch(`/api/modules?company=${business.company}`);
       const data = await res.json();
       if (ignore) return;
       setModules(data);
@@ -116,7 +118,7 @@ export default function AdminModulesPage() {
     return () => {
       ignore = true;
     };
-  }, []);
+  }, [business.company]);
 
   async function toggleExpanded(moduleId: string) {
     setExpandedIds((current) => {

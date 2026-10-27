@@ -6,17 +6,17 @@ import { useBusiness } from "./BusinessProvider";
 import type { Business } from "@/lib/business";
 import { isCompanySidebarPath } from "@/lib/business";
 
-export function BusinessSelector({ options }: { options: readonly Business[] }) {
+export function BusinessSelector({ options, showOnModules = false }: { options: readonly Business[]; showOnModules?: boolean }) {
   const pathname = usePathname();
   const business = useBusiness();
   const [switching, setSwitching] = useState(false);
   const [error, setError] = useState("");
-  if (isCompanySidebarPath(pathname) || ["/dashboard", "/modules", "/career", "/knowledge", "/search", "/admin/onboarding"].some((path) => pathname === path || pathname.startsWith(`${path}/`))
+  if (!showOnModules && (isCompanySidebarPath(pathname) || ["/dashboard", "/modules", "/career", "/knowledge", "/search", "/admin/onboarding"].some((path) => pathname === path || pathname.startsWith(`${path}/`))
     || pathname === "/cash-management" || pathname.startsWith("/cash-management/")
     || pathname === "/marketing"
     || pathname === "/admin/knowledge"
     || pathname === "/admin/org-chart"
-    || ["/marketing/ad-reporting", "/marketing/evaluate", "/marketing/performance", "/marketing/website-attribution"].some((path) => pathname === path || pathname.startsWith(`${path}/`))) return null;
+    || ["/marketing/ad-reporting", "/marketing/evaluate", "/marketing/performance", "/marketing/website-attribution"].some((path) => pathname === path || pathname.startsWith(`${path}/`)))) return null;
 
   async function switchBusiness(company: string) {
     if (company === business.company) return;

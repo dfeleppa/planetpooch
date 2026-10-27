@@ -2,6 +2,7 @@ import { getActiveBusiness } from "@/lib/business-server";
 import { requireAdmin } from "@/lib/auth-helpers";
 import { prisma } from "@/lib/prisma";
 import { NewScheduleForm } from "./NewScheduleForm";
+import { VanSubnav } from "@/components/maintenance/VanSubnav";
 
 export default async function NewSchedulePage() {
   await requireAdmin();
@@ -24,6 +25,7 @@ export default async function NewSchedulePage() {
         <h1 className="text-2xl font-bold text-gray-900">New Maintenance Schedule</h1>
         <p className="text-gray-500 mt-1">Set up a recurring maintenance task with inventory requirements</p>
       </div>
+      {initialCompany === "GROOMING" && <VanSubnav active="schedules" />}
       <NewScheduleForm inventoryItems={inventoryItems} initialCompany={initialCompany} />
     </div>
   );

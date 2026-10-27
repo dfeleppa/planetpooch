@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { cn } from "@/lib/utils";
 import { Company } from "@prisma/client";
+import { VanSubnav } from "./VanSubnav";
 
 type MaintenanceView = "dashboard" | "schedules" | "inventory";
 
@@ -11,6 +12,7 @@ const views: { key: MaintenanceView; label: string; href: string }[] = [
 ];
 
 export function MaintenanceSubnav({ active, company }: { active: MaintenanceView; company: Company }) {
+  if (company === "GROOMING") return active === "schedules" ? <VanSubnav active="schedules" /> : null;
   return (
     <nav aria-label="Maintenance sections" className="mb-6 border-b border-gray-200">
       <div className="flex gap-5">

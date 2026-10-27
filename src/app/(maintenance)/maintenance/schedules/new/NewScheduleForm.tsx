@@ -96,7 +96,7 @@ export function NewScheduleForm({
         });
       }
 
-      router.push(`/maintenance/schedules/${schedule.id}`);
+      router.push(`/maintenance/schedules/${schedule.id}?company=${company}`);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Something went wrong");
     } finally {

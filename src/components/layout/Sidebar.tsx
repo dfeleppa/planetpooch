@@ -23,16 +23,16 @@ const employeeNav: NavItem[] = [
   { href: "/dashboard", label: "Employee Dashboard", icon: "▣" },
 ];
 
-// Full admin nav — SUPER_ADMIN only (includes module management)
+const modulesNavItem: NavItem = { href: "/admin/module-progress", label: "Modules", icon: "❏" };
+
+// Company-specific people navigation.
 const superAdminNav: NavItem[] = [
   { href: "/admin/employees", label: "People", icon: "" },
-  { href: "/admin/module-progress", label: "Modules", icon: "❏" },
 ];
 
 // Manager nav — no module management
 const managerNav: NavItem[] = [
   { href: "/admin/employees", label: "People", icon: "" },
-  { href: "/admin/module-progress", label: "Modules", icon: "❏" },
 ];
 
 const sharedNav: NavItem[] = [
@@ -157,6 +157,7 @@ export function Sidebar() {
   // "Manager-tier admin UI" — controls visibility of the Employee View
   // section.
   const isManagerOrAbove = isSuperAdmin || isManager;
+  const canManageModules = isSuperAdmin || jobTitle === "CMO";
   const corporateNav: NavItem[] = [
     ...(isSuperAdmin
       ? [
@@ -165,14 +166,12 @@ export function Sidebar() {
         ]
       : []),
     ...(isManagerOrAbove ? [...businessFinanceNav, { href: "/admin/org-chart", label: "Org Chart", icon: "" }] : []),
+    ...(canManageModules || isManager ? [modulesNavItem] : []),
     ...(isSuperAdmin && isKnowledgeAccount ? [{ href: "/admin/knowledge", label: "Knowledge library", icon: "✦" }] : []),
   ];
   const showGroomingInventory = !isManagerOrAbove && canEditGroomingCounts(session?.user);
   const hasMarketingAccess =
     role === "MARKETING" || isSuperAdmin || jobTitle === "CMO";
-  // CMO can manage modules — give the same admin nav as SUPER_ADMIN so
-  // "Manage Modules" appears alongside the rest of the admin links.
-  const canManageModules = isSuperAdmin || jobTitle === "CMO";
 
   const baseNav = canManageModules
     ? superAdminNav
@@ -217,6 +216,9 @@ export function Sidebar() {
   }
 
   function isActive(href: string) {
+    if (business.company === "GROOMING" && (pathname === "/maintenance/schedules" || pathname.startsWith("/maintenance/schedules/"))) {
+      return href === "/maintenance/vans";
+    }
     if (href === "/admin/knowledge") return pathname === href || pathname.startsWith(href + "/");
     if (href === "/admin/employees") {
       return peoplePaths.some((path) =>
@@ -364,7 +366,7 @@ export function Sidebar() {
               ...companyOperations,
               ...(showGroomingInventory && company.company === "GROOMING"
                 ? [{ href: "/maintenance/inventory", label: "Inventory", icon: "▤" }] : []),
-              ...(isAdminNav ? nav : []),
+              ...(isAdminNav ? [...nav, ...(!canSeeCorporate ? [modulesNavItem] : [])] : []),
             ];
             return (
               <section key={company.company} aria-label={company.label}>

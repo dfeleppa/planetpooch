@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { formatRecurrenceInterval } from "@/lib/maintenance";
 import { ScheduleActions } from "./ScheduleActions";
 import Link from "next/link";
+import { VanSubnav } from "@/components/maintenance/VanSubnav";
 
 export default async function ScheduleDetailPage({
   params,
@@ -51,11 +52,12 @@ export default async function ScheduleDetailPage({
   return (
     <div>
       <div className="flex items-center gap-2 text-sm text-gray-500 mb-4">
-        <Link href="/maintenance/schedules" className="hover:text-blue-600">Schedules</Link>
+        <Link href={`/maintenance/schedules?company=${schedule.company}`} className="hover:text-blue-600">Schedules</Link>
         <span>/</span>
         <span className="text-gray-900">{schedule.title}</span>
       </div>
 
+      {schedule.company === "GROOMING" && <VanSubnav active="schedules" />}
       <div className="flex items-start justify-between mb-6">
         <div>
           <div className="flex items-center gap-3">
