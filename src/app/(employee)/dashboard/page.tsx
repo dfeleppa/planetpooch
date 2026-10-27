@@ -8,6 +8,7 @@ import { DAYS_OF_WEEK, formatTimeLabel } from "@/lib/availability";
 import { HANDBOOK_SIGNABLE_NAME } from "@/lib/employee-documents";
 import { EmployeeDocumentsCard } from "@/components/EmployeeDocumentsCard";
 import { getVisibleModuleIdsForUser } from "@/lib/module-visibility";
+import { hasAskPoochAccess } from "@/lib/knowledge-access";
 
 const COMPANY_LABELS: Record<Company, string> = {
   GROOMING: "Planet Pooch Grooming",
@@ -130,7 +131,7 @@ export default async function DashboardPage() {
           <h1>Good to see you, {displayName}.</h1>
           <p>Pick up where you left off and see what matters today.</p>
         </div>
-        <Link className="pp-today-help" href="/knowledge"><span aria-hidden="true">✦</span> Ask Pooch <span aria-hidden="true">↗</span></Link>
+        {hasAskPoochAccess(user) && <Link className="pp-today-help" href="/knowledge"><span aria-hidden="true">✦</span> Ask Pooch <span aria-hidden="true">↗</span></Link>}
       </div>
 
       <section className="pp-today-feature-grid" aria-label="Today at a glance">
@@ -184,7 +185,7 @@ export default async function DashboardPage() {
             )}
             <Link href="/maintenance/checklists"><span className="pp-quick-icon" aria-hidden="true">✓</span><span><strong>Daily checklists</strong><small>Open your assigned checklists</small></span><span aria-hidden="true">→</span></Link>
             <a href="#employee-documents"><span className="pp-quick-icon" aria-hidden="true">▤</span><span><strong>Documents</strong><small>View your employee files</small></span><span aria-hidden="true">→</span></a>
-            <Link href="/knowledge"><span className="pp-quick-icon" aria-hidden="true">✦</span><span><strong>Ask Pooch</strong><small>Find answers and guidance</small></span><span aria-hidden="true">→</span></Link>
+            {hasAskPoochAccess(user) && <Link href="/knowledge"><span className="pp-quick-icon" aria-hidden="true">✦</span><span><strong>Ask Pooch</strong><small>Find answers and guidance</small></span><span aria-hidden="true">→</span></Link>}
             <a href="#availability"><span className="pp-quick-icon" aria-hidden="true">◷</span><span><strong>Availability</strong><small>View your weekly availability</small></span><span aria-hidden="true">→</span></a>
             <a href="#employee-info"><span className="pp-quick-icon" aria-hidden="true">◉</span><span><strong>Employee info</strong><small>Review your details</small></span><span aria-hidden="true">→</span></a>
           </div>

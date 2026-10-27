@@ -8,6 +8,7 @@ import { cn } from "@/lib/utils";
 import { useState, useEffect } from "react";
 import { useBusiness } from "@/components/business/BusinessProvider";
 import { isKnowledgeOwner } from "@/lib/knowledge-owner";
+import { hasAskPoochAccess } from "@/lib/knowledge-access";
 import { canEditGroomingCounts } from "@/lib/grooming-inventory-access";
 import { UserMenu } from "./UserMenu";
 
@@ -139,7 +140,8 @@ export function Sidebar() {
   const role = session?.user?.role;
   const jobTitle = session?.user?.jobTitle;
   const isSuperAdmin = role === "SUPER_ADMIN" || role === "ADMIN";
-  const isKnowledgeAccount = isKnowledgeOwner({ email: session?.user?.email, role });
+  const canAskPooch = hasAskPoochAccess(session?.user);
+  const isKnowledgeAccount = canAskPooch && isKnowledgeOwner({ email: session?.user?.email, role });
   const isManager = role === "MANAGER";
   // "Manager-tier admin UI" — controls visibility of the Employee View
   // section.
@@ -448,12 +450,11 @@ export function Sidebar() {
             </>
           )}
 
-          {/* Ask Pooch is a standalone destination for every employee. */}
-          <Link href="/knowledge" title={isCollapsed ? "Ask Pooch" : undefined} aria-current={isActive("/knowledge") ? "page" : undefined} className={cn(navItemClass(isActive("/knowledge")), "mt-1 border-t border-pp-line pt-3")}>
+          {canAskPooch && <Link href="/knowledge" title={isCollapsed ? "Ask Pooch" : undefined} aria-current={isActive("/knowledge") ? "page" : undefined} className={cn(navItemClass(isActive("/knowledge")), "mt-1 border-t border-pp-line pt-3")}>
             {activeRail(isActive("/knowledge"))}
             <span className={cn("text-[14px] w-4 text-center flex-shrink-0", isActive("/knowledge") ? "text-pp-accent" : "text-pp-ink-3")} aria-hidden="true">✦</span>
             {!isCollapsed && <span className="truncate">Ask Pooch</span>}
-          </Link>
+          </Link>}
 
         </nav>
 

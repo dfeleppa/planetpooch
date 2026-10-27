@@ -5,7 +5,7 @@ import { BusinessSelector } from "@/components/business/BusinessSelector";
 import { getActiveBusiness } from "@/lib/business-server";
 import { requireAuth } from "@/lib/auth-helpers";
 import { availableBusinesses } from "@/lib/business";
-import { isKnowledgeOwner } from "@/lib/knowledge-owner";
+import { hasAskPoochAccess } from "@/lib/knowledge-access";
 import { AskPoochWidget } from "@/components/knowledge/AskPoochWidget";
 import { UserMenu } from "./UserMenu";
 
@@ -25,7 +25,7 @@ export async function AppShell({ children }: { children: React.ReactNode }) {
               {children}
             </div>
           </main>
-          {isKnowledgeOwner(session.user) && <AskPoochWidget />}
+          {hasAskPoochAccess(session.user) && <AskPoochWidget />}
         </div>
       </BusinessProvider>
     </Providers>

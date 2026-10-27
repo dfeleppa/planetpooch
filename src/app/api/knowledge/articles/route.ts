@@ -5,6 +5,7 @@ import { getSession } from "@/lib/auth-helpers";
 import { isBusinessSwitchOriginAllowed } from "@/lib/business";
 import { getKnowledgeViewer } from "@/lib/knowledge";
 import { isKnowledgeOwner } from "@/lib/knowledge-owner";
+import { hasAskPoochAccess } from "@/lib/knowledge-access";
 import { prisma } from "@/lib/prisma";
 
 const articleSchema = z.object({
@@ -23,7 +24,7 @@ async function authorizedAdmin() {
   const session = await getSession();
   if (!session?.user?.id) return null;
   const viewer = await getKnowledgeViewer(session.user.id);
-  return viewer && isKnowledgeOwner(viewer) ? viewer : null;
+  return viewer && hasAskPoochAccess(viewer) && isKnowledgeOwner(viewer) ? viewer : null;
 }
 
 export async function GET(request: Request) {

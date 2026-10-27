@@ -4,6 +4,7 @@ import { getSession } from "@/lib/auth-helpers";
 import { isBusinessSwitchOriginAllowed } from "@/lib/business";
 import { findKnowledgeSources, getKnowledgeViewer } from "@/lib/knowledge";
 import { isKnowledgeOwner } from "@/lib/knowledge-owner";
+import { hasAskPoochAccess } from "@/lib/knowledge-access";
 import { knowledgeRetrievalQuestion } from "@/lib/knowledge-app-data";
 import { DEFAULT_KNOWLEDGE_CHAT_MODEL, KNOWLEDGE_CHAT_MODEL_IDS } from "@/lib/knowledge-chat-models";
 import { buildKnowledgeAnswerRequest, knowledgeResponseText, type KnowledgeModelResponse } from "@/lib/knowledge-answer-request";
@@ -22,6 +23,11 @@ const requestSchema = z.object({
 export async function POST(request: Request) {
   const session = await getSession();
   if (!session?.user?.id) return NextResponse.json({ error: "Sign in required." }, { status: 401 });
+  const viewer = await getKnowledgeViewer(session.user.id);
+  if (!viewer) return NextResponse.json({ error: "Sign in required." }, { status: 401 });
+  if (!hasAskPoochAccess(viewer)) {
+    return NextResponse.json({ error: "Ask Pooch is currently available to Corporate only." }, { status: 403 });
+  }
   if (!isBusinessSwitchOriginAllowed(request.headers.get("origin"), request.headers.get("host"))) {
     return NextResponse.json({ error: "Invalid request origin." }, { status: 403 });
   }
@@ -29,8 +35,6 @@ export async function POST(request: Request) {
   if (!parsed.success || parsed.data.messages.at(-1)?.role !== "user") {
     return NextResponse.json({ error: "Enter a question to continue." }, { status: 400 });
   }
-  const viewer = await getKnowledgeViewer(session.user.id);
-  if (!viewer) return NextResponse.json({ error: "Sign in required." }, { status: 401 });
   const messages = parsed.data.messages;
   const model = parsed.data.model;
   const question = messages[messages.length - 1].content;

@@ -3,10 +3,12 @@ import { notFound } from "next/navigation";
 import { requireAuth } from "@/lib/auth-helpers";
 import { canReadKnowledgeArticle, getKnowledgeViewer } from "@/lib/knowledge";
 import { prisma } from "@/lib/prisma";
+import { hasAskPoochAccess } from "@/lib/knowledge-access";
 
 export default async function KnowledgeArticlePage({ params }: { params: Promise<{ id: string }> }) {
   const session = await requireAuth();
   const viewer = await getKnowledgeViewer(session.user.id);
+  if (!viewer || !hasAskPoochAccess(viewer)) notFound();
   const { id } = await params;
   const article = await prisma.knowledgeArticle.findUnique({ where: { id } });
   if (!viewer || !article || !canReadKnowledgeArticle(article, viewer)) notFound();
