@@ -4,7 +4,6 @@ import { cn } from "@/lib/utils";
 const views = [
   { key: "fleet", label: "Fleet", href: "/maintenance/vans" },
   { key: "schedules", label: "Schedules", href: "/maintenance/schedules" },
-  { key: "insurance", label: "Insurance", href: "/maintenance/vans/insurance" },
 ] as const;
 
 export function VanSubnav({ active }: { active: (typeof views)[number]["key"] }) {

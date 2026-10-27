@@ -1,7 +1,10 @@
 import Link from "next/link";
 import { VanSubnav } from "@/components/maintenance/VanSubnav";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
+import { InsuranceDetails } from "./InsuranceDetails";
 import { redirect } from "next/navigation";
-import { requireAuth } from "@/lib/auth-helpers";
+import { isManagerOrAbove, requireAuth } from "@/lib/auth-helpers";
 import { getActiveBusiness } from "@/lib/business-server";
 import { prisma } from "@/lib/prisma";
 
@@ -19,15 +22,23 @@ export default async function VansPage() {
     include: { records: { orderBy: [{ serviceDate: "desc" }, { createdAt: "desc" }], take: 1 } },
   });
 
+  const session = await getServerSession(authOptions);
+  const canEdit = isManagerOrAbove(session?.user?.role);
+  const totalPremium = vans.reduce((total, van) => total + Math.round(Number(van.insurancePremium ?? 0) * 100), 0) / 100;
+
   return (
     <div>
       <div className="mb-6">
         <h1 className="text-2xl font-bold text-gray-900">Vans</h1>
-        <p className="mt-1 text-gray-500">Mobile Grooming vehicle details and maintenance history</p>
+        <p className="mt-1 text-gray-500">Mobile Grooming vehicle details, insurance, and maintenance history</p>
       </div>
       <VanSubnav active="fleet" />
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
+        <h2 className="text-lg font-semibold text-gray-900">Fleet</h2>
+        <p className="text-sm text-gray-600">Total insurance premiums <strong className="ml-2 text-gray-900">{totalPremium.toLocaleString("en-US", { style: "currency", currency: "USD" })}</strong></p>
+      </div>
       <div className="overflow-x-auto rounded-xl border border-gray-200 bg-white shadow-sm">
-        <table className="w-full min-w-[1000px] divide-y divide-gray-200 text-sm">
+        <table className="w-full min-w-[1200px] divide-y divide-gray-200 text-sm">
           <thead className="bg-gray-50 text-left text-gray-700">
             <tr>
               <th scope="col" className="px-4 py-3">Van</th>
@@ -38,11 +49,12 @@ export default async function VansPage() {
               <th scope="col" className="px-4 py-3">Mileage</th>
               <th scope="col" className="px-4 py-3">Last service</th>
               <th scope="col" className="px-4 py-3">Registration</th>
+              <th scope="col" className="px-4 py-3">Insurance</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-100">
             {vans.map((van) => (
-              <tr key={van.id} className="hover:bg-gray-50">
+              <tr key={van.id} className="align-top hover:bg-gray-50">
                 <th scope="row" className="whitespace-nowrap px-4 py-3 text-left font-semibold">
                   <Link href={`/maintenance/vans/${van.number}`} className="text-blue-700 hover:underline">Van {van.number}</Link>
                 </th>
@@ -57,6 +69,11 @@ export default async function VansPage() {
                 <td className="whitespace-nowrap px-4 py-3 text-gray-900">{van.mileage == null ? "—" : van.mileage.toLocaleString()}</td>
                 <td className="whitespace-nowrap px-4 py-3 text-gray-900">{dateLabel(van.records[0]?.serviceDate ?? null)}</td>
                 <td className="whitespace-nowrap px-4 py-3 text-gray-900">{dateLabel(van.registrationExpiry)}</td>
+                <td className="px-4 py-3">
+                  <InsuranceDetails number={van.number} canEdit={canEdit} expiry={dateLabel(van.insuranceExpiry)} insurance={{
+                    carrier: van.insuranceCarrier ?? "", deductible: van.insuranceDeductible?.toString() ?? "", premium: van.insurancePremium?.toString() ?? "",
+                  }} />
+                </td>
               </tr>
             ))}
           </tbody>
