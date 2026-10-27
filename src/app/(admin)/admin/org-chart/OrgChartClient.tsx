@@ -282,11 +282,11 @@ export function OrgChartClient({
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-3">
       {/* Controls */}
       <Card>
-        <CardContent className="py-4">
-          <div className="flex flex-wrap items-center gap-4">
+        <CardContent className="py-3">
+          <div className="flex flex-wrap items-center gap-3">
             <fieldset className="flex flex-wrap items-center gap-3">
               <legend className="sr-only">Show divisions</legend>
               <span className="text-sm font-medium text-gray-700" aria-hidden="true">Show:</span>
@@ -593,13 +593,13 @@ function CompanySection({
           }}
           onDragLeave={() => setDragOverRoot(false)}
           onDrop={onDropOnRoot}
-          className={`mb-4 pb-3 border-b transition-colors flex items-start justify-between gap-4 ${
+          className={`mb-2 pb-2 border-b transition-colors flex items-center justify-between gap-4 ${
             dragOverRoot ? "bg-blue-50 border-blue-300" : "border-gray-200"
           }`}
         >
           <div>
             <h2 className="text-lg font-semibold text-gray-900">{title}</h2>
-            <p className="text-xs text-gray-500">{subtitle}</p>
+            <p className="sr-only">{subtitle}</p>
             {dragOverRoot && (
               <p className="text-xs text-blue-600 mt-1">Drop here to make top-level</p>
             )}
@@ -960,6 +960,7 @@ function ChartNode({
   collapsedPositionIds: Set<string>;
   onToggleExpanded: (positionId: string) => void;
 }) {
+  const [showRoster, setShowRoster] = useState(false);
   const children = allPositions.filter((p) => p.parentPositionId === node.id);
   const assigned = node.assignedUserId ? userById.get(node.assignedUserId) : null;
   const vacant = !assigned;
@@ -1036,7 +1037,16 @@ function ChartNode({
         </div>
         {showNames && isExpanded && hasPeople && (
           <div className="mt-2 flex flex-col items-center gap-1">
-            {people.map((user) => <EmployeeChip key={user.id} user={user} />)}
+            {(showRoster ? people : people.length === 1 ? people : assigned ? [assigned] : []).map((user) => (
+              <EmployeeChip key={user.id} user={user} compact />
+            ))}
+            {people.length > 1 && (
+              <button type="button" aria-expanded={showRoster}
+                onClick={() => setShowRoster((current) => !current)}
+                className="text-xs font-medium text-pp-ink underline underline-offset-2">
+                {showRoster ? "Hide staff list" : `Show all ${people.length} people`}
+              </button>
+            )}
           </div>
         )}
       </div>
@@ -1191,7 +1201,7 @@ function PanZoomViewport({
   );
 }
 
-function EmployeeChip({ user }: { user: UserOption }) {
+function EmployeeChip({ user, compact = false }: { user: UserOption; compact?: boolean }) {
   const [open, setOpen] = useState(false);
   const initials =
     user.name
@@ -1203,7 +1213,7 @@ function EmployeeChip({ user }: { user: UserOption }) {
       .toUpperCase() || "?";
   return (
     <div
-      className="relative w-48"
+      className={compact ? "relative w-full" : "relative w-48"}
       onMouseDown={(e) => e.stopPropagation()}
       onClick={(e) => e.stopPropagation()}
     >
@@ -1211,15 +1221,16 @@ function EmployeeChip({ user }: { user: UserOption }) {
         type="button"
         onClick={() => setOpen((value) => !value)}
         aria-expanded={open}
-        className="w-full px-3 py-2 rounded-lg border border-emerald-300 bg-emerald-50 shadow-sm text-left transition hover:border-emerald-500 hover:bg-emerald-100 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-1"
+        title={user.name}
+        className={`w-full ${compact ? "px-2 py-1" : "px-3 py-2"} rounded-lg border border-emerald-300 bg-emerald-50 shadow-sm text-left transition hover:border-emerald-500 hover:bg-emerald-100 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-1`}
       >
         <div className="flex items-center gap-2">
-          <div className="flex-shrink-0 w-8 h-8 rounded-full bg-gradient-to-br from-emerald-400 to-emerald-600 text-white text-xs font-semibold flex items-center justify-center">
+          {!compact && <div className="flex-shrink-0 w-8 h-8 rounded-full bg-gradient-to-br from-emerald-400 to-emerald-600 text-white text-xs font-semibold flex items-center justify-center">
             {initials}
-          </div>
+          </div>}
           <div className="min-w-0 flex-1">
-            <div className="text-sm font-semibold text-gray-900 truncate">{user.name}</div>
-            {user.jobTitle && (
+            <div className={`${compact ? "text-xs" : "text-sm"} font-semibold text-gray-900 truncate`}>{user.name}</div>
+            {!compact && user.jobTitle && (
               <div className="text-[11px] text-gray-600 truncate">{user.jobTitle}</div>
             )}
           </div>

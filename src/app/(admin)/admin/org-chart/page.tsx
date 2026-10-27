@@ -47,11 +47,10 @@ export default async function OrgChartPage() {
 
   return (
     <div>
-      <div className="mb-6">
+      <div className="mb-3">
         <h1 className="text-2xl font-bold text-gray-900">Org Chart</h1>
         <p className="text-gray-500 mt-1">
-          Visualize your org structure with positions — vacant or filled. Drag a position onto
-          another to change who it reports to. Assign employees to positions, or leave them vacant.
+          Corporate leadership and reporting lines across both divisions.
         </p>
       </div>
       <OrgChartClient
