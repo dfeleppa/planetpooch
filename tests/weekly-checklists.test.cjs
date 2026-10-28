@@ -192,7 +192,7 @@ test('weekly due day changes reject invalid days and daily tasks', async () => {
     const result = await load(base + 'items/[itemId]/route.ts').PATCH(request({ dueWeekday }), { params: Promise.resolve({ itemId: 'task' }) });
     assert.equal(result.status, 400);
   }
-  const result = await load(base + 'items/[itemId]/route.ts', { dailyChecklistItem: { findUnique: async () => ({ period: 'DAILY' }) } }).PATCH(request({ dueWeekday: 2 }), { params: Promise.resolve({ itemId: 'task' }) });
+  const result = await load(base + 'items/[itemId]/route.ts', { dailyChecklistItem: { findUnique: async () => ({ period: 'DAILY', department: 'BOARDING' }) } }).PATCH(request({ dueWeekday: 2 }), { params: Promise.resolve({ itemId: 'task' }) });
   assert.equal(result.status, 400);
 });
 
@@ -201,7 +201,7 @@ const groomingIds = ['cmobz2cwb0007k0041qnobqcz', 'cmoc04aqt000njr04ehczgndc', '
 test('Corporate can view and edit every checklist regardless of role', () => {
   for (const role of ['EMPLOYEE', 'MANAGER', 'SUPER_ADMIN']) {
     const user = { id: 'corporate', company: 'CORPORATE', role };
-    assert.deepEqual([...access.checklistDepartments(user)], ['BOARDING', 'GROOMING', 'FRONT_DESK']);
+    assert.deepEqual([...access.checklistDepartments(user)], ['BOARDING', 'GROOMING', 'FRONT_DESK', 'MANAGEMENT']);
     assert.equal(access.canEditChecklists(user), true);
   }
 });
@@ -211,7 +211,7 @@ test('named Grooming staff get Grooming only and no configuration permissions ev
       const user = { id, company, role: 'MANAGER' };
       assert.deepEqual([...access.checklistDepartments(user)], ['GROOMING']);
       assert.equal(access.canEditChecklists(user), false);
-      for (const department of ['BOARDING', 'FRONT_DESK']) {
+      for (const department of ['BOARDING', 'FRONT_DESK', 'MANAGEMENT']) {
         const route = load(base + 'route.ts', {}, true, user);
         const result = await route.GET({ nextUrl: new URL(`https://example.com?date=2026-10-28&department=${department}`) });
         assert.equal(result.status, 403);
@@ -276,4 +276,37 @@ test('daily tasks can be created and old AM/PM creation is rejected', async () =
       assert.equal((await route.POST(request({ department, period, title: 'Old period' }))).status, 400);
     }
   }
+});
+
+test('Kim and Derek have Boarding, Front Desk and Management but cannot read or edit Grooming', async () => {
+  for (const id of ['cmoc0283w000jjr04200pulk3', 'cmoc059wd000rjr04x03j7h19']) {
+    const user = { id, company: 'RESORT', role: 'MANAGER' };
+    assert.deepEqual([...access.checklistDepartments(user)], ['BOARDING', 'FRONT_DESK', 'MANAGEMENT']);
+    assert.equal(access.canEditChecklists(user), true);
+    for (const method of ['PATCH', 'DELETE']) {
+      const result = await load(base + 'items/[itemId]/route.ts', { dailyChecklistItem: { findUnique: async () => ({ department: 'GROOMING' }) } }, true, user)[method](request({ title: 'Blocked' }), { params: Promise.resolve({ itemId: 'task' }) });
+      assert.equal(result.status, 403);
+    }
+  }
+});
+test('shared front desk email and role get Front Desk only without editing', () => {
+  for (const user of [
+    { id: 'shared', email: 'planetpoochpetservices@gmail.com', company: 'RESORT', role: 'EMPLOYEE' },
+    { id: 'frontdesk', company: 'RESORT', role: 'FRONT_DESK' },
+  ]) {
+    assert.deepEqual([...access.checklistDepartments(user)], ['FRONT_DESK']);
+    assert.equal(access.canEditChecklists(user), false);
+    assert.equal(access.canAccessChecklist(user, 'MANAGEMENT'), false);
+  }
+});
+test('Management supports Daily and Weekly items for authorized managers', async () => {
+  for (const period of ['DAILY', 'WEEKLY']) {
+    const result = await load(base + 'items/route.ts', { dailyChecklistItem: {
+      aggregate: async () => ({ _max: { order: null } }), create: async ({ data }) => data,
+    } }, true, { id: 'cmoc059wd000rjr04x03j7h19' }).POST(request({ department: 'MANAGEMENT', period, title: 'Management task' }));
+    assert.equal(result.status, 201);
+    assert.equal(result.body.department, 'MANAGEMENT');
+    assert.equal(result.body.period, period);
+  }
+  assert.equal(access.canAccessChecklist({ id: 'other', company: 'RESORT', role: 'MANAGER' }, 'MANAGEMENT'), false);
 });

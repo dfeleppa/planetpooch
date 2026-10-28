@@ -92,6 +92,7 @@ const DEPARTMENTS = [
   { value: "BOARDING", label: "Boarding" },
   { value: "GROOMING", label: "Grooming" },
   { value: "FRONT_DESK", label: "Front Desk" },
+  { value: "MANAGEMENT", label: "Management" },
 ] as const;
 type Department = (typeof DEPARTMENTS)[number]["value"];
 

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/auth-helpers";
-import { canEditChecklists } from "@/lib/checklist-access";
+import { canAccessChecklist, canEditChecklists } from "@/lib/checklist-access";
 
 async function requireManagerSession() {
   const session = await getSession();
@@ -22,7 +22,7 @@ export async function PATCH(
   req: NextRequest,
   { params }: { params: Promise<{ itemId: string }> }
 ) {
-  const { error } = await requireManagerSession();
+  const { error, session } = await requireManagerSession();
   if (error) return error;
 
   const { itemId } = await params;
@@ -34,6 +34,9 @@ export async function PATCH(
     return NextResponse.json({ error: "dueWeekday must be null or 0 through 6" }, { status: 400 });
   }
   if (!title && !hasDueWeekday) return NextResponse.json({ error: "title or dueWeekday is required" }, { status: 400 });
+  const target = await prisma.dailyChecklistItem.findUnique({ where: { id: itemId } });
+  if (!target) return NextResponse.json({ error: "Item not found" }, { status: 404 });
+  if (!canAccessChecklist(session!.user, target.department)) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   let weeklyScheduledAt: Date | null = null;
   if (hasDueWeekday) {
     const existing = await prisma.dailyChecklistItem.findUnique({ where: { id: itemId } });
@@ -60,10 +63,13 @@ export async function DELETE(
   _req: NextRequest,
   { params }: { params: Promise<{ itemId: string }> }
 ) {
-  const { error } = await requireManagerSession();
+  const { error, session } = await requireManagerSession();
   if (error) return error;
 
   const { itemId } = await params;
+  const target = await prisma.dailyChecklistItem.findUnique({ where: { id: itemId } });
+  if (!target) return NextResponse.json({ error: "Item not found" }, { status: 404 });
+  if (!canAccessChecklist(session!.user, target.department)) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   const completionCount = await prisma.dailyChecklistCompletion.count({ where: { itemId } });
 
   if (completionCount > 0) {

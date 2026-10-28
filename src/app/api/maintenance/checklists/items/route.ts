@@ -17,7 +17,7 @@ export async function POST(req: NextRequest) {
 
   const body = await req.json().catch(() => null);
   const department = body?.department ?? "BOARDING";
-  if (!["BOARDING", "GROOMING", "FRONT_DESK"].includes(department)) {
+  if (!["BOARDING", "GROOMING", "FRONT_DESK", "MANAGEMENT"].includes(department)) {
     return NextResponse.json({ error: "Invalid checklist department" }, { status: 400 });
   }
 

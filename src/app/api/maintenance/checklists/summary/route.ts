@@ -15,7 +15,7 @@ export async function GET(req: NextRequest) {
   if (!session?.user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const department = req.nextUrl.searchParams.get("department") ?? "BOARDING";
-  if (!["BOARDING", "GROOMING", "FRONT_DESK"].includes(department)) {
+  if (!["BOARDING", "GROOMING", "FRONT_DESK", "MANAGEMENT"].includes(department)) {
     return NextResponse.json({ error: "Invalid checklist department" }, { status: 400 });
   }
 
