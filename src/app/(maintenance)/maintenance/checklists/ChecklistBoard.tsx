@@ -580,21 +580,32 @@ function PeriodCard({
           <ul>
             {items.map((item) => (
               <li key={item.id}>
-                {item.dualCheck ? <div className="rounded-lg px-3 py-3">
-                  <p className="mb-2 text-sm text-gray-800">{item.title}</p>
-                  <div className="flex flex-wrap gap-2">
+                {item.dualCheck ? <div className="rounded-lg px-3 py-2.5 transition-colors hover:bg-gray-50">
+                  <div className="flex items-center gap-3">
+                    <div className="flex shrink-0 items-center gap-2">
+                      {(["AM", "PM"] as const).map((slot) => {
+                        const completion = slot === "AM" ? item.amCompletion : item.pmCompletion;
+                        return <button key={slot} type="button" aria-label={`${slot}: ${item.title}`} aria-pressed={!!completion}
+                          title={completion ? `${slot}: ${completion.completedByName ?? "Unknown"} · ${formatTime(completion.completedAt)}` : `Complete ${slot}`}
+                          disabled={disabled || (!!completion && !completion.canUncheck)}
+                          onClick={() => onToggle(item, slot)}
+                          className="group flex shrink-0 items-center gap-1.5 rounded-md py-1 text-xs text-gray-500 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-500">
+                          <span className={cn("grid h-6 w-6 shrink-0 place-items-center rounded-full border-2 transition-colors", completion ? "border-green-500 bg-green-500" : "border-gray-300 bg-white group-hover:border-blue-400")}>
+                            {completion && <svg className="h-3.5 w-3.5 text-white" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth={3} aria-hidden="true"><path strokeLinecap="round" strokeLinejoin="round" d="M4 10.5l4 4 8-9" /></svg>}
+                          </span>
+                          <span>{slot}</span>
+                        </button>;
+                      })}
+                    </div>
+                    <span className={cn("min-w-0 flex-1 text-sm", item.amCompletion && item.pmCompletion ? "text-gray-400 line-through decoration-gray-300" : "text-gray-800")}>{item.title}</span>
+                  </div>
+                  {(item.amCompletion || item.pmCompletion) && <p className="mt-1 text-xs text-gray-400">
                     {(["AM", "PM"] as const).map((slot) => {
                       const completion = slot === "AM" ? item.amCompletion : item.pmCompletion;
-                      return <button key={slot} type="button" aria-label={`${slot}: ${item.title}`} aria-pressed={!!completion}
-                        disabled={disabled || (!!completion && !completion.canUncheck)}
-                        onClick={() => onToggle(item, slot)}
-                        className={cn("flex flex-col items-start rounded-lg border px-3 py-2 text-left text-xs disabled:opacity-60", completion ? "border-green-300 bg-green-50 text-green-700" : "border-gray-300 text-gray-700 hover:border-blue-400")}>
-                        <span className="font-semibold">{completion ? "✓" : "○"} {slot}</span>
-                        {completion && <span>{completion.completedByName ?? "Unknown"} · {formatTime(completion.completedAt)}</span>}
-                      </button>;
-                    })}
-                  </div>
-                  {item.completion && <p className="mt-2 text-xs text-gray-500">Earlier single sign-off: {item.completion.completedByName ?? "Unknown"} · {formatTime(item.completion.completedAt)}</p>}
+                      return completion ? `${slot}: ${completion.completedByName ?? "Unknown"} · ${formatTime(completion.completedAt)}` : null;
+                    }).filter(Boolean).join(" · ")}
+                  </p>}
+                  {item.completion && <p className="mt-1 text-xs text-gray-400">Earlier single sign-off: {item.completion.completedByName ?? "Unknown"} · {formatTime(item.completion.completedAt)}</p>}
                 </div> : <button
                   onClick={() => onToggle(item)}
                   disabled={disabled || (!!item.completion && !item.completion.canUncheck)}
