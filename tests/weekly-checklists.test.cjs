@@ -25,7 +25,7 @@ const base = 'src/app/api/maintenance/checklists/';
 const request = (body) => ({ json: async () => body });
 
 test('weekly sign-offs and unchecks use Sunday; daily sign-offs retain their selected day', async () => {
-  for (const period of ['WEEKLY', 'AM', 'PM']) {
+  for (const period of ['WEEKLY', 'DAILY']) {
     for (const completed of [true, false]) {
       let saved;
       const route = load(base + 'completions/route.ts', {
@@ -50,8 +50,8 @@ test('Wednesday reads weekly Sunday history without marking daily Sunday work co
   const route = load(base + 'route.ts', {
     dailyChecklistItem: { findMany: async () => [
       { id: 'weekly', period: 'WEEKLY', isActive: false, completions: [completion] },
-      { id: 'daily', period: 'AM', isActive: true, completions: [completion] },
-      { id: 'removed-daily', period: 'AM', isActive: false, completions: [completion] },
+      { id: 'daily', period: 'DAILY', isActive: true, completions: [completion] },
+      { id: 'removed-daily', period: 'DAILY', isActive: false, completions: [completion] },
     ] },
   });
   const result = await route.GET({ nextUrl: new URL('https://example.com?date=2026-10-28') });
@@ -62,14 +62,12 @@ test('Wednesday reads weekly Sunday history without marking daily Sunday work co
 
 test('weekly completions do not inflate daily progress', async () => {
   const route = load(base + 'summary/route.ts', {
-    dailyChecklistItem: { groupBy: async () => ['AM', 'PM', 'WEEKLY'].map((period) => ({ period, _count: { _all: 1 } })) },
-    dailyChecklistCompletion: { findMany: async () => ['AM', 'WEEKLY'].map((period) => ({ item: { period }, date: new Date('2026-10-25') })) },
+    dailyChecklistItem: { groupBy: async () => ['DAILY', 'WEEKLY'].map((period) => ({ period, _count: { _all: 1 } })) },
+    dailyChecklistCompletion: { findMany: async () => ['DAILY', 'WEEKLY'].map((period) => ({ item: { period }, date: new Date('2026-10-25') })) },
   });
   const result = await route.GET({ nextUrl: new URL('https://example.com?start=2026-10-25&end=2026-10-31') });
-  assert.equal(result.body.amTotal, 1);
-  assert.equal(result.body.pmTotal, 1);
-  assert.equal(result.body.days['2026-10-25'].amDone, 1);
-  assert.equal(result.body.days['2026-10-25'].pmDone, 0);
+  assert.equal(result.body.dailyTotal, 1);
+  assert.equal(result.body.days['2026-10-25'].dailyDone, 1);
 });
 
 test('only managers can create weekly items', async () => {
@@ -124,7 +122,7 @@ test('date strip renders exactly Sunday through Saturday across year and dayligh
 });
 
 test('only the signer can uncheck daily and weekly tasks, including orphaned sign-offs', async () => {
-  for (const period of ['AM', 'PM', 'WEEKLY']) {
+  for (const period of ['DAILY', 'WEEKLY']) {
     for (const owner of ['staff', 'other', null, 'absent']) {
       let remaining = owner === 'absent' ? null : { completedById: owner };
       const route = load(base + 'completions/route.ts', {
@@ -165,15 +163,15 @@ test('department filters isolate task reads, creation, ordering and progress', a
     };
     await load(base + 'route.ts', prisma).GET({ nextUrl: new URL(`https://example.com?date=2026-10-28&department=${department}`) });
     await load(base + 'summary/route.ts', prisma).GET({ nextUrl: new URL(`https://example.com?start=2026-10-25&end=2026-10-31&department=${department}`) });
-    await load(base + 'items/route.ts', prisma).POST(request({ department, period: 'AM', title: 'Task' }));
-    await load(base + 'items/reorder/route.ts', prisma).PUT(request({ department, period: 'AM', orderedIds: ['task'] }));
+    await load(base + 'items/route.ts', prisma).POST(request({ department, period: 'DAILY', title: 'Task' }));
+    await load(base + 'items/reorder/route.ts', prisma).PUT(request({ department, period: 'DAILY', orderedIds: ['task'] }));
     assert.equal(seen.length, 6);
     assert.ok(seen.every((value) => value === department));
   }
 });
 
 test('invalid departments are rejected before database access', async () => {
-  const result = await load(base + 'items/route.ts').POST(request({ department: 'OTHER', period: 'AM', title: 'Task' }));
+  const result = await load(base + 'items/route.ts').POST(request({ department: 'OTHER', period: 'DAILY', title: 'Task' }));
   assert.equal(result.status, 400);
 });
 
@@ -194,7 +192,7 @@ test('weekly due day changes reject invalid days and daily tasks', async () => {
     const result = await load(base + 'items/[itemId]/route.ts').PATCH(request({ dueWeekday }), { params: Promise.resolve({ itemId: 'task' }) });
     assert.equal(result.status, 400);
   }
-  const result = await load(base + 'items/[itemId]/route.ts', { dailyChecklistItem: { findUnique: async () => ({ period: 'AM' }) } }).PATCH(request({ dueWeekday: 2 }), { params: Promise.resolve({ itemId: 'task' }) });
+  const result = await load(base + 'items/[itemId]/route.ts', { dailyChecklistItem: { findUnique: async () => ({ period: 'DAILY' }) } }).PATCH(request({ dueWeekday: 2 }), { params: Promise.resolve({ itemId: 'task' }) });
   assert.equal(result.status, 400);
 });
 
@@ -220,8 +218,8 @@ test('named Grooming staff get Grooming only and no configuration permissions ev
         const summary = await load(base + 'summary/route.ts', {}, true, user).GET({ nextUrl: new URL(`https://example.com?start=2026-10-25&end=2026-10-31&department=${department}`) });
         assert.equal(summary.status, 403);
       }
-      assert.equal((await load(base + 'items/route.ts', {}, true, user).POST(request({ department: 'GROOMING', period: 'AM', title: 'No' }))).status, 403);
-      assert.equal((await load(base + 'items/reorder/route.ts', {}, true, user).PUT(request({ department: 'GROOMING', period: 'AM', orderedIds: [] }))).status, 403);
+      assert.equal((await load(base + 'items/route.ts', {}, true, user).POST(request({ department: 'GROOMING', period: 'DAILY', title: 'No' }))).status, 403);
+      assert.equal((await load(base + 'items/reorder/route.ts', {}, true, user).PUT(request({ department: 'GROOMING', period: 'DAILY', orderedIds: [] }))).status, 403);
       for (const method of ['PATCH', 'DELETE']) {
         const result = await load(base + 'items/[itemId]/route.ts', {}, true, user)[method](request({ title: 'No' }), { params: Promise.resolve({ itemId: 'task' }) });
         assert.equal(result.status, 403);
@@ -233,7 +231,7 @@ test('Grooming-only staff cannot complete tasks in other departments by guessing
   for (const department of ['BOARDING', 'FRONT_DESK', 'GROOMING']) {
     let saved = false;
     const route = load(base + 'completions/route.ts', {
-      dailyChecklistItem: { findUnique: async () => ({ department, period: 'AM' }) },
+      dailyChecklistItem: { findUnique: async () => ({ department, period: 'DAILY' }) },
       dailyChecklistCompletion: { upsert: async () => { saved = true; return { completedAt: new Date(), completedById: groomingIds[0] }; } },
     }, false, { id: groomingIds[0], company: 'GROOMING', role: 'EMPLOYEE' });
     const result = await route.POST(request({ itemId: 'task', date: '2026-10-27', completed: true }));
@@ -249,7 +247,7 @@ test('Corporate employees can create checklist tasks without a manager role', as
   const route = load(base + 'items/route.ts', { dailyChecklistItem: {
     aggregate: async () => ({ _max: { order: 0 } }), create: async ({ data }) => data,
   } }, false, { company: 'CORPORATE', role: 'EMPLOYEE' });
-  const result = await route.POST(request({ department: 'FRONT_DESK', period: 'AM', title: 'Corporate task' }));
+  const result = await route.POST(request({ department: 'FRONT_DESK', period: 'DAILY', title: 'Corporate task' }));
   assert.equal(result.status, 201);
 });
 
@@ -263,4 +261,19 @@ test('Grooming staff can read Grooming tasks and summaries', async () => {
     dailyChecklistItem: { groupBy: async () => [] }, dailyChecklistCompletion: { findMany: async () => [] },
   }, false, user);
   assert.equal((await summary.GET({ nextUrl: new URL('https://example.com?start=2026-10-25&end=2026-10-31&department=GROOMING') })).status, 200);
+});
+
+test('daily tasks can be created and old AM/PM creation is rejected', async () => {
+  for (const department of ['BOARDING', 'GROOMING', 'FRONT_DESK']) {
+    const route = load(base + 'items/route.ts', { dailyChecklistItem: {
+      aggregate: async () => ({ _max: { order: 6 } }), create: async ({ data }) => data,
+    } });
+    const result = await route.POST(request({ department, period: 'DAILY', title: 'Daily task' }));
+    assert.equal(result.status, 201);
+    assert.equal(result.body.period, 'DAILY');
+    assert.equal(result.body.order, 7);
+    for (const period of ['AM', 'PM']) {
+      assert.equal((await route.POST(request({ department, period, title: 'Old period' }))).status, 400);
+    }
+  }
 });

@@ -103,7 +103,7 @@ export async function getAdminDashboard() {
       ? prisma.dailyChecklistItem.findMany({
           where: { OR: [{ isActive: true }, { completions: { some: { date: periods.today } } }] },
           select: { period: true, completions: { where: { date: periods.today }, select: { id: true } } },
-        }).then((items) => (["AM", "PM"] as const).map((period) => {
+        }).then((items) => (["DAILY"] as const).map((period) => {
           const periodItems = items.filter((item) => item.period === period);
           return { period, total: periodItems.length, completed: periodItems.filter((item) => item.completions.length > 0).length };
         }))

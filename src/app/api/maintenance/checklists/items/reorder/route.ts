@@ -5,7 +5,7 @@ import { canAccessChecklist, canEditChecklists } from "@/lib/checklist-access";
 
 /**
  * PUT /api/maintenance/checklists/items/reorder
- * Body: { period: "AM" | "PM" | "WEEKLY", orderedIds: string[] }
+ * Body: { period: "DAILY" | "WEEKLY", orderedIds: string[] }
  * Rewrites the order of a period's active items to match orderedIds.
  * Managers only.
  */
@@ -24,11 +24,11 @@ export async function PUT(req: NextRequest) {
 
   if (!canAccessChecklist(session.user, department)) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
-  const period = body?.period === "AM" || body?.period === "PM" || body?.period === "WEEKLY" ? body.period : null;
+  const period = body?.period === "DAILY" || body?.period === "WEEKLY" ? body.period : null;
   const orderedIds: unknown = body?.orderedIds;
   if (!period || !Array.isArray(orderedIds) || orderedIds.some((id) => typeof id !== "string")) {
     return NextResponse.json(
-      { error: "period (AM|PM|WEEKLY) and orderedIds (string[]) are required" },
+      { error: "period (DAILY|WEEKLY) and orderedIds (string[]) are required" },
       { status: 400 }
     );
   }

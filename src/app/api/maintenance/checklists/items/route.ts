@@ -5,7 +5,7 @@ import { canAccessChecklist, canEditChecklists } from "@/lib/checklist-access";
 
 /**
  * POST /api/maintenance/checklists/items
- * Body: { period: "AM" | "PM" | "WEEKLY", title: string }
+ * Body: { period: "DAILY" | "WEEKLY", title: string }
  * Appends a new item to the end of that period's checklist. Managers only.
  */
 export async function POST(req: NextRequest) {
@@ -23,10 +23,10 @@ export async function POST(req: NextRequest) {
 
   if (!canAccessChecklist(session.user, department)) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
-  const period = body?.period === "AM" || body?.period === "PM" || body?.period === "WEEKLY" ? body.period : null;
+  const period = body?.period === "DAILY" || body?.period === "WEEKLY" ? body.period : null;
   const title = typeof body?.title === "string" ? body.title.trim() : "";
   if (!period || !title) {
-    return NextResponse.json({ error: "period (AM|PM|WEEKLY) and title are required" }, { status: 400 });
+    return NextResponse.json({ error: "period (DAILY|WEEKLY) and title are required" }, { status: 400 });
   }
 
   const last = await prisma.dailyChecklistItem.aggregate({

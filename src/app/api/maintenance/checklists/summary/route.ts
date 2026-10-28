@@ -39,16 +39,14 @@ export async function GET(req: NextRequest) {
     }),
   ]);
 
-  const amTotal = totals.find((t) => t.period === "AM")?._count._all ?? 0;
-  const pmTotal = totals.find((t) => t.period === "PM")?._count._all ?? 0;
+  const dailyTotal = totals.find((t) => t.period === "DAILY")?._count._all ?? 0;
 
-  const days: Record<string, { amDone: number; pmDone: number }> = {};
+  const days: Record<string, { dailyDone: number }> = {};
   for (const c of completions) {
     const key = c.date.toISOString().slice(0, 10);
-    days[key] ??= { amDone: 0, pmDone: 0 };
-    if (c.item.period === "AM") days[key].amDone += 1;
-    else if (c.item.period === "PM") days[key].pmDone += 1;
+    days[key] ??= { dailyDone: 0 };
+    if (c.item.period === "DAILY") days[key].dailyDone += 1;
   }
 
-  return NextResponse.json({ amTotal, pmTotal, days });
+  return NextResponse.json({ dailyTotal, days });
 }

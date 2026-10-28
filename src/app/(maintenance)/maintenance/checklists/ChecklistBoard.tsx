@@ -10,7 +10,7 @@ import { SortableList, DragHandle, SortableHandleProps } from "@/components/Sort
 
 const WEEKDAYS = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
 
-type Period = "AM" | "PM" | "WEEKLY";
+type Period = "DAILY" | "WEEKLY";
 
 interface Completion {
   canUncheck: boolean;
@@ -30,13 +30,11 @@ interface ChecklistItem {
 }
 
 interface DaySummary {
-  amDone: number;
-  pmDone: number;
+  dailyDone: number;
 }
 
 interface SummaryData {
-  amTotal: number;
-  pmTotal: number;
+  dailyTotal: number;
   days: Record<string, DaySummary>;
 }
 
@@ -75,18 +73,11 @@ const PERIODS: {
   iconClass: string;
 }[] = [
   {
-    period: "AM",
-    label: "AM",
-    sublabel: "AM checklist",
+    period: "DAILY",
+    label: "Daily",
+    sublabel: "Daily checklist",
     icon: "☀",
     iconClass: "bg-amber-50 text-amber-500",
-  },
-  {
-    period: "PM",
-    label: "PM",
-    sublabel: "PM checklist",
-    icon: "☾",
-    iconClass: "bg-indigo-50 text-indigo-500",
   },
   {
     period: "WEEKLY",
@@ -177,10 +168,9 @@ function DepartmentChecklistBoard({ canEdit, department }: { canEdit: boolean; d
   function bumpSummary(period: Period, delta: number) {
     setSummary((prev) => {
       if (!prev || period === "WEEKLY") return prev;
-      const day = prev.days[selectedDate] ?? { amDone: 0, pmDone: 0 };
+      const day = prev.days[selectedDate] ?? { dailyDone: 0 };
       const next = { ...day };
-      if (period === "AM") next.amDone = Math.max(0, next.amDone + delta);
-      else next.pmDone = Math.max(0, next.pmDone + delta);
+      if (period === "DAILY") next.dailyDone = Math.max(0, next.dailyDone + delta);
       return { ...prev, days: { ...prev.days, [selectedDate]: next } };
     });
   }
@@ -227,8 +217,7 @@ function DepartmentChecklistBoard({ canEdit, department }: { canEdit: boolean; d
       prev
         ? {
             ...prev,
-            amTotal: prev.amTotal + (period === "AM" ? 1 : 0),
-            pmTotal: prev.pmTotal + (period === "PM" ? 1 : 0),
+            dailyTotal: prev.dailyTotal + (period === "DAILY" ? 1 : 0),
           }
         : prev
     );
@@ -249,8 +238,7 @@ function DepartmentChecklistBoard({ canEdit, department }: { canEdit: boolean; d
       prev
         ? {
             ...prev,
-            amTotal: Math.max(0, prev.amTotal - (item.period === "AM" ? 1 : 0)),
-            pmTotal: Math.max(0, prev.pmTotal - (item.period === "PM" ? 1 : 0)),
+            dailyTotal: Math.max(0, prev.dailyTotal - (item.period === "DAILY" ? 1 : 0)),
           }
         : prev
     );
@@ -274,7 +262,7 @@ function DepartmentChecklistBoard({ canEdit, department }: { canEdit: boolean; d
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-5">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Dashboard</h1>
-          <p className="text-gray-500 mt-1">Pet Resort AM, PM, and weekly sign-off</p>
+          <p className="text-gray-500 mt-1">Pet Resort daily and weekly sign-off</p>
         </div>
         {canEdit && (
           <Button
@@ -304,7 +292,7 @@ function DepartmentChecklistBoard({ canEdit, department }: { canEdit: boolean; d
       <div
         className={cn(
           "mt-5 grid grid-cols-1 gap-4 md:gap-6 transition-opacity",
-          "lg:grid-cols-3",
+          "lg:grid-cols-2",
           fetching && loaded && "opacity-60"
         )}
       >
@@ -336,7 +324,7 @@ function DepartmentChecklistBoard({ canEdit, department }: { canEdit: boolean; d
         open={pendingDelete !== null}
         title="Remove checklist item"
         message={`Remove "${pendingDelete?.title}" from the ${
-          pendingDelete?.period === "WEEKLY" ? "weekly" : pendingDelete?.period === "AM" ? "morning" : "evening"
+          pendingDelete?.period === "WEEKLY" ? "weekly" : "daily"
         } checklist? Days it was already signed off keep their records.`}
         confirmLabel="Remove"
         onConfirm={() => {
@@ -371,9 +359,9 @@ function DateStrip({
   function dayStatus(date: string): "complete" | "partial" | "none" {
     if (!summary) return "none";
     const day = summary.days[date];
-    const total = summary.amTotal + summary.pmTotal;
+    const total = summary.dailyTotal;
     if (!day || total === 0) return "none";
-    const done = day.amDone + day.pmDone;
+    const done = day.dailyDone;
     if (done >= total) return "complete";
     return done > 0 ? "partial" : "none";
   }
@@ -486,7 +474,7 @@ function DateStrip({
   );
 }
 
-// ── AM / PM card ────────────────────────────────────────────────────────────
+// ── Daily / Weekly card ────────────────────────────────────────────────────────────
 
 function PeriodCard({
   cfg,

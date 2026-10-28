@@ -152,8 +152,7 @@ enum MaintenanceTaskStatus {
 }
 
 enum ChecklistPeriod {
-  AM
-  PM
+  DAILY
   WEEKLY
 }
 
@@ -518,7 +517,7 @@ model EmployeeNote {
 // Maintenance Models
 // ============================================================
 
-/// One line of the resort's daily AM or PM checklist template. Managers
+/// One line of the resort's daily checklist template. Managers
 /// edit these; the same items repeat every day. Removing an item that has
 /// history archives it (isActive=false) so past days still render the
 /// items that were checked off at the time.

@@ -156,7 +156,7 @@ export function DashboardView({ data }: { data: AdminDashboardData }) {
             {resort ? checklists ? checklists.map((checklist) => (
               <div key={checklist.period}>
                 <div className="mb-2 flex items-center justify-between text-sm">
-                  <span className="font-medium text-pp-ink">{checklist.period === "AM" ? "Morning" : "Evening"}</span>
+                  <span className="font-medium text-pp-ink">Daily</span>
                   <span className="text-xs text-pp-ink-3">{checklist.total === 0 ? "No items configured" : `${checklist.completed} of ${checklist.total} complete`}</span>
                 </div>
                 <div className="h-2 overflow-hidden rounded-full bg-pp-bg-2" role="progressbar" aria-label={`${checklist.period} checklist completion`} aria-valuemin={0} aria-valuemax={checklist.total || 1} aria-valuenow={checklist.completed}>
