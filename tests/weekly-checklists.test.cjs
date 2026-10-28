@@ -13,7 +13,7 @@ function load(file, prisma = {}, manager = true, userOverride = {}) {
   const deps = {
     'next/server': { NextResponse: { json: (body, options) => ({ body, status: options?.status ?? 200 }) } },
     '@/lib/prisma': { prisma },
-    '@/lib/auth-helpers': { getSession: async () => ({ user: { id: 'staff', company: 'RESORT', role: manager ? 'MANAGER' : 'EMPLOYEE', ...userOverride } }), isManagerOrAbove: () => manager },
+    '@/lib/auth-helpers': { getSession: async () => ({ user: { id: 'staff', company: manager ? 'CORPORATE' : 'RESORT', role: manager ? 'MANAGER' : 'EMPLOYEE', ...userOverride } }), isManagerOrAbove: () => manager },
     '@/lib/maintenance-access': require('../src/lib/maintenance-access.ts'),
     '@/lib/checklist-access': require('../src/lib/checklist-access.ts'),
   };
@@ -70,7 +70,7 @@ test('weekly completions do not inflate daily progress', async () => {
   assert.equal(result.body.days['2026-10-25'].dailyDone, 1);
 });
 
-test('only managers can create weekly items', async () => {
+test('only Corporate can create weekly items', async () => {
   let created = false;
   const prisma = { dailyChecklistItem: {
     aggregate: async () => ({ _max: { order: 2 } }),
@@ -278,16 +278,13 @@ test('daily tasks can be created and old AM/PM creation is rejected', async () =
   }
 });
 
-test('Kim and Derek have Boarding, Front Desk and Management but cannot read or edit Grooming', async () => {
-  for (const id of ['cmoc0283w000jjr04200pulk3', 'cmoc059wd000rjr04x03j7h19']) {
-    const user = { id, company: 'RESORT', role: 'MANAGER' };
-    assert.deepEqual([...access.checklistDepartments(user)], ['BOARDING', 'FRONT_DESK', 'MANAGEMENT']);
-    assert.equal(access.canEditChecklists(user), true);
-    for (const method of ['PATCH', 'DELETE']) {
-      const result = await load(base + 'items/[itemId]/route.ts', { dailyChecklistItem: { findUnique: async () => ({ department: 'GROOMING' }) } }, true, user)[method](request({ title: 'Blocked' }), { params: Promise.resolve({ itemId: 'task' }) });
-      assert.equal(result.status, 403);
-    }
-  }
+test('Derek has all four lists and Kim has three, with no editing for either', () => {
+  const derek = { id: 'cmoc059wd000rjr04x03j7h19', company: 'RESORT', role: 'MANAGER' };
+  const kim = { id: 'cmoc0283w000jjr04200pulk3', company: 'RESORT', role: 'MANAGER' };
+  assert.deepEqual([...access.checklistDepartments(derek)], ['BOARDING', 'GROOMING', 'FRONT_DESK', 'MANAGEMENT']);
+  assert.deepEqual([...access.checklistDepartments(kim)], ['BOARDING', 'FRONT_DESK', 'MANAGEMENT']);
+  assert.equal(access.canEditChecklists(derek), false);
+  assert.equal(access.canEditChecklists(kim), false);
 });
 test('shared front desk email and role get Front Desk only without editing', () => {
   for (const user of [
@@ -299,14 +296,36 @@ test('shared front desk email and role get Front Desk only without editing', () 
     assert.equal(access.canAccessChecklist(user, 'MANAGEMENT'), false);
   }
 });
-test('Management supports Daily and Weekly items for authorized managers', async () => {
+test('Management supports Daily and Weekly items for Corporate', async () => {
   for (const period of ['DAILY', 'WEEKLY']) {
     const result = await load(base + 'items/route.ts', { dailyChecklistItem: {
       aggregate: async () => ({ _max: { order: null } }), create: async ({ data }) => data,
-    } }, true, { id: 'cmoc059wd000rjr04x03j7h19' }).POST(request({ department: 'MANAGEMENT', period, title: 'Management task' }));
+    } }, true, { company: 'CORPORATE' }).POST(request({ department: 'MANAGEMENT', period, title: 'Management task' }));
     assert.equal(result.status, 201);
     assert.equal(result.body.department, 'MANAGEMENT');
     assert.equal(result.body.period, period);
   }
   assert.equal(access.canAccessChecklist({ id: 'other', company: 'RESORT', role: 'MANAGER' }, 'MANAGEMENT'), false);
+});
+
+test('only Corporate can change list configuration, including non-Corporate Super Admins', async () => {
+  for (const role of ['MANAGER', 'SUPER_ADMIN', 'EMPLOYEE']) {
+    for (const id of ['cmoc059wd000rjr04x03j7h19', 'cmoc0283w000jjr04200pulk3', 'other']) {
+      const user = { id, company: 'RESORT', role };
+      assert.equal(access.canEditChecklists(user), false);
+      assert.equal((await load(base + 'items/route.ts', {}, true, user).POST(request({ department: 'GROOMING', period: 'DAILY', title: 'No' }))).status, 403);
+      assert.equal((await load(base + 'items/reorder/route.ts', {}, true, user).PUT(request({ department: 'BOARDING', period: 'DAILY', orderedIds: [] }))).status, 403);
+      for (const method of ['PATCH', 'DELETE']) {
+        assert.equal((await load(base + 'items/[itemId]/route.ts', {}, true, user)[method](request({ title: 'No', dueWeekday: 2 }), { params: Promise.resolve({ itemId: 'task' }) })).status, 403);
+      }
+    }
+  }
+});
+test('Derek can complete Grooming tasks without list editing access', async () => {
+  const user = { id: 'cmoc059wd000rjr04x03j7h19', company: 'RESORT', role: 'MANAGER' };
+  const route = load(base + 'completions/route.ts', {
+    dailyChecklistItem: { findUnique: async () => ({ department: 'GROOMING', period: 'DAILY' }) },
+    dailyChecklistCompletion: { upsert: async () => ({ completedAt: new Date(), completedById: user.id }) },
+  }, true, user);
+  assert.equal((await route.POST(request({ itemId: 'task', date: '2026-10-28', completed: true }))).status, 200);
 });

@@ -20,6 +20,7 @@ export function isGroomingChecklistStaff(user: ChecklistUser | null | undefined)
 export function checklistDepartments(user: ChecklistUser): readonly ChecklistDepartment[] {
   if (user.role === "FRONT_DESK" || user.email?.trim().toLowerCase() === "planetpoochpetservices@gmail.com") return ["FRONT_DESK"];
   if (user.company === "CORPORATE" || user.role === "SUPER_ADMIN") return CHECKLIST_DEPARTMENTS;
+  if (user.id === "cmoc059wd000rjr04x03j7h19") return CHECKLIST_DEPARTMENTS;
   if (user.id && MANAGEMENT_STAFF_IDS.has(user.id)) return ["BOARDING", "FRONT_DESK", "MANAGEMENT"];
   if (isGroomingChecklistStaff(user)) return ["GROOMING"];
   return canAccessMaintenanceCompany(user, "RESORT") ? ["BOARDING", "GROOMING", "FRONT_DESK"] : [];
@@ -29,7 +30,5 @@ export function canAccessChecklist(user: ChecklistUser, department: unknown): bo
 }
 export function canEditChecklists(user: ChecklistUser): boolean {
   if (user.role === "FRONT_DESK" || user.email?.trim().toLowerCase() === "planetpoochpetservices@gmail.com") return false;
-  if (user.company === "CORPORATE" || user.role === "SUPER_ADMIN") return true;
-  if (isGroomingChecklistStaff(user)) return false;
-  return canAccessMaintenanceCompany(user, "RESORT") && user.role === "MANAGER";
+  return user.company === "CORPORATE";
 }
