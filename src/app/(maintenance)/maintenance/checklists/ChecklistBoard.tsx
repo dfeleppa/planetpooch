@@ -102,10 +102,10 @@ type Department = (typeof DEPARTMENTS)[number]["value"];
 export function ChecklistBoard({ canEdit, departments }: { canEdit: boolean; departments: readonly Department[] }) {
   const [department, setDepartment] = useState<Department>(departments[0]);
   return <div>
-    <div className="mb-5 flex flex-wrap gap-2" aria-label="Checklist department">
+    <div className="mb-5 grid grid-cols-2 gap-2 sm:flex sm:flex-wrap" aria-label="Checklist department">
       {DEPARTMENTS.filter(({ value }) => departments.includes(value)).map(({ value, label }) => <button key={value} type="button"
         aria-pressed={department === value} onClick={() => setDepartment(value)}
-        className={cn("rounded-lg px-4 py-2 text-sm font-medium transition-colors",
+        className={cn("min-h-11 rounded-lg px-3 py-2 text-sm font-medium transition-colors sm:px-4",
           department === value ? "bg-blue-600 text-white" : "bg-gray-100 text-gray-600 hover:bg-gray-200")}>
         {label}
       </button>)}
@@ -384,18 +384,18 @@ function DateStrip({
   return (
     <div className="rounded-xl border border-gray-200 bg-white shadow-sm px-3 py-3">
       <div className="flex flex-wrap items-center justify-between gap-2 px-1 mb-2">
-        <div className="flex items-center gap-1 sm:gap-2">
+        <div className="grid w-full grid-cols-[44px_minmax(0,1fr)_44px] items-center gap-1 sm:flex sm:w-auto sm:gap-2">
           <button type="button" aria-label="Previous week" onClick={() => onSelect(addDays(selected, -7))}
-            className="rounded-md px-2 py-1.5 text-gray-600 hover:bg-gray-100">{"<"}</button>
-          <p className="text-xs sm:text-sm font-medium text-gray-700">{weekLabel}</p>
+            className="min-h-11 min-w-11 rounded-md px-2 py-1.5 text-gray-600 hover:bg-gray-100">{"<"}</button>
+          <p className="text-center text-xs sm:text-sm font-medium text-gray-700">{weekLabel}</p>
           <button type="button" aria-label="Next week" onClick={() => onSelect(addDays(selected, 7))}
-            className="rounded-md px-2 py-1.5 text-gray-600 hover:bg-gray-100">{">"}</button>
+            className="min-h-11 min-w-11 rounded-md px-2 py-1.5 text-gray-600 hover:bg-gray-100">{">"}</button>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex w-full items-center justify-end gap-2 sm:w-auto">
           {selected !== today && (
             <button
               onClick={() => onSelect(today)}
-              className="text-xs font-medium text-blue-600 hover:text-blue-700"
+              className="min-h-11 px-2 text-xs font-medium text-blue-600 hover:text-blue-700"
             >
               Back to today
             </button>
@@ -409,7 +409,7 @@ function DateStrip({
             }}
             title="Jump to a date"
             aria-label="Jump to a date"
-            className="rounded-md p-1.5 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600"
+            className="grid min-h-11 min-w-11 place-items-center rounded-md p-1.5 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600"
           >
             <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
               <path
@@ -589,7 +589,7 @@ function PeriodCard({
                           title={completion ? `${slot}: ${completion.completedByName ?? "Unknown"} · ${formatTime(completion.completedAt)}` : `Complete ${slot}`}
                           disabled={disabled || (!!completion && !completion.canUncheck)}
                           onClick={() => onToggle(item, slot)}
-                          className="group flex shrink-0 items-center gap-1.5 rounded-md py-1 text-xs text-gray-500 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-500">
+                          className="group flex min-h-11 shrink-0 items-center gap-1.5 rounded-md py-1 text-xs text-gray-500 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-500">
                           <span className={cn("grid h-6 w-6 shrink-0 place-items-center rounded-full border-2 transition-colors", completion ? "border-green-500 bg-green-500" : "border-gray-300 bg-white group-hover:border-blue-400")}>
                             {completion && <svg className="h-3.5 w-3.5 text-white" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth={3} aria-hidden="true"><path strokeLinecap="round" strokeLinejoin="round" d="M4 10.5l4 4 8-9" /></svg>}
                           </span>
@@ -597,7 +597,7 @@ function PeriodCard({
                         </button>;
                       })}
                     </div>
-                    <span className={cn("min-w-0 flex-1 text-sm", item.amCompletion && item.pmCompletion ? "text-gray-400 line-through decoration-gray-300" : "text-gray-800")}>{item.title}</span>
+                    <span className={cn("min-w-0 flex-1 break-words text-sm", item.amCompletion && item.pmCompletion ? "text-gray-400 line-through decoration-gray-300" : "text-gray-800")}>{item.title}</span>
                   </div>
                   {(item.amCompletion || item.pmCompletion) && <p className="mt-1 text-xs text-gray-400">
                     {(["AM", "PM"] as const).map((slot) => {
@@ -611,7 +611,7 @@ function PeriodCard({
                   disabled={disabled || (!!item.completion && !item.completion.canUncheck)}
                   title={item.completion && !item.completion.canUncheck ? "Only the employee who completed this task can uncheck it" : undefined}
                   aria-pressed={!!item.completion}
-                  className="group flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left transition-colors hover:bg-gray-50"
+                  className="group flex min-h-11 w-full flex-wrap items-center gap-3 rounded-lg px-3 py-2.5 text-left transition-colors hover:bg-gray-50"
                 >
                   <span
                     className={cn(
@@ -630,7 +630,7 @@ function PeriodCard({
                   <span className="min-w-0 flex-1">
                     <span
                       className={cn(
-                        "block truncate text-sm",
+                        "block break-words text-sm",
                         item.completion ? "text-gray-400 line-through decoration-gray-300" : "text-gray-800"
                       )}
                     >
@@ -648,7 +648,7 @@ function PeriodCard({
                     </span>
                   </span>
                   {item.completion && (
-                    <span className="flex-shrink-0 text-xs text-gray-400">
+                    <span className="w-full pl-9 text-xs text-gray-400 sm:w-auto sm:pl-0">
                       {item.completion.completedByName ?? "Unknown"} · {formatTime(item.completion.completedAt)}
                     </span>
                   )}
@@ -711,7 +711,7 @@ function EditableList({
             if (e.key === "Enter") submitNew();
           }}
           placeholder="Add an item…"
-          className="flex-1 rounded-lg border border-dashed border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 placeholder-gray-400 focus:border-solid focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+          className="min-h-11 min-w-0 flex-1 rounded-lg border border-dashed border-gray-300 bg-white px-3 py-2 text-base sm:text-sm text-gray-900 placeholder-gray-400 focus:border-solid focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
         />
         <Button size="sm" variant="secondary" onClick={submitNew} disabled={!newTitle.trim()}>
           Add
@@ -735,16 +735,16 @@ function EditableRow({
   const [title, setTitle] = useState(item.title);
 
   return (
-    <div className="mb-1 flex items-center gap-1.5 rounded-lg border border-gray-200 bg-white px-2 py-1.5">
+    <div className="mb-2 grid grid-cols-[28px_minmax(0,1fr)_44px] items-center gap-1.5 sm:flex rounded-lg border border-gray-200 bg-white px-2 py-1.5">
       <DragHandle {...handle} />
-      {item.period === "DAILY" && <label className="flex items-center gap-1 text-xs text-gray-600">
-        <input type="checkbox" checked={!!item.dualCheck} aria-label={`AM + PM checks for ${item.title}`}
+      {item.period === "DAILY" && <label className="col-start-2 row-start-2 flex min-h-11 items-center gap-2 text-sm text-gray-600 sm:text-xs">
+        <input type="checkbox" className="h-5 w-5" checked={!!item.dualCheck} aria-label={`AM + PM checks for ${item.title}`}
           onChange={(event) => onRename(item.id, title.trim() || item.title, undefined, event.target.checked)} />
         AM + PM
       </label>}
       {item.period === "WEEKLY" && <select aria-label={`Due day for ${item.title}`} value={item.dueWeekday ?? ""}
         onChange={(event) => onRename(item.id, title.trim() || item.title, event.target.value === "" ? null : Number(event.target.value))}
-        className="max-w-32 rounded border border-gray-200 px-1 py-1 text-xs">
+        className="col-start-2 row-start-2 min-h-11 max-w-full rounded border border-gray-200 px-2 py-1 text-base sm:max-w-32 sm:text-xs">
         <option value="">Any day</option>
         {WEEKDAYS.map((day, index) => <option key={day} value={index}>{day}</option>)}
       </select>}
@@ -759,13 +759,13 @@ function EditableRow({
         onKeyDown={(e) => {
           if (e.key === "Enter") (e.target as HTMLInputElement).blur();
         }}
-        className="min-w-0 flex-1 rounded px-1.5 py-1 text-sm text-gray-800 focus:bg-blue-50/50 focus:outline-none"
+        className="col-start-2 row-start-1 min-h-11 min-w-0 flex-1 rounded px-1.5 py-1 text-base sm:text-sm text-gray-800 focus:bg-blue-50/50 focus:outline-none"
       />
       <button
         onClick={() => onDelete(item)}
         title="Remove item"
         aria-label={`Remove ${item.title}`}
-        className="rounded-md p-1.5 text-gray-300 transition-colors hover:bg-red-50 hover:text-red-500"
+        className="col-start-3 row-start-1 grid min-h-11 min-w-11 place-items-center rounded-md p-1.5 text-gray-300 transition-colors hover:bg-red-50 hover:text-red-500"
       >
         <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
           <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
