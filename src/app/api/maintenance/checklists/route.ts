@@ -16,6 +16,11 @@ export async function GET(req: NextRequest) {
   if (!session?.user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   if (!canAccessMaintenanceCompany(session.user, "RESORT")) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
+  const department = req.nextUrl.searchParams.get("department") ?? "BOARDING";
+  if (!["BOARDING", "GROOMING", "FRONT_DESK"].includes(department)) {
+    return NextResponse.json({ error: "Invalid checklist department" }, { status: 400 });
+  }
+
   const dateParam = req.nextUrl.searchParams.get("date");
   if (!dateParam || !DATE_RE.test(dateParam)) {
     return NextResponse.json({ error: "date must be YYYY-MM-DD" }, { status: 400 });
@@ -27,12 +32,13 @@ export async function GET(req: NextRequest) {
 
   const items = await prisma.dailyChecklistItem.findMany({
     where: {
+      department,
       OR: [{ isActive: true }, { completions: { some: { date: { in: [date, weekDate] } } } }],
     },
     orderBy: [{ order: "asc" }, { createdAt: "asc" }],
     include: {
       completions: {
-        where: { date: { in: [date, weekDate] } },
+        where: { OR: [{ date: { in: [date, weekDate] } }, { item: { period: "WEEKLY", dueWeekday: { not: null } } }] },
         include: { completedBy: { select: { id: true, name: true } } },
       },
     },
@@ -43,11 +49,23 @@ export async function GET(req: NextRequest) {
     items: items.filter((item) => item.isActive || item.completions.some((c) =>
       c.date.getTime() === (item.period === "WEEKLY" ? weekDate : date).getTime()
     )).map((item) => {
-      const targetDate = item.period === "WEEKLY" ? weekDate : date;
+      let targetDate = item.period === "WEEKLY" ? weekDate : date;
+      // Keep the oldest unfinished scheduled week visible until it is signed off.
+      if (item.period === "WEEKLY" && item.dueWeekday !== null && item.weeklyScheduledAt) {
+        const localStart = new Intl.DateTimeFormat("en-CA", { timeZone: "America/New_York", year: "numeric", month: "2-digit", day: "2-digit" }).format(item.weeklyScheduledAt);
+        const firstWeek = new Date(localStart);
+        firstWeek.setUTCDate(firstWeek.getUTCDate() - firstWeek.getUTCDay());
+        const completedWeeks = new Set(item.completions.map((c) => c.date.getTime()));
+        for (const candidate = new Date(firstWeek); candidate <= weekDate; candidate.setUTCDate(candidate.getUTCDate() + 7)) {
+          if (!completedWeeks.has(candidate.getTime())) { targetDate = new Date(candidate); break; }
+        }
+      }
       const completion = item.completions.find((c) => c.date.getTime() === targetDate.getTime()) ?? null;
       return {
         id: item.id,
         period: item.period,
+        dueWeekday: item.dueWeekday,
+        completionDate: targetDate.toISOString().slice(0, 10),
         title: item.title,
         order: item.order,
         isActive: item.isActive,

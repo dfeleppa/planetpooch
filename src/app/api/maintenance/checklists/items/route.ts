@@ -17,6 +17,11 @@ export async function POST(req: NextRequest) {
   }
 
   const body = await req.json().catch(() => null);
+  const department = body?.department ?? "BOARDING";
+  if (!["BOARDING", "GROOMING", "FRONT_DESK"].includes(department)) {
+    return NextResponse.json({ error: "Invalid checklist department" }, { status: 400 });
+  }
+
   const period = body?.period === "AM" || body?.period === "PM" || body?.period === "WEEKLY" ? body.period : null;
   const title = typeof body?.title === "string" ? body.title.trim() : "";
   if (!period || !title) {
@@ -24,12 +29,12 @@ export async function POST(req: NextRequest) {
   }
 
   const last = await prisma.dailyChecklistItem.aggregate({
-    where: { period },
+    where: { department, period },
     _max: { order: true },
   });
 
   const item = await prisma.dailyChecklistItem.create({
-    data: { period, title, order: (last._max.order ?? -1) + 1 },
+    data: { department, period, title, order: (last._max.order ?? -1) + 1 },
   });
 
   return NextResponse.json(item, { status: 201 });

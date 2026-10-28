@@ -18,6 +18,11 @@ export async function PUT(req: NextRequest) {
   }
 
   const body = await req.json().catch(() => null);
+  const department = body?.department ?? "BOARDING";
+  if (!["BOARDING", "GROOMING", "FRONT_DESK"].includes(department)) {
+    return NextResponse.json({ error: "Invalid checklist department" }, { status: 400 });
+  }
+
   const period = body?.period === "AM" || body?.period === "PM" || body?.period === "WEEKLY" ? body.period : null;
   const orderedIds: unknown = body?.orderedIds;
   if (!period || !Array.isArray(orderedIds) || orderedIds.some((id) => typeof id !== "string")) {
@@ -30,7 +35,7 @@ export async function PUT(req: NextRequest) {
   await prisma.$transaction(
     (orderedIds as string[]).map((id, index) =>
       prisma.dailyChecklistItem.updateMany({
-        where: { id, period },
+        where: { id, department, period },
         data: { order: index },
       })
     )

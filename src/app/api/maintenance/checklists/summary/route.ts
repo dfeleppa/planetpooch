@@ -15,6 +15,11 @@ export async function GET(req: NextRequest) {
   if (!session?.user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   if (!canAccessMaintenanceCompany(session.user, "RESORT")) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
+  const department = req.nextUrl.searchParams.get("department") ?? "BOARDING";
+  if (!["BOARDING", "GROOMING", "FRONT_DESK"].includes(department)) {
+    return NextResponse.json({ error: "Invalid checklist department" }, { status: 400 });
+  }
+
   const start = req.nextUrl.searchParams.get("start");
   const end = req.nextUrl.searchParams.get("end");
   if (!start || !end || !DATE_RE.test(start) || !DATE_RE.test(end)) {
@@ -24,11 +29,11 @@ export async function GET(req: NextRequest) {
   const [totals, completions] = await Promise.all([
     prisma.dailyChecklistItem.groupBy({
       by: ["period"],
-      where: { isActive: true },
+      where: { department, isActive: true },
       _count: { _all: true },
     }),
     prisma.dailyChecklistCompletion.findMany({
-      where: { date: { gte: new Date(start), lte: new Date(end) } },
+      where: { item: { department }, date: { gte: new Date(start), lte: new Date(end) } },
       include: { item: { select: { period: true } } },
     }),
   ]);

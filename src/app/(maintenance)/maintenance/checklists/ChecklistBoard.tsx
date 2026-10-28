@@ -8,6 +8,8 @@ import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { SortableList, DragHandle, SortableHandleProps } from "@/components/SortableList";
 
+const WEEKDAYS = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+
 type Period = "AM" | "PM" | "WEEKLY";
 
 interface Completion {
@@ -19,6 +21,8 @@ interface Completion {
 interface ChecklistItem {
   id: string;
   period: Period;
+  dueWeekday?: number | null;
+  completionDate?: string;
   title: string;
   order: number;
   isActive: boolean;
@@ -93,7 +97,29 @@ const PERIODS: {
   },
 ];
 
+const DEPARTMENTS = [
+  { value: "BOARDING", label: "Boarding" },
+  { value: "GROOMING", label: "Grooming" },
+  { value: "FRONT_DESK", label: "Front Desk" },
+] as const;
+type Department = (typeof DEPARTMENTS)[number]["value"];
+
 export function ChecklistBoard({ canEdit }: { canEdit: boolean }) {
+  const [department, setDepartment] = useState<Department>("BOARDING");
+  return <div>
+    <div className="mb-5 flex flex-wrap gap-2" aria-label="Checklist department">
+      {DEPARTMENTS.map(({ value, label }) => <button key={value} type="button"
+        aria-pressed={department === value} onClick={() => setDepartment(value)}
+        className={cn("rounded-lg px-4 py-2 text-sm font-medium transition-colors",
+          department === value ? "bg-blue-600 text-white" : "bg-gray-100 text-gray-600 hover:bg-gray-200")}>
+        {label}
+      </button>)}
+    </div>
+    <DepartmentChecklistBoard key={department} department={department} canEdit={canEdit} />
+  </div>;
+}
+
+function DepartmentChecklistBoard({ canEdit, department }: { canEdit: boolean; department: Department }) {
   const { data: session } = useSession();
   const myName = session?.user?.name ?? "You";
 
@@ -119,7 +145,7 @@ export function ChecklistBoard({ canEdit }: { canEdit: boolean }) {
     setFetching(true);
     setLoadError(false);
     try {
-      const res = await fetch(`/api/maintenance/checklists?date=${date}`);
+      const res = await fetch(`/api/maintenance/checklists?date=${date}&department=${department}`);
       if (!res.ok) throw new Error("Unable to load checklists");
       const data = await res.json();
       if (id !== requestId.current) return;
@@ -130,7 +156,7 @@ export function ChecklistBoard({ canEdit }: { canEdit: boolean }) {
     } finally {
       if (id === requestId.current) setFetching(false);
     }
-  }, []);
+  }, [department]);
 
   useEffect(() => {
     loadItems(checklistDate);
@@ -138,7 +164,7 @@ export function ChecklistBoard({ canEdit }: { canEdit: boolean }) {
 
   useEffect(() => {
     let cancelled = false;
-    fetch(`/api/maintenance/checklists/summary?start=${stripStart}&end=${stripEnd}`)
+    fetch(`/api/maintenance/checklists/summary?start=${stripStart}&end=${stripEnd}&department=${department}`)
       .then((res) => (res.ok ? res.json() : null))
       .then((data) => {
         if (data && !cancelled) setSummary(data);
@@ -146,7 +172,7 @@ export function ChecklistBoard({ canEdit }: { canEdit: boolean }) {
     return () => {
       cancelled = true;
     };
-  }, [stripStart, stripEnd]);
+  }, [stripStart, stripEnd, department]);
 
   function bumpSummary(period: Period, delta: number) {
     setSummary((prev) => {
@@ -173,7 +199,7 @@ export function ChecklistBoard({ canEdit }: { canEdit: boolean }) {
     const res = await fetch("/api/maintenance/checklists/completions", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ itemId: item.id, date: item.period === "WEEKLY" ? stripStart : selectedDate, completed }),
+      body: JSON.stringify({ itemId: item.id, date: item.completionDate ?? (item.period === "WEEKLY" ? stripStart : selectedDate), completed }),
     });
     if (!res.ok) {
       // Revert by refetching the authoritative state.
@@ -185,13 +211,14 @@ export function ChecklistBoard({ canEdit }: { canEdit: boolean }) {
     setItems((prev) =>
       prev.map((i) => (i.id === item.id ? { ...i, completion: data.completion } : i))
     );
+    if (item.period === "WEEKLY" && item.completionDate && item.completionDate < stripStart) await loadItems(checklistDate);
   }
 
   async function addItem(period: Period, title: string) {
     const res = await fetch("/api/maintenance/checklists/items", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ period, title }),
+      body: JSON.stringify({ department, period, title }),
     });
     if (!res.ok) return;
     const item = await res.json();
@@ -207,13 +234,13 @@ export function ChecklistBoard({ canEdit }: { canEdit: boolean }) {
     );
   }
 
-  async function renameItem(itemId: string, title: string) {
-    setItems((prev) => prev.map((i) => (i.id === itemId ? { ...i, title } : i)));
-    await fetch(`/api/maintenance/checklists/items/${itemId}`, {
+  async function renameItem(itemId: string, title: string, dueWeekday?: number | null) {
+    const res = await fetch(`/api/maintenance/checklists/items/${itemId}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ title }),
+      body: JSON.stringify({ title, ...(dueWeekday !== undefined ? { dueWeekday } : {}) }),
     });
+    if (res.ok) await loadItems(checklistDate);
   }
 
   async function deleteItem(item: ChecklistItem) {
@@ -238,7 +265,7 @@ export function ChecklistBoard({ canEdit }: { canEdit: boolean }) {
     await fetch("/api/maintenance/checklists/items/reorder", {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ period, orderedIds: reordered.map((i) => i.id) }),
+      body: JSON.stringify({ department, period, orderedIds: reordered.map((i) => i.id) }),
     });
   }
 
@@ -283,6 +310,7 @@ export function ChecklistBoard({ canEdit }: { canEdit: boolean }) {
       >
         {PERIODS.map((cfg) => (
           <PeriodCard
+            weekStart={stripStart}
             key={cfg.period}
             cfg={cfg.period === "WEEKLY" ? {
               ...cfg,
@@ -462,6 +490,7 @@ function DateStrip({
 
 function PeriodCard({
   cfg,
+  weekStart,
   items,
   loaded,
   editMode,
@@ -474,6 +503,7 @@ function PeriodCard({
   onReorder,
 }: {
   cfg: (typeof PERIODS)[number];
+  weekStart: string;
   items: ChecklistItem[];
   loaded: boolean;
   editMode: boolean;
@@ -481,7 +511,7 @@ function PeriodCard({
   onToggle: (item: ChecklistItem) => void;
   disabled: boolean;
   onAdd: (title: string) => void;
-  onRename: (itemId: string, title: string) => void;
+  onRename: (itemId: string, title: string, dueWeekday?: number | null) => void;
   onDelete: (item: ChecklistItem) => void;
   onReorder: (items: ChecklistItem[]) => void;
 }) {
@@ -581,6 +611,11 @@ function PeriodCard({
                       )}
                     >
                       {item.title}
+                      {item.period === "WEEKLY" && item.dueWeekday != null && (
+                        <span className={cn("mt-1 block text-xs no-underline", !item.completion && addDays(item.completionDate ?? weekStart, item.dueWeekday) < toDateStr(new Date()) ? "font-semibold text-red-600" : "text-gray-500")}>
+                          {!item.completion && addDays(item.completionDate ?? weekStart, item.dueWeekday) < toDateStr(new Date()) ? "Overdue · " : ""}Due {WEEKDAYS[item.dueWeekday]}
+                        </span>
+                      )}
                       {!item.isActive && (
                         <span className="ml-2 rounded bg-gray-100 px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-gray-400 no-underline">
                           removed
@@ -619,7 +654,7 @@ function EditableList({
   onAdd,
 }: {
   items: ChecklistItem[];
-  onRename: (itemId: string, title: string) => void;
+  onRename: (itemId: string, title: string, dueWeekday?: number | null) => void;
   onDelete: (item: ChecklistItem) => void;
   onReorder: (items: ChecklistItem[]) => void;
   onAdd: (title: string) => void;
@@ -670,7 +705,7 @@ function EditableRow({
 }: {
   item: ChecklistItem;
   handle: SortableHandleProps;
-  onRename: (itemId: string, title: string) => void;
+  onRename: (itemId: string, title: string, dueWeekday?: number | null) => void;
   onDelete: (item: ChecklistItem) => void;
 }) {
   const [title, setTitle] = useState(item.title);
@@ -678,6 +713,12 @@ function EditableRow({
   return (
     <div className="mb-1 flex items-center gap-1.5 rounded-lg border border-gray-200 bg-white px-2 py-1.5">
       <DragHandle {...handle} />
+      {item.period === "WEEKLY" && <select aria-label={`Due day for ${item.title}`} value={item.dueWeekday ?? ""}
+        onChange={(event) => onRename(item.id, title.trim() || item.title, event.target.value === "" ? null : Number(event.target.value))}
+        className="max-w-32 rounded border border-gray-200 px-1 py-1 text-xs">
+        <option value="">Any day</option>
+        {WEEKDAYS.map((day, index) => <option key={day} value={index}>{day}</option>)}
+      </select>}
       <input
         value={title}
         onChange={(e) => setTitle(e.target.value)}

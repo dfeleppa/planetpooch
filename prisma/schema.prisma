@@ -523,6 +523,9 @@ model EmployeeNote {
 /// history archives it (isActive=false) so past days still render the
 /// items that were checked off at the time.
 model DailyChecklistItem {
+  department String @default("BOARDING")
+  dueWeekday Int?
+  weeklyScheduledAt DateTime?
   id        String          @id @default(cuid())
   period    ChecklistPeriod
   title     String
@@ -534,6 +537,7 @@ model DailyChecklistItem {
   completions DailyChecklistCompletion[]
 
   @@index([period, isActive])
+  @@index([department, period, isActive])
 }
 
 /// One checkmark: item X was completed on calendar day Y. `completedAt`
