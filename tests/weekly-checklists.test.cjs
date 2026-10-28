@@ -6,15 +6,16 @@ const vm = require('node:vm');
 const ts = require('typescript');
 require('tsx/cjs');
 
-function load(file, prisma = {}, manager = true) {
+function load(file, prisma = {}, manager = true, userOverride = {}) {
   const js = ts.transpileModule(fs.readFileSync(path.join(__dirname, '..', file), 'utf8'), {
     compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 },
   }).outputText;
   const deps = {
     'next/server': { NextResponse: { json: (body, options) => ({ body, status: options?.status ?? 200 }) } },
     '@/lib/prisma': { prisma },
-    '@/lib/auth-helpers': { getSession: async () => ({ user: { id: 'staff', company: 'RESORT', role: manager ? 'MANAGER' : 'EMPLOYEE' } }), isManagerOrAbove: () => manager },
+    '@/lib/auth-helpers': { getSession: async () => ({ user: { id: 'staff', company: 'RESORT', role: manager ? 'MANAGER' : 'EMPLOYEE', ...userOverride } }), isManagerOrAbove: () => manager },
     '@/lib/maintenance-access': require('../src/lib/maintenance-access.ts'),
+    '@/lib/checklist-access': require('../src/lib/checklist-access.ts'),
   };
   const context = { exports: {}, require: (name) => deps[name] ?? require(name), Date };
   vm.runInNewContext(js, context);
@@ -28,7 +29,7 @@ test('weekly sign-offs and unchecks use Sunday; daily sign-offs retain their sel
     for (const completed of [true, false]) {
       let saved;
       const route = load(base + 'completions/route.ts', {
-        dailyChecklistItem: { findUnique: async () => ({ period }) },
+        dailyChecklistItem: { findUnique: async () => ({ period, department: "BOARDING" }) },
         dailyChecklistCompletion: {
           deleteMany: async (args) => { saved = args.where; return { count: 1 }; },
           upsert: async (args) => {
@@ -127,7 +128,7 @@ test('only the signer can uncheck daily and weekly tasks, including orphaned sig
     for (const owner of ['staff', 'other', null, 'absent']) {
       let remaining = owner === 'absent' ? null : { completedById: owner };
       const route = load(base + 'completions/route.ts', {
-        dailyChecklistItem: { findUnique: async () => ({ period }) },
+        dailyChecklistItem: { findUnique: async () => ({ period, department: "BOARDING" }) },
         dailyChecklistCompletion: {
           deleteMany: async ({ where }) => {
             assert.equal(where.completedById, 'staff');
@@ -195,4 +196,71 @@ test('weekly due day changes reject invalid days and daily tasks', async () => {
   }
   const result = await load(base + 'items/[itemId]/route.ts', { dailyChecklistItem: { findUnique: async () => ({ period: 'AM' }) } }).PATCH(request({ dueWeekday: 2 }), { params: Promise.resolve({ itemId: 'task' }) });
   assert.equal(result.status, 400);
+});
+
+const access = require('../src/lib/checklist-access.ts');
+const groomingIds = ['cmobz2cwb0007k0041qnobqcz', 'cmoc04aqt000njr04ehczgndc', 'cmtxaffs40001l2042xiq3yrs'];
+test('Corporate can view and edit every checklist regardless of role', () => {
+  for (const role of ['EMPLOYEE', 'MANAGER', 'SUPER_ADMIN']) {
+    const user = { id: 'corporate', company: 'CORPORATE', role };
+    assert.deepEqual([...access.checklistDepartments(user)], ['BOARDING', 'GROOMING', 'FRONT_DESK']);
+    assert.equal(access.canEditChecklists(user), true);
+  }
+});
+test('named Grooming staff get Grooming only and no configuration permissions even with manager role', async () => {
+  for (const id of groomingIds) {
+    for (const company of ['RESORT', 'GROOMING']) {
+      const user = { id, company, role: 'MANAGER' };
+      assert.deepEqual([...access.checklistDepartments(user)], ['GROOMING']);
+      assert.equal(access.canEditChecklists(user), false);
+      for (const department of ['BOARDING', 'FRONT_DESK']) {
+        const route = load(base + 'route.ts', {}, true, user);
+        const result = await route.GET({ nextUrl: new URL(`https://example.com?date=2026-10-28&department=${department}`) });
+        assert.equal(result.status, 403);
+        const summary = await load(base + 'summary/route.ts', {}, true, user).GET({ nextUrl: new URL(`https://example.com?start=2026-10-25&end=2026-10-31&department=${department}`) });
+        assert.equal(summary.status, 403);
+      }
+      assert.equal((await load(base + 'items/route.ts', {}, true, user).POST(request({ department: 'GROOMING', period: 'AM', title: 'No' }))).status, 403);
+      assert.equal((await load(base + 'items/reorder/route.ts', {}, true, user).PUT(request({ department: 'GROOMING', period: 'AM', orderedIds: [] }))).status, 403);
+      for (const method of ['PATCH', 'DELETE']) {
+        const result = await load(base + 'items/[itemId]/route.ts', {}, true, user)[method](request({ title: 'No' }), { params: Promise.resolve({ itemId: 'task' }) });
+        assert.equal(result.status, 403);
+      }
+    }
+  }
+});
+test('Grooming-only staff cannot complete tasks in other departments by guessing item IDs', async () => {
+  for (const department of ['BOARDING', 'FRONT_DESK', 'GROOMING']) {
+    let saved = false;
+    const route = load(base + 'completions/route.ts', {
+      dailyChecklistItem: { findUnique: async () => ({ department, period: 'AM' }) },
+      dailyChecklistCompletion: { upsert: async () => { saved = true; return { completedAt: new Date(), completedById: groomingIds[0] }; } },
+    }, false, { id: groomingIds[0], company: 'GROOMING', role: 'EMPLOYEE' });
+    const result = await route.POST(request({ itemId: 'task', date: '2026-10-27', completed: true }));
+    assert.equal(result.status, department === 'GROOMING' ? 200 : 403);
+    assert.equal(saved, department === 'GROOMING');
+  }
+});
+test('account names and business selection cannot impersonate assigned Grooming staff', () => {
+  assert.deepEqual([...access.checklistDepartments({ id: 'unrelated', name: 'Stacey Conti', company: 'GROOMING', role: 'EMPLOYEE' })], []);
+});
+
+test('Corporate employees can create checklist tasks without a manager role', async () => {
+  const route = load(base + 'items/route.ts', { dailyChecklistItem: {
+    aggregate: async () => ({ _max: { order: 0 } }), create: async ({ data }) => data,
+  } }, false, { company: 'CORPORATE', role: 'EMPLOYEE' });
+  const result = await route.POST(request({ department: 'FRONT_DESK', period: 'AM', title: 'Corporate task' }));
+  assert.equal(result.status, 201);
+});
+
+test('Grooming staff can read Grooming tasks and summaries', async () => {
+  const user = { id: groomingIds[0], company: 'GROOMING', role: 'EMPLOYEE' };
+  const route = load(base + 'route.ts', { dailyChecklistItem: { findMany: async ({ where }) => {
+    assert.equal(where.department, 'GROOMING'); return [];
+  } } }, false, user);
+  assert.equal((await route.GET({ nextUrl: new URL('https://example.com?date=2026-10-28&department=GROOMING') })).status, 200);
+  const summary = load(base + 'summary/route.ts', {
+    dailyChecklistItem: { groupBy: async () => [] }, dailyChecklistCompletion: { findMany: async () => [] },
+  }, false, user);
+  assert.equal((await summary.GET({ nextUrl: new URL('https://example.com?start=2026-10-25&end=2026-10-31&department=GROOMING') })).status, 200);
 });

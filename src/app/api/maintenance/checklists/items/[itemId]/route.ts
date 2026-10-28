@@ -1,17 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { getSession, isManagerOrAbove } from "@/lib/auth-helpers";
-import { canAccessMaintenanceCompany } from "@/lib/maintenance-access";
+import { getSession } from "@/lib/auth-helpers";
+import { canEditChecklists } from "@/lib/checklist-access";
 
 async function requireManagerSession() {
   const session = await getSession();
   if (!session?.user) {
     return { error: NextResponse.json({ error: "Unauthorized" }, { status: 401 }) };
   }
-  if (!canAccessMaintenanceCompany(session.user, "RESORT")) {
-    return { error: NextResponse.json({ error: "Forbidden" }, { status: 403 }) };
-  }
-  if (!isManagerOrAbove((session.user as { role?: string }).role)) {
+  if (!canEditChecklists(session.user)) {
     return { error: NextResponse.json({ error: "Forbidden" }, { status: 403 }) };
   }
   return { session };

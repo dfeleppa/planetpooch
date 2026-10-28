@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/auth-helpers";
-import { canAccessMaintenanceCompany } from "@/lib/maintenance-access";
+import { canAccessChecklist } from "@/lib/checklist-access";
 
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 
@@ -13,7 +13,6 @@ const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 export async function POST(req: NextRequest) {
   const session = await getSession();
   if (!session?.user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  if (!canAccessMaintenanceCompany(session.user, "RESORT")) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   const userId = (session.user as { id: string }).id;
 
   const body = await req.json().catch(() => null);
@@ -36,6 +35,8 @@ export async function POST(req: NextRequest) {
 
   const item = await prisma.dailyChecklistItem.findUnique({ where: { id: itemId } });
   if (!item) return NextResponse.json({ error: "Item not found" }, { status: 404 });
+
+  if (!canAccessChecklist(session.user, item.department)) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
   const date = new Date(dateParam);
   if (item.period === "WEEKLY") date.setUTCDate(date.getUTCDate() - date.getUTCDay());

@@ -104,11 +104,11 @@ const DEPARTMENTS = [
 ] as const;
 type Department = (typeof DEPARTMENTS)[number]["value"];
 
-export function ChecklistBoard({ canEdit }: { canEdit: boolean }) {
-  const [department, setDepartment] = useState<Department>("BOARDING");
+export function ChecklistBoard({ canEdit, departments }: { canEdit: boolean; departments: readonly Department[] }) {
+  const [department, setDepartment] = useState<Department>(departments[0]);
   return <div>
     <div className="mb-5 flex flex-wrap gap-2" aria-label="Checklist department">
-      {DEPARTMENTS.map(({ value, label }) => <button key={value} type="button"
+      {DEPARTMENTS.filter(({ value }) => departments.includes(value)).map(({ value, label }) => <button key={value} type="button"
         aria-pressed={department === value} onClick={() => setDepartment(value)}
         className={cn("rounded-lg px-4 py-2 text-sm font-medium transition-colors",
           department === value ? "bg-blue-600 text-white" : "bg-gray-100 text-gray-600 hover:bg-gray-200")}>

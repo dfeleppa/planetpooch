@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/auth-helpers";
-import { canAccessMaintenanceCompany } from "@/lib/maintenance-access";
+import { canAccessChecklist } from "@/lib/checklist-access";
 
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 
@@ -14,12 +14,13 @@ const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 export async function GET(req: NextRequest) {
   const session = await getSession();
   if (!session?.user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  if (!canAccessMaintenanceCompany(session.user, "RESORT")) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
   const department = req.nextUrl.searchParams.get("department") ?? "BOARDING";
   if (!["BOARDING", "GROOMING", "FRONT_DESK"].includes(department)) {
     return NextResponse.json({ error: "Invalid checklist department" }, { status: 400 });
   }
+
+  if (!canAccessChecklist(session.user, department)) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
   const dateParam = req.nextUrl.searchParams.get("date");
   if (!dateParam || !DATE_RE.test(dateParam)) {

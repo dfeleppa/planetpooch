@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { isGroomingChecklistStaff } from "@/lib/checklist-access";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { useSession } from "next-auth/react";
@@ -402,6 +403,12 @@ export function Sidebar() {
               </section>
             );
           })}
+          {isGroomingChecklistStaff(session?.user) && session?.user?.company !== "RESORT" && (
+            <Link href="/maintenance/checklists?company=RESORT" aria-label="Grooming Checklist" title={isCollapsed ? "Grooming Checklist" : undefined} className={navItemClass(pathname === "/maintenance/checklists")}>
+              <span aria-hidden="true">✓</span>
+              {!isCollapsed && <span>Grooming Checklist</span>}
+            </Link>
+          )}
           {/* Marketing section — visible to Super Admins and the CMO */}
           {canSeeCorporate && hasMarketingAccess && !isSuperAdmin && (
             <>

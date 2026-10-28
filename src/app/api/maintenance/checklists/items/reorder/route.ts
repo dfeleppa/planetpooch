@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { getSession, isManagerOrAbove } from "@/lib/auth-helpers";
-import { canAccessMaintenanceCompany } from "@/lib/maintenance-access";
+import { getSession } from "@/lib/auth-helpers";
+import { canAccessChecklist, canEditChecklists } from "@/lib/checklist-access";
 
 /**
  * PUT /api/maintenance/checklists/items/reorder
@@ -12,8 +12,7 @@ import { canAccessMaintenanceCompany } from "@/lib/maintenance-access";
 export async function PUT(req: NextRequest) {
   const session = await getSession();
   if (!session?.user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  if (!canAccessMaintenanceCompany(session.user, "RESORT")) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-  if (!isManagerOrAbove((session.user as { role?: string }).role)) {
+  if (!canEditChecklists(session.user)) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
@@ -22,6 +21,8 @@ export async function PUT(req: NextRequest) {
   if (!["BOARDING", "GROOMING", "FRONT_DESK"].includes(department)) {
     return NextResponse.json({ error: "Invalid checklist department" }, { status: 400 });
   }
+
+  if (!canAccessChecklist(session.user, department)) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
   const period = body?.period === "AM" || body?.period === "PM" || body?.period === "WEEKLY" ? body.period : null;
   const orderedIds: unknown = body?.orderedIds;
