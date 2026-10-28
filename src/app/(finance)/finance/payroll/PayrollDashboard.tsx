@@ -33,6 +33,7 @@ import {
   type PayrollCategoryValue,
 } from "@/lib/payroll";
 import { cn } from "@/lib/utils";
+import { replacePulledMobileEntries } from "@/lib/mobile-grooming-import";
 import { EmployeeVerificationQueue, type VerificationDay } from "./EmployeeVerificationQueue";
 import { PayrollSubnav } from "./PayrollSubnav";
 
@@ -1707,7 +1708,7 @@ export function PayrollDashboard({
       const importedEntries = savedMobileEntriesToEditable(data.entries);
       const pulledEmployeeKeys = new Set(
         (
-          mobilePayrollView === "summary"
+          mobilePayrollView !== "employee"
             ? data.staffs?.map((staff) => staff.name) ??
               importedEntries.map((entry) => entry.employeeName)
             : [employeeName]
@@ -1728,13 +1729,11 @@ export function PayrollDashboard({
       const savedEntries = savedMobileEntriesToEditable(
         savedData.week?.mobileGroomingEntries ?? []
       );
-      const mergedEntries = [
-        ...savedEntries.filter(
-          (entry) =>
-            !pulledEmployeeKeys.has(normalizeEmployeeName(entry.employeeName).toLocaleLowerCase())
-        ),
-        ...importedEntries,
-      ].sort((a, b) => {
+      const mergedEntries = replacePulledMobileEntries(
+        savedEntries,
+        importedEntries,
+        [...pulledEmployeeKeys]
+      ).sort((a, b) => {
         const dateCompare = a.serviceDate.localeCompare(b.serviceDate);
         if (dateCompare !== 0) return dateCompare;
         return a.employeeName.localeCompare(b.employeeName, undefined, { sensitivity: "base" });
