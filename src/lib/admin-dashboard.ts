@@ -102,10 +102,10 @@ export async function getAdminDashboard() {
     business.company === "RESORT"
       ? prisma.dailyChecklistItem.findMany({
           where: { OR: [{ isActive: true }, { completions: { some: { date: periods.today } } }] },
-          select: { period: true, completions: { where: { date: periods.today }, select: { id: true } } },
+          select: { period: true, dualCheck: true, completions: { where: { date: periods.today }, select: { slot: true } } },
         }).then((items) => (["DAILY"] as const).map((period) => {
           const periodItems = items.filter((item) => item.period === period);
-          return { period, total: periodItems.length, completed: periodItems.filter((item) => item.completions.length > 0).length };
+          return { period, total: periodItems.reduce((sum, item) => sum + (item.dualCheck ? 2 : 1), 0), completed: periodItems.reduce((sum, item) => sum + item.completions.filter((c) => item.dualCheck ? c.slot === "AM" || c.slot === "PM" : c.slot === "SINGLE").length, 0) };
         }))
       : Promise.resolve(null),
   ]);

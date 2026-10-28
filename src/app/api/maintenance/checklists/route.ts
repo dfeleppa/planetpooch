@@ -61,8 +61,15 @@ export async function GET(req: NextRequest) {
           if (!completedWeeks.has(candidate.getTime())) { targetDate = new Date(candidate); break; }
         }
       }
-      const completion = item.completions.find((c) => c.date.getTime() === targetDate.getTime()) ?? null;
+      const completion = item.completions.find((c) => c.date.getTime() === targetDate.getTime() && (!c.slot || c.slot === "SINGLE")) ?? null;
+      const serializeCompletion = (entry: typeof completion) => entry ? {
+        completedAt: entry.completedAt.toISOString(), completedByName: entry.completedBy?.name ?? null,
+        canUncheck: entry.completedById === session.user.id,
+      } : null;
+      const forSlot = (slot: string) => serializeCompletion(item.completions.find((c) => c.date.getTime() === targetDate.getTime() && c.slot === slot) ?? null);
       return {
+        dualCheck: item.dualCheck,
+        amCompletion: forSlot("AM"), pmCompletion: forSlot("PM"),
         id: item.id,
         period: item.period,
         dueWeekday: item.dueWeekday,

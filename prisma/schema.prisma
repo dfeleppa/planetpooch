@@ -525,6 +525,7 @@ model DailyChecklistItem {
   department String @default("BOARDING")
   dueWeekday Int?
   weeklyScheduledAt DateTime?
+  dualCheck Boolean @default(false)
   id        String          @id @default(cuid())
   period    ChecklistPeriod
   title     String
@@ -543,6 +544,7 @@ model DailyChecklistItem {
 /// is the real timestamp of the click (the sign-off record); `date` is the
 /// checklist day it counts toward. Unchecking deletes the row.
 model DailyChecklistCompletion {
+  slot String @default("SINGLE")
   id            String   @id @default(cuid())
   itemId        String
   date          DateTime @db.Date
@@ -552,7 +554,7 @@ model DailyChecklistCompletion {
   item        DailyChecklistItem @relation(fields: [itemId], references: [id], onDelete: Cascade)
   completedBy User?              @relation("ChecklistCompleter", fields: [completedById], references: [id], onDelete: SetNull)
 
-  @@unique([itemId, date])
+  @@unique([itemId, date, slot])
   @@index([date])
   @@index([completedById])
 }

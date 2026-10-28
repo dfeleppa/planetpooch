@@ -38,6 +38,10 @@ export async function POST(req: NextRequest) {
 
   if (!canAccessChecklist(session.user, item.department)) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
+  const slot = body?.slot ?? "SINGLE";
+  if (item.dualCheck ? !["AM", "PM"].includes(slot) : slot !== "SINGLE") {
+    return NextResponse.json({ error: "Invalid sign-off slot for this task" }, { status: 400 });
+  }
   const date = new Date(dateParam);
   if (item.period === "WEEKLY") date.setUTCDate(date.getUTCDate() - date.getUTCDay());
 
@@ -45,11 +49,11 @@ export async function POST(req: NextRequest) {
     // Enforce ownership in the delete itself so concurrent requests cannot
     // remove a replacement sign-off belonging to another employee.
     const removed = await prisma.dailyChecklistCompletion.deleteMany({
-      where: { itemId, date, completedById: userId },
+      where: { itemId, date, slot, completedById: userId },
     });
     if (removed.count === 0) {
       const existing = await prisma.dailyChecklistCompletion.findUnique({
-        where: { itemId_date: { itemId, date } },
+        where: { itemId_date_slot: { itemId, date, slot } },
       });
       if (existing) {
         return NextResponse.json({ error: "Only the employee who completed this task can uncheck it" }, { status: 403 });
@@ -59,10 +63,10 @@ export async function POST(req: NextRequest) {
   }
 
   const completion = await prisma.dailyChecklistCompletion.upsert({
-    where: { itemId_date: { itemId, date } },
+    where: { itemId_date_slot: { itemId, date, slot } },
     // Already checked by someone else — keep their sign-off, don't overwrite.
     update: {},
-    create: { itemId, date, completedById: userId },
+    create: { itemId, date, slot, completedById: userId },
     include: { completedBy: { select: { id: true, name: true } } },
   });
 

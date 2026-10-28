@@ -27,6 +27,9 @@ interface ChecklistItem {
   order: number;
   isActive: boolean;
   completion: Completion | null;
+  dualCheck?: boolean;
+  amCompletion?: Completion | null;
+  pmCompletion?: Completion | null;
 }
 
 interface DaySummary {
@@ -176,21 +179,23 @@ function DepartmentChecklistBoard({ canEdit, department }: { canEdit: boolean; d
     });
   }
 
-  async function toggleItem(item: ChecklistItem) {
-    if (item.completion && !item.completion.canUncheck) return;
-    const completed = !item.completion;
+  async function toggleItem(item: ChecklistItem, slot: "SINGLE" | "AM" | "PM" = "SINGLE") {
+    const field = slot === "AM" ? "amCompletion" : slot === "PM" ? "pmCompletion" : "completion";
+    const previous = item[field];
+    if (previous && !previous.canUncheck) return;
+    const completed = !previous;
     const optimistic: Completion | null = completed
       ? { completedAt: new Date().toISOString(), completedByName: myName, canUncheck: true }
       : null;
     setItems((prev) =>
-      prev.map((i) => (i.id === item.id ? { ...i, completion: optimistic } : i))
+      prev.map((i) => (i.id === item.id ? { ...i, [field]: optimistic } : i))
     );
     bumpSummary(item.period, completed ? 1 : -1);
 
     const res = await fetch("/api/maintenance/checklists/completions", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ itemId: item.id, date: item.completionDate ?? (item.period === "WEEKLY" ? stripStart : selectedDate), completed }),
+      body: JSON.stringify({ slot, itemId: item.id, date: item.completionDate ?? (item.period === "WEEKLY" ? stripStart : selectedDate), completed }),
     });
     if (!res.ok) {
       // Revert by refetching the authoritative state.
@@ -200,7 +205,7 @@ function DepartmentChecklistBoard({ canEdit, department }: { canEdit: boolean; d
     }
     const data = await res.json();
     setItems((prev) =>
-      prev.map((i) => (i.id === item.id ? { ...i, completion: data.completion } : i))
+      prev.map((i) => (i.id === item.id ? { ...i, [field]: data.completion } : i))
     );
     if (item.period === "WEEKLY" && item.completionDate && item.completionDate < stripStart) await loadItems(checklistDate);
   }
@@ -224,13 +229,17 @@ function DepartmentChecklistBoard({ canEdit, department }: { canEdit: boolean; d
     );
   }
 
-  async function renameItem(itemId: string, title: string, dueWeekday?: number | null) {
+  async function renameItem(itemId: string, title: string, dueWeekday?: number | null, dualCheck?: boolean) {
     const res = await fetch(`/api/maintenance/checklists/items/${itemId}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ title, ...(dueWeekday !== undefined ? { dueWeekday } : {}) }),
+      body: JSON.stringify({ title, ...(dualCheck !== undefined ? { dualCheck } : {}), ...(dueWeekday !== undefined ? { dueWeekday } : {}) }),
     });
-    if (res.ok) await loadItems(checklistDate);
+    if (res.ok) {
+      await loadItems(checklistDate);
+      const summaryRes = await fetch(`/api/maintenance/checklists/summary?start=${stripStart}&end=${stripEnd}&department=${department}`);
+      if (summaryRes.ok) setSummary(await summaryRes.json());
+    }
   }
 
   async function deleteItem(item: ChecklistItem) {
@@ -239,7 +248,7 @@ function DepartmentChecklistBoard({ canEdit, department }: { canEdit: boolean; d
       prev
         ? {
             ...prev,
-            dailyTotal: Math.max(0, prev.dailyTotal - (item.period === "DAILY" ? 1 : 0)),
+            dailyTotal: Math.max(0, prev.dailyTotal - (item.period === "DAILY" ? (item.dualCheck ? 2 : 1) : 0)),
           }
         : prev
     );
@@ -497,15 +506,15 @@ function PeriodCard({
   loaded: boolean;
   editMode: boolean;
   canEdit: boolean;
-  onToggle: (item: ChecklistItem) => void;
+  onToggle: (item: ChecklistItem, slot?: "SINGLE" | "AM" | "PM") => void;
   disabled: boolean;
   onAdd: (title: string) => void;
-  onRename: (itemId: string, title: string, dueWeekday?: number | null) => void;
+  onRename: (itemId: string, title: string, dueWeekday?: number | null, dualCheck?: boolean) => void;
   onDelete: (item: ChecklistItem) => void;
   onReorder: (items: ChecklistItem[]) => void;
 }) {
-  const done = items.filter((i) => i.completion).length;
-  const total = items.length;
+  const done = items.reduce((sum, item) => sum + (item.dualCheck ? Number(!!item.amCompletion) + Number(!!item.pmCompletion) : Number(!!item.completion)), 0);
+  const total = items.reduce((sum, item) => sum + (item.dualCheck ? 2 : 1), 0);
   const allDone = total > 0 && done === total;
 
   return (
@@ -565,13 +574,28 @@ function PeriodCard({
         ) : items.length === 0 ? (
           <p className="px-3 py-6 text-center text-sm text-gray-400">
             No items yet.{" "}
-            {canEdit ? "Use “Edit checklists” to add some." : "A manager can add them."}
+            {canEdit ? "Use “Edit checklists” to add some." : "Corporate can add them."}
           </p>
         ) : (
           <ul>
             {items.map((item) => (
               <li key={item.id}>
-                <button
+                {item.dualCheck ? <div className="rounded-lg px-3 py-3">
+                  <p className="mb-2 text-sm text-gray-800">{item.title}</p>
+                  <div className="flex flex-wrap gap-2">
+                    {(["AM", "PM"] as const).map((slot) => {
+                      const completion = slot === "AM" ? item.amCompletion : item.pmCompletion;
+                      return <button key={slot} type="button" aria-label={`${slot}: ${item.title}`} aria-pressed={!!completion}
+                        disabled={disabled || (!!completion && !completion.canUncheck)}
+                        onClick={() => onToggle(item, slot)}
+                        className={cn("flex flex-col items-start rounded-lg border px-3 py-2 text-left text-xs disabled:opacity-60", completion ? "border-green-300 bg-green-50 text-green-700" : "border-gray-300 text-gray-700 hover:border-blue-400")}>
+                        <span className="font-semibold">{completion ? "✓" : "○"} {slot}</span>
+                        {completion && <span>{completion.completedByName ?? "Unknown"} · {formatTime(completion.completedAt)}</span>}
+                      </button>;
+                    })}
+                  </div>
+                  {item.completion && <p className="mt-2 text-xs text-gray-500">Earlier single sign-off: {item.completion.completedByName ?? "Unknown"} · {formatTime(item.completion.completedAt)}</p>}
+                </div> : <button
                   onClick={() => onToggle(item)}
                   disabled={disabled || (!!item.completion && !item.completion.canUncheck)}
                   title={item.completion && !item.completion.canUncheck ? "Only the employee who completed this task can uncheck it" : undefined}
@@ -617,7 +641,7 @@ function PeriodCard({
                       {item.completion.completedByName ?? "Unknown"} · {formatTime(item.completion.completedAt)}
                     </span>
                   )}
-                </button>
+                </button>}
               </li>
             ))}
           </ul>
@@ -643,7 +667,7 @@ function EditableList({
   onAdd,
 }: {
   items: ChecklistItem[];
-  onRename: (itemId: string, title: string, dueWeekday?: number | null) => void;
+  onRename: (itemId: string, title: string, dueWeekday?: number | null, dualCheck?: boolean) => void;
   onDelete: (item: ChecklistItem) => void;
   onReorder: (items: ChecklistItem[]) => void;
   onAdd: (title: string) => void;
@@ -694,7 +718,7 @@ function EditableRow({
 }: {
   item: ChecklistItem;
   handle: SortableHandleProps;
-  onRename: (itemId: string, title: string, dueWeekday?: number | null) => void;
+  onRename: (itemId: string, title: string, dueWeekday?: number | null, dualCheck?: boolean) => void;
   onDelete: (item: ChecklistItem) => void;
 }) {
   const [title, setTitle] = useState(item.title);
@@ -702,6 +726,11 @@ function EditableRow({
   return (
     <div className="mb-1 flex items-center gap-1.5 rounded-lg border border-gray-200 bg-white px-2 py-1.5">
       <DragHandle {...handle} />
+      {item.period === "DAILY" && <label className="flex items-center gap-1 text-xs text-gray-600">
+        <input type="checkbox" checked={!!item.dualCheck} aria-label={`AM + PM checks for ${item.title}`}
+          onChange={(event) => onRename(item.id, title.trim() || item.title, undefined, event.target.checked)} />
+        AM + PM
+      </label>}
       {item.period === "WEEKLY" && <select aria-label={`Due day for ${item.title}`} value={item.dueWeekday ?? ""}
         onChange={(event) => onRename(item.id, title.trim() || item.title, event.target.value === "" ? null : Number(event.target.value))}
         className="max-w-32 rounded border border-gray-200 px-1 py-1 text-xs">

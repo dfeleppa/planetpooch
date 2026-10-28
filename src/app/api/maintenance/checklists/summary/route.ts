@@ -29,23 +29,23 @@ export async function GET(req: NextRequest) {
 
   const [totals, completions] = await Promise.all([
     prisma.dailyChecklistItem.groupBy({
-      by: ["period"],
+      by: ["period", "dualCheck"],
       where: { department, isActive: true },
       _count: { _all: true },
     }),
     prisma.dailyChecklistCompletion.findMany({
       where: { item: { department }, date: { gte: new Date(start), lte: new Date(end) } },
-      include: { item: { select: { period: true } } },
+      include: { item: { select: { period: true, dualCheck: true } } },
     }),
   ]);
 
-  const dailyTotal = totals.find((t) => t.period === "DAILY")?._count._all ?? 0;
+  const dailyTotal = totals.filter((t) => t.period === "DAILY").reduce((sum, t) => sum + t._count._all * (t.dualCheck ? 2 : 1), 0);
 
   const days: Record<string, { dailyDone: number }> = {};
   for (const c of completions) {
     const key = c.date.toISOString().slice(0, 10);
     days[key] ??= { dailyDone: 0 };
-    if (c.item.period === "DAILY") days[key].dailyDone += 1;
+    if (c.item.period === "DAILY" && (c.item.dualCheck ? c.slot === "AM" || c.slot === "PM" : !c.slot || c.slot === "SINGLE")) days[key].dailyDone += 1;
   }
 
   return NextResponse.json({ dailyTotal, days });

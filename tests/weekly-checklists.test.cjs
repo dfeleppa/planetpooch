@@ -329,3 +329,38 @@ test('Derek can complete Grooming tasks without list editing access', async () =
   }, true, user);
   assert.equal((await route.POST(request({ itemId: 'task', date: '2026-10-28', completed: true }))).status, 200);
 });
+
+test('AM and PM sign-offs are independent and only their respective signer can uncheck', async () => {
+  const saved = new Map();
+  const prisma = {
+    dailyChecklistItem: { findUnique: async () => ({ period: 'DAILY', department: 'BOARDING', dualCheck: true }) },
+    dailyChecklistCompletion: {
+      upsert: async ({ create }) => { if (!saved.has(create.slot)) saved.set(create.slot, { ...create, completedAt: new Date() }); return saved.get(create.slot); },
+      deleteMany: async ({ where }) => { if (saved.get(where.slot)?.completedById !== where.completedById) return { count: 0 }; saved.delete(where.slot); return { count: 1 }; },
+      findUnique: async ({ where }) => saved.get(where.itemId_date_slot.slot) ?? null,
+    },
+  };
+  const submit = (id, slot, completed) => load(base + 'completions/route.ts', prisma, false, { id, company: 'RESORT' }).POST(request({ itemId: 'dual', date: '2026-10-28', slot, completed }));
+  assert.equal((await submit('am-staff', 'AM', true)).status, 200);
+  assert.equal(saved.has('PM'), false);
+  assert.equal((await submit('pm-staff', 'PM', true)).status, 200);
+  assert.equal(saved.size, 2);
+  assert.equal((await submit('pm-staff', 'AM', false)).status, 403);
+  assert.equal((await submit('am-staff', 'AM', false)).status, 200);
+  assert.equal(saved.has('PM'), true);
+  assert.equal((await submit('am-staff', 'SINGLE', true)).status, 400);
+});
+test('ordinary tasks reject AM/PM slots and weekly tasks reject dual-check configuration', async () => {
+  const prisma = { dailyChecklistItem: { findUnique: async () => ({ period: 'WEEKLY', department: 'BOARDING', dualCheck: false }) } };
+  assert.equal((await load(base + 'completions/route.ts', prisma).POST(request({ itemId: 'weekly', date: '2026-10-28', slot: 'AM', completed: true }))).status, 400);
+  assert.equal((await load(base + 'items/[itemId]/route.ts', prisma).PATCH(request({ dualCheck: true }), { params: Promise.resolve({ itemId: 'weekly' }) })).status, 400);
+});
+test('daily progress counts both required checks and excludes legacy single sign-offs for dual tasks', async () => {
+  const route = load(base + 'summary/route.ts', {
+    dailyChecklistItem: { groupBy: async () => [{ period: 'DAILY', dualCheck: true, _count: { _all: 1 } }] },
+    dailyChecklistCompletion: { findMany: async () => ['SINGLE', 'AM', 'PM'].map((slot) => ({ slot, item: { period: 'DAILY', dualCheck: true }, date: new Date('2026-10-28') })) },
+  });
+  const result = await route.GET({ nextUrl: new URL('https://example.com?start=2026-10-25&end=2026-10-31') });
+  assert.equal(result.body.dailyTotal, 2);
+  assert.equal(result.body.days['2026-10-28'].dailyDone, 2);
+});

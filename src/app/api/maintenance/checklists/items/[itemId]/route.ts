@@ -28,15 +28,18 @@ export async function PATCH(
   const { itemId } = await params;
   const body = await req.json().catch(() => null);
   const title = typeof body?.title === "string" ? body.title.trim() : "";
+  const hasDualCheck = body && Object.prototype.hasOwnProperty.call(body, "dualCheck");
+  if (hasDualCheck && typeof body.dualCheck !== "boolean") return NextResponse.json({ error: "dualCheck must be a boolean" }, { status: 400 });
   const hasDueWeekday = body && Object.prototype.hasOwnProperty.call(body, "dueWeekday");
   const dueWeekday = body?.dueWeekday;
   if (hasDueWeekday && dueWeekday !== null && (!Number.isInteger(dueWeekday) || dueWeekday < 0 || dueWeekday > 6)) {
     return NextResponse.json({ error: "dueWeekday must be null or 0 through 6" }, { status: 400 });
   }
-  if (!title && !hasDueWeekday) return NextResponse.json({ error: "title or dueWeekday is required" }, { status: 400 });
+  if (!title && !hasDueWeekday && !hasDualCheck) return NextResponse.json({ error: "title or dueWeekday is required" }, { status: 400 });
   const target = await prisma.dailyChecklistItem.findUnique({ where: { id: itemId } });
   if (!target) return NextResponse.json({ error: "Item not found" }, { status: 404 });
   if (!canAccessChecklist(session!.user, target.department)) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  if (hasDualCheck && target.period !== "DAILY") return NextResponse.json({ error: "AM/PM checks are only for daily tasks" }, { status: 400 });
   let weeklyScheduledAt: Date | null = null;
   if (hasDueWeekday) {
     const existing = await prisma.dailyChecklistItem.findUnique({ where: { id: itemId } });
@@ -46,7 +49,7 @@ export async function PATCH(
   }
 
   const item = await prisma.dailyChecklistItem
-    .update({ where: { id: itemId }, data: { ...(title ? { title } : {}), ...(hasDueWeekday ? { dueWeekday, weeklyScheduledAt: dueWeekday === null ? null : weeklyScheduledAt } : {}) } })
+    .update({ where: { id: itemId }, data: { ...(hasDualCheck ? { dualCheck: body.dualCheck } : {}), ...(title ? { title } : {}), ...(hasDueWeekday ? { dueWeekday, weeklyScheduledAt: dueWeekday === null ? null : weeklyScheduledAt } : {}) } })
     .catch(() => null);
   if (!item) return NextResponse.json({ error: "Item not found" }, { status: 404 });
 
