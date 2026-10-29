@@ -14,6 +14,7 @@ interface LessonData {
   content: Record<string, unknown>;
   estimatedMinutes: number | null;
   isCompleted: boolean;
+  isOutOfDate: boolean;
   completedAt: string | null;
   module: { id: string; title: string; notesEnabled: boolean };
   subsectionTitle: string;
@@ -83,8 +84,9 @@ export default function LessonPage() {
         <LessonCompletionToggle
           lessonId={lessonId}
           isCompleted={lesson.isCompleted}
+          isOutOfDate={lesson.isOutOfDate}
           onToggle={(isCompleted) => {
-            setLesson({ ...lesson, isCompleted });
+            setLesson({ ...lesson, isCompleted, isOutOfDate: false });
             // Refresh server components so the module nav sidebar updates completion state
             router.refresh();
           }}

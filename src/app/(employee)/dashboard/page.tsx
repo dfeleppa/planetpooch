@@ -62,8 +62,8 @@ export default async function DashboardPage() {
       });
     })(),
     prisma.lessonCompletion.findMany({
-      where: { userId, isCompleted: true },
-      select: { lessonId: true },
+      where: { userId },
+      select: { lessonId: true, isCompleted: true, isOutOfDate: true },
     }),
     prisma.employeeAvailability.findMany({
       where: { userId },
@@ -89,7 +89,7 @@ export default async function DashboardPage() {
 
   const handbookSigned = handbookEsignRequests.length > 0;
 
-  const completedSet = new Set(completions.map((c) => c.lessonId));
+  const completedSet = new Set(completions.filter((c) => c.isCompleted).map((c) => c.lessonId));
 
   const moduleProgress = modules.map((mod) => {
     const lessons = mod.subsections.flatMap((s) => s.lessons);
@@ -107,7 +107,7 @@ export default async function DashboardPage() {
       if (continueLesson) break;
     }
 
-    return { ...mod, totalLessons: total, completedLessons: completed, continueLesson };
+    return { ...mod, isOutOfDate: lessons.some((l) => completions.some((c) => c.lessonId === l.id && c.isOutOfDate)), totalLessons: total, completedLessons: completed, continueLesson };
   });
 
   const availabilityByDay = new Map(availability.map((a) => [a.dayOfWeek, a]));
@@ -172,7 +172,7 @@ export default async function DashboardPage() {
             <div className="pp-learning-row" key={mod.id}>
               <div className="pp-learning-icon" aria-hidden="true">{mod.icon || "↗"}</div>
               <div className="pp-learning-copy"><Link href={`/modules/${mod.id}`}>{mod.title}</Link><p>{mod.description || `${mod.completedLessons} of ${mod.totalLessons} lessons complete`}</p><ProgressBar value={mod.completedLessons} max={mod.totalLessons} showLabel={false} size="sm" /></div>
-              <div className="pp-learning-end"><span>{mod.totalLessons ? Math.round((mod.completedLessons / mod.totalLessons) * 100) : 0}%</span>{mod.continueLesson ? <Link href={`/modules/${mod.id}/lessons/${mod.continueLesson.id}`}>Continue</Link> : <span>{mod.totalLessons ? "Complete" : "Not started"}</span>}</div>
+              <div className="pp-learning-end"><span>{mod.isOutOfDate ? "Out of Date" : `${mod.totalLessons ? Math.round((mod.completedLessons / mod.totalLessons) * 100) : 0}%`}</span>{mod.continueLesson ? <Link href={`/modules/${mod.id}/lessons/${mod.continueLesson.id}`}>Continue</Link> : <span>{mod.totalLessons ? "Complete" : "Not started"}</span>}</div>
             </div>
           ))}</div> : <p className="pp-today-empty">No modules are assigned to you.</p>}
         </section>

@@ -116,6 +116,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ less
   return NextResponse.json({
     ...lesson,
     isCompleted: completion?.isCompleted ?? false,
+    isOutOfDate: completion?.isOutOfDate ?? false,
     completedAt: completion?.completedAt ?? null,
     prevLesson,
     nextLesson,

@@ -46,7 +46,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ les
     const result = await prisma.$transaction(async (tx) => {
       const completion = await tx.lessonCompletion.upsert({
         where: { userId_lessonId: { userId, lessonId } },
-        update: { isCompleted: true, completedAt: new Date() },
+        update: { isCompleted: true, isOutOfDate: false, completedAt: new Date() },
         create: { userId, lessonId, isCompleted: true },
       });
 

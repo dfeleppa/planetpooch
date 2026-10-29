@@ -6,10 +6,11 @@ import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 interface LessonCompletionToggleProps {
   lessonId: string;
   isCompleted: boolean;
+  isOutOfDate?: boolean;
   onToggle: (isCompleted: boolean) => void;
 }
 
-export function LessonCompletionToggle({ lessonId, isCompleted, onToggle }: LessonCompletionToggleProps) {
+export function LessonCompletionToggle({ lessonId, isCompleted, isOutOfDate, onToggle }: LessonCompletionToggleProps) {
   const [loading, setLoading] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
   const [checked, setChecked] = useState(isCompleted);
@@ -59,7 +60,7 @@ export function LessonCompletionToggle({ lessonId, isCompleted, onToggle }: Less
             </svg>
           )}
         </span>
-        {loading ? "Updating..." : checked ? "Completed" : "Mark as Complete"}
+        {loading ? "Updating..." : checked ? "Completed" : isOutOfDate ? "Out of Date - Mark as Complete" : "Mark as Complete"}
       </button>
 
       <ConfirmDialog

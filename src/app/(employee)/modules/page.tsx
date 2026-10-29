@@ -38,11 +38,11 @@ export default async function ModulesPage() {
   });
 
   const completions = await prisma.lessonCompletion.findMany({
-    where: { userId, isCompleted: true },
-    select: { lessonId: true },
+    where: { userId },
+    select: { lessonId: true, isCompleted: true, isOutOfDate: true },
   });
 
-  const completedSet = new Set(completions.map((c) => c.lessonId));
+  const completedSet = new Set(completions.filter((c) => c.isCompleted).map((c) => c.lessonId));
 
   // Calculate per-module completion for prerequisite checking
   const moduleCompletionMap = new Map<string, boolean>();
@@ -63,6 +63,7 @@ export default async function ModulesPage() {
 
     return {
       ...mod,
+      isOutOfDate: lessons.some((l) => completions.some((c) => c.lessonId === l.id && c.isOutOfDate)),
       totalLessons: total,
       completedLessons: completed,
       isLocked: unmetPrereqs.length > 0,
@@ -93,6 +94,7 @@ export default async function ModulesPage() {
                     {mod.completedLessons === mod.totalLessons && mod.totalLessons > 0 && (
                       <Badge variant="success">Complete</Badge>
                     )}
+                    {mod.isOutOfDate && <Badge variant="warning">Out of Date</Badge>}
                     {mod.isLocked && <Badge variant="warning">Locked</Badge>}
                   </div>
                   {mod.description && <p className="text-sm text-gray-500 mt-1">{mod.description}</p>}

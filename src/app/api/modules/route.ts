@@ -51,11 +51,11 @@ export async function GET(req: NextRequest) {
   });
 
   const completions = await prisma.lessonCompletion.findMany({
-    where: { userId: session.user.id, isCompleted: true },
-    select: { lessonId: true },
+    where: { userId: session.user.id },
+    select: { lessonId: true, isCompleted: true, isOutOfDate: true },
   });
 
-  const completedSet = new Set(completions.map((c) => c.lessonId));
+  const completedSet = new Set(completions.filter((c) => c.isCompleted).map((c) => c.lessonId));
 
   const result = modules.map((mod) => {
     const allLessons = mod.subsections.flatMap((s) => s.lessons);
@@ -69,6 +69,7 @@ export async function GET(req: NextRequest) {
       icon: mod.icon,
       totalLessons,
       completedLessons,
+      isOutOfDate: allLessons.some((l) => completions.some((c) => c.lessonId === l.id && c.isOutOfDate)),
     };
   });
 

@@ -17,6 +17,7 @@ interface LessonProgressRow {
   id: string;
   title: string;
   isCompleted: boolean;
+  isOutOfDate: boolean;
   completedAt: string | null;
 }
 
@@ -34,11 +35,13 @@ export interface ModuleProgressRow {
   completed: number;
   total: number;
   percent: number;
+  isOutOfDate: boolean;
   completedAt: string | null;
   subsections: SubsectionProgressRow[];
 }
 
 function getBadgeVariant(module: ModuleProgressRow) {
+  if (module.isOutOfDate) return "warning";
   if (module.total > 0 && module.completed === module.total) return "success";
   if (module.completed > 0) return "warning";
   return "default";
@@ -121,7 +124,7 @@ export function EmployeeModuleProgressTable({
                 </TableCell>
                 <TableCell>
                   <Badge variant={getBadgeVariant(module)}>
-                    {module.total > 0 && module.completed === module.total
+                    {module.isOutOfDate ? "Out of Date" : module.total > 0 && module.completed === module.total
                       ? "Complete"
                       : module.completed > 0
                         ? "In progress"
@@ -175,7 +178,7 @@ export function EmployeeModuleProgressTable({
                                             : "text-gray-500",
                                         )}
                                       >
-                                        {lesson.isCompleted ? "Complete" : "Not started"}
+                                        {lesson.isOutOfDate ? "Out of Date" : lesson.isCompleted ? "Complete" : "Not started"}
                                       </div>
                                       <div className="text-gray-500">
                                         {lesson.completedAt ?? "-"}

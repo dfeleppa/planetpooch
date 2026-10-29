@@ -32,11 +32,11 @@ export async function GET() {
   });
 
   const completions = await prisma.lessonCompletion.findMany({
-    where: { userId: session.user.id, isCompleted: true },
-    select: { lessonId: true },
+    where: { userId: session.user.id },
+    select: { lessonId: true, isCompleted: true, isOutOfDate: true },
   });
 
-  const completedSet = new Set(completions.map((c) => c.lessonId));
+  const completedSet = new Set(completions.filter((c) => c.isCompleted).map((c) => c.lessonId));
 
   let totalLessons = 0;
   let totalCompleted = 0;
@@ -54,6 +54,7 @@ export async function GET() {
       icon: mod.icon,
       totalLessons: total,
       completedLessons: completed,
+      isOutOfDate: lessons.some((l) => completions.some((c) => c.lessonId === l.id && c.isOutOfDate)),
     };
   });
 

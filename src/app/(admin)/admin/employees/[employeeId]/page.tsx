@@ -111,7 +111,7 @@ export default async function EmployeeDetailPage({ params }: { params: Promise<{
 
   const completions = await prisma.lessonCompletion.findMany({
     where: { userId: employeeId },
-    select: { lessonId: true, isCompleted: true, completedAt: true },
+    select: { lessonId: true, isCompleted: true, isOutOfDate: true, completedAt: true },
   });
 
   const completionMap = new Map(completions.map((c) => [c.lessonId, c]));
@@ -135,6 +135,7 @@ export default async function EmployeeDetailPage({ params }: { params: Promise<{
       title: mod.title,
       completed,
       total,
+      isOutOfDate: allLessons.some((lesson) => completionMap.get(lesson.id)?.isOutOfDate),
       percent: total > 0 ? Math.round((completed / total) * 100) : 0,
       completedAt: completedAt ? formatDateTime(completedAt) : null,
       subsections: mod.subsections.map((subsection) => {
@@ -154,8 +155,9 @@ export default async function EmployeeDetailPage({ params }: { params: Promise<{
               id: lesson.id,
               title: lesson.title,
               isCompleted: !!completion?.isCompleted,
+              isOutOfDate: !!completion?.isOutOfDate,
               completedAt:
-                completion?.isCompleted && completion.completedAt
+                (completion?.isCompleted || completion?.isOutOfDate) && completion.completedAt
                   ? formatDateTime(completion.completedAt)
                   : null,
             };

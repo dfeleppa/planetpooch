@@ -76,7 +76,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ empl
 
   const completions = await prisma.lessonCompletion.findMany({
     where: { userId: employeeId },
-    select: { lessonId: true, isCompleted: true, completedAt: true },
+    select: { lessonId: true, isCompleted: true, isOutOfDate: true, completedAt: true },
   });
 
   const completionMap = new Map(completions.map((c) => [c.lessonId, c]));
@@ -98,6 +98,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ empl
         return {
           ...lesson,
           isCompleted: comp?.isCompleted ?? false,
+          isOutOfDate: comp?.isOutOfDate ?? false,
           completedAt: comp?.completedAt ?? null,
         };
       }),
@@ -109,6 +110,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ empl
       title: mod.title,
       totalLessons: allLessons.length,
       completedLessons: allLessons.filter((l) => l.isCompleted).length,
+      isOutOfDate: allLessons.some((l) => l.isOutOfDate),
       subsections,
     };
   });

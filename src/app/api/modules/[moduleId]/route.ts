@@ -65,18 +65,19 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ modu
   }
 
   const completions = await prisma.lessonCompletion.findMany({
-    where: { userId: session.user.id, isCompleted: true },
-    select: { lessonId: true, completedAt: true },
+    where: { userId: session.user.id },
+    select: { lessonId: true, completedAt: true, isCompleted: true, isOutOfDate: true },
   });
 
-  const completionMap = new Map(completions.map((c) => [c.lessonId, c.completedAt]));
+  const completionMap = new Map(completions.map((c) => [c.lessonId, c]));
 
   const subsections = mod.subsections.map((sub) => ({
     ...sub,
     lessons: sub.lessons.map((lesson) => ({
       ...lesson,
-      isCompleted: completionMap.has(lesson.id),
-      completedAt: completionMap.get(lesson.id) || null,
+      isCompleted: completionMap.get(lesson.id)?.isCompleted ?? false,
+      isOutOfDate: completionMap.get(lesson.id)?.isOutOfDate ?? false,
+      completedAt: completionMap.get(lesson.id)?.completedAt ?? null,
     })),
   }));
 

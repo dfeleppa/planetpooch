@@ -27,14 +27,14 @@ export default async function AdminModuleProgressPage() {
   });
 
   const completions = await prisma.lessonCompletion.findMany({
-    where: { isCompleted: true, userId: { in: employees.map((employee) => employee.id) } },
-    select: { userId: true, lessonId: true },
+    where: { userId: { in: employees.map((employee) => employee.id) } },
+    select: { userId: true, lessonId: true, isCompleted: true, isOutOfDate: true },
   });
 
   const completionsByUser = new Map<string, Set<string>>();
   for (const c of completions) {
     if (!completionsByUser.has(c.userId)) completionsByUser.set(c.userId, new Set());
-    completionsByUser.get(c.userId)!.add(c.lessonId);
+    if (c.isCompleted) completionsByUser.get(c.userId)!.add(c.lessonId);
   }
 
   const moduleLessons = modules.map((mod) => ({
@@ -108,6 +108,7 @@ export default async function AdminModuleProgressPage() {
                         <p className="text-xs text-gray-400">{emp.email}</p>
                       </td>
                       {moduleLessons.map((mod) => {
+                        const isOutOfDate = completions.some((c) => c.userId === emp.id && c.isOutOfDate && mod.lessonIds.includes(c.lessonId));
                         const total = mod.lessonIds.length;
                         const completed = mod.lessonIds.filter((id) => userCompletions.has(id)).length;
                         empTotal += total;
@@ -116,8 +117,8 @@ export default async function AdminModuleProgressPage() {
 
                         return (
                           <td key={mod.id} className="text-center px-4 py-3">
-                            <Badge variant={pct === 100 ? "success" : pct > 0 ? "warning" : "default"}>
-                              {pct}%
+                            <Badge variant={isOutOfDate ? "warning" : pct === 100 ? "success" : pct > 0 ? "warning" : "default"}>
+                              {isOutOfDate ? "Out of Date" : `${pct}%`}
                             </Badge>
                           </td>
                         );
