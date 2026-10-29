@@ -30,5 +30,5 @@ export function canAccessChecklist(user: ChecklistUser, department: unknown): bo
 }
 export function canEditChecklists(user: ChecklistUser): boolean {
   if (user.role === "FRONT_DESK" || user.email?.trim().toLowerCase() === "planetpoochpetservices@gmail.com") return false;
-  return user.company === "CORPORATE";
+  return user.company === "CORPORATE" || user.id === "cmobz2cwb0007k0041qnobqcz";
 }
