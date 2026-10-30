@@ -43,6 +43,8 @@ export function CashManagementDashboard({ mobile, petResort, safeCents, initialS
   const [adjustSuccess, setAdjustSuccess] = useState("");
   const [latestSafeVerification, setLatestSafeVerification] = useState(initialSafeVerification);
   const countedSafeCents = latestSafeVerification?.countedCents ?? null;
+  const changeDrawerCents = countedSafeCents ?? safeCents;
+  const totalSafeCents = changeDrawerCents + mobile.onHandCents + petResort.onHandCents;
   const [editingCash, setEditingCash] = useState<DailyCash | null>(null);
   const [editDate, setEditDate] = useState("");
   const [editAmount, setEditAmount] = useState("");
@@ -179,13 +181,13 @@ export function CashManagementDashboard({ mobile, petResort, safeCents, initialS
       <div className="grid gap-3 sm:grid-cols-2">
         {([
           { id: "mobile-grooming", label: "Mobile Grooming", balance: mobile.onHandCents },
-          { id: "safe", label: "Safe", balance: countedSafeCents ?? safeCents },
+          { id: "safe", label: "Safe", balance: totalSafeCents },
         ] as const).map((area) => (
           <button key={area.id} type="button" onClick={() => selectCashView(area.id)} aria-pressed={cashView === area.id}
             className={`flex min-h-40 w-full cursor-pointer flex-col rounded-xl border-2 p-4 text-left transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-pp-accent ${cashView === area.id ? "border-pp-accent bg-pp-accent-soft" : "border-pp-line bg-white hover:border-pp-accent hover:bg-pp-accent-soft"}`}>
             <span className="text-sm font-semibold text-gray-900">{area.label}</span>
             <span className="mt-1 text-xl font-bold tabular-nums text-gray-900">{money(area.balance)}</span>
-            <span className="mt-1 text-xs text-gray-500">{area.id === "safe" ? countedSafeCents === null ? "Target safe balance" : "Last verified balance" : "Cash on hand"}</span>
+            <span className="mt-1 text-xs text-gray-500">{area.id === "safe" ? "Change drawer + Mobile Grooming + Pet Resort" : "Cash on hand"}</span>
             <span className="mt-auto flex items-center justify-between pt-4 text-sm font-semibold text-pp-accent">
               {cashView === area.id ? "Selected" : area.id === "safe" ? "Manage safe" : "Manage cash"}
               <span aria-hidden="true">{cashView === area.id ? "↓" : "→"}</span>
@@ -264,13 +266,13 @@ export function CashManagementDashboard({ mobile, petResort, safeCents, initialS
       </div>
       <div className={cashView === "safe" ? "space-y-4" : "hidden"}>
         <section className="rounded-xl border border-pp-line bg-white p-6 shadow-sm">
-          <h2 className="text-lg font-semibold text-gray-900">Safe</h2>
-          <p className="mt-4 text-3xl font-bold text-gray-900">{money(countedSafeCents ?? safeCents)}</p>
-          <p className="mt-2 text-sm text-gray-500">{latestSafeVerification ? `Last verified ${new Intl.DateTimeFormat("en-US", { dateStyle: "medium", timeStyle: "short", timeZone: "America/New_York" }).format(new Date(latestSafeVerification.verifiedAt))} ET · Target ${money(safeCents)}` : "Target safe balance · No verifications yet"}</p>
+          <h2 className="text-lg font-semibold text-gray-900">Change Drawer</h2>
+          <p className="mt-4 text-3xl font-bold text-gray-900">{money(changeDrawerCents)}</p>
+          <p className="mt-2 text-sm text-gray-500">{latestSafeVerification ? `Last verified ${new Intl.DateTimeFormat("en-US", { dateStyle: "medium", timeStyle: "short", timeZone: "America/New_York" }).format(new Date(latestSafeVerification.verifiedAt))} ET · Target ${money(safeCents)}` : "Target change drawer balance · No verifications yet"}</p>
           {countedSafeCents !== null && countedSafeCents !== safeCents && <p className="mt-1 text-sm font-medium text-amber-800">{money(Math.abs(countedSafeCents - safeCents))} {countedSafeCents > safeCents ? "over target" : "under target"}</p>}
           <button type="button" onClick={() => setDetailView((current) => current === "history" ? "actions" : "history")} aria-expanded={detailView === "history"} className="mt-4 text-sm font-semibold text-pp-accent underline underline-offset-2">{detailView === "history" ? "Hide verification history" : "View verification history"}</button>
+          <SafeBalanceVerification expectedCents={safeCents} onLatestVerificationChange={setLatestSafeVerification} mode={detailView} />
         </section>
-        <SafeBalanceVerification expectedCents={safeCents} onLatestVerificationChange={setLatestSafeVerification} mode={detailView} />
       </div>
       <section className={cashView === "safe" && detailView === "history" ? "rounded-xl border border-pp-line bg-white p-6 shadow-sm" : "hidden"}>
         <h2 className="text-lg font-semibold text-gray-900">Pet Resort activity</h2>

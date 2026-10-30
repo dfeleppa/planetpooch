@@ -38,13 +38,13 @@ export function SafeBalanceVerification({ expectedCents, onLatestVerificationCha
     fetch("/api/cash-management/safe-verifications", { cache: "no-store" })
       .then(async (response) => {
         const result = await response.json();
-        if (!response.ok) throw new Error(result.error ?? "Could not load safe verifications.");
+        if (!response.ok) throw new Error(result.error ?? "Could not load change drawer verifications.");
         if (active) {
           setEntries(result.entries);
           onLatestVerificationChange(result.entries[0] ? { countedCents: result.entries[0].countedCents, verifiedAt: result.entries[0].verifiedAt } : null);
         }
       })
-      .catch((cause) => { if (active) setError(cause instanceof Error ? cause.message : "Could not load safe verifications."); })
+      .catch((cause) => { if (active) setError(cause instanceof Error ? cause.message : "Could not load change drawer verifications."); })
       .finally(() => { if (active) setLoading(false); });
     return () => { active = false; };
   }, [onLatestVerificationChange]);
@@ -59,7 +59,7 @@ export function SafeBalanceVerification({ expectedCents, onLatestVerificationCha
   async function save(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setError(""); setSuccess("");
-    if (countedCents === null) { setError("Enter a valid safe count in dollars and cents."); return; }
+    if (countedCents === null) { setError("Enter a valid change drawer count in dollars and cents."); return; }
     setSaving(true);
     try {
       const response = await fetch("/api/cash-management/safe-verifications", {
@@ -71,18 +71,18 @@ export function SafeBalanceVerification({ expectedCents, onLatestVerificationCha
       setEntries((current) => [result.entry, ...current].slice(0, 50));
       onLatestVerificationChange({ countedCents: result.entry.countedCents, verifiedAt: result.entry.verifiedAt });
       setCounted(""); setNote("");
-      setSuccess("Safe balance verification saved.");
+      setSuccess("Change drawer verification saved.");
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "Could not save verification.");
     } finally { setSaving(false); }
   }
 
-  return <section className="rounded-xl border border-pp-line bg-white p-6 shadow-sm">
+  return <div className="mt-5 border-t border-pp-line pt-5">
     {mode === "actions" ? <>
-    <h2 className="text-lg font-semibold text-gray-900">Verify safe balance</h2>
-    <p className="mt-1 text-sm text-gray-600">Count the cash in the safe and compare it with the {money(expectedCents)} target.</p>
+    <h3 className="text-base font-semibold text-gray-900">Verify change drawer balance</h3>
+    <p className="mt-1 text-sm text-gray-600">Count the cash in the change drawer and compare it with the {money(expectedCents)} target.</p>
     {loading ? <p className="mt-4 text-sm text-gray-500">Loading verifications…</p> : <form onSubmit={(event) => void save(event)} className="mt-4 space-y-3">
-      <label className="block max-w-xs text-sm font-medium text-gray-700">Counted safe balance
+      <label className="block max-w-xs text-sm font-medium text-gray-700">Counted change drawer balance
         <input type="text" inputMode="decimal" value={counted} onChange={(event) => setCounted(event.target.value)} placeholder="0.00" required className="mt-1 block w-full rounded-lg border border-pp-line px-3 py-2" />
       </label>
       {varianceCents !== null && <p className={`w-fit rounded-lg px-3 py-2 text-sm font-semibold ${varianceCents === 0 ? "bg-green-50 text-green-800" : "bg-amber-50 text-amber-900"}`}>Difference: {varianceLabel(varianceCents)}</p>}
@@ -94,7 +94,7 @@ export function SafeBalanceVerification({ expectedCents, onLatestVerificationCha
       <button type="submit" disabled={saving || countedCents === null} className="rounded-lg bg-pp-accent px-4 py-2 text-sm font-semibold text-white disabled:opacity-50">{saving ? "Saving…" : "Save verification"}</button>
     </form>}
     </> : <>
-    <h2 className="text-lg font-semibold text-gray-900">Verification history</h2>
+    <h3 className="text-base font-semibold text-gray-900">Verification history</h3>
     <label className="mt-4 block max-w-xs text-sm font-medium text-gray-700">Show verifications
       <select value={historyFilter} onChange={(event) => setHistoryFilter(event.target.value as typeof historyFilter)} className="mt-1 block w-full rounded-lg border border-pp-line bg-white px-3 py-2">
         <option value="all">All verifications</option><option value="balanced">Balanced</option><option value="over">Over target</option><option value="under">Under target</option>
@@ -102,7 +102,7 @@ export function SafeBalanceVerification({ expectedCents, onLatestVerificationCha
     </label>
     {loading && <p className="mt-3 text-sm text-gray-500">Loading verifications…</p>}
     {error && <p role="alert" className="mt-3 text-sm text-red-700">{error}</p>}
-    {!loading && entries.length === 0 && <p className="mt-2 text-sm text-gray-500">No safe balance verifications recorded yet.</p>}
+    {!loading && entries.length === 0 && <p className="mt-2 text-sm text-gray-500">No change drawer verifications recorded yet.</p>}
     {!loading && entries.length > 0 && visibleEntries.length === 0 && <p className="mt-3 text-sm text-gray-500">No verifications match this filter.</p>}
     {visibleEntries.length > 0 && <div className="mt-3 space-y-3">{visibleEntries.map((entry) => <article key={entry.id} className="rounded-lg border border-pp-line p-4 text-sm">
       <div className="flex flex-wrap justify-between gap-2"><strong>{money(entry.countedCents)} counted</strong><span className={entry.varianceCents === 0 ? "text-green-700" : "text-amber-800"}>{varianceLabel(entry.varianceCents)}</span></div>
@@ -110,5 +110,5 @@ export function SafeBalanceVerification({ expectedCents, onLatestVerificationCha
       {entry.note && <p className="mt-2 whitespace-pre-wrap text-gray-700">{entry.note}</p>}
     </article>)}</div>}
     </>}
-  </section>;
+  </div>;
 }
