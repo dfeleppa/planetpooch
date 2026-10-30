@@ -7,7 +7,6 @@ import { PayrollSubnav } from "../PayrollSubnav";
 import { CommissionsLedger, type CommissionRow } from "./CommissionsLedger";
 
 const REBECCA_METRICS = ["product_sales", "group_revenue", "one_on_one_revenue"] as const;
-const GABRIELA_METRICS = ["revenue", "upsells"] as const;
 const KIM_METRICS = ["package_sales", "addon_sales"] as const;
 const easternDateFormatter = new Intl.DateTimeFormat("en-US", {
   timeZone: "America/New_York",
@@ -77,23 +76,14 @@ export default async function CommissionsPage() {
 
   const [
     trainingValues,
-    groomingValues,
     boardingValues,
     rebeccaPaidDates,
-    gabrielaPaidDates,
     kimPaidDates,
   ] = await Promise.all([
     prisma.kpiWeeklyValue.findMany({
       where: {
         segment: KpiSegment.TRAINING,
         metricKey: { in: [...REBECCA_METRICS] },
-      },
-      orderBy: { weekStart: "desc" },
-    }),
-    prisma.kpiWeeklyValue.findMany({
-      where: {
-        segment: KpiSegment.IN_HOUSE_GROOMING,
-        metricKey: { in: [...GABRIELA_METRICS] },
       },
       orderBy: { weekStart: "desc" },
     }),
@@ -106,12 +96,6 @@ export default async function CommissionsPage() {
     }),
     prisma.financeEmployeeCommission.findMany({
       where: { employeeName: "Rebecca", businessSegment: KpiSegment.TRAINING },
-    }),
-    prisma.financeEmployeeCommission.findMany({
-      where: {
-        employeeName: "Gabriela",
-        businessSegment: KpiSegment.IN_HOUSE_GROOMING,
-      },
     }),
     prisma.financeEmployeeCommission.findMany({
       where: { employeeName: "Kim", businessSegment: KpiSegment.BOARDING },
@@ -130,7 +114,6 @@ export default async function CommissionsPage() {
         todayEastern={getEasternDateKey(new Date())}
         kimRows={buildCommissionRows(boardingValues, KIM_METRICS, kimPaidDates)}
         rebeccaRows={buildCommissionRows(trainingValues, REBECCA_METRICS, rebeccaPaidDates)}
-        gabrielaRows={buildCommissionRows(groomingValues, GABRIELA_METRICS, gabrielaPaidDates)}
       />
     </div>
   );

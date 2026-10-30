@@ -19,7 +19,7 @@ export interface CommissionRow {
 }
 
 interface CommissionTableConfig {
-  employeeName: "Kim" | "Rebecca" | "Gabriela";
+  employeeName: "Kim" | "Rebecca";
   businessSegment: CommissionBusinessSegment;
   segmentLabel: string;
   heading: string;
@@ -32,13 +32,13 @@ interface CommissionTableConfig {
 
 interface PaidDateEdit {
   row: CommissionRow;
-  employeeName: "Kim" | "Rebecca" | "Gabriela";
+  employeeName: "Kim" | "Rebecca";
   businessSegment: CommissionBusinessSegment;
   paidDate: string;
   confirmedEdit: boolean;
 }
 
-const EMPLOYEES = ["Kim", "Gabriela", "Rebecca"] as const;
+const EMPLOYEES = ["Kim", "Rebecca"] as const;
 const moneyFormatter = new Intl.NumberFormat("en-US", {
   style: "currency",
   currency: "USD",
@@ -60,20 +60,14 @@ function twentyPercentCommission(totalCents: number): number {
   return Math.round(totalCents * 0.2);
 }
 
-function gabrielaCommission(totalCents: number): number {
-  return Math.max(0, Math.round((totalCents - 100_000) * 0.05));
-}
-
 export function CommissionsLedger({
   todayEastern,
   kimRows,
   rebeccaRows,
-  gabrielaRows,
 }: {
   todayEastern: string;
   kimRows: CommissionRow[];
   rebeccaRows: CommissionRow[];
-  gabrielaRows: CommissionRow[];
 }) {
   const router = useRouter();
   const [employee, setEmployee] = useState<(typeof EMPLOYEES)[number] | "">("");
@@ -109,20 +103,7 @@ export function CommissionsLedger({
           rows: rebeccaRows,
           calculateCommission: fivePercentCommission,
         }
-      : employee === "Gabriela"
-        ? {
-            employeeName: "Gabriela",
-            businessSegment: "IN_HOUSE_GROOMING",
-            segmentLabel: "In-House Grooming",
-            heading: "Gabriela’s weekly in-house grooming commissions",
-            description:
-              "Revenue and upsells come directly from In-House Grooming. Commission is 5% of the amount above $1,000, with a $0 floor.",
-            columnLabels: ["Revenue", "Upsells"],
-            commissionLabel: "Commission ((Total - $1,000) × 5%)",
-            rows: gabrielaRows,
-            calculateCommission: gabrielaCommission,
-          }
-        : null;
+      : null;
 
   const availableYears = tableConfig
     ? [...new Set(tableConfig.rows.map((row) => row.weekEnding.slice(0, 4)))].sort((a, b) =>
