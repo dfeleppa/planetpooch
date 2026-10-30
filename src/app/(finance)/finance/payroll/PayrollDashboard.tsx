@@ -2748,7 +2748,7 @@ export function PayrollDashboard({
                       </Button>
                     </div>
                     <p className="mb-3 text-sm text-gray-600">
-                      Earned pay includes commission, credit card tips, and any weekly base pay shown below. Pay from closed weeks is carried separately. Cash payout = earned pay + prior-week correction − direct deposit + adjustment + any reviewed weekly over/short applied.
+                      Earned pay includes commission, credit card tips, and any weekly base pay shown below. Pay from closed weeks is carried separately. Cash payout = earned pay + prior-week correction − direct deposit + adjustment + any reviewed weekly over/short applied. Until reconciliation and review are complete, cash payouts are estimates assuming unreconciled days are even and no unreviewed over/short is applied. Unset direct deposits are estimated at $0.
                     </p>
                     <div className="overflow-x-auto rounded-lg border border-gray-200">
                       <Table>
@@ -2861,7 +2861,12 @@ export function PayrollDashboard({
                                 {payout.varianceReviewed ? formatSignedMoney(payout.variancePayoutCents) : "Review pending"}
                               </TableCell>
                               <TableCell className={payout.cashPayoutCents < 0 ? "font-medium text-red-700" : "font-medium"}>
-                                {payout.directDepositSet ? formatMoney(payout.cashPayoutCents / 100) : "Pending"}
+                                {formatMoney(payout.cashPayoutCents / 100)}
+                                {(!payout.directDepositSet || !payout.varianceReviewed ||
+                                  closeoutData.preview.missingDays.some((day) => day.startsWith(`${payout.employeeName} — `)) ||
+                                  closeoutData.preview.staleDays.some((day) => day.startsWith(`${payout.employeeName} — `))) && (
+                                  <span className="mt-1 block text-xs font-normal text-gray-500">Estimated</span>
+                                )}
                               </TableCell>
                               <TableCell>
                                 <label className="inline-flex items-center gap-2 whitespace-nowrap text-sm">
@@ -2915,8 +2920,7 @@ export function PayrollDashboard({
                               : "Pending"}</TableCell>
                             <TableCell className="font-semibold">{formatSignedMoney(closeoutData.preview.adjustmentCents)}</TableCell>
                             <TableCell className="font-semibold">{formatSignedMoney(closeoutData.preview.payouts.reduce((sum, payout) => sum + payout.variancePayoutCents, 0))}</TableCell>
-                            <TableCell className="font-semibold">{closeoutData.preview.missingDepositSettings.length === 0
-                              ? formatMoney(closeoutData.preview.cashPayoutCents / 100) : "Pending"}</TableCell>
+                            <TableCell className="font-semibold">{formatMoney(closeoutData.preview.cashPayoutCents / 100)}</TableCell>
                             <TableCell className="font-semibold">{closeoutData.preview.payouts.filter((payout) => payout.payPrepared).length}/{closeoutData.preview.payouts.length}</TableCell>
                             <TableCell className="font-semibold">{closeoutData.preview.payouts.filter((payout) => payout.payLock).length}/{closeoutData.preview.payouts.length}</TableCell>
                             <TableCell />
