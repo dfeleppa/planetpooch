@@ -16,7 +16,7 @@ type MobileSummary = {
   onHandCents: number;
   ledger: MobileCashLedgerEntry[];
 };
-type CashView = "pet-resort" | "mobile-grooming" | "safe";
+type CashView = "mobile-grooming" | "safe";
 type DetailView = "actions" | "history";
 type MobileHistoryFilter = "all" | MobileCashLedgerEntry["kind"];
 type LatestSafeVerification = { countedCents: number; verifiedAt: string } | null;
@@ -169,16 +169,15 @@ export function CashManagementDashboard({ mobile, petResort, safeCents, initialS
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-bold text-gray-900">Cash Management</h1>
-        <p className="mt-1 text-gray-500">Choose Pet Resort, Mobile Grooming, or Safe to open its tools.</p>
+        <p className="mt-1 text-gray-500">Choose Mobile Grooming or Safe to open its tools.</p>
       </div>
       <section aria-labelledby="cash-areas-heading" className="space-y-3">
         <div>
           <h2 id="cash-areas-heading" className="text-lg font-semibold text-gray-900">Manage cash by location</h2>
           <p className="mt-1 text-sm text-gray-600">Select a card to open its cash actions and history.</p>
         </div>
-      <div className="grid gap-3 sm:grid-cols-3">
+      <div className="grid gap-3 sm:grid-cols-2">
         {([
-          { id: "pet-resort", label: "Pet Resort", balance: petResort.onHandCents },
           { id: "mobile-grooming", label: "Mobile Grooming", balance: mobile.onHandCents },
           { id: "safe", label: "Safe", balance: countedSafeCents ?? safeCents },
         ] as const).map((area) => (
@@ -207,16 +206,16 @@ export function CashManagementDashboard({ mobile, petResort, safeCents, initialS
           <p className="mt-3 text-xs text-gray-600">Manage bank deposits and cash adjustments under Safe.</p>
         </section>
       )}
-      {cashView !== null && cashView !== "mobile-grooming" && <nav aria-label="Cash view" className="flex flex-wrap items-center gap-2 border-b border-pp-line pb-3">
-        <p className="mr-auto w-full text-sm font-semibold text-gray-900 sm:w-auto" role="status">{cashView === "pet-resort" ? "Pet Resort" : "Safe"} · {detailView === "actions" ? "Actions" : "History"}</p>
+      {cashView === "safe" && <nav aria-label="Cash view" className="flex flex-wrap items-center gap-2 border-b border-pp-line pb-3">
+        <p className="mr-auto w-full text-sm font-semibold text-gray-900 sm:w-auto" role="status">Safe · {detailView === "actions" ? "Actions" : "History"}</p>
         {(["actions", "history"] as const).map((section) => (
           <button key={section} type="button" onClick={() => setDetailView(section)} aria-pressed={detailView === section}
             className={`min-h-11 cursor-pointer rounded-lg border px-4 py-2 text-sm font-semibold focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-pp-accent ${detailView === section ? "border-pp-accent bg-pp-accent text-white" : "border-pp-line bg-white text-gray-700 hover:bg-gray-100"}`}>
-            {section === "actions" ? cashView === "safe" ? "Manage safe" : "Record cash" : "History"}
+            {section === "actions" ? "Manage safe" : "History"}
           </button>
         ))}
       </nav>}
-      <div className={cashView === "pet-resort" && detailView === "actions" ? "block" : "hidden"}>
+      <div className={cashView === "safe" && detailView === "actions" ? "block" : "hidden"}>
         <section className="rounded-xl border border-pp-line bg-white p-6 shadow-sm">
           <h2 className="text-lg font-semibold text-gray-900">Pet Resort cash</h2>
           <PetResortCash summary={petResort} />
@@ -273,7 +272,7 @@ export function CashManagementDashboard({ mobile, petResort, safeCents, initialS
         </section>
         <SafeBalanceVerification expectedCents={safeCents} onLatestVerificationChange={setLatestSafeVerification} mode={detailView} />
       </div>
-      <section className={cashView === "pet-resort" && detailView === "history" ? "rounded-xl border border-pp-line bg-white p-6 shadow-sm" : "hidden"}>
+      <section className={cashView === "safe" && detailView === "history" ? "rounded-xl border border-pp-line bg-white p-6 shadow-sm" : "hidden"}>
         <h2 className="text-lg font-semibold text-gray-900">Pet Resort activity</h2>
         <p className="mt-2 text-sm text-gray-600">{petResort.transactionCount} imported cash transactions · MoeGo cash: {money(petResort.receivedCents)} · Daily cash: {money(petResort.dailyCashCents)} · Banked: {money(petResort.bankedCents)}</p>
         <label className="mt-5 block max-w-xs text-sm font-medium text-gray-700">Show activity
