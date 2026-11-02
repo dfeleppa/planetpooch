@@ -1,3 +1,4 @@
+import { reportScope, matchesInquiryScope } from "@/lib/marketing/report-scope";
 import { NextRequest, NextResponse } from "next/server";
 import { getSession, hasMarketingAccess } from "@/lib/auth-helpers";
 import { prisma } from "@/lib/prisma";
@@ -48,7 +49,8 @@ export async function GET(request: NextRequest) {
     },
   });
 
-  const normalized = submissions.map((submission) => {
+  const scope = reportScope(Object.fromEntries(request.nextUrl.searchParams));
+  const normalized = submissions.filter((row) => matchesInquiryScope(row, scope)).map((submission) => {
     const attribution = submission.attribution as SubmissionAttribution;
     return {
       ...submission,

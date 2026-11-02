@@ -1,3 +1,4 @@
+import { reportScope } from "@/lib/marketing/report-scope";
 import { NextRequest, NextResponse } from "next/server";
 import { getSession, hasMarketingAccess } from "@/lib/auth-helpers";
 import { prisma } from "@/lib/prisma";
@@ -34,9 +35,11 @@ export async function GET(req: NextRequest) {
   const source: LeadAttributionSource | "all" = sourceParam === "meta" || sourceParam === "google-ads" || sourceParam === "google-lsa"
     ? sourceParam : "all";
 
+  const scope = reportScope(Object.fromEntries(req.nextUrl.searchParams));
+  const businesses = scope.business === "all" ? ["pet-resort", "mobile-grooming"] : [scope.business];
   const [meta, metaSpendCampaigns, orderCursor, customerCursor, lsaBackfills, latestOrder, google, lsa, manualSpend, googleRows, googleWindow] = await Promise.all([
-    getMetaPeriodMetrics("", from, toExclusive),
-    source === "all" || source === "meta" ? getMetaSpendBreakdown(from, toExclusive) : Promise.resolve([]),
+    getMetaPeriodMetrics(scope.business, from, toExclusive),
+    source === "all" || source === "meta" ? getMetaSpendBreakdown(from, toExclusive, scope.business) : Promise.resolve([]),
     prisma.moegoSyncState.findUnique({ where: { resource: "order" }, select: { lastSyncedAt: true } }),
     prisma.moegoSyncState.findUnique({ where: { resource: "customer" }, select: { lastSyncedAt: true } }),
     prisma.moegoSyncState.findMany({
@@ -45,21 +48,21 @@ export async function GET(req: NextRequest) {
     }),
     prisma.moegoOrder.aggregate({ _max: { syncedAt: true } }),
     prisma.financeGoogleCampaignReportRow.aggregate({
-      where: { business: { in: ["pet-resort", "mobile-grooming"] }, periodStart: from, periodEnd: to },
+      where: { business: { in: businesses }, periodStart: from, periodEnd: to },
       _sum: { costCents: true }, _count: { _all: true }, _max: { updatedAt: true },
     }),
-    getGoogleLsaLeads(["pet-resort", "mobile-grooming"], from, to),
+    getGoogleLsaLeads(businesses, from, to),
     prisma.marketingManualSpend.findMany({
       where: { business: "combined", periodStart: from, periodEnd: to },
       select: { source: true, amountCents: true, updatedAt: true },
     }),
     prisma.financeGoogleCampaignReportRow.findMany({
-      where: { business: { in: ["pet-resort", "mobile-grooming"] }, periodStart: from, periodEnd: to },
+      where: { business: { in: businesses }, periodStart: from, periodEnd: to },
       select: { origin: true, campaignId: true, campaign: true, costCents: true },
     }),
     prisma.googleAdsSyncWindow.findUnique({ where: { from_to: { from, to } }, select: { syncedAt: true } }),
   ]);
-  const manualGoogle = manualSpend.find((item) => item.source === "google-ads");
+  const manualGoogle = scope.business === "all" ? manualSpend.find((item) => item.source === "google-ads") : undefined;
 
   const { staleBefore } = leadOutcomeWindow(1);
   const orderDataAvailable = Boolean(orderCursor && latestOrder._max.syncedAt && latestOrder._max.syncedAt >= staleBefore);

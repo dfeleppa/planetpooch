@@ -1,9 +1,12 @@
+import { reportScope, matchesService } from "@/lib/marketing/report-scope";
+import { reportingRange } from "../ad-reporting/report-range";
+import { getMetaPeriodMetrics } from "@/lib/marketing/meta-reporting";
+import { CampaignSyncControls } from "../ad-reporting/CampaignSyncControls";
 import { getCampaignBusinessAssignments } from "@/lib/marketing/campaign-business";
 import { CampaignBusinessAssignments } from "./CampaignBusinessAssignments";
 import Link from "next/link";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import {
-  DAY_PRESETS,
   SORTABLE_COLUMNS,
   formatCents,
   formatCpl,
@@ -11,14 +14,13 @@ import {
   formatHookRate,
   formatRoas,
   getAdAggregates,
-  getCampaigns,
   type SortColumn,
   type SortDir,
 } from "@/lib/marketing/performance";
-import { PerformanceActions } from "../performance/PerformanceActions";
 import { PerformanceFilters } from "../performance/PerformanceFilters";
 
 type Query = {
+  business?: string; service?: string; source?: string; compare?: string; compareFrom?: string; compareTo?: string;
   days?: string;
   from?: string;
   to?: string;
@@ -27,29 +29,27 @@ type Query = {
   dir?: string;
 };
 
-function parseDays(value: string | undefined) {
-  const days = value ? Number(value) : 30;
-  return (DAY_PRESETS as readonly number[]).includes(days) ? days : 30;
-}
-
 function parseSort(value: string | undefined): SortColumn {
   return (SORTABLE_COLUMNS as readonly string[]).includes(value ?? "") ? value as SortColumn : "spend";
 }
 
 export async function MetaCreativePerformance({ searchParams }: { searchParams: Query }) {
-  const days = parseDays(searchParams.days);
-  const validDate = (value?: string) => !!value && /^\d{4}-\d{2}-\d{2}$/.test(value) && !Number.isNaN(Date.parse(`${value}T00:00:00Z`)) && new Date(`${value}T00:00:00Z`).toISOString().slice(0, 10) === value;
-  const from = validDate(searchParams.from) && validDate(searchParams.to) && searchParams.from! <= searchParams.to! ? searchParams.from : undefined;
-  const to = from ? searchParams.to : undefined;
+  const range = reportingRange(searchParams);
+  const { from, to } = range;
+  const days = range.days ?? 30;
+  const scope = reportScope(searchParams);
   const campaign = searchParams.campaign?.trim() ?? "";
   const sort = parseSort(searchParams.sort);
   const dir: SortDir = searchParams.dir === "asc" ? "asc" : "desc";
 
-  const [ads, campaigns, assignments] = await Promise.all([
-    getAdAggregates({ days, from, to, campaign, sort, dir }),
-    getCampaigns(days, from, to),
+  const [allAds, assignments, coverage] = await Promise.all([
+    getAdAggregates({ days, from, to, business: scope.business, sort, dir }),
     getCampaignBusinessAssignments(),
+    getMetaPeriodMetrics(scope.business, new Date(from + "T00:00:00Z"), new Date(Date.parse(to + "T00:00:00Z") + 86400000)),
   ]);
+  const serviceAds = allAds.filter((ad) => matchesService([ad.adName, ad.campaignName ?? ""], scope.service));
+  const campaigns = [...new Set(serviceAds.map((ad) => ad.campaignName).filter((name): name is string => Boolean(name)))].sort();
+  const ads = serviceAds.filter((ad) => !campaign || ad.campaignName === campaign);
   const totals = ads.reduce((acc, ad) => ({
     spend: acc.spend + ad.spendCents,
     impressions: acc.impressions + ad.impressions,
@@ -65,13 +65,16 @@ export async function MetaCreativePerformance({ searchParams }: { searchParams: 
     <div>
       <CampaignBusinessAssignments campaigns={assignments} />
       <div className="mb-4 flex flex-col gap-3 rounded-xl border border-gray-200 bg-white p-4 lg:flex-row lg:items-center lg:justify-between">
-        <PerformanceFilters days={days} from={from} to={to} campaign={campaign} campaigns={campaigns} />
-        <PerformanceActions />
+        <PerformanceFilters hideDates days={days} from={from} to={to} campaign={campaign} campaigns={campaigns} />
+        <CampaignSyncControls metaOnly from={from} to={to} isAdmin={false} metaSyncedAt={coverage.syncedAt?.toISOString() ?? null} googleSyncedAt={null} moegoSyncedAt={null} />
       </div>
 
+      <p className="mb-4 text-xs text-gray-600">Meta platform-reported metrics · {from} to {to}. {scope.business === "all" ? "All businesses, including unassigned campaigns." : "Campaign business assignments; shared campaigns may appear in both businesses."}</p>
+      {scope.service !== "all" && <p className="mb-4 rounded-lg bg-amber-50 p-3 text-sm text-amber-900">Creative service filtering matches ad or campaign names. It does not allocate campaign costs to requested services or prove lead service intent. Unnamed services are excluded.</p>}
+      {!coverage.complete && <p className="mb-4 text-sm text-amber-800">Meta data does not cover the full selected period. Refresh data before comparing totals.</p>}
       <div className="mb-5 grid grid-cols-2 gap-3 lg:grid-cols-5">
         <Metric label={from && to ? `Spend · ${from} to ${to}` : `Spend · ${days}d`} value={formatCents(totals.spend)} />
-        <Metric label="Leads" value={totals.leads.toLocaleString()} />
+        <Metric label="Meta-reported leads" value={totals.leads.toLocaleString()} />
         <Metric label="CPL" value={formatCpl(totals.spend, totals.leads)} />
         <Metric label="Purchases" value={totals.purchases.toLocaleString()} />
         <Metric label="ROAS" value={formatRoas(totals.revenue, totals.spend)} />
@@ -140,6 +143,7 @@ function NumberCell({ children }: { children: React.ReactNode }) {
 
 function SortHeader({ label, column, sort, dir, query }: { label: string; column: SortColumn; sort: SortColumn; dir: SortDir; query: Query }) {
   const params = new URLSearchParams({ view: "creatives" });
+  for (const key of ["business", "service", "source", "compare", "compareFrom", "compareTo"] as const) if (query[key]) params.set(key, query[key]!);
   if (query.days) params.set("days", query.days);
   if (query.from && query.to) { params.set("from", query.from); params.set("to", query.to); }
   if (query.campaign) params.set("campaign", query.campaign);

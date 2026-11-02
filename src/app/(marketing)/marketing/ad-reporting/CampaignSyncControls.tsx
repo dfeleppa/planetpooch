@@ -18,10 +18,10 @@ async function jsonRequest(url: string, options?: RequestInit) {
   return result;
 }
 
-export function CampaignSyncControls({ from, to, isAdmin, metaSyncedAt, googleSyncedAt, moegoSyncedAt, onUpdated }: {
+export function CampaignSyncControls({ from, to, isAdmin, metaSyncedAt, googleSyncedAt, moegoSyncedAt, onUpdated = () => {}, metaOnly = false, moegoOnly = false }: {
   from: string; to: string; isAdmin: boolean;
   metaSyncedAt: string | null; googleSyncedAt: string | null; moegoSyncedAt: string | null;
-  onUpdated: () => void;
+  onUpdated?: () => void; metaOnly?: boolean; moegoOnly?: boolean;
 }) {
   const router = useRouter();
   const [working, setWorking] = useState<Platform | "LSA appointments" | "all" | null>(null);
@@ -95,7 +95,7 @@ export function CampaignSyncControls({ from, to, isAdmin, metaSyncedAt, googleSy
     setStatus("");
     const completed: string[] = [];
     const issues: string[] = [];
-    const targets: Platform[] = platform === "all" ? ["Meta", "Google Ads", "MoeGo"] : [platform];
+    const targets: Platform[] = platform === "all" ? (moegoOnly ? (isAdmin ? ["MoeGo"] : []) : metaOnly ? ["Meta"] : isAdmin ? ["Meta", "Google Ads", "MoeGo"] : ["Meta", "Google Ads"]) : [platform];
     for (const target of targets) {
       try {
         setStatus(`Updating ${target}…`);
@@ -135,14 +135,17 @@ export function CampaignSyncControls({ from, to, isAdmin, metaSyncedAt, googleSy
   }
 
   return <div className="w-full print:hidden">
-    <div className="flex items-center gap-2 overflow-x-auto pb-1">
-      <button type="button" className={buttonClass} disabled={working !== null} onClick={() => update("Meta")}>Update Meta</button>
-      <button type="button" className={buttonClass} disabled={working !== null} onClick={() => update("Google Ads")}>Update Google Ads</button>
-      {isAdmin && <button type="button" className={buttonClass} disabled={working !== null} onClick={() => update("MoeGo")}>Update MoeGo</button>}
-      {isAdmin && <button type="button" className={buttonClass} disabled={working !== null} onClick={backfillLsaAppointments}>Backfill LSA appointments</button>}
-      {isAdmin && <button type="button" className={buttonClass} disabled={working !== null} onClick={() => update("all")}>Update all</button>}
+    <div className="flex flex-wrap items-start gap-2">
+      <button type="button" className={buttonClass} disabled={working !== null || (moegoOnly && !isAdmin)} onClick={() => update("all")}>{working ? "Refreshing…" : "Refresh data"}</button>
+      {!metaOnly && !moegoOnly && <details className="rounded-lg border border-gray-200 bg-white"><summary className="cursor-pointer px-4 py-2 text-sm font-medium text-gray-700">Data tools</summary><div className="flex flex-wrap gap-2 p-3">
+        <button type="button" className={buttonClass} disabled={working !== null} onClick={() => update("Meta")}>Update Meta</button>
+        <button type="button" className={buttonClass} disabled={working !== null} onClick={() => update("Google Ads")}>Update Google Ads</button>
+        {isAdmin && <button type="button" className={buttonClass} disabled={working !== null} onClick={() => update("MoeGo")}>Update MoeGo</button>}
+        {isAdmin && <button type="button" className={buttonClass} disabled={working !== null} onClick={backfillLsaAppointments}>Backfill LSA appointments</button>}
+        {isAdmin && <a href="/finance/moego" className="px-3 py-2 text-sm text-blue-700 underline">Refresh MoeGo orders in Finance</a>}
+      </div></details>}
     </div>
-    <p className="mt-1 text-xs text-gray-500">Last updated (ET) · Meta: {dateTime(metaSyncedAt)} · Google Ads: {dateTime(googleSyncedAt)} · MoeGo appointments: {dateTime(moegoSyncedAt)}</p>
+    <p className="mt-1 text-xs text-gray-500">Last updated (ET) · Meta: {dateTime(metaSyncedAt)} {!metaOnly && <> · Google Ads: {dateTime(googleSyncedAt)} · MoeGo appointments: {dateTime(moegoSyncedAt)}</>}</p>
     {status && <p role="status" className="mt-1 text-xs text-gray-700">{status}</p>}
     {campaigns?.some((campaign) => !campaign.business) && <div className="mt-2 rounded-lg border border-gray-200 bg-white p-3">
       <p className="mb-2 text-sm font-medium">Assign each Google Ads campaign before syncing this date range.</p>

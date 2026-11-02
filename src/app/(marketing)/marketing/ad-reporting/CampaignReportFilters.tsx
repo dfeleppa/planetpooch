@@ -1,6 +1,7 @@
 "use client";
 
-import { useRouter } from "next/navigation";
+import { BUSINESSES, SERVICES, type ReportScope } from "@/lib/marketing/report-scope";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useState, useTransition } from "react";
 import type { CompareMode, ReportSource } from "./report-range";
 
@@ -11,23 +12,29 @@ const SOURCES: { value: ReportSource; label: string }[] = [
   { value: "google-lsa", label: "Google LSA" },
 ];
 
-export function CampaignReportFilters({ from, to, source, days, comparison }: {
+export function CampaignReportFilters({ from, to, source, days, comparison, scope, view = "results" }: {
   from: string; to: string; source: ReportSource; days: number | null;
+  scope: ReportScope; view?: string;
   comparison: { mode: CompareMode; from: string; to: string } | null;
 }) {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [pending, startTransition] = useTransition();
-  const [startDate, setStartDate] = useState(days ? "" : from);
-  const [endDate, setEndDate] = useState(days ? "" : to);
+  const [startDate, setStartDate] = useState(from);
+  const [endDate, setEndDate] = useState(to);
 
   const [compareMode, setCompareMode] = useState<CompareMode>(comparison?.mode ?? "none");
   const [compareFrom, setCompareFrom] = useState(comparison?.from ?? "");
   const [compareTo, setCompareTo] = useState(comparison?.to ?? "");
 
-  function navigate(next: { days?: number; from?: string; to?: string; source?: ReportSource; compare?: CompareMode; compareFrom?: string; compareTo?: string }) {
-    const params = new URLSearchParams();
+  function navigate(next: { business?: string; service?: string; days?: number; from?: string; to?: string; source?: ReportSource; compare?: CompareMode; compareFrom?: string; compareTo?: string }) {
+    const params = new URLSearchParams(searchParams.toString());
+    params.delete("campaign");
+    params.delete("days"); params.delete("from"); params.delete("to");
+    params.set("business", next.business ?? scope.business);
+    params.set("service", next.service ?? scope.service);
     const selectedSource = next.source ?? source;
-    if (selectedSource !== "all") params.set("source", selectedSource);
+    params.set("source", selectedSource);
     if (next.from && next.to) {
       params.set("from", next.from);
       params.set("to", next.to);
@@ -35,6 +42,7 @@ export function CampaignReportFilters({ from, to, source, days, comparison }: {
       params.set("days", String(next.days));
     }
     const mode = next.compare ?? comparison?.mode ?? "none";
+    params.delete("compare"); params.delete("compareFrom"); params.delete("compareTo");
     if (mode !== "none") {
       params.set("compare", mode);
       if (mode === "custom") {
@@ -72,16 +80,17 @@ export function CampaignReportFilters({ from, to, source, days, comparison }: {
         <button type="submit" disabled={pending || !startDate || !endDate || startDate > endDate}
           className="rounded-lg bg-gray-900 px-3 py-2 text-sm font-medium text-white disabled:opacity-40">Apply dates</button>
       </form>
-      <label className="text-xs font-medium text-gray-600">Lead source
+      {view !== "creatives" && <label className="text-xs font-medium text-gray-600">Lead source
         <select aria-label="Lead source" value={source} onChange={(event) => navigate(days
           ? { days, source: event.target.value as ReportSource }
           : { from, to, source: event.target.value as ReportSource })}
           className="mt-1 block rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900">
           {SOURCES.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}
         </select>
-      </label>
+      </label>}
+      {[{ label: "Business", key: "business", options: BUSINESSES }, { label: "Service", key: "service", options: SERVICES }].map(({label, key, options}) => <label key={key} className="text-xs font-medium text-gray-600">{label}<select aria-label={label} value={scope[key as keyof ReportScope]} disabled={pending} onChange={(event) => navigate({ ...(days ? { days } : { from, to }), [key]: event.target.value })} className="mt-1 block rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900">{options.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}</select></label>)}
     </div>
-    <div className="mt-4 flex flex-wrap items-end gap-3 border-t border-gray-100 pt-4">
+    {view === "results" && <div className="mt-4 flex flex-wrap items-end gap-3 border-t border-gray-100 pt-4">
       <label className="text-xs font-medium text-gray-600">Compare to
         <select aria-label="Compare to" value={compareMode} disabled={pending} onChange={(event) => {
           const mode = event.target.value as CompareMode;
@@ -106,7 +115,7 @@ export function CampaignReportFilters({ from, to, source, days, comparison }: {
         </label>
         <button disabled={pending || !compareFrom || !compareTo || compareFrom > compareTo} className="rounded-lg bg-gray-900 px-3 py-2 text-sm font-medium text-white disabled:opacity-40">Apply comparison</button>
       </form>}
-    </div>
+    </div>}
     <p className="mt-3 text-xs text-gray-500">Spend uses the selected dates. Website forms use submission dates; their MoeGo bookings and payments can occur later.</p>
   </div>;
 }

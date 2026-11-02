@@ -11,7 +11,9 @@ export function PerformanceFilters({
   to,
   campaign,
   campaigns,
+  hideDates = false,
 }: {
+  hideDates?: boolean;
   days: number;
   from?: string;
   to?: string;
@@ -39,7 +41,7 @@ export function PerformanceFilters({
 
   return (
     <div className="flex flex-wrap items-center gap-2 mb-4">
-      <div
+      {!hideDates && <><div
         className={cn(
           "inline-flex rounded-lg border border-gray-200 bg-white p-0.5",
           isPending && "opacity-60"
@@ -72,7 +74,7 @@ export function PerformanceFilters({
         <label className="text-xs text-gray-600">From <input type="date" value={startDate} onChange={(event) => setStartDate(event.target.value)} className="rounded-lg border border-gray-300 px-2 py-1.5 text-sm text-gray-900" required /></label>
         <label className="text-xs text-gray-600">To <input type="date" value={endDate} min={startDate || undefined} onChange={(event) => setEndDate(event.target.value)} className="rounded-lg border border-gray-300 px-2 py-1.5 text-sm text-gray-900" required /></label>
         <button type="submit" disabled={isPending || !startDate || !endDate || startDate > endDate} className="rounded-lg bg-blue-600 px-3 py-1.5 text-sm text-white disabled:opacity-50">Apply</button>
-      </form>
+      </form></>}
 
       <select
         value={campaign}
@@ -94,7 +96,7 @@ export function PerformanceFilters({
         ))}
       </select>
 
-      {(campaign || days !== 30 || from) && (
+      {!hideDates && (campaign || days !== 30 || from) && (
         <button
           type="button"
           onClick={() => { setStartDate(""); setEndDate(""); update({ days: undefined, from: undefined, to: undefined, campaign: undefined }); }}

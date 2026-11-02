@@ -2,7 +2,7 @@
 
 import { Fragment, useId, useEffect, useMemo, useState } from "react";
 import { paidOverview } from "@/lib/marketing/paid-overview";
-import { LeadFollowUpList } from "./LeadFollowUpList";
+import type { ReportScope } from "@/lib/marketing/report-scope";
 import { attachGoogleSpendCampaigns, attachMetaSpendCampaigns, combineCampaignRows, type GoogleSpendCampaign, type ReportCampaign } from "@/lib/marketing/campaign-results";
 import type { MetaSpendCampaign } from "@/lib/marketing/meta-spend-breakdown";
 import { FacebookCampaignReportTable, GoogleCampaignReportTable } from "./CampaignReportTables";
@@ -45,11 +45,11 @@ const dateTime = (value: string | null) => value ? new Intl.DateTimeFormat("en-U
 const reportDate = (value: string) => new Intl.DateTimeFormat("en-US", { timeZone: "UTC", month: "short", day: "numeric", year: "numeric" }).format(new Date(`${value}T00:00:00Z`));
 const keyFor = (source: Source, id: string | null, name: string) => `${source}|${id ?? `name:${name}`}`;
 
-export function CampaignResultsReport({ from, to, source, rangeLabel, outcomes }: {
-  from: string; to: string; source: ReportSource; rangeLabel: string; outcomes: Outcomes;
+export function CampaignResultsReport({ from, to, source, rangeLabel, outcomes, scope = { business: "all", service: "all" } }: {
+  from: string; to: string; source: ReportSource; rangeLabel: string; outcomes: Outcomes; scope?: ReportScope;
 }) {
   const headingId = useId();
-  const query = new URLSearchParams({ from, to, source }).toString();
+  const query = new URLSearchParams({ from, to, source, ...scope }).toString();
   const [data, setData] = useState<{ query: string; leads: LeadData | null; metric: Metric | null; leadError: boolean; metricError: boolean } | null>(null);
   const [refresh, setRefresh] = useState(0);
   const [editing, setEditing] = useState<"google-ads" | null>(null);
@@ -88,12 +88,12 @@ export function CampaignResultsReport({ from, to, source, rangeLabel, outcomes }
   const metric = current?.metric;
   const visibleSources = source === "all" ? SOURCES : [source];
   const campaigns = useMemo(() => attachGoogleSpendCampaigns(
-    attachMetaSpendCampaigns(combineCampaignRows(leads?.campaigns ?? [], outcomes.campaigns), metric?.metaSpendCampaigns ?? null),
-    metric?.googleSpendCampaigns ?? null,
-  ), [leads, outcomes.campaigns, metric?.metaSpendCampaigns, metric?.googleSpendCampaigns]);
+    attachMetaSpendCampaigns(combineCampaignRows(leads?.campaigns ?? [], outcomes.campaigns), scope.service === "all" ? metric?.metaSpendCampaigns ?? null : null),
+    scope.service === "all" ? metric?.googleSpendCampaigns ?? null : null,
+  ), [leads, outcomes.campaigns, metric?.metaSpendCampaigns, metric?.googleSpendCampaigns, scope.service]);
 
   function sourceSpend(rowSource: Source): number | null {
-    if (!metric || rowSource === "unattributed") return null;
+    if (scope.service !== "all" || !metric || rowSource === "unattributed") return null;
     if (rowSource === "meta") return metric.metaDataComplete ? metric.metaAdSpend : null;
     return rowSource === "google-ads" ? metric.googleAdSpend : metric.googleLsaAdSpend;
   }
@@ -135,6 +135,8 @@ export function CampaignResultsReport({ from, to, source, rangeLabel, outcomes }
       </div>
     </div>
 
+    {scope.service !== "all" && <p className="rounded-lg bg-amber-50 p-3 text-sm text-amber-900">Service filters use requested services on website inquiries. Ad spend, cost ratios, and LSA call outcomes are unavailable by service because campaigns and calls are not reliably allocated to individual services.</p>}
+    {scope.business !== "all" && <p className="text-xs text-gray-600">Meta spend uses campaign business assignments; shared campaigns may appear in both businesses. Business totals are not additive. Unassigned campaigns are excluded.</p>}
     {source !== "google-lsa" && <div className="rounded-xl border border-gray-200 bg-white p-5">
       <h3 className="font-semibold text-gray-900">Paid website lead overview</h3>
       <p className="mt-1 text-sm text-gray-600">{reportDate(from)} – {reportDate(to)} · {source === "all" ? "Meta + Google Ads" : LABELS[source]}</p>
@@ -144,7 +146,7 @@ export function CampaignResultsReport({ from, to, source, rangeLabel, outcomes }
       <p className="mt-3 text-xs text-gray-600">Website submissions attributed to the selected paid sources only. Booked counts submissions with a qualifying booking, not unique new customers. LSA calls and unattributed inquiries are separate below. Payments can occur after the selected dates; this is observed revenue, not proof of ad causation.</p>
       {(outcomes.incomplete || metric?.leadsLimited) && <p className="mt-2 text-sm text-amber-800">MoeGo outcomes may be incomplete. Review data freshness before acting on these figures.</p>}
     </div>}
-    <LeadFollowUpList outcomes={outcomes} />
+
 
     <div className="pp-marketing-campaign-table overflow-hidden rounded-xl border border-gray-200 bg-white">
       <div className="overflow-x-auto">
@@ -166,12 +168,12 @@ export function CampaignResultsReport({ from, to, source, rangeLabel, outcomes }
               const sourceCampaigns = campaigns.filter((row) => row.source === rowSource);
               const spend = sourceSpend(rowSource);
               const forms = leads ? sourceCampaigns.reduce((sum, row) => sum + row.formLeads, 0) : null;
-              const sourceLeads = rowSource === "google-lsa" ? metric ? metric.googleLsaLeadCount : null : forms;
+              const sourceLeads = rowSource === "google-lsa" ? metric && scope.service === "all" ? metric.googleLsaLeadCount : null : forms;
               const linked = sourceCampaigns.reduce((sum, row) => sum + row.linked, 0);
               const booked = sourceCampaigns.reduce((sum, row) => sum + row.bookedLeads, 0);
               const appointments = sourceCampaigns.reduce((sum, row) => sum + row.appointments, 0);
               const paid = outcomes.orderDataAvailable && metric?.moegoDataAvailable ? sourceCampaigns.reduce((sum, row) => sum + row.netPaidCents, 0) : null;
-              const lsaCalls = rowSource === "google-lsa" ? metric?.googleLsaCallOutcomes : null;
+              const lsaCalls = rowSource === "google-lsa" && scope.service === "all" ? metric?.googleLsaCallOutcomes : null;
               const sourceLinked = rowSource === "google-lsa" ? lsaCalls?.linked ?? null : linked;
               const sourceBooked = rowSource === "google-lsa" ? lsaCalls?.bookedLeads ?? null
                 : outcomes.appointmentsAvailable ? booked : null;
@@ -187,7 +189,7 @@ export function CampaignResultsReport({ from, to, source, rangeLabel, outcomes }
                       <span>$</span><input aria-label={`${LABELS[rowSource]} spend in dollars`} type="number" min="0" max="21474836.47" step="0.01" required value={amount} onChange={(event) => setAmount(event.target.value)} className="w-24 rounded border border-gray-300 px-2 py-1 text-right" />
                       <button type="submit" disabled={saving} className="text-blue-700 underline print:hidden">{saving ? "Saving…" : "Save"}</button>
                       <button type="button" onClick={() => setEditing(null)} className="text-gray-600 underline print:hidden">Cancel</button>
-                    </form> : <>{dollars(spend)}{rowSource === "google-lsa" && <span className="block text-xs font-normal text-amber-800">Estimated · $28 per call</span>}{rowSource === "google-ads" && <button type="button" onClick={() => { setEditing(rowSource); setAmount(((spend ?? 0) / 100).toFixed(2)); setSaveError(""); }} className="ml-2 text-xs font-normal text-blue-700 underline print:hidden">Edit</button>}</>}
+                    </form> : <>{dollars(spend)}{rowSource === "google-lsa" && <span className="block text-xs font-normal text-amber-800">Estimated · $28 per call</span>}{rowSource === "google-ads" && scope.business === "all" && scope.service === "all" && <button type="button" onClick={() => { setEditing(rowSource); setAmount(((spend ?? 0) / 100).toFixed(2)); setSaveError(""); }} className="ml-2 text-xs font-normal text-blue-700 underline print:hidden">Edit</button>}</>}
                   </td>
                   <td className="px-4 py-3 text-right">{number(sourceLeads)}</td>
                   <td className="px-4 py-3 text-right">{costPerLead(spend, sourceLeads)}</td>
@@ -199,7 +201,7 @@ export function CampaignResultsReport({ from, to, source, rangeLabel, outcomes }
                 </tr>
                 {sourceCampaigns.map((campaign) => {
                   const campaignKey = keyFor(campaign.source, campaign.id, campaign.name);
-                  const campaignSpend = campaign.source === "meta" && metric?.metaDataComplete
+                  const campaignSpend = scope.service !== "all" ? null : campaign.source === "meta" && metric?.metaDataComplete
                     ? campaign.metaSpend?.spendCents ?? (campaign.id ? 0 : null)
                     : campaign.source === "google-ads" && metric?.googleSpendCampaigns != null
                       ? campaign.googleSpend?.spendCents ?? null : null;
@@ -285,9 +287,9 @@ export function CampaignResultsReport({ from, to, source, rangeLabel, outcomes }
     <p className="text-xs text-gray-600">This list includes forms linked to MoeGo customers. Website form totals above include all saved submissions.</p>
 
     <details onToggle={(event) => setShowPlatform(event.currentTarget.open)} className="rounded-xl border border-gray-200 bg-white">
-      <summary className="cursor-pointer px-4 py-3 text-sm font-medium text-gray-800">Platform metrics and CSV imports</summary>
+      <summary className="cursor-pointer px-4 py-3 text-sm font-medium text-gray-800">Platform metrics and CSV imports (all services)</summary>
       {showPlatform && <div className="space-y-6 border-t border-gray-100 p-4">
-        {([{ key: "pet-resort", label: "Pet Resort" }, { key: "mobile-grooming", label: "Mobile Grooming" }] as const).map((business) => <div key={business.key} className="space-y-4">
+        {([{ key: "pet-resort", label: "Pet Resort" }, { key: "mobile-grooming", label: "Mobile Grooming" }] as const).filter((item) => scope.business === "all" || scope.business === item.key).map((business) => <div key={business.key} className="space-y-4">
           <h3 className="font-semibold text-gray-900">{business.label}</h3>
           {(source === "all" || source === "meta") && <FacebookCampaignReportTable business={business.key} from={from} to={to} />}
           {(source === "all" || source === "google-ads") && <GoogleCampaignReportTable business={business.key} from={from} to={to} />}

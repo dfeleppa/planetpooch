@@ -1,3 +1,4 @@
+import { metaInsightWhere } from "./meta-reporting";
 import { prisma } from "@/lib/prisma";
 
 export type MetaSpendAd = { id: string; name: string; spendCents: number };
@@ -52,9 +53,9 @@ export function aggregateMetaSpend(rows: MetaSpendInsight[]): MetaSpendCampaign[
       .map((adset) => ({ ...adset, ads: adset.ads.sort((a, b) => b.spendCents - a.spendCents || a.name.localeCompare(b.name)) })) }));
 }
 
-export async function getMetaSpendBreakdown(from: Date, toExclusive: Date): Promise<MetaSpendCampaign[]> {
+export async function getMetaSpendBreakdown(from: Date, toExclusive: Date, business = ""): Promise<MetaSpendCampaign[]> {
   const rows = await prisma.metaAdInsight.findMany({
-    where: { date: { gte: from, lt: toExclusive } },
+    where: await metaInsightWhere(business, from, toExclusive),
     orderBy: { date: "desc" },
     select: { campaignId: true, campaignName: true, adsetId: true, adsetName: true, adId: true, adName: true, spendCents: true },
   });

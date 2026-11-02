@@ -1,4 +1,4 @@
-import { metaBusinessWhere } from "@/lib/marketing/campaign-business";
+import { metaBusinessWhere, metaCampaignWhereForCompany } from "@/lib/marketing/campaign-business";
 import { marketingChildWhere } from "@/lib/marketing/business";
 import { prisma } from "@/lib/prisma";
 
@@ -40,6 +40,7 @@ export type SortDir = "asc" | "desc";
 export { DAY_PRESETS, type DayPreset } from "./performance-options";
 
 export type AggregateOptions = {
+  business?: string;
   days?: number;
   from?: string;
   to?: string;
@@ -148,7 +149,7 @@ export async function getAdAggregates(
   // renames in Ads Manager show through.
   const rows = await prisma.metaAdInsight.findMany({
     where: {
-      ...await metaBusinessWhere(),
+      ...(options.business === undefined ? await metaBusinessWhere() : options.business === "pet-resort" ? await metaCampaignWhereForCompany("RESORT") : options.business === "mobile-grooming" ? await metaCampaignWhereForCompany("GROOMING") : {}),
       date: insightDateFilter(options),
       ...(campaign ? { campaignName: campaign } : {}),
       ...(scriptId ? { scriptId } : {}),

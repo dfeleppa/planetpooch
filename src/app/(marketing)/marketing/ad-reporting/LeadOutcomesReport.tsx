@@ -1,3 +1,4 @@
+import { matchesInquiryScope, type ReportScope } from "@/lib/marketing/report-scope";
 import { getSession } from "@/lib/auth-helpers";
 import { prisma } from "@/lib/prisma";
 import { assignLeadOutcomes, leadOutcomeWindow, matchingOutcomeCustomerIds, type OutcomeCustomerProfile } from "@/lib/marketing/lead-outcomes";
@@ -7,7 +8,7 @@ import { Prisma } from "@prisma/client";
 import type { ReportSource } from "./report-range";
 import { resolveSubmissionDateRange } from "@/lib/marketing/submission-date-range";
 
-export async function loadLeadOutcomes({ from, to, source }: { from: string; to: string; source: ReportSource }) {
+export async function loadLeadOutcomes({ from, to, source, scope = { business: "all", service: "all" } }: { from: string; to: string; source: ReportSource; scope?: ReportScope }) {
   const { startAt: since, endBefore: until } = resolveSubmissionDateRange(from, to);
   const { staleBefore } = leadOutcomeWindow(1);
   const [session, submissions, appointmentSync, orderSync, latestOrder, latestCustomer] = await Promise.all([
@@ -68,7 +69,7 @@ export async function loadLeadOutcomes({ from, to, source }: { from: string; to:
     ...row,
     profileCount: ids.size,
     result: assigned.get(row.id)!,
-  }));
+  })).filter((row) => matchesInquiryScope(row, scope));
   const uniqueOutcomes = new Map<string, typeof outcomes[number]>();
   for (const outcome of outcomes) {
     uniqueOutcomes.set(outcome.moegoCustomerId!, outcome);

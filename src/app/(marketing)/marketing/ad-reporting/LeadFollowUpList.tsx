@@ -8,12 +8,10 @@ const labels = { meta: "Meta", "google-ads": "Google Ads", "google-lsa": "Google
 
 export function LeadFollowUpList({ outcomes }: { outcomes: Outcomes }) {
   const [search, setSearch] = useState("");
-  const [business, setBusiness] = useState("all");
   const [status, setStatus] = useState("all");
   const [showAll, setShowAll] = useState(false);
   const candidates = outcomes.leads.filter((lead) => lead.booked === 0);
-  const filtered = candidates.filter((lead) => (business === "all" || lead.business === business)
-    && (status === "all" || (status === "pending" ? lead.pending > 0 : lead.pending === 0))
+  const filtered = candidates.filter((lead) => (status === "all" || (status === "pending" ? lead.pending > 0 : lead.pending === 0))
     && [lead.customer, lead.phone, lead.email, lead.campaignName, ...lead.services].join(" ").toLowerCase().includes(search.toLowerCase()))
     .sort((a, b) => a.receivedAt.localeCompare(b.receivedAt));
   return <section aria-label="Lead follow-up" className="rounded-xl border border-gray-200 bg-white p-5">
@@ -23,7 +21,6 @@ export function LeadFollowUpList({ outcomes }: { outcomes: Outcomes }) {
       {outcomes.incomplete && <p className="mt-3 text-sm text-amber-800">MoeGo data may be behind. These are review candidates, not confirmed missed bookings.</p>}
       <div className="my-4 flex flex-wrap gap-3 print:hidden">
         <input aria-label="Search follow-up inquiries" placeholder="Search name, contact, service or campaign" value={search} onChange={(event) => { setSearch(event.target.value); setShowAll(false); }} className="min-w-64 flex-1 rounded-lg border border-gray-300 p-2 text-sm" />
-        <select aria-label="Follow-up business" value={business} onChange={(event) => setBusiness(event.target.value)} className="rounded-lg border border-gray-300 p-2 text-sm"><option value="all">All businesses</option><option>Pet Resort</option><option>Mobile Grooming</option></select>
         <select aria-label="Follow-up booking status" value={status} onChange={(event) => setStatus(event.target.value)} className="rounded-lg border border-gray-300 p-2 text-sm"><option value="all">All review candidates</option><option value="none">No booking recorded</option><option value="pending">Pending appointment</option></select>
       </div>
       <p className="mb-2 text-xs text-gray-600" aria-live="polite">{filtered.length} matching inquiries. Contact history and follow-up assignments are not tracked here.</p>
