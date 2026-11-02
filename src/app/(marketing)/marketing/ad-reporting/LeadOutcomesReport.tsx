@@ -1,3 +1,4 @@
+import { conversionCustomerKeys, type CustomerPayment } from "@/lib/marketing/conversions";
 import { matchesInquiryScope, type ReportScope } from "@/lib/marketing/report-scope";
 import { getSession } from "@/lib/auth-helpers";
 import { prisma } from "@/lib/prisma";
@@ -62,6 +63,7 @@ export async function loadLeadOutcomes({ from, to, source, scope = { business: "
       select: { id: true, customerMoegoId: true, status: true, createdTime: true, salesDatetime: true, completedTime: true, paidCents: true, refundedCents: true },
     }) : Promise.resolve([]),
   ]);
+  const customerKeys = conversionCustomerKeys(matchedRows.map(({ row, ids }) => ({ id: row.id, customerIds: ids })));
   const assigned = assignLeadOutcomes(matchedRows.map(({ row, ids }) => ({
     id: row.id, receivedAt: row.receivedAt, customerIds: ids,
   })), appointments, orders);
@@ -102,7 +104,7 @@ export async function loadLeadOutcomes({ from, to, source, scope = { business: "
   for (const campaign of googleCampaigns) {
     if (campaign.campaignId && !campaignNames.has(`google-ads|${campaign.campaignId}`)) campaignNames.set(`google-ads|${campaign.campaignId}`, campaign.campaign);
   }
-  type CampaignGroup = { source: LeadAttributionSource; campaignId: string | null; campaignName: string; leads: number; bookedLeads: number; appointments: number; netPaidCents: number };
+  type CampaignGroup = { customerPayments: CustomerPayment[]; source: LeadAttributionSource; campaignId: string | null; campaignName: string; leads: number; bookedLeads: number; appointments: number; netPaidCents: number };
   const campaignGroups = new Map<string, CampaignGroup>();
   for (const outcome of attributedOutcomes) {
     const key = `${outcome.source}|${outcome.campaignId ?? ""}`;
@@ -112,10 +114,11 @@ export async function loadLeadOutcomes({ from, to, source, scope = { business: "
         source: outcome.source, campaignId: outcome.campaignId,
         campaignName: outcome.source === "unattributed" ? "Unattributed" : outcome.campaignId
           ? campaignNames.get(`${outcome.source}|${outcome.campaignId}`) ?? outcome.campaignId : "Campaign not supplied",
-        leads: 0, bookedLeads: 0, appointments: 0, netPaidCents: 0,
+        customerPayments: [], leads: 0, bookedLeads: 0, appointments: 0, netPaidCents: 0,
       };
       campaignGroups.set(key, group);
     }
+    group.customerPayments.push({ customerKey: customerKeys.get(outcome.id)!, netPaidCents: outcome.result.netPaidCents });
     group.leads++;
     if (outcome.result.booked > 0) group.bookedLeads++;
     group.appointments += outcome.result.booked;

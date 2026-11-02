@@ -8,7 +8,7 @@ import { CampaignResultsReport } from "../src/app/(marketing)/marketing/ad-repor
 
 test("campaign results render as one primary report table with honest loading values", () => {
   const outcomes: Parameters<typeof CampaignResultsReport>[0]["outcomes"] = {
-    campaigns: [{ source: "meta", campaignId: "daycare", campaignName: "Daycare", leads: 2, bookedLeads: 1, appointments: 1, netPaidCents: 10000 }],
+    campaigns: [{ customerPayments: [], source: "meta", campaignId: "daycare", campaignName: "Daycare", leads: 2, bookedLeads: 1, appointments: 1, netPaidCents: 10000 }],
     leads: [], isAdmin: false, linkedSubmissions: 2, linkedCustomers: 2,
     duplicateProfileLeads: 0, totalBookedLeads: 1, totalBooked: 1, totalNetPaidCents: 10000,
     appointmentsAvailable: true, orderDataAvailable: true, incomplete: false,

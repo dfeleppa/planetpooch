@@ -1,3 +1,4 @@
+import { conversionMetrics, type CustomerPayment } from "./conversions";
 import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { lsaLeadDay } from "./google-lsa-leads";
@@ -77,15 +78,19 @@ export function summarizeGoogleLsaCallOutcomes(
     booked.add(callId);
     appointmentCount++;
   }
+  const customerPayments: CustomerPayment[] = [];
   const seenOrders = new Set<string>();
   let netPaidCents = 0;
   for (const order of orders) {
     if (seenOrders.has(order.moegoId) || !PAID.has(order.status ?? "")) continue;
     seenOrders.add(order.moegoId);
     const callId = owner(order.customerMoegoId, order.salesDatetime ?? order.completedTime ?? order.createdTime);
-    if (callId) netPaidCents += order.paidCents - order.refundedCents;
+    if (callId) {
+      netPaidCents += order.paidCents - order.refundedCents;
+      customerPayments.push({ customerKey: order.customerMoegoId!, netPaidCents: order.paidCents - order.refundedCents });
+    }
   }
-  return { linked, ambiguous, bookedLeads: booked.size, appointments: appointmentCount, netPaidCents };
+  return { linked, ambiguous, bookedLeads: booked.size, appointments: appointmentCount, netPaidCents, ...conversionMetrics(customerPayments, true) };
 }
 
 export async function getGoogleLsaCallOutcomes(calls: Call[]) {

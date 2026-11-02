@@ -1,3 +1,4 @@
+import type { CustomerPayment } from "./conversions";
 import type { LeadAttributionSource } from "./lead-attribution";
 import type { MetaSpendCampaign } from "./meta-spend-breakdown";
 
@@ -13,6 +14,7 @@ export type ReportCampaign = {
 };
 
 export type OutcomeCampaign = {
+  customerPayments?: CustomerPayment[];
   source: LeadAttributionSource;
   campaignId: string | null;
   campaignName: string;
@@ -23,6 +25,7 @@ export type OutcomeCampaign = {
 };
 
 export type CombinedCampaign = {
+  customerPayments?: CustomerPayment[];
   source: LeadAttributionSource;
   id: string | null;
   name: string;
@@ -92,6 +95,7 @@ export function attachGoogleSpendCampaigns(campaigns: SpendCampaign[], spend: Go
       existing.bookedLeads += campaign.bookedLeads;
       existing.appointments += campaign.appointments;
       existing.netPaidCents += campaign.netPaidCents;
+      existing.customerPayments = [...(existing.customerPayments ?? []), ...(campaign.customerPayments ?? [])];
       existing.ads.push(...campaign.ads);
       existing.googleSpendMatchedByName ||= !idMatch;
     } else {
@@ -158,6 +162,7 @@ export function combineCampaignRows(forms: ReportCampaign[], outcomes: OutcomeCa
     group.bookedLeads = row.bookedLeads;
     group.appointments = row.appointments;
     group.netPaidCents = row.netPaidCents;
+    if (row.customerPayments) group.customerPayments = row.customerPayments;
     groups.set(key, group);
   }
   return [...groups.values()].sort((a, b) => b.formLeads - a.formLeads || b.netPaidCents - a.netPaidCents || a.name.localeCompare(b.name));

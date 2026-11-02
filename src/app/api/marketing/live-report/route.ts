@@ -92,6 +92,8 @@ export async function GET(req: NextRequest) {
       googleLsaAdSpend: lsa.length ? lsa.length * GOOGLE_LSA_LEAD_COST_CENTS : null,
       googleLsaLeadCount: lsa.length,
       googleLsaCallOutcomes: lsaCallOutcomes && {
+        conversions: orderDataAvailable ? lsaCallOutcomes.conversions : null,
+        valuePerConversion: orderDataAvailable ? lsaCallOutcomes.valuePerConversion : null,
         linked: lsaCallOutcomes.linked,
         ambiguous: lsaCallOutcomes.ambiguous,
         bookedLeads: lsaAppointmentsBackfilled ? lsaCallOutcomes.bookedLeads : null,
