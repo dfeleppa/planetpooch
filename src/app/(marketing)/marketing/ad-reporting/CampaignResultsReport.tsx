@@ -1,11 +1,12 @@
 "use client";
 
+import { groupCampaignSegments, type SegmentCampaign } from "@/lib/marketing/campaign-segments";
 import { conversionMetrics, conversionEfficiency } from "@/lib/marketing/conversions";
 
 import { Fragment, useId, useEffect, useMemo, useState } from "react";
 import { paidOverview } from "@/lib/marketing/paid-overview";
 import type { ReportScope } from "@/lib/marketing/report-scope";
-import { attachGoogleSpendCampaigns, attachMetaSpendCampaigns, combineCampaignRows, type GoogleSpendCampaign, type ReportCampaign } from "@/lib/marketing/campaign-results";
+import { attachGoogleSpendCampaigns, attachMetaSpendCampaigns, combineCampaignRows, type CampaignWithSpend, type GoogleSpendCampaign, type ReportCampaign } from "@/lib/marketing/campaign-results";
 import type { MetaSpendCampaign } from "@/lib/marketing/meta-spend-breakdown";
 import { FacebookCampaignReportTable, GoogleCampaignReportTable } from "./CampaignReportTables";
 import { GoogleLsaLeadReportTable } from "./GoogleLsaLeadReportTable";
@@ -49,8 +50,8 @@ const dateTime = (value: string | null) => value ? new Intl.DateTimeFormat("en-U
 const reportDate = (value: string) => new Intl.DateTimeFormat("en-US", { timeZone: "UTC", month: "short", day: "numeric", year: "numeric" }).format(new Date(`${value}T00:00:00Z`));
 const keyFor = (source: Source, id: string | null, name: string) => `${source}|${id ?? `name:${name}`}`;
 
-export function CampaignResultsReport({ from, to, source, rangeLabel, outcomes, scope = { business: "all", service: "all" } }: {
-  from: string; to: string; source: ReportSource; rangeLabel: string; outcomes: Outcomes; scope?: ReportScope;
+export function CampaignResultsReport({ from, to, source, rangeLabel, outcomes, segmentCatalog = [], scope = { business: "all", service: "all" } }: {
+  from: string; to: string; source: ReportSource; rangeLabel: string; outcomes: Outcomes; scope?: ReportScope; segmentCatalog?: SegmentCampaign[];
 }) {
   const headingId = useId();
   const query = new URLSearchParams({ from, to, source, ...scope }).toString();
@@ -61,6 +62,7 @@ export function CampaignResultsReport({ from, to, source, rangeLabel, outcomes, 
   const [saveError, setSaveError] = useState("");
   const [saving, setSaving] = useState(false);
   const [expanded, setExpanded] = useState<string | null>(null);
+  const [expandedSegments, setExpandedSegments] = useState<string[]>([]);
   const [showLeads, setShowLeads] = useState(false);
   const [showPlatform, setShowPlatform] = useState(false);
 
@@ -100,6 +102,13 @@ export function CampaignResultsReport({ from, to, source, rangeLabel, outcomes, 
     if (scope.service !== "all" || !metric || rowSource === "unattributed") return null;
     if (rowSource === "meta") return metric.metaDataComplete ? metric.metaAdSpend : null;
     return rowSource === "google-ads" ? metric.googleAdSpend : metric.googleLsaAdSpend;
+  }
+
+  function getCampaignSpend(campaign: CampaignWithSpend): number | null {
+    return scope.service !== "all" ? null : campaign.source === "meta" && metric?.metaDataComplete
+                    ? campaign.metaSpend?.spendCents ?? (campaign.id ? 0 : null)
+                    : campaign.source === "google-ads" && metric?.googleSpendCampaigns != null
+                      ? campaign.googleSpend?.spendCents ?? null : null;
   }
 
   async function saveSpend(event: React.FormEvent<HTMLFormElement>) {
@@ -162,7 +171,7 @@ export function CampaignResultsReport({ from, to, source, rangeLabel, outcomes, 
         <table className="w-full min-w-[1550px] text-left text-sm">
           <caption className="pp-marketing-print-period text-left">Reporting period: {reportDate(from)} – {reportDate(to)}</caption>
           <thead className="bg-gray-50 text-xs uppercase tracking-wide text-gray-600"><tr>
-            <th scope="col" className="px-4 py-3 font-medium">Source / campaign</th>
+            <th scope="col" className="px-4 py-3 font-medium">Source / segment</th>
             <th scope="col" className="px-4 py-3 text-right font-medium">Ad spend</th>
             <th scope="col" className="px-4 py-3 text-right font-medium">Leads</th>
             <th scope="col" className="px-4 py-3 text-right font-medium">Cost per lead</th>
@@ -213,19 +222,38 @@ export function CampaignResultsReport({ from, to, source, rangeLabel, outcomes, 
                   <td className="px-4 py-3 text-right">{percentage(sourceEfficiency.conversionRate)}</td>
                   <td className="px-4 py-3 text-right">{ratio}</td>
                 </tr>
-                {sourceCampaigns.map((campaign) => {
+                {groupCampaignSegments(sourceCampaigns, segmentCatalog).map((group) => {
+                  const segmentKey = rowSource + "|" + group.value;
+                  const open = expandedSegments.includes(segmentKey);
+                  const amounts = group.campaigns.map(getCampaignSpend);
+                  const segmentSpend = amounts.every((value) => value !== null) ? amounts.reduce<number>((sum, value) => sum + (value ?? 0), 0) : null;
+                  const segmentLeads = leads ? group.campaigns.reduce((sum, row) => sum + row.formLeads, 0) : null;
+                  const segmentPaid = conversionsAvailable ? group.campaigns.reduce((sum, row) => sum + row.netPaidCents, 0) : null;
+                  const converted = conversionMetrics(group.campaigns.flatMap((row) => row.customerPayments ?? []), conversionsAvailable);
+                  const efficiency = conversionEfficiency(segmentSpend, segmentLeads, converted.conversions);
+                  return <Fragment key={segmentKey}><tr className="font-medium hover:bg-gray-50">
+                    <th scope="row" className="px-4 py-3 pl-8"><button type="button" aria-expanded={open} onClick={() => setExpandedSegments((current) => open ? current.filter((key) => key !== segmentKey) : [...current, segmentKey])} className="text-left hover:text-blue-700"><span aria-hidden="true" className="mr-2 text-gray-400">{open ? "▾" : "▸"}</span>{group.label}<span className="block pl-5 text-xs font-normal text-gray-500">{group.campaigns.length} {group.campaigns.length === 1 ? "campaign" : "campaigns"}</span></button></th>
+                    <td className="px-4 py-3 text-right">{dollars(segmentSpend)}</td>
+                    <td className="px-4 py-3 text-right">{number(segmentLeads)}</td>
+                    <td className="px-4 py-3 text-right">{costPerLead(segmentSpend, segmentLeads)}</td>
+                    <td className="px-4 py-3 text-right">{number(group.campaigns.reduce((sum, row) => sum + row.linked, 0))}</td>
+                    <td className="px-4 py-3 text-right">{number(outcomes.appointmentsAvailable ? group.campaigns.reduce((sum, row) => sum + row.bookedLeads, 0) : null)}</td>
+                    <td className="px-4 py-3 text-right">{dollars(segmentPaid)}</td>
+                    <td className="px-4 py-3 text-right">{number(converted.conversions)}</td>
+                    <td className="px-4 py-3 text-right">{dollars(converted.valuePerConversion)}</td>
+                    <td className="px-4 py-3 text-right">{dollars(efficiency.costPerConversion)}</td>
+                    <td className="px-4 py-3 text-right">{percentage(efficiency.conversionRate)}</td>
+                    <td className="px-4 py-3 text-right">{segmentSpend && segmentPaid !== null ? (segmentPaid / segmentSpend).toFixed(2) + "x" : "—"}</td>
+                  </tr>{open && group.campaigns.map((campaign) => {
                   const campaignConversions = conversionMetrics(campaign.customerPayments ?? [], conversionsAvailable);
                   const campaignKey = keyFor(campaign.source, campaign.id, campaign.name);
-                  const campaignSpend = scope.service !== "all" ? null : campaign.source === "meta" && metric?.metaDataComplete
-                    ? campaign.metaSpend?.spendCents ?? (campaign.id ? 0 : null)
-                    : campaign.source === "google-ads" && metric?.googleSpendCampaigns != null
-                      ? campaign.googleSpend?.spendCents ?? null : null;
+                  const campaignSpend = getCampaignSpend(campaign);
                   const campaignEfficiency = conversionEfficiency(campaignSpend, leads ? campaign.formLeads : null, campaignConversions.conversions);
                   const campaignReturn = campaignSpend && outcomes.orderDataAvailable && metric?.moegoDataAvailable
                     ? `${(campaign.netPaidCents / campaignSpend).toFixed(2)}x` : "—";
                   return <Fragment key={campaignKey}>
                     <tr className="hover:bg-gray-50">
-                      <th scope="row" className="max-w-80 px-4 py-3 pl-8 font-normal text-gray-800">
+                      <th scope="row" className="max-w-80 px-4 py-3 pl-12 font-normal text-gray-800">
                         <button type="button" aria-expanded={expanded === campaignKey} onClick={() => setExpanded(expanded === campaignKey ? null : campaignKey)} className="text-left hover:text-blue-700">
                           <span aria-hidden="true" className="mr-2 text-gray-400">{expanded === campaignKey ? "▾" : "▸"}</span>{campaign.name}
                         </button>
@@ -257,6 +285,7 @@ export function CampaignResultsReport({ from, to, source, rangeLabel, outcomes, 
                       {campaign.ads.length ? <div className="space-y-1 text-sm">{campaign.ads.map((ad) => <div key={`${ad.adsetId}|${ad.adId}`} className="flex justify-between gap-4 border-b border-gray-100 py-1"><span>{ad.adsetName || ad.adsetId || "No ad set"} · {ad.adName || ad.adId || "No ad"}</span><span className="whitespace-nowrap">{ad.leads} website forms</span></div>)}</div> : <p className="text-sm text-gray-500">No ad tags were captured for these forms.</p>}
                     </td></tr>}
                   </Fragment>;
+                })}</Fragment>;
                 })}
               </Fragment>;
             })}
