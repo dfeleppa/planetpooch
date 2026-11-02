@@ -1,8 +1,17 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { conversionMetrics, conversionCustomerKeys } from "../src/lib/marketing/conversions";
+import { conversionMetrics, conversionCustomerKeys, conversionEfficiency } from "../src/lib/marketing/conversions";
 import { attachGoogleSpendCampaigns, combineCampaignRows } from "../src/lib/marketing/campaign-results";
 import { summarizeGoogleLsaCallOutcomes } from "../src/lib/marketing/google-lsa-call-outcomes";
+
+test("cost and conversion rate use the same paying-customer count", () => {
+  assert.deepEqual(conversionEfficiency(20000, 10, 2), {costPerConversion: 10000, conversionRate: 0.2});
+  assert.deepEqual(conversionEfficiency(20000, 10, 0), {costPerConversion: null, conversionRate: 0});
+  assert.deepEqual(conversionEfficiency(null, 10, 2), {costPerConversion: null, conversionRate: 0.2});
+  assert.deepEqual(conversionEfficiency(0, 10, 2), {costPerConversion: 0, conversionRate: 0.2});
+  assert.deepEqual(conversionEfficiency(10000, 0, 0), {costPerConversion: null, conversionRate: null});
+  assert.deepEqual(conversionEfficiency(10000, null, null), {costPerConversion: null, conversionRate: null});
+});
 
 test("two paying customers spending $50 each produce 2 conversions and $50 value", () => {
   assert.deepEqual(conversionMetrics([{customerKey: "a", netPaidCents: 5000}, {customerKey: "b", netPaidCents: 5000}], true), {conversions: 2, valuePerConversion: 5000});

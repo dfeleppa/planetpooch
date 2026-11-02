@@ -1,6 +1,6 @@
 "use client";
 
-import { conversionMetrics } from "@/lib/marketing/conversions";
+import { conversionMetrics, conversionEfficiency } from "@/lib/marketing/conversions";
 
 import { Fragment, useId, useEffect, useMemo, useState } from "react";
 import { paidOverview } from "@/lib/marketing/paid-overview";
@@ -42,6 +42,7 @@ const LABELS: Record<Source, string> = {
   meta: "Meta", "google-ads": "Google Ads", "google-lsa": "Google LSA", unattributed: "Unattributed",
 };
 const dollars = (cents: number | null) => cents === null ? "—" : (cents / 100).toLocaleString("en-US", { style: "currency", currency: "USD" });
+const percentage = (value: number | null) => value === null ? "—" : `${(value * 100).toFixed(2)}%`;
 const number = (value: number | null) => value === null ? "—" : value.toLocaleString("en-US");
 const costPerLead = (spendCents: number | null, leads: number | null) => dollars(spendCents !== null && leads !== null && leads > 0 ? spendCents / leads : null);
 const dateTime = (value: string | null) => value ? new Intl.DateTimeFormat("en-US", { timeZone: "America/New_York", dateStyle: "medium", timeStyle: "short" }).format(new Date(value)) : "—";
@@ -127,6 +128,8 @@ export function CampaignResultsReport({ from, to, source, rangeLabel, outcomes, 
   const conversionsAvailable = Boolean(outcomes.orderDataAvailable && metric?.moegoDataAvailable);
   const paidConversions = conversionMetrics(campaigns.filter((row) => visibleSources.includes(row.source) && (row.source === "meta" || row.source === "google-ads")).flatMap((row) => row.customerPayments ?? []), conversionsAvailable);
 
+  const paidEfficiency = conversionEfficiency(overview.spend, overview.leads, paidConversions.conversions);
+
   return <section aria-labelledby={headingId} className="pp-marketing-campaign-results space-y-4">
     <div className="flex flex-wrap items-start justify-between gap-3">
       <div>
@@ -146,17 +149,17 @@ export function CampaignResultsReport({ from, to, source, rangeLabel, outcomes, 
     {source !== "google-lsa" && <div className="rounded-xl border border-gray-200 bg-white p-5">
       <h3 className="font-semibold text-gray-900">Paid website lead overview</h3>
       <p className="mt-1 text-sm text-gray-600">{reportDate(from)} – {reportDate(to)} · {source === "all" ? "Meta + Google Ads" : LABELS[source]}</p>
-      <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-        {[["Ad spend", dollars(overview.spend)], ["Website leads", number(overview.leads)], ["Booked leads", number(overview.booked)], ["Cost per booked lead", dollars(overview.costPerBooked)], ["Net collected after lead", dollars(overview.revenue)], ["Conversions", number(paidConversions.conversions)], ["Value / conversion", dollars(paidConversions.valuePerConversion)]].map(([label, value]) => <div key={label} className="rounded-lg bg-slate-50 p-4"><p className="text-xs font-medium text-gray-600">{label}</p><p className="mt-2 text-2xl font-semibold tabular-nums text-gray-900">{value}</p></div>)}
+      <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+        {[["Ad spend", dollars(overview.spend)], ["Website leads", number(overview.leads)], ["Booked leads", number(overview.booked)], ["Cost per booked lead", dollars(overview.costPerBooked)], ["Revenue", dollars(overview.revenue)], ["Conversions", number(paidConversions.conversions)], ["Revenue per conversion", dollars(paidConversions.valuePerConversion)], ["Cost per conversion", dollars(paidEfficiency.costPerConversion)], ["Conversion rate", percentage(paidEfficiency.conversionRate)]].map(([label, value]) => <div key={label} className="rounded-lg bg-slate-50 p-4"><p className="text-xs font-medium text-gray-600">{label}</p><p className="mt-2 text-2xl font-semibold tabular-nums text-gray-900">{value}</p></div>)}
       </div>
-      <p className="mt-3 text-xs text-gray-600">Website submissions attributed to the selected paid sources only. Booked counts submissions with a qualifying booking, not unique new customers. LSA calls and unattributed inquiries are separate below. Conversions count unique paying customers after their lead, including returning customers; verified duplicate profiles count once. Value / conversion is their average net collected amount after refunds. Payments can occur after the selected dates; this is observed revenue, not proof of ad causation.</p>
+      <p className="mt-3 text-xs text-gray-600">Website submissions attributed to the selected paid sources only. Booked counts submissions with a qualifying booking, not unique new customers. LSA calls and unattributed inquiries are separate below. Conversions count unique paying customers after their lead, including returning customers; verified duplicate profiles count once. Revenue per conversion is their average net collected amount after refunds. Payments can occur after the selected dates; this is observed revenue, not proof of ad causation.</p>
       {(outcomes.incomplete || metric?.leadsLimited) && <p className="mt-2 text-sm text-amber-800">MoeGo outcomes may be incomplete. Review data freshness before acting on these figures.</p>}
     </div>}
 
 
     <div className="pp-marketing-campaign-table overflow-hidden rounded-xl border border-gray-200 bg-white">
       <div className="overflow-x-auto">
-        <table className="w-full min-w-[1400px] text-left text-sm">
+        <table className="w-full min-w-[1650px] text-left text-sm">
           <caption className="pp-marketing-print-period text-left">Reporting period: {reportDate(from)} – {reportDate(to)}</caption>
           <thead className="bg-gray-50 text-xs uppercase tracking-wide text-gray-600"><tr>
             <th scope="col" className="px-4 py-3 font-medium">Source / campaign</th>
@@ -166,9 +169,11 @@ export function CampaignResultsReport({ from, to, source, rangeLabel, outcomes, 
             <th scope="col" className="px-4 py-3 text-right font-medium">MoeGo linked</th>
             <th scope="col" className="px-4 py-3 text-right font-medium">Booked</th>
             <th scope="col" className="px-4 py-3 text-right font-medium">Appointments</th>
-            <th scope="col" className="px-4 py-3 text-right font-medium">Net paid after lead</th>
+            <th scope="col" className="px-4 py-3 text-right font-medium">Revenue</th>
             <th scope="col" className="px-4 py-3 text-right font-medium">Conversions</th>
-            <th scope="col" className="px-4 py-3 text-right font-medium">Value / conversion</th>
+            <th scope="col" className="px-4 py-3 text-right font-medium">Revenue per conversion</th>
+            <th scope="col" className="px-4 py-3 text-right font-medium">Cost per conversion</th>
+            <th scope="col" className="px-4 py-3 text-right font-medium">Conversion rate</th>
             <th scope="col" className="px-4 py-3 text-right font-medium">ROAS</th>
           </tr></thead>
           <tbody className="divide-y divide-gray-100">
@@ -189,6 +194,7 @@ export function CampaignResultsReport({ from, to, source, rangeLabel, outcomes, 
                 : outcomes.appointmentsAvailable ? appointments : null;
               const sourcePaid = rowSource === "google-lsa" ? lsaCalls?.netPaidCents ?? null : paid;
               const sourceConversions = rowSource === "google-lsa" ? { conversions: lsaCalls?.conversions ?? null, valuePerConversion: lsaCalls?.valuePerConversion ?? null } : conversionMetrics(sourceCampaigns.flatMap((row) => row.customerPayments ?? []), conversionsAvailable);
+              const sourceEfficiency = conversionEfficiency(spend, sourceLeads, sourceConversions.conversions);
               const ratio = spend && sourcePaid !== null ? `${(sourcePaid / spend).toFixed(2)}x` : "—";
               return <Fragment key={rowSource}>
                 <tr className="bg-slate-50 font-semibold text-gray-900">
@@ -208,6 +214,8 @@ export function CampaignResultsReport({ from, to, source, rangeLabel, outcomes, 
                   <td className="px-4 py-3 text-right">{dollars(sourcePaid)}</td>
                   <td className="px-4 py-3 text-right">{number(sourceConversions.conversions)}</td>
                   <td className="px-4 py-3 text-right">{dollars(sourceConversions.valuePerConversion)}</td>
+                  <td className="px-4 py-3 text-right">{dollars(sourceEfficiency.costPerConversion)}</td>
+                  <td className="px-4 py-3 text-right">{percentage(sourceEfficiency.conversionRate)}</td>
                   <td className="px-4 py-3 text-right">{ratio}</td>
                 </tr>
                 {sourceCampaigns.map((campaign) => {
@@ -217,6 +225,7 @@ export function CampaignResultsReport({ from, to, source, rangeLabel, outcomes, 
                     ? campaign.metaSpend?.spendCents ?? (campaign.id ? 0 : null)
                     : campaign.source === "google-ads" && metric?.googleSpendCampaigns != null
                       ? campaign.googleSpend?.spendCents ?? null : null;
+                  const campaignEfficiency = conversionEfficiency(campaignSpend, leads ? campaign.formLeads : null, campaignConversions.conversions);
                   const campaignReturn = campaignSpend && outcomes.orderDataAvailable && metric?.moegoDataAvailable
                     ? `${(campaign.netPaidCents / campaignSpend).toFixed(2)}x` : "—";
                   return <Fragment key={campaignKey}>
@@ -238,9 +247,11 @@ export function CampaignResultsReport({ from, to, source, rangeLabel, outcomes, 
                       <td className="px-4 py-3 text-right">{dollars(outcomes.orderDataAvailable && metric?.moegoDataAvailable ? campaign.netPaidCents : null)}</td>
                       <td className="px-4 py-3 text-right">{number(campaignConversions.conversions)}</td>
                       <td className="px-4 py-3 text-right">{dollars(campaignConversions.valuePerConversion)}</td>
+                      <td className="px-4 py-3 text-right">{dollars(campaignEfficiency.costPerConversion)}</td>
+                      <td className="px-4 py-3 text-right">{percentage(campaignEfficiency.conversionRate)}</td>
                       <td className="px-4 py-3 text-right">{campaignReturn}</td>
                     </tr>
-                    {expanded === campaignKey && <tr><td colSpan={11} className="bg-white px-8 py-4">
+                    {expanded === campaignKey && <tr><td colSpan={13} className="bg-white px-8 py-4">
                       {campaign.metaSpend && <div className="mb-4 space-y-3 text-sm">
                         <p className="text-xs font-medium text-gray-600">Meta spend by ad set and ad</p>
                         {campaign.metaSpend.adsets.map((adset) => <div key={adset.id ?? "unknown"}>
@@ -265,6 +276,8 @@ export function CampaignResultsReport({ from, to, source, rangeLabel, outcomes, 
               <td className="px-4 py-3 text-right">{dollars(overview.revenue)}</td>
               <td className="px-4 py-3 text-right">{number(paidConversions.conversions)}</td>
               <td className="px-4 py-3 text-right">{dollars(paidConversions.valuePerConversion)}</td>
+              <td className="px-4 py-3 text-right">{dollars(paidEfficiency.costPerConversion)}</td>
+              <td className="px-4 py-3 text-right">{percentage(paidEfficiency.conversionRate)}</td>
               <td className="px-4 py-3 text-right">{overview.roas !== null ? `${overview.roas.toFixed(2)}x` : "—"}</td>
             </tr>}
           </tbody>
@@ -276,8 +289,9 @@ export function CampaignResultsReport({ from, to, source, rangeLabel, outcomes, 
     </div>
 
     <details className="space-y-2 rounded-xl border border-gray-200 bg-white p-4 text-xs text-gray-600"><summary className="cursor-pointer text-sm font-medium text-gray-800">How these numbers work</summary>
-      <p>Conversions are distinct verified customers with positive net payments after a website lead. Repeat inquiries and duplicate profiles count once within each row; the subtotal deduplicates across campaigns and sources, so conversion counts are not additive. These include returning customers and do not establish first-ever purchases. Value / conversion divides converted customer net payments by conversions; no conversions or unavailable payment data shows a dash. The LSA source row uses unique paying customers matched to calls; its campaign rows refer only to website forms. LSA is excluded from the paid website subtotal to avoid overlap.</p>
-      <p>Website forms are actual submissions; Meta platform leads may differ. The Google LSA source row uses exact-phone matches to imported calls, including existing customers. Phones matching multiple MoeGo profiles are linked but excluded from LSA bookings and payments. Because the CSV has dates rather than call times, LSA outcomes exclude MoeGo activity on a call date and use later New York calendar dates. Each appointment and order is assigned to the latest qualifying LSA call once. Booked counts leads with at least one qualifying appointment; Appointments counts all qualifying appointments. ROAS is net paid after the lead divided by known source spend; it does not prove the ad caused a purchase.</p>
+      <p>Revenue is net collected after the lead, after refunds. Cost per conversion is ad spend divided by unique paying customers. Conversion rate is unique paying customers divided by the displayed lead count (website submissions, or imported calls for LSA); repeat inquiries remain in the lead denominator. Zero conversions with known leads shows 0%; unavailable data or a zero denominator shows a dash.</p>
+      <p>Conversions are distinct verified customers with positive net payments after a website lead. Repeat inquiries and duplicate profiles count once within each row; the subtotal deduplicates across campaigns and sources, so conversion counts are not additive. These include returning customers and do not establish first-ever purchases. Revenue per conversion divides converted customer net payments by conversions; no conversions or unavailable payment data shows a dash. The LSA source row uses unique paying customers matched to calls; its campaign rows refer only to website forms. LSA is excluded from the paid website subtotal to avoid overlap.</p>
+      <p>Website forms are actual submissions; Meta platform leads may differ. The Google LSA source row uses exact-phone matches to imported calls, including existing customers. Phones matching multiple MoeGo profiles are linked but excluded from LSA bookings and payments. Because the CSV has dates rather than call times, LSA outcomes exclude MoeGo activity on a call date and use later New York calendar dates. Each appointment and order is assigned to the latest qualifying LSA call once. Booked counts leads with at least one qualifying appointment; Appointments counts all qualifying appointments. ROAS is revenue divided by known source spend; it does not prove the ad caused a purchase.</p>
       <p>Meta, Google Ads, and unattributed leads are saved website submissions. The LSA source row counts imported calls only; tagged website forms appear separately in its campaign rows. Cost per lead is ad spend divided by leads; a dash means spend or lead count is unavailable, or there are no leads. LSA calls lack campaign attribution, so LSA campaign rows show only tagged submissions. The paid website subtotal includes only Meta and Google Ads spend and attributed website outcomes. Unattributed inquiries and LSA are excluded. LSA call outcomes can overlap with website outcomes and must not be added together.{metric?.googleLsaCallOutcomes && !metric.googleLsaCallOutcomes.appointmentsBackfilled ? " Run Backfill LSA appointments for this date range to complete the call booking counts." : ""}</p>
       <p>Spend uses the selected calendar dates. Meta campaign, ad set, and ad amounts come from the same synced insight rows as the Meta source total. Google Ads campaign spend uses the saved campaign IDs for this range; campaigns with spend appear even without tagged website forms. Google Ads form tags join a spend row when its campaign name is unique after case, space, hyphen, and underscore normalization. Google manual spend covers Pet Resort and Mobile Grooming together for this exact range and takes priority over campaign totals. A dash means unavailable, not zero.</p>
       <p>Google LSA spend is estimated at $28 for each unique imported lead received in the selected dates, regardless of charge status. The CSV import is updated manually.</p>
@@ -291,7 +305,7 @@ export function CampaignResultsReport({ from, to, source, rangeLabel, outcomes, 
       <summary className="cursor-pointer px-4 py-3 text-sm font-medium text-gray-800">MoeGo-linked submissions ({outcomes.leads.length})</summary>
       {showLeads && <div className="overflow-x-auto border-t border-gray-100">
         <table className="w-full min-w-[1000px] text-left text-sm">
-          <thead className="bg-gray-50 text-xs uppercase text-gray-600"><tr>{["Submitted", "Customer", "Business", "Source", "Campaign", "Services", "Profiles", "Booked", "Pending", "First booked", "Net paid after form"].map((label) => <th key={label} className="px-4 py-3 font-medium">{label}</th>)}</tr></thead>
+          <thead className="bg-gray-50 text-xs uppercase text-gray-600"><tr>{["Submitted", "Customer", "Business", "Source", "Campaign", "Services", "Profiles", "Booked", "Pending", "First booked", "Revenue"].map((label) => <th key={label} className="px-4 py-3 font-medium">{label}</th>)}</tr></thead>
           <tbody className="divide-y divide-gray-100">{outcomes.leads.map((lead) => <tr key={lead.id}>
             <td className="whitespace-nowrap px-4 py-3">{dateTime(lead.receivedAt)}</td><td className="px-4 py-3">{lead.customer}</td><td className="px-4 py-3">{lead.business}</td>
             <td className="px-4 py-3">{LABELS[lead.source]}</td><td className="px-4 py-3">{lead.campaignName || "—"}</td><td className="px-4 py-3">{lead.services.join(", ") || "—"}</td>

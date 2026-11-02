@@ -1,5 +1,12 @@
 export type CustomerPayment = { customerKey: string; netPaidCents: number };
 
+export function conversionEfficiency(spendCents: number | null, leads: number | null, conversions: number | null) {
+  return {
+    costPerConversion: spendCents !== null && conversions !== null && conversions > 0 ? spendCents / conversions : null,
+    conversionRate: leads !== null && leads > 0 && conversions !== null ? conversions / leads : null,
+  };
+}
+
 /** Each verified customer counts once, even across repeat forms or campaigns. */
 export function conversionMetrics(payments: CustomerPayment[], available: boolean) {
   if (!available) return { conversions: null, valuePerConversion: null };
