@@ -1,3 +1,4 @@
+import { LeadFollowUpList } from "../src/app/(marketing)/marketing/ad-reporting/LeadFollowUpList";
 import test from "node:test";
 import assert from "node:assert/strict";
 import { createElement } from "react";
@@ -24,4 +25,22 @@ test("campaign results render as one primary report table with honest loading va
   assert.match(markup, /Net paid after lead/);
   assert.match(markup, /Daycare/);
   assert.match(markup, /Loading spend and website forms/);
+});
+
+
+test("follow-up hides unknown booking data instead of flagging customers", () => {
+  const outcomes = { leads: [{ id: "a", customer: "Test Customer", booked: 0, pending: 0, receivedAt: "2026-10-01", business: "Pet Resort", source: "meta", services: [] }], appointmentsAvailable: false } as never;
+  const markup = renderToStaticMarkup(createElement(LeadFollowUpList, { outcomes }));
+  assert.match(markup, /Booking data is unavailable/);
+  assert.doesNotMatch(markup, /Test Customer/);
+});
+
+test("follow-up excludes booked inquiries and displays pending status and contacts", () => {
+  const base = { receivedAt: "2026-10-01", business: "Pet Resort", source: "meta", services: ["Daycare"], phone: "5551234567", email: "example@example.com", moegoCustomerId: "123" };
+  const outcomes = { leads: [{ ...base, id: "a", customer: "Pending Customer", booked: 0, pending: 1 }, { ...base, id: "b", customer: "Booked Customer", booked: 1, pending: 0 }], appointmentsAvailable: true } as never;
+  const markup = renderToStaticMarkup(createElement(LeadFollowUpList, { outcomes }));
+  assert.match(markup, /Pending Customer/);
+  assert.match(markup, /Pending appointment/);
+  assert.match(markup, /tel:5551234567/);
+  assert.doesNotMatch(markup, /Booked Customer/);
 });

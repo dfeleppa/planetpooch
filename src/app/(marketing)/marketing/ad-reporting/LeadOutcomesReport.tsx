@@ -135,6 +135,9 @@ export async function loadLeadOutcomes({ from, to, source }: { from: string; to:
     campaigns: campaignRows,
     leads: attributedOutcomes.map((row) => ({
       id: row.id,
+      phone: row.phone,
+      email: row.email,
+      moegoCustomerId: row.moegoCustomerId,
       receivedAt: row.receivedAt.toISOString(),
       customer: [row.firstName, row.lastName].filter(Boolean).join(" ") || row.moegoCustomerId!,
       business: row.company === "RESORT" ? "Pet Resort" : "Mobile Grooming",
