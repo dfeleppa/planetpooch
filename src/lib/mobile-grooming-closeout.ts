@@ -1,5 +1,6 @@
 import { createHash } from "node:crypto";
 import { normalizeEmployeeName } from "@/lib/payroll";
+import { directDepositEmployeeKey } from "./mobile-grooming-direct-deposit";
 
 type Entry = {
   serviceDate: Date;
@@ -41,7 +42,7 @@ export function mobileGroomingCloseoutPreview(
     creditCardTipCents: number;
   }>();
   const settingByName = new Map(settings.map((setting) => [
-    normalizeEmployeeName(setting.employeeName).toLocaleLowerCase(), setting.amountCents,
+    directDepositEmployeeKey(setting.employeeName), setting.amountCents,
   ]));
   const adjustmentByName = new Map(adjustments.map((adjustment) => [
     normalizeEmployeeName(adjustment.employeeName).toLocaleLowerCase(), adjustment,
@@ -115,7 +116,8 @@ export function mobileGroomingCloseoutPreview(
       ? basePayCents : commissionPayCents + basePayCents;
     const priorPeriodAdjustmentCents = priorAdjustmentByName.get(key) ?? 0;
     const weeklyPayCents = groomerPayCents + priorPeriodAdjustmentCents;
-    const directDepositCents = settingByName.get(key) ?? 0;
+    const depositKey = directDepositEmployeeKey(employee.employeeName);
+    const directDepositCents = settingByName.get(depositKey) ?? 0;
     const adjustment = adjustmentByName.get(key);
     const adjustmentCents = adjustment?.amountCents ?? 0;
     const varianceCents = varianceByEmployee.get(key) ?? 0;
@@ -152,7 +154,7 @@ export function mobileGroomingCloseoutPreview(
       applyVarianceToCashPayout: varianceReviewCurrent ? (review?.applyToCashPayout ?? false) : null,
       variancePayoutCents,
       cashPayoutCents: weeklyPayCents - directDepositCents + adjustmentCents + variancePayoutCents,
-      directDepositSet: settingByName.has(key),
+      directDepositSet: settingByName.has(depositKey),
     };
   }).sort((a, b) => a.employeeName.localeCompare(b.employeeName));
   const adjustmentCents = payouts.reduce((sum, payout) => sum + payout.adjustmentCents, 0);

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getSession, isSuperAdmin } from "@/lib/auth-helpers";
 import { normalizeEmployeeName } from "@/lib/payroll";
 import { prisma } from "@/lib/prisma";
+import { directDepositEmployeeName } from "@/lib/mobile-grooming-direct-deposit";
 
 async function authorized() {
   const session = await getSession();
@@ -49,7 +50,7 @@ export async function PUT(req: NextRequest) {
     return NextResponse.json({ error: "No mobile grooming payroll entry or base pay exists for this employee." }, { status: 404 });
   }
 
-  const canonicalName = normalizeEmployeeName(payRule?.employeeName ?? payrollEntry?.employeeName ?? carriedAdjustment!.employeeName);
+  const canonicalName = directDepositEmployeeName(payRule?.employeeName ?? payrollEntry?.employeeName ?? carriedAdjustment!.employeeName);
   const setting = await prisma.financeMobileGroomingDirectDeposit.upsert({
     where: { employeeName_effectiveWeekStart: { employeeName: canonicalName, effectiveWeekStart: weekStart } },
     create: { employeeName: canonicalName, effectiveWeekStart: weekStart, amountCents },

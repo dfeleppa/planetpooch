@@ -1409,7 +1409,7 @@ export function PayrollDashboard({
       const data = (await response.json()) as { error?: string };
       if (!response.ok) throw new Error(data.error || "Could not save direct deposit.");
       setDepositEditEmployee(null);
-      setMessage(`Direct deposit saved for ${employeeName}.`);
+      setMessage(`Direct deposit saved for ${employeeName}. This amount repeats each week until you change it.`);
       await loadPayouts(weekStart);
     } catch (error) {
       setError(error instanceof Error ? error.message : "Could not save direct deposit.");

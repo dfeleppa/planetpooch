@@ -6,6 +6,7 @@ import { postPayoutBreakdowns } from "@/lib/mobile-grooming-post-payout-details"
 import { snapshotPayrollEntries } from "@/lib/mobile-grooming-post-payout";
 import { lastCompletedPayrollWeekStart, normalizeEmployeeName } from "@/lib/payroll";
 import { prisma } from "@/lib/prisma";
+import { latestDirectDeposits } from "@/lib/mobile-grooming-direct-deposit";
 
 async function authorized() {
   const session = await getSession();
@@ -43,7 +44,7 @@ async function getWeek(weekStart: Date) {
     }),
     prisma.financeMobileGroomingDirectDeposit.findMany({
       where: { effectiveWeekStart: { lte: weekStart } },
-      orderBy: { effectiveWeekStart: "desc" },
+      orderBy: [{ effectiveWeekStart: "desc" }, { updatedAt: "desc" }],
       select: { employeeName: true, amountCents: true },
     }),
     prisma.financeMobileGroomingPayRule.findMany({
@@ -65,11 +66,7 @@ async function getWeek(weekStart: Date) {
     },
   });
   const correctionBreakdowns = await postPayoutBreakdowns(postPayoutAdjustments);
-  const latestSettings = new Map<string, { employeeName: string; amountCents: number }>();
-  for (const setting of settings) {
-    const key = setting.employeeName.toLocaleLowerCase();
-    if (!latestSettings.has(key)) latestSettings.set(key, setting);
-  }
+  const latestSettings = latestDirectDeposits(settings);
   const latestRules = new Map<string, MobilePayRule>();
   for (const rule of rules) {
     const key = normalizeEmployeeName(rule.employeeName).toLocaleLowerCase();
@@ -80,7 +77,7 @@ async function getWeek(weekStart: Date) {
   const preview = mobileGroomingCloseoutPreview(
     week?.mobileGroomingEntries ?? [],
     week?.mobileGroomingReconciliations ?? [],
-    Array.from(latestSettings.values()),
+    latestSettings,
     week?.mobileGroomingPayoutAdjustments ?? [],
     week?.mobileGroomingVarianceReviews ?? [],
     Array.from(latestRules.values()),
