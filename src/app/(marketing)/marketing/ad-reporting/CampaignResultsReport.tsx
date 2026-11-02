@@ -1,6 +1,6 @@
 "use client";
 
-import { Fragment, useEffect, useMemo, useState } from "react";
+import { Fragment, useId, useEffect, useMemo, useState } from "react";
 import { attachGoogleSpendCampaigns, attachMetaSpendCampaigns, combineCampaignRows, type GoogleSpendCampaign, type ReportCampaign } from "@/lib/marketing/campaign-results";
 import type { MetaSpendCampaign } from "@/lib/marketing/meta-spend-breakdown";
 import { FacebookCampaignReportTable, GoogleCampaignReportTable } from "./CampaignReportTables";
@@ -46,6 +46,7 @@ const keyFor = (source: Source, id: string | null, name: string) => `${source}|$
 export function CampaignResultsReport({ from, to, source, rangeLabel, outcomes }: {
   from: string; to: string; source: ReportSource; rangeLabel: string; outcomes: Outcomes;
 }) {
+  const headingId = useId();
   const query = new URLSearchParams({ from, to, source }).toString();
   const [data, setData] = useState<{ query: string; leads: LeadData | null; metric: Metric | null; leadError: boolean; metricError: boolean } | null>(null);
   const [refresh, setRefresh] = useState(0);
@@ -122,10 +123,10 @@ export function CampaignResultsReport({ from, to, source, rangeLabel, outcomes }
   const totalLeads = totalForms !== null && metric ? totalForms + metric.googleLsaLeadCount : null;
   const totalRevenue = outcomes.orderDataAvailable && metric?.moegoDataAvailable ? outcomes.totalNetPaidCents : null;
 
-  return <section aria-labelledby="campaign-results-heading" className="pp-marketing-campaign-results space-y-4">
+  return <section aria-labelledby={headingId} className="pp-marketing-campaign-results space-y-4">
     <div className="flex flex-wrap items-start justify-between gap-3">
       <div>
-        <h2 id="campaign-results-heading" className="text-lg font-semibold text-gray-900">Campaign results</h2>
+        <h2 id={headingId} className="text-lg font-semibold text-gray-900">Campaign results</h2>
         <p className="mt-1 text-sm text-gray-600">Ad spend, leads, cost per lead, and MoeGo outcomes for {rangeLabel}.</p>
       </div>
       <div className="flex w-full items-start gap-2 print:hidden">

@@ -21,7 +21,7 @@ test("campaign results render as one primary report table with honest loading va
   assert.equal((markup.match(/<table\b/g) ?? []).length, 1);
   assert.match(markup, /Website forms/);
   assert.match(markup, /MoeGo linked/);
-  assert.match(markup, /Net paid after form/);
+  assert.match(markup, /Net paid after lead/);
   assert.match(markup, /Daycare/);
   assert.match(markup, /Loading spend and website forms/);
 });

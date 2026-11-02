@@ -5,11 +5,11 @@ import { MetaCreativePerformance } from "./evaluate/MetaCreativePerformance";
 import { loadLeadOutcomes } from "./ad-reporting/LeadOutcomesReport";
 import { CampaignResultsReport } from "./ad-reporting/CampaignResultsReport";
 import { CampaignReportFilters } from "./ad-reporting/CampaignReportFilters";
-import { reportingRange } from "./ad-reporting/report-range";
+import { comparisonRange, reportingRange } from "./ad-reporting/report-range";
 import { Suspense } from "react";
 import type { ReportSource } from "./ad-reporting/report-range";
 
-type SearchParams = { view?: string; month?: string; year?: string; range?: string; source?: string; submissionStart?: string; submissionEnd?: string; page?: string; days?: string; from?: string; to?: string; campaign?: string; sort?: string; dir?: string };
+type SearchParams = { compare?: string; compareFrom?: string; compareTo?: string; view?: string; month?: string; year?: string; range?: string; source?: string; submissionStart?: string; submissionEnd?: string; page?: string; days?: string; from?: string; to?: string; campaign?: string; sort?: string; dir?: string };
 
 async function Results({ from, to, source, rangeLabel }: { from: string; to: string; source: ReportSource; rangeLabel: string }) {
   const outcomes = await loadLeadOutcomes({ from, to, source });
@@ -26,6 +26,7 @@ export default async function MarketingPage({ searchParams }: { searchParams: Pr
   }
   const creatives = query.view === "creatives";
   const report = reportingRange(query);
+  const comparison = comparisonRange(report, query);
   return <div className={!creatives ? "pp-marketing-print-report" : undefined}>
     <nav aria-label="Marketing views" className="mb-6 flex flex-wrap items-center justify-between gap-3 border-b border-gray-200 pb-4 print:hidden">
       <div className="flex flex-wrap gap-2">
@@ -39,13 +40,19 @@ export default async function MarketingPage({ searchParams }: { searchParams: Pr
       </p>
       <div className="print:hidden">
         <Suspense fallback={<p className="mb-6 text-sm text-gray-500">Loading filters…</p>}>
-          <CampaignReportFilters from={report.from} to={report.to} source={report.source} days={report.days} />
+          <CampaignReportFilters key={`${report.from}|${report.to}|${report.source}|${comparison?.mode}|${comparison?.from}|${comparison?.to}`} comparison={comparison} from={report.from} to={report.to} source={report.source} days={report.days} />
         </Suspense>
       </div>
       <p className="mb-5 text-sm text-gray-600">Showing <strong>Pet Resort and Mobile Grooming</strong> · {report.label}</p>
       <Suspense fallback={<p className="text-sm text-gray-500">Loading campaign results…</p>}>
         <Results from={report.from} to={report.to} source={report.source} rangeLabel={report.label} />
       </Suspense>
+      {comparison && <div className="mt-8 border-t-2 border-gray-200 pt-6">
+        <p className="mb-4 text-sm font-semibold text-gray-800">Compare to: {comparison.label} · {comparison.from} to {comparison.to}</p>
+        <Suspense fallback={<p className="text-sm text-gray-500">Loading comparison results…</p>}>
+          <Results from={comparison.from} to={comparison.to} source={report.source} rangeLabel={comparison.label + ': ' + comparison.from + ' to ' + comparison.to} />
+        </Suspense>
+      </div>}
     </>}
   </div>;
 }
