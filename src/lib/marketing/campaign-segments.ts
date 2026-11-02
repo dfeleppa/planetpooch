@@ -32,3 +32,6 @@ export function segmentForCampaign(row: Pick<CampaignWithSpend, "source" | "id" 
 export function groupCampaignSegments(rows: CampaignWithSpend[], catalog: SegmentCampaign[]) {
   return SEGMENTS.map((segment) => ({ ...segment, campaigns: rows.filter((row) => segmentForCampaign(row, catalog) === segment.value) })).filter((group) => group.campaigns.length > 0);
 }
+
+/** Legacy lead exports put phone numbers in the campaign ID column. */
+export const isPhoneCampaignId = (id: string) => /^[+\d ()-]+$/.test(id) && [10, 11].includes(id.replace(/\D/g, "").length);

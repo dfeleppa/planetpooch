@@ -46,3 +46,11 @@ test("follow-up excludes booked inquiries and displays pending status and contac
   assert.match(markup, /tel:5551234567/);
   assert.doesNotMatch(markup, /Booked Customer/);
 });
+import { CampaignSegmentAssignments } from "../src/app/(marketing)/marketing/CampaignSegmentAssignments";
+test("assignment list has one global save button rather than one per campaign", () => {
+  const campaigns = ["A", "B"].map((id) => ({source: "meta", id, name: id, aliases: [], segment: "unassigned" as const, saved: false}));
+  const markup = renderToStaticMarkup(createElement(AppRouterContext.Provider, { value: {} as never }, createElement(CampaignSegmentAssignments, { campaigns })));
+  assert.equal((markup.match(/<button/g) ?? []).length, 1);
+  assert.match(markup, /Save all/);
+  assert.match(markup, /including those hidden by search/);
+});

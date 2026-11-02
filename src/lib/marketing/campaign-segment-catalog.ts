@@ -1,7 +1,7 @@
 import { cache } from "react";
 import { prisma } from "@/lib/prisma";
 import { attributionText, classifyLeadAttribution, type SubmissionAttribution } from "./lead-attribution";
-import { SEGMENTS, campaignIdentity, normalizeCampaignName, suggestedSegment, type SegmentCampaign } from "./campaign-segments";
+import { SEGMENTS, isPhoneCampaignId, campaignIdentity, normalizeCampaignName, suggestedSegment, type SegmentCampaign } from "./campaign-segments";
 
 /** All imported campaigns, plus historical website campaign tags without a platform match. */
 export const getCampaignSegmentCatalog = cache(async (): Promise<SegmentCampaign[]> => {
@@ -19,7 +19,7 @@ export const getCampaignSegmentCatalog = cache(async (): Promise<SegmentCampaign
     if (!catalog.has(key)) catalog.set(key, { source, id, name, aliases: [], segment: suggestedSegment(name), saved: false });
   };
   for (const row of meta) add("meta", row.campaignId!, row.campaignName || row.campaignId!);
-  for (const row of facebookImports) if (row.campaignId) add("meta", row.campaignId, row.campaign);
+  for (const row of facebookImports) if (row.campaignId && !isPhoneCampaignId(row.campaignId)) add("meta", row.campaignId, row.campaign);
   for (const row of googleAssignments) add("google-ads", row.campaignId, row.campaign);
   for (const row of google) if (row.campaignId) add("google-ads", row.campaignId, row.campaign);
   const platformRows = [...catalog.values()];

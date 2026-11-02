@@ -15,3 +15,10 @@ test("saved segments override suggestions for IDs and legacy tags, within their 
   assert.deepEqual(groups.map((row) => row.value), ["in-house-grooming", "daycare"]);
   assert.equal(groups.flatMap((row) => row.campaigns).length, rows.length);
 });
+import { isPhoneCampaignId } from "../src/lib/marketing/campaign-segments";
+test("legacy phone IDs are excluded without excluding real Meta IDs or campaign tags", () => {
+  assert.equal(isPhoneCampaignId("+1 555-123-4567"), true);
+  assert.equal(isPhoneCampaignId("555-123-4567"), true);
+  assert.equal(isPhoneCampaignId("120252206425970779"), false);
+  assert.equal(isPhoneCampaignId("daycare_2026"), false);
+});
