@@ -184,6 +184,7 @@ export const KPI_SEGMENTS: KpiSegmentDef[] = [
       { key: "revenue", label: "Revenue", section: "ACTUALS", format: "currency" },
       { key: "upsells", label: "Upsells", section: "ACTUALS", format: "currency" },
       { key: "total_pets_serviced", label: "Total Pets Serviced", section: "ACTUALS", format: "number" },
+      { key: "first_time_pets", label: "First-Time Grooming Pets", section: "ACTUALS", format: "number" },
     ],
   },
 ];

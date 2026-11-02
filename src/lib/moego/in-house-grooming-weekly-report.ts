@@ -1,3 +1,4 @@
+import { countFirstTimeGroomingPets } from "./first-time-grooming-pets";
 import { KpiSegment, Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { addWeeks, fromWeekParam, toWeekParam } from "@/lib/week";
@@ -15,6 +16,7 @@ const IN_HOUSE_GROOMING_KPI_METRICS = {
   revenue: "revenue",
   upsells: "upsells",
   totalPetsServiced: "total_pets_serviced",
+  firstTimePets: "first_time_pets",
 } as const;
 
 const COMPLETED_DATE_CANDIDATE_LOOKBACK_WEEKS = 26;
@@ -28,6 +30,7 @@ export type WeeklyInHouseGroomingReport = {
   groomingAppointments: number;
   groomingAppointmentsInCompletedWindow: number;
   totalPetsServiced: number;
+  firstTimePets: number;
   totalNetSalesCents: number;
   upsellsCents: number;
   ordersCompletedInWindow: number;
@@ -42,6 +45,7 @@ export type WeeklyInHouseGroomingKpiValues = {
   totalNetSalesCents: number;
   upsellsCents?: number;
   totalPetsServiced: number;
+  firstTimePets?: number;
 };
 
 type OrderMoney = {
@@ -146,7 +150,8 @@ function isCompletedTimeInWindow(
 async function listFinishedAppointments(
   start: Date,
   end: Date,
-  businessId: string
+  businessId: string,
+  customerIds?: string[]
 ): Promise<MoegoAppointmentRow[]> {
   const appointments: MoegoAppointmentRow[] = [];
   for await (const page of streamAppointments(
@@ -156,6 +161,7 @@ async function listFinishedAppointments(
         endTime: end.toISOString(),
       },
       statuses: ["FINISHED"],
+      ...(customerIds ? { customerIds } : {}),
     },
     [businessId]
   )) {
@@ -247,6 +253,24 @@ export async function buildWeeklyInHouseGroomingReport(options?: {
     return isCompletedTimeInWindow(order, start, end);
   });
 
+  // Visit dates determine first-time status; payment dates determine the KPI cohort.
+  const customerIds = [...new Set(groomingAppointmentsInCompletedWindow.map(a => a.customerId).filter((id): id is string => Boolean(id)))];
+  const historyEnd = new Date(Math.max(end.getTime(), ...groomingAppointmentsInCompletedWindow.map(a => {
+    const date = parseDate(a.duration?.startTime);
+    if (!date || !a.customerId) throw new Error("Cannot determine first-time grooming without appointment date and customer ID");
+    return date.getTime() + 1;
+  })));
+  const history: MoegoAppointmentRow[] = [];
+  for (let offset = 0; offset < customerIds.length; offset += 50) {
+    history.push(...await listFinishedAppointments(
+      new Date("2000-01-01T00:00:00.000Z"), historyEnd, businessId,
+      customerIds.slice(offset, offset + 50)
+    ));
+  }
+  const firstTimePets = countFirstTimeGroomingPets(
+    history, groomingAppointmentsInCompletedWindow, isGroomingService
+  );
+
   for (const appointment of groomingAppointmentsInCompletedWindow) {
     const allLines = serviceDetails(appointment);
     const order = appointment.orderId
@@ -289,6 +313,7 @@ export async function buildWeeklyInHouseGroomingReport(options?: {
     groomingAppointments: groomingAppointments.length,
     groomingAppointmentsInCompletedWindow: groomingAppointmentsInCompletedWindow.length,
     totalPetsServiced: totalPetsServiced.size,
+    firstTimePets,
     totalNetSalesCents,
     upsellsCents,
     ordersCompletedInWindow: countedOrderIds.size,
@@ -309,7 +334,7 @@ export async function upsertWeeklyInHouseGroomingKpis(
   values: WeeklyInHouseGroomingKpiValues
 ): Promise<void> {
   const weekStart = new Date(`${values.weekStart}T00:00:00.000Z`);
-  const rows = [
+  const rows: { metricKey: string; value: number }[] = [
     {
       metricKey: IN_HOUSE_GROOMING_KPI_METRICS.revenue,
       value: moneyValue(values.totalNetSalesCents),
@@ -323,6 +348,11 @@ export async function upsertWeeklyInHouseGroomingKpis(
       value: numberValue(values.totalPetsServiced),
     },
   ];
+
+  if (values.firstTimePets !== undefined) rows.push({
+    metricKey: IN_HOUSE_GROOMING_KPI_METRICS.firstTimePets,
+    value: numberValue(values.firstTimePets),
+  });
 
   await prisma.$transaction(
     rows.map((row) =>
@@ -358,6 +388,7 @@ export async function syncWeeklyInHouseGroomingKpis(options?: {
     totalNetSalesCents: report.totalNetSalesCents,
     upsellsCents: report.upsellsCents,
     totalPetsServiced: report.totalPetsServiced,
+    firstTimePets: report.firstTimePets,
   });
 
   return report;

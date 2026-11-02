@@ -95,6 +95,7 @@ type InHouseGroomingImportReport = {
   groomingAppointments: number;
   groomingAppointmentsInCompletedWindow: number;
   totalPetsServiced: number;
+  firstTimePets: number;
   totalNetSalesCents: number;
   upsellsCents: number;
   ordersCompletedInWindow: number;
@@ -282,6 +283,7 @@ const QUARTER_METRIC_LABELS: Record<string, string> = {
   "IN_HOUSE_GROOMING:revenue": "Rev.",
   "IN_HOUSE_GROOMING:upsells": "Upsells",
   "IN_HOUSE_GROOMING:total_pets_serviced": "Total\nPets",
+  "IN_HOUSE_GROOMING:first_time_pets": "First-Time\nPets",
 };
 
 const PRIMARY_QUARTER_KPI_ORDER = [
@@ -293,6 +295,7 @@ const PRIMARY_QUARTER_KPI_ORDER = [
   "DAYCARE:evaluations",
   "IN_HOUSE_GROOMING:revenue",
   "IN_HOUSE_GROOMING:total_pets_serviced",
+  "IN_HOUSE_GROOMING:first_time_pets",
 ] as const;
 
 const PRIMARY_QUARTER_KPI_KEYS = new Set<string>(PRIMARY_QUARTER_KPI_ORDER);
@@ -680,7 +683,7 @@ export function KpiView({
         const report = json.report as InHouseGroomingImportReport;
         setImportMessage(
           withImportedAt(
-            `Imported ${report.totalPetsServiced} pets serviced, ${dollars(report.totalNetSalesCents)} grooming net sales, and ${dollars(report.upsellsCents)} upsells from ${report.ordersCompletedInWindow} completed grooming orders in the selected week.`,
+            `Imported ${report.totalPetsServiced} pets serviced (${report.firstTimePets} first-time grooming pets), ${dollars(report.totalNetSalesCents)} grooming net sales, and ${dollars(report.upsellsCents)} upsells from ${report.ordersCompletedInWindow} completed grooming orders in the selected week.`,
             importedAt
           )
         );
