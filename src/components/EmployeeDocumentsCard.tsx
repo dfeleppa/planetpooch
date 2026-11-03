@@ -1,5 +1,7 @@
 "use client";
 
+import { readApiResponse } from "@/lib/api-response";
+
 import { useId, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
@@ -102,7 +104,7 @@ export function EmployeeDocumentsCard({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ category: cat, note: issueNote.trim() }),
       });
-      const data = await res.json();
+      const data = await readApiResponse(res);
       if (!res.ok) throw new Error(data.error || "Failed to save");
       setIssues(issues.filter((i) => i.category !== cat).concat(data));
       setEditingIssue(null);
@@ -123,7 +125,7 @@ export function EmployeeDocumentsCard({
         `/api/employees/${employeeId}/document-issues?category=${cat}`,
         { method: "DELETE" }
       );
-      const data = await res.json();
+      const data = await readApiResponse(res);
       if (!res.ok) throw new Error(data.error || "Failed to resolve");
       setIssues(issues.filter((i) => i.category !== cat));
       router.refresh();
@@ -143,7 +145,7 @@ export function EmployeeDocumentsCard({
       const res = await fetch(`/api/employees/${employeeId}/documents/${docId}`, {
         method: "DELETE",
       });
-      const data = await res.json();
+      const data = await readApiResponse(res);
       if (!res.ok) throw new Error(data.error || "Failed to delete");
       setDocuments(documents.filter((d) => d.id !== docId));
       router.refresh();
@@ -164,7 +166,7 @@ export function EmployeeDocumentsCard({
         body: JSON.stringify({ ssCardNotNeeded: !ssCardNotNeeded }),
       });
       if (!res.ok) {
-        const data = await res.json();
+        const data = await readApiResponse(res);
         throw new Error(data.error || "Failed to update");
       }
       setSsCardNotNeeded(!ssCardNotNeeded);

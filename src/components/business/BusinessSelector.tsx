@@ -1,5 +1,7 @@
 "use client";
 
+import { readApiResponse } from "@/lib/api-response";
+
 import { useState } from "react";
 import { usePathname } from "next/navigation";
 import { useBusiness } from "./BusinessProvider";
@@ -29,7 +31,7 @@ export function BusinessSelector({ options, showOnModules = false }: { options: 
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ company, href: window.location.pathname + window.location.search }),
       });
-      const result = await response.json();
+      const result = await readApiResponse(response);
       if (!response.ok) throw new Error(result.error ?? "Unable to switch businesses");
       // A full navigation clears prefetched pages and all business-specific forms.
       window.location.assign(result.href);

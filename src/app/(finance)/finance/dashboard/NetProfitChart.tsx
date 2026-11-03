@@ -1,5 +1,7 @@
 "use client";
 
+import { readApiResponse } from "@/lib/api-response";
+
 import { useEffect, useState } from "react";
 
 type Bucket = { date: string; profitCents: number };
@@ -15,7 +17,7 @@ export function NetProfitChart({ from, to, business }: { from: string; to: strin
     fetch(`/api/finance/moego/revenue?${params}`, { signal: controller.signal, cache: "no-store" })
       .then(async (response) => {
         if (!response.ok) throw new Error("Unable to load net profit");
-        return response.json() as Promise<ChartData>;
+        return readApiResponse(response) as Promise<ChartData>;
       })
       .then(setData)
       .catch((cause: unknown) => {

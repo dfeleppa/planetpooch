@@ -1,5 +1,7 @@
 "use client";
 
+import { readApiResponse } from "@/lib/api-response";
+
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
@@ -42,7 +44,7 @@ export function EndEmploymentDialog({
     if (!needsReplacement || managers.length > 0) return;
     setLoadingManagers(true);
     fetch("/api/users")
-      .then((r) => r.json())
+      .then((r) => readApiResponse(r))
       .then((data: ManagerOption[]) => {
         setManagers(data.filter((u) => u.id !== employeeId));
       })
@@ -76,7 +78,7 @@ export function EndEmploymentDialog({
           }),
         }
       );
-      const data = await res.json();
+      const data = await readApiResponse(res);
       if (!res.ok) {
         if (data.requiresReplacement) {
           setNeedsReplacement(true);

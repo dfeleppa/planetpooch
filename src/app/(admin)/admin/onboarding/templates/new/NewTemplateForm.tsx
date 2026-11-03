@@ -1,5 +1,7 @@
 "use client";
 
+import { readApiResponse } from "@/lib/api-response";
+
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Card, CardContent } from "@/components/ui/card";
@@ -24,10 +26,10 @@ export function NewTemplateForm() {
         body: JSON.stringify({ name, description }),
       });
       if (!res.ok) {
-        const data = await res.json();
+        const data = await readApiResponse(res);
         throw new Error(data.error || "Failed to create template");
       }
-      const template = await res.json();
+      const template = await readApiResponse(res);
       router.push(`/admin/onboarding/templates/${template.id}`);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Something went wrong");

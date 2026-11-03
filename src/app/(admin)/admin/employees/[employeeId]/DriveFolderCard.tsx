@@ -1,5 +1,7 @@
 "use client";
 
+import { readApiResponse } from "@/lib/api-response";
+
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
@@ -34,7 +36,7 @@ export function DriveFolderCard({
       const res = await fetch(`/api/employees/${employeeId}/drive-folder`, {
         method: "POST",
       });
-      const data = await res.json();
+      const data = await readApiResponse(res);
       if (!res.ok) throw new Error(data.error || "Failed to create folder");
       router.refresh();
     } catch (err) {

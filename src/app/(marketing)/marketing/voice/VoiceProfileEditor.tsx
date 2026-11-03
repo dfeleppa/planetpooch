@@ -1,5 +1,7 @@
 "use client";
 
+import { readApiResponse } from "@/lib/api-response";
+
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
@@ -125,10 +127,10 @@ export function VoiceProfileEditor({ initial }: Props) {
         }),
       });
       if (!res.ok) {
-        const data = await res.json().catch(() => ({}));
+        const data = await readApiResponse(res);
         throw new Error(data.error || "Failed to save voice profile");
       }
-      const saved = await res.json();
+      const saved = await readApiResponse(res);
       setSavedVersion(saved.version);
       router.refresh();
     } catch (err) {

@@ -1,5 +1,7 @@
 "use client";
 
+import { readApiResponse } from "@/lib/api-response";
+
 import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Badge } from "@/components/ui/badge";
@@ -76,7 +78,7 @@ export function AdLinkPicker({
         body: JSON.stringify({ adId, scriptId }),
       });
       if (!res.ok) {
-        const data = (await res.json().catch(() => ({}))) as {
+        const data = (await readApiResponse(res)) as {
           error?: string;
         };
         setError(data.error ?? `Request failed (${res.status})`);

@@ -1,5 +1,7 @@
 "use client";
 
+import { readApiResponse } from "@/lib/api-response";
+
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
@@ -101,7 +103,7 @@ export function IdeaEditor({ idea }: { idea: IdeaProp }) {
         }),
       });
       if (!res.ok) {
-        const data = await res.json().catch(() => ({}));
+        const data = await readApiResponse(res);
         throw new Error(data.error || "Failed to save");
       }
       setSavedAt(new Date().toLocaleTimeString());
@@ -128,7 +130,7 @@ export function IdeaEditor({ idea }: { idea: IdeaProp }) {
         method: "DELETE",
       });
       if (!res.ok) {
-        const data = await res.json().catch(() => ({}));
+        const data = await readApiResponse(res);
         throw new Error(data.error || "Failed to delete");
       }
       router.push("/marketing/create");

@@ -1,5 +1,8 @@
 "use client";
 
+import { readApiResponse } from "@/lib/api-response";
+import { csvUploadError, MAX_CAMPAIGN_CSV_BYTES } from "@/lib/csv-upload";
+
 import {
   useCallback,
   useEffect,
@@ -178,7 +181,7 @@ function CampaignReportTable({
 
     try {
       const res = await fetch(`${apiPath}?${params.toString()}`);
-      const json = (await res.json().catch(() => ({}))) as {
+      const json = (await readApiResponse(res)) as {
         rows?: ApiCampaignReportRow[];
         error?: string;
         complete?: boolean;
@@ -247,6 +250,11 @@ function CampaignReportTable({
       return;
     }
 
+    const validationError = csvUploadError(file, MAX_CAMPAIGN_CSV_BYTES);
+    if (validationError) {
+      setError(validationError);
+      return;
+    }
     setImporting(true);
     setSaved(false);
     setError(null);
@@ -262,7 +270,7 @@ function CampaignReportTable({
         method: "POST",
         body: form,
       });
-      const json = (await res.json().catch(() => ({}))) as {
+      const json = (await readApiResponse(res)) as {
         rows?: ApiCampaignReportRow[];
         error?: string;
       };

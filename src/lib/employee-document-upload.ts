@@ -1,4 +1,5 @@
 import { ALLOWED_MIME_TYPES, MAX_FILE_SIZE_BYTES, MAX_SOURCE_IMAGE_BYTES } from "./employee-documents";
+import { readApiResponse } from "./api-response";
 
 const SIZE_ERROR = "This file is too large. Choose a PDF or image under 4 MB, or a photo under 20 MB that can be resized automatically.";
 
@@ -46,7 +47,7 @@ export async function prepareEmployeeDocument(file: File): Promise<File> {
 /** Proxies can return text/HTML errors before the JSON route handler runs. */
 export async function readDocumentUploadResponse(response: Response) {
   if (response.status === 413) throw new Error(SIZE_ERROR);
-  const data = await response.json().catch(() => null);
+  const data = await readApiResponse(response);
   if (!response.ok) {
     throw new Error(typeof data?.error === "string" ? data.error : "Upload failed. Please try again.");
   }

@@ -1,5 +1,7 @@
 "use client";
 
+import { readApiResponse } from "@/lib/api-response";
+
 import { useState, useEffect, useCallback, useRef } from "react";
 
 interface LessonNotesProps {
@@ -15,7 +17,7 @@ export function LessonNotes({ lessonId }: LessonNotesProps) {
 
   useEffect(() => {
     fetch(`/api/lessons/${lessonId}/notes`)
-      .then((res) => res.json())
+      .then((res) => readApiResponse(res))
       .then((data) => {
         setContent(data.content || "");
         if (data.content) setExpanded(true);

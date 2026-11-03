@@ -1,5 +1,7 @@
 "use client";
 
+import { readApiResponse } from "@/lib/api-response";
+
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -147,7 +149,7 @@ export function ScriptEditor({ script }: { script: ScriptProp }) {
         }),
       });
       if (!scriptRes.ok) {
-        const data = await scriptRes.json().catch(() => ({}));
+        const data = await readApiResponse(scriptRes);
         throw new Error(data.error || "Failed to save script");
       }
 
@@ -174,7 +176,7 @@ export function ScriptEditor({ script }: { script: ScriptProp }) {
           }),
         });
         if (!res.ok) {
-          const data = await res.json().catch(() => ({}));
+          const data = await readApiResponse(res);
           throw new Error(data.error || `Failed to save hook ${h.label}`);
         }
       }
@@ -203,7 +205,7 @@ export function ScriptEditor({ script }: { script: ScriptProp }) {
         method: "DELETE",
       });
       if (!res.ok) {
-        const data = await res.json().catch(() => ({}));
+        const data = await readApiResponse(res);
         throw new Error(data.error || "Failed to delete");
       }
       router.push(`/marketing/create/${script.ideaId}`);
@@ -220,7 +222,7 @@ export function ScriptEditor({ script }: { script: ScriptProp }) {
         method: "DELETE",
       });
       if (!res.ok) {
-        const data = await res.json().catch(() => ({}));
+        const data = await readApiResponse(res);
         throw new Error(data.error || "Failed to delete hook");
       }
       setHooks((prev) => prev.filter((h) => h.id !== hookId));
@@ -253,7 +255,7 @@ export function ScriptEditor({ script }: { script: ScriptProp }) {
         }
       );
       if (!res.ok) {
-        const data = await res.json().catch(() => ({}));
+        const data = await readApiResponse(res);
         throw new Error(data.error || "Failed to generate variants");
       }
       router.refresh();

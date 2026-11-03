@@ -1,5 +1,7 @@
 "use client";
 
+import { readApiResponse } from "@/lib/api-response";
+
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
@@ -89,7 +91,7 @@ export function EsignRequestsCard({
           driveFileRef: driveFileRef.trim(),
         }),
       });
-      const data = await res.json();
+      const data = await readApiResponse(res);
       if (!res.ok) throw new Error(data.error || "Failed to register");
       setRequests([data, ...requests]);
       setDriveFileRef("");
@@ -125,7 +127,7 @@ export function EsignRequestsCard({
         const res = await fetch(`/api/esign-requests/${requestId}`, {
           method: "DELETE",
         });
-        const data = await res.json();
+        const data = await readApiResponse(res);
         if (!res.ok) throw new Error(data.error || "Failed to delete");
         setRequests(requests.filter((r) => r.id !== requestId));
         setInfo("eSign request deleted.");
@@ -138,7 +140,7 @@ export function EsignRequestsCard({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ action }),
       });
-      const data = await res.json();
+      const data = await readApiResponse(res);
       if (!res.ok) throw new Error(data.error || "Failed to update");
 
       const updated: EsignRequest = data;

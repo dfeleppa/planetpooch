@@ -1,5 +1,7 @@
 "use client";
 
+import { readApiResponse } from "@/lib/api-response";
+
 import Link from "next/link";
 import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
@@ -85,7 +87,7 @@ export function CashManagementDashboard({ mobile, petResort, safeCents, initialS
         body: JSON.stringify({ direction: adjustDirection, amountCents, note: adjustNote,
           requestId: adjustmentRequestId.current }),
       });
-      const result = await response.json();
+      const result = await readApiResponse(response);
       if (!response.ok) throw new Error(result.error ?? "Unable to record adjustment.");
       adjustmentRequestId.current = null;
       setAdjustAmount(""); setAdjustNote("");
@@ -123,7 +125,7 @@ export function CashManagementDashboard({ mobile, petResort, safeCents, initialS
         body: JSON.stringify({ id: editingCash.id, cashDate: editDate, amountCents, note: editNote,
           original: { cashDate: editingCash.cashDate, amountCents: editingCash.amountCents, note: editingCash.note } }),
       });
-      const result = await response.json();
+      const result = await readApiResponse(response);
       if (!response.ok) throw new Error(result.error ?? "Unable to update daily cash.");
       setEditingCash(null);
       setEditMessage("Daily cash entry updated.");
@@ -154,7 +156,7 @@ export function CashManagementDashboard({ mobile, petResort, safeCents, initialS
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ source: "mobile-grooming", amountCents, requestId: requestId.current }),
       });
-      const result = await response.json();
+      const result = await readApiResponse(response);
       if (!response.ok) throw new Error(result.error ?? "Unable to record deposit.");
       requestId.current = null;
       setAmount("");

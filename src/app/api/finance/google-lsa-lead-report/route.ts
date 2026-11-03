@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSession, hasMarketingAccess } from "@/lib/auth-helpers";
 import { prisma } from "@/lib/prisma";
+import { csvUploadError, MAX_LSA_CSV_BYTES } from "@/lib/csv-upload";
 import { getGoogleLsaLeads, GOOGLE_LSA_LEAD_COST_CENTS } from "@/lib/marketing/google-lsa-leads";
 
 const VALID_BUSINESSES = new Set([
@@ -11,7 +12,6 @@ const VALID_BUSINESSES = new Set([
   "mobile-grooming-manual",
   "pet-resort-manual",
 ]);
-const MAX_CSV_BYTES = 2_000_000;
 const MAX_ROWS = 5_000;
 
 type ParsedCsvRow = Record<string, string>;
@@ -105,7 +105,7 @@ function cleanRows(csvText: string) {
     leadReceived: cleanString(row["Lead received"]),
     lastActivity: cleanString(row["Last activity"]),
     totalPaidCents: cleanCents(row["Total paid"]),
-  }));
+  })).filter((row) => row.customer || row.jobType || row.searchIntent || row.location || row.leadType || row.chargeStatus || row.leadReceived || row.lastActivity || row.totalPaidCents !== null);
 }
 
 export async function GET(req: NextRequest) {
@@ -165,9 +165,8 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  if (file.size > MAX_CSV_BYTES) {
-    return NextResponse.json({ error: "CSV file must be 2 MB or smaller." }, { status: 413 });
-  }
+  const uploadError = csvUploadError(file, MAX_LSA_CSV_BYTES);
+  if (uploadError) return NextResponse.json({ error: uploadError }, { status: file.size > MAX_LSA_CSV_BYTES ? 413 : 400 });
 
   const rows = cleanRows(await file.text());
   if (rows.length === 0 || rows.length > MAX_ROWS) {

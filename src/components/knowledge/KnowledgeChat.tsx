@@ -1,5 +1,7 @@
 "use client";
 
+import { readApiResponse } from "@/lib/api-response";
+
 import Link from "next/link";
 import { FormEvent, useEffect, useRef, useState } from "react";
 import { DEFAULT_KNOWLEDGE_CHAT_MODEL, KNOWLEDGE_CHAT_MODEL_CONFIG, KNOWLEDGE_CHAT_MODEL_IDS, type KnowledgeChatModel } from "@/lib/knowledge-chat-models";
@@ -72,7 +74,7 @@ export function KnowledgeChat({ compact = false, owner = true, onSourceNavigate 
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ model, messages: next.slice(-9).map(({ role, content }) => ({ role, content })) }),
       });
-      const data = await response.json();
+      const data = await readApiResponse(response);
       if (!response.ok) throw new Error(data.error || "The assistant is unavailable right now.");
       setMessages([...next, { role: "assistant", content: data.answer, sources: data.sources }]);
     } catch (cause) {

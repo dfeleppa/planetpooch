@@ -1,5 +1,7 @@
 "use client";
 
+import { readApiResponse } from "@/lib/api-response";
+
 import { useEffect, useState } from "react";
 
 type Entry = {
@@ -37,7 +39,7 @@ export function SafeBalanceVerification({ expectedCents, onLatestVerificationCha
     let active = true;
     fetch("/api/cash-management/safe-verifications", { cache: "no-store" })
       .then(async (response) => {
-        const result = await response.json();
+        const result = await readApiResponse(response);
         if (!response.ok) throw new Error(result.error ?? "Could not load change drawer verifications.");
         if (active) {
           setEntries(result.entries);
@@ -66,7 +68,7 @@ export function SafeBalanceVerification({ expectedCents, onLatestVerificationCha
         method: "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ countedCents, note }),
       });
-      const result = await response.json();
+      const result = await readApiResponse(response);
       if (!response.ok) throw new Error(result.error ?? "Could not save verification.");
       setEntries((current) => [result.entry, ...current].slice(0, 50));
       onLatestVerificationChange({ countedCents: result.entry.countedCents, verifiedAt: result.entry.verifiedAt });

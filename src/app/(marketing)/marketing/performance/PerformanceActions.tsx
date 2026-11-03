@@ -1,5 +1,7 @@
 "use client";
 
+import { readApiResponse } from "@/lib/api-response";
+
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
@@ -48,7 +50,7 @@ export function PerformanceActions() {
     setLoadingStatus(true);
     try {
       const res = await fetch("/api/marketing/performance/status");
-      const data = (await res.json()) as Status;
+      const data = (await readApiResponse(res)) as Status;
       setStatus(data);
     } catch (err) {
       setStatus({
@@ -74,7 +76,7 @@ export function PerformanceActions() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ days: 7 }),
       });
-      const data = (await res.json()) as
+      const data = (await readApiResponse(res)) as
         | {
             rowsFetched: number;
             rowsUpserted: number;

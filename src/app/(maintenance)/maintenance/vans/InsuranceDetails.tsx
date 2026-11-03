@@ -1,5 +1,7 @@
 "use client";
 
+import { readApiResponse } from "@/lib/api-response";
+
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 
@@ -22,7 +24,7 @@ export function InsuranceDetails({ number, insurance, expiry, canEdit }: {
         method: "PATCH", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ insuranceOnly: true, insuranceCarrier: draft.carrier, insuranceDeductible: draft.deductible, insurancePremium: draft.premium }),
       });
-      const result = await response.json();
+      const result = await readApiResponse(response);
       if (!response.ok) throw new Error(result.error || "Could not save insurance");
       setMessage(`Van ${number} insurance saved.`);
       router.refresh();

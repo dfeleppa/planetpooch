@@ -1,5 +1,7 @@
 "use client";
 
+import { readApiResponse } from "@/lib/api-response";
+
 import { useEffect, useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -40,7 +42,7 @@ export default function AuditLogPage() {
     if (action) params.set("action", action);
 
     const res = await fetch(`/api/audit-log?${params}`);
-    return (await res.json()) as { logs: AuditLog[]; pagination: Pagination };
+    return (await readApiResponse(res)) as { logs: AuditLog[]; pagination: Pagination };
   }
 
   async function loadLogs(page = 1) {

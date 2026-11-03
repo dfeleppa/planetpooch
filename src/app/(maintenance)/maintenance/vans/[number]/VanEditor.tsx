@@ -1,5 +1,7 @@
 "use client";
 
+import { readApiResponse } from "@/lib/api-response";
+
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
@@ -72,7 +74,7 @@ export function VanEditor({ number, van, records, canEdit }: { number: number; v
     event.preventDefault(); setError(""); setSuccess(""); setSaving(true);
     try {
       const response = await fetch(`/api/maintenance/vans/${number}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify(profile) });
-      const data = await response.json();
+      const data = await readApiResponse(response);
       if (!response.ok) throw new Error(data.error || "Could not save vehicle details");
       setSuccess("Vehicle details saved."); router.refresh();
     } catch (cause) { setError(cause instanceof Error ? cause.message : "Could not save vehicle details"); }
@@ -87,7 +89,7 @@ export function VanEditor({ number, van, records, canEdit }: { number: number; v
       const response = await fetch(`/api/maintenance/vans/${number}/records/${editingId}`, {
         method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify(record),
       });
-      const data = await response.json();
+      const data = await readApiResponse(response);
       if (!response.ok) throw new Error(data.error || "Could not update maintenance record");
       setRecord(emptyRecord); setSuccess("Maintenance record updated."); setEditingId(null); router.refresh();
     } catch (cause) { setError(cause instanceof Error ? cause.message : "Could not update maintenance record"); }

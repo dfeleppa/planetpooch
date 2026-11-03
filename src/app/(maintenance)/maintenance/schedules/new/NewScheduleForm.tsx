@@ -1,5 +1,7 @@
 "use client";
 
+import { readApiResponse } from "@/lib/api-response";
+
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Card, CardContent } from "@/components/ui/card";
@@ -81,11 +83,11 @@ export function NewScheduleForm({
       });
 
       if (!res.ok) {
-        const data = await res.json();
+        const data = await readApiResponse(res);
         throw new Error(data.error || "Failed to create schedule");
       }
 
-      const schedule = await res.json();
+      const schedule = await readApiResponse(res);
 
       // Add inventory requirements
       if (requirements.length > 0) {

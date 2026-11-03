@@ -1,5 +1,7 @@
 "use client";
 
+import { readApiResponse } from "@/lib/api-response";
+
 import { useCallback, useEffect, useState } from "react";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -67,7 +69,7 @@ export function ModuleVisibilityCard({ moduleId }: { moduleId: string }) {
   const fetchAssignments = useCallback(async () => {
     const res = await fetch(`/api/modules/${moduleId}/assignments`);
     if (!res.ok) return null;
-    return (await res.json()) as AssignmentsPayload;
+    return (await readApiResponse(res)) as AssignmentsPayload;
   }, [moduleId]);
 
   function applyPayload(payload: AssignmentsPayload) {

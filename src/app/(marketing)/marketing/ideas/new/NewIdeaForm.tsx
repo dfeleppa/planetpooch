@@ -1,5 +1,7 @@
 "use client";
 
+import { readApiResponse } from "@/lib/api-response";
+
 import { useState } from "react";
 import { useBusiness } from "@/components/business/BusinessProvider";
 import { useRouter } from "next/navigation";
@@ -58,7 +60,7 @@ export function NewIdeaForm() {
           notes,
         }),
       });
-      const data = await response.json().catch(() => ({}));
+      const data = await readApiResponse(response);
       if (!response.ok) throw new Error(data.error || "Failed to create brief");
       router.push(`/marketing/create/${data.id}`);
     } catch (err) {

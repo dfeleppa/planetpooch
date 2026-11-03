@@ -1,5 +1,7 @@
 "use client";
 
+import { readApiResponse } from "@/lib/api-response";
+
 import { useState } from "react";
 
 type Campaign = { id: string; name: string; business: string | null };
@@ -15,7 +17,7 @@ export function GoogleAdsSync({ from, to }: { from: string; to: string }) {
     try {
       const query = new URLSearchParams({ from, to });
       const response = await fetch(`/api/marketing/google-ads/campaigns?${query}`, { cache: "no-store" });
-      const data = await response.json();
+      const data = await readApiResponse(response);
       if (!response.ok) throw new Error(data.error ?? "Could not load Google Ads campaigns.");
       setCampaigns(data.campaigns);
       setMessage(data.campaigns.length ? "Assign each campaign to a division, then sync this date range." : "No Google Ads campaigns were returned for this date range.");
@@ -34,7 +36,7 @@ export function GoogleAdsSync({ from, to }: { from: string; to: string }) {
         method: "PUT", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ campaignId: campaign.id, campaign: campaign.name, business: business || null }),
       });
-      const data = await response.json();
+      const data = await readApiResponse(response);
       if (!response.ok) throw new Error(data.error ?? "Could not save campaign division.");
       setCampaigns((current) => current?.map((row) => row.id === campaign.id ? { ...row, business: business || null } : row) ?? null);
     } catch (error) {
@@ -51,7 +53,7 @@ export function GoogleAdsSync({ from, to }: { from: string; to: string }) {
       const response = await fetch("/api/marketing/google-ads/sync", {
         method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ from, to }),
       });
-      const data = await response.json();
+      const data = await readApiResponse(response);
       if (!response.ok) throw new Error(data.error ?? (data.unassigned?.length ? "Assign every campaign before syncing." : "Google Ads sync failed."));
       window.location.reload();
     } catch (error) {

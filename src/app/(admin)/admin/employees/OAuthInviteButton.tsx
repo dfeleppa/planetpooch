@@ -1,4 +1,6 @@
 "use client";
+
+import { readApiResponse } from "@/lib/api-response";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 
@@ -11,7 +13,7 @@ export function OAuthInviteButton({ employeeId }: { employeeId: string }) {
     try {
       const res = await fetch(`/api/employees/${employeeId}/oauth-invite`, { method: "POST" });
       if (!res.ok) throw new Error("Could not generate connection link.");
-      setUrl((await res.json()).url);
+      setUrl((await readApiResponse(res)).url);
     } catch (err) { setError((err as Error).message); }
     finally { setBusy(false); }
   }

@@ -1,7 +1,9 @@
 import { MAX_VAN_DOCUMENT_BYTES } from "@/lib/van-document-size";
 
 async function jpegBytes(file: File, maxDimension: number, quality: number): Promise<ArrayBuffer> {
-  const bitmap = await createImageBitmap(file);
+  const bitmap = await createImageBitmap(file).catch(() => {
+    throw new Error("This image could not be read. Choose a valid JPEG, PNG or WebP image.");
+  });
   try {
     const scale = Math.min(1, maxDimension / Math.max(bitmap.width, bitmap.height));
     const canvas = document.createElement("canvas");
@@ -22,6 +24,9 @@ async function jpegBytes(file: File, maxDimension: number, quality: number): Pro
 
 /** Keep supported small images intact; resize large camera photos before upload. */
 export async function prepareVanDocumentImage(file: File): Promise<File> {
+  if (!file.size) throw new Error("This file is empty. Choose another file.");
+  if (!["application/pdf", "image/jpeg", "image/png", "image/webp"].includes(file.type))
+    throw new Error("Choose a PDF, JPEG, PNG or WebP file.");
   if (!file.type.startsWith("image/")) return file;
   if (["image/jpeg", "image/png", "image/webp"].includes(file.type) && file.size <= MAX_VAN_DOCUMENT_BYTES) return file;
   for (const compression of [{ maxDimension: 3000, quality: 0.88 }, { maxDimension: 2400, quality: 0.78 }]) {

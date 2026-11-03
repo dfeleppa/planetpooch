@@ -1,5 +1,7 @@
 "use client";
 
+import { readApiResponse } from "@/lib/api-response";
+
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
@@ -69,7 +71,7 @@ export default function AdminModuleDetailPage() {
 
   async function loadModule() {
     const res = await fetch(`/api/modules/${moduleId}`);
-    const data = await res.json();
+    const data = await readApiResponse(res);
     setMod(data);
     setEditTitle(data.title);
     setEditDesc(data.description);

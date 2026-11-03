@@ -1,5 +1,7 @@
 "use client";
 
+import { readApiResponse } from "@/lib/api-response";
+
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Badge } from "@/components/ui/badge";
@@ -77,7 +79,7 @@ export function ContentAssetsSection({ ideaId, initialAssets }: { ideaId: string
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ type, model: "claude-haiku-4-5" }),
       });
-      const data = await response.json().catch(() => ({}));
+      const data = await readApiResponse(response);
       if (!response.ok) throw new Error(data.error || "Generation failed");
       const created = {
         ...data.asset,

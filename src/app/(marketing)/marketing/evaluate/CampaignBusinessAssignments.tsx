@@ -1,5 +1,7 @@
 "use client";
 
+import { readApiResponse } from "@/lib/api-response";
+
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import type { BusinessCompany } from "@/lib/business";
@@ -19,7 +21,7 @@ export function CampaignBusinessAssignments({ campaigns }: { campaigns: { id: st
         method: "PUT", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ campaignId, companies: value === "BOTH" ? ["RESORT", "GROOMING"] : [value] }),
       });
-      if (!response.ok) throw new Error((await response.json()).error ?? "Unable to save assignment");
+      if (!response.ok) throw new Error((await readApiResponse(response)).error ?? "Unable to save assignment");
       router.refresh();
     } catch (cause) { setError(cause instanceof Error ? cause.message : "Unable to save assignment"); }
     finally { setSaving(null); }

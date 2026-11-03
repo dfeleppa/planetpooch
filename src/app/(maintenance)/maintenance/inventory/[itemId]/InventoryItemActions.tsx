@@ -1,5 +1,7 @@
 "use client";
 
+import { readApiResponse } from "@/lib/api-response";
+
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
@@ -52,7 +54,7 @@ export function InventoryItemActions({
     let cancelled = false;
     setLoadingCategories(true);
     fetch(`/api/maintenance/inventory-categories?company=${company}`)
-      .then((res) => (res.ok ? res.json() : Promise.reject(new Error("Failed to load categories"))))
+      .then((res) => (res.ok ? readApiResponse(res) : Promise.reject(new Error("Failed to load categories"))))
       .then((data: Category[]) => {
         if (!cancelled) setCategories(data);
       })
@@ -104,7 +106,7 @@ export function InventoryItemActions({
         }),
       });
       if (!res.ok) {
-        const data = await res.json().catch(() => ({}));
+        const data = await readApiResponse(res);
         throw new Error(data.error || "Failed to update item");
       }
       setShowEdit(false);

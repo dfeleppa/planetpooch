@@ -1,5 +1,7 @@
 "use client";
 
+import { readApiResponse } from "@/lib/api-response";
+
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Tabs } from "@/components/ui/Tabs";
@@ -91,12 +93,12 @@ export function MoegoDashboard({ businesses, initialRange }: {
           { cache: "no-store" }
         );
         if (!res.ok) {
-          const body = (await res.json().catch(() => ({}))) as {
+          const body = (await readApiResponse(res)) as {
             error?: string;
           };
           throw new Error(body.error ?? `HTTP ${res.status}`);
         }
-        setMetrics((await res.json()) as MoegoMetrics);
+        setMetrics((await readApiResponse(res)) as MoegoMetrics);
       } catch (e) {
         setError(e instanceof Error ? e.message : "Failed to load metrics");
       }
@@ -137,12 +139,12 @@ export function MoegoDashboard({ businesses, initialRange }: {
       for (let i = 0; i < 60; i++) {
         const res = await fetch(url, { method: "POST" });
         if (!res.ok) {
-          const body = (await res.json().catch(() => ({}))) as {
+          const body = (await readApiResponse(res)) as {
             error?: string;
           };
           throw new Error(body.error ?? `HTTP ${res.status}`);
         }
-        const data = (await res.json()) as {
+        const data = (await readApiResponse(res)) as {
           caughtUp: boolean;
           chunks: number;
           customers: { upserted: number };
@@ -189,10 +191,10 @@ export function MoegoDashboard({ businesses, initialRange }: {
         cache: "no-store",
       });
       if (!res.ok) {
-        const body = (await res.json().catch(() => ({}))) as { error?: string };
+        const body = (await readApiResponse(res)) as { error?: string };
         throw new Error(body.error ?? `HTTP ${res.status}`);
       }
-      const data = (await res.json()) as { companies: DiscoveredCompany[] };
+      const data = (await readApiResponse(res)) as { companies: DiscoveredCompany[] };
       setCompanies(data.companies);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Discovery failed");
@@ -320,9 +322,7 @@ export function MoegoDashboard({ businesses, initialRange }: {
               if (res.ok) {
                 await runSync();
               } else {
-                const body = (await res
-                  .json()
-                  .catch(() => ({}))) as { error?: string };
+                const body = (await readApiResponse(res)) as { error?: string };
                 setError(body.error ?? `Reset failed: HTTP ${res.status}`);
               }
             }}

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSession, hasMarketingAccess } from "@/lib/auth-helpers";
 import { prisma } from "@/lib/prisma";
+import { csvUploadError, MAX_CAMPAIGN_CSV_BYTES } from "@/lib/csv-upload";
 
 const VALID_BUSINESSES = new Set([
   "all-businesses",
@@ -315,12 +316,18 @@ export async function POST(req: NextRequest) {
     );
   }
 
+  const uploadError = csvUploadError(file, MAX_CAMPAIGN_CSV_BYTES);
+  if (uploadError) return NextResponse.json({ error: uploadError }, { status: file.size > MAX_CAMPAIGN_CSV_BYTES ? 413 : 400 });
   const csvText = await file.text();
+  const parsedRows = cleanRows(cleanRowsFromCsv(csvText).filter((row) => cleanString(row.campaignId) || cleanString(row.campaign)));
+  if (!parsedRows.length) {
+    return NextResponse.json({ error: "No valid campaign rows were found. Choose a campaign CSV export with campaign names or IDs." }, { status: 400 });
+  }
   const rows = await replaceRows({
     business,
     periodStart,
     periodEnd,
-    rows: cleanRows(cleanRowsFromCsv(csvText)),
+    rows: parsedRows,
   });
 
   return NextResponse.json({ rows });

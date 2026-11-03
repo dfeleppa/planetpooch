@@ -1,5 +1,7 @@
 "use client";
 
+import { readApiResponse } from "@/lib/api-response";
+
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import type { KpiSegment } from "@prisma/client";
@@ -640,7 +642,7 @@ export function KpiView({
         body: JSON.stringify({ segment, weekStart: week, metrics }),
       });
       if (!res.ok) {
-        const json = await res.json().catch(() => ({}));
+        const json = await readApiResponse(res);
         alert(json.error ?? "Failed to save KPIs");
         return;
       }
@@ -657,7 +659,7 @@ export function KpiView({
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ weekStart }),
     });
-    const json = (await res.json().catch(() => ({}))) as {
+    const json = (await readApiResponse(res)) as {
       error?: string;
       report?:
         | MobileGroomingImportReport
@@ -1611,7 +1613,7 @@ function UpcomingBoardingBookingsSection() {
             signal: controller.signal,
           }
         );
-        const json = (await res.json().catch(() => ({}))) as {
+        const json = (await readApiResponse(res)) as {
           error?: string;
           report?: UpcomingBoardingBookingsReport;
         };
@@ -1650,7 +1652,7 @@ function UpcomingBoardingBookingsSection() {
           cache: "no-store",
         }
       );
-      const json = (await res.json().catch(() => ({}))) as {
+      const json = (await readApiResponse(res)) as {
         error?: string;
         report?: UpcomingBoardingBookingsReport;
       };

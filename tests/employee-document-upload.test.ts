@@ -44,9 +44,9 @@ test("a 10.1 MB photo is resized locally and uploaded as a correctly named JPEG"
 
 test("plain-text hosting errors never surface JSON parse failures", async () => {
   await assert.rejects(readDocumentUploadResponse(new Response("Request Entity Too Large", { status: 413 })), /too large/);
-  await assert.rejects(readDocumentUploadResponse(new Response("Bad Gateway", { status: 502 })), /Upload failed/);
+  await assert.rejects(readDocumentUploadResponse(new Response("Bad Gateway", { status: 502 })), /upstream service/);
   await assert.rejects(readDocumentUploadResponse(Response.json({ error: "Employee not found" }, { status: 404 })), /Employee not found/);
-  await assert.rejects(readDocumentUploadResponse(new Response("login page")), /unexpected response/);
+  await assert.rejects(readDocumentUploadResponse(new Response("login page")), /unreadable response/);
   const uploaded = { id: "document-1", fileName: "card.jpg" };
   assert.deepEqual(await readDocumentUploadResponse(Response.json(uploaded, { status: 201 })), uploaded);
 });

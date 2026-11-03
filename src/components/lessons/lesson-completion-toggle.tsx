@@ -1,5 +1,7 @@
 "use client";
 
+import { readApiResponse } from "@/lib/api-response";
+
 import { useState } from "react";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 
@@ -22,7 +24,7 @@ export function LessonCompletionToggle({ lessonId, isCompleted, isOutOfDate, onT
         method: "POST",
       });
       if (res.ok) {
-        const data = await res.json();
+        const data = await readApiResponse(res);
         setChecked(data.isCompleted);
         onToggle(data.isCompleted);
       }

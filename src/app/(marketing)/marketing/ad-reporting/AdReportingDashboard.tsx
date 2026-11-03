@@ -1,5 +1,7 @@
 "use client";
 
+import { readApiResponse } from "@/lib/api-response";
+
 import { useEffect, useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import {
@@ -100,7 +102,7 @@ export function AdReportingDashboard({
   useEffect(() => {
     let cancelled = false;
     fetch(`/api/marketing/live-report?from=${from}&to=${to}&source=${source}`, { cache: "no-store" })
-      .then((res) => { if (!res.ok) throw new Error("Report unavailable"); return res.json(); })
+      .then((res) => { if (!res.ok) throw new Error("Report unavailable"); return readApiResponse(res); })
       .then((json) => {
         if (cancelled) return;
         if (json.metric) {
@@ -154,7 +156,7 @@ export function AdReportingDashboard({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ from, to, source: editing, amount }),
       });
-      const result = await response.json();
+      const result = await readApiResponse(response);
       if (!response.ok) throw new Error(result.error || "Could not save spend.");
       setEditing(null);
       setRefresh((value) => value + 1);

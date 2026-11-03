@@ -1,5 +1,7 @@
 "use client";
 
+import { readApiResponse } from "@/lib/api-response";
+
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 
@@ -58,7 +60,7 @@ export function PetResortCash({ summary }: { summary: PetResortSummary }) {
         method: "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ cashDate, amountCents, note: dailyNote, requestId: dailyRequestId.current }),
       });
-      const result = await response.json();
+      const result = await readApiResponse(response);
       if (!response.ok) throw new Error(result.error ?? "Unable to save daily cash.");
       dailyRequestId.current = null;
       setDailyAmount(""); setDailyNote("");
@@ -79,7 +81,7 @@ export function PetResortCash({ summary }: { summary: PetResortSummary }) {
       const response = await fetch("/api/cash-management/pet-resort-import", {
         method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body),
       });
-      const result = await response.json();
+      const result = await readApiResponse(response);
       if (!response.ok) throw new Error(result.error ?? "Unable to import cash transactions.");
       setMessage(`${result.inserted} cash transactions imported; ${result.skipped} already present.`);
       setImportFile(null);
@@ -105,7 +107,7 @@ export function PetResortCash({ summary }: { summary: PetResortSummary }) {
         method: "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ source: "pet-resort", amountCents, requestId: requestId.current }),
       });
-      const result = await response.json();
+      const result = await readApiResponse(response);
       if (!response.ok) throw new Error(result.error ?? "Unable to record bank deposit.");
       requestId.current = null; setAmount("");
       setMessage(`${money(amountCents)} Pet Resort bank deposit recorded.`);

@@ -1,5 +1,7 @@
 "use client";
 
+import { readApiResponse } from "@/lib/api-response";
+
 import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
@@ -47,7 +49,7 @@ function DocumentSection({ number, canEdit, documents, maintenance }: { number: 
       body.set("category", category);
       body.set("document", ready);
       const response = await fetch(`/api/maintenance/vans/${number}/documents`, { method: "POST", body });
-      const result = await response.json().catch(() => null);
+      const result = await readApiResponse(response);
       if (!response.ok) throw new Error(result?.error || "Could not save document.");
       setSuccess(category === "Maintenance" && !result.recordCreated
         ? `${result.title} saved as a document. A maintenance history row needs a readable service date and work performed.`
@@ -62,7 +64,7 @@ function DocumentSection({ number, canEdit, documents, maintenance }: { number: 
     setError(""); setSuccess(""); setBusy(true);
     try {
       const response = await fetch(`/api/maintenance/vans/${number}/documents/${document.id}`, { method: "DELETE" });
-      const result = await response.json();
+      const result = await readApiResponse(response);
       if (!response.ok) throw new Error(result.error || "Could not delete document.");
       setSuccess("Vehicle document deleted."); router.refresh();
     } catch (cause) { setError(cause instanceof Error ? cause.message : "Could not delete document."); }

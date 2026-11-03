@@ -1,5 +1,7 @@
 "use client";
 
+import { readApiResponse } from "@/lib/api-response";
+
 import { useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -86,7 +88,7 @@ export function ExpiredDaycarePackagesReport({
         method: "POST",
         cache: "no-store",
       });
-      const payload = (await response.json().catch(() => ({}))) as {
+      const payload = (await readApiResponse(response)) as {
         error?: string;
         report?: DaycarePackageCreditReport;
       };

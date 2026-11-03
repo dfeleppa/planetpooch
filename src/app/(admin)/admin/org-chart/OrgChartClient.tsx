@@ -1,5 +1,7 @@
 "use client";
 
+import { readApiResponse } from "@/lib/api-response";
+
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { Card, CardContent } from "@/components/ui/card";
@@ -114,10 +116,10 @@ export function OrgChartClient({
         body: JSON.stringify(body),
       });
       if (!res.ok) {
-        const data = await res.json();
+        const data = await readApiResponse(res);
         throw new Error(data.error || "Failed to update");
       }
-      return await res.json();
+      return await readApiResponse(res);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to update");
       return null;
@@ -202,7 +204,7 @@ export function OrgChartClient({
     try {
       const res = await fetch(`/api/org-chart/${positionId}`, { method: "DELETE" });
       if (!res.ok) {
-        const data = await res.json();
+        const data = await readApiResponse(res);
         throw new Error(data.error || "Failed to delete");
       }
       // Re-parent locally + remove
@@ -232,10 +234,10 @@ export function OrgChartClient({
         body: JSON.stringify({ title, company, parentPositionId: parentId }),
       });
       if (!res.ok) {
-        const data = await res.json();
+        const data = await readApiResponse(res);
         throw new Error(data.error || "Failed to create");
       }
-      const pos = await res.json();
+      const pos = await readApiResponse(res);
       setPositions((p) => [...p, pos]);
       setCreateModalCompany(null);
     } catch (err) {
@@ -484,12 +486,12 @@ function EmptyState({
         body: JSON.stringify({}),
       });
       if (!res.ok) {
-        const data = await res.json();
+        const data = await readApiResponse(res);
         throw new Error(data.error || "Failed to seed");
       }
       // Re-fetch
       const getRes = await fetch("/api/org-chart");
-      const data = await getRes.json();
+      const data = await readApiResponse(getRes);
       onSeeded(data.positions);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to seed");

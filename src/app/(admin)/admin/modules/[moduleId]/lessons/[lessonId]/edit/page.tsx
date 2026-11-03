@@ -1,5 +1,7 @@
 "use client";
 
+import { readApiResponse } from "@/lib/api-response";
+
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { TiptapEditor } from "@/components/editor/tiptap-editor";
@@ -22,7 +24,7 @@ export default function EditLessonPage() {
 
   useEffect(() => {
     fetch(`/api/lessons/${lessonId}`)
-      .then((res) => res.json())
+      .then((res) => readApiResponse(res))
       .then((data) => {
         setTitle(data.title);
         setContent(data.content || {});

@@ -1,5 +1,8 @@
 "use client";
 
+import { readApiResponse } from "@/lib/api-response";
+import { csvUploadError, MAX_LSA_CSV_BYTES } from "@/lib/csv-upload";
+
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Card } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
@@ -73,7 +76,7 @@ export function GoogleLsaLeadReportTable({
       const response = await fetch(
         `/api/finance/google-lsa-lead-report?${params.toString()}`
       );
-      const json = (await response.json().catch(() => ({}))) as {
+      const json = (await readApiResponse(response)) as {
         rows?: GoogleLsaLeadRow[];
         error?: string;
       };
@@ -112,6 +115,11 @@ export function GoogleLsaLeadReportTable({
       return;
     }
 
+    const validationError = csvUploadError(file, MAX_LSA_CSV_BYTES);
+    if (validationError) {
+      setError(validationError);
+      return;
+    }
     setImporting(true);
     setError(null);
     setMessage(null);
@@ -126,7 +134,7 @@ export function GoogleLsaLeadReportTable({
         method: "POST",
         body: form,
       });
-      const json = (await response.json().catch(() => ({}))) as {
+      const json = (await readApiResponse(response)) as {
         rows?: GoogleLsaLeadRow[];
         error?: string;
       };

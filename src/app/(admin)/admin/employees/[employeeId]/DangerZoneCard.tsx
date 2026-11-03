@@ -1,5 +1,7 @@
 "use client";
 
+import { readApiResponse } from "@/lib/api-response";
+
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
@@ -36,7 +38,7 @@ export function DangerZoneCard({
         `/api/employees/${employeeId}/reactivate`,
         { method: "POST" }
       );
-      const data = await res.json();
+      const data = await readApiResponse(res);
       if (!res.ok) throw new Error(data.error || "Failed to reactivate");
       router.refresh();
     } catch (err) {
@@ -57,7 +59,7 @@ export function DangerZoneCard({
         `/api/employees/${employeeId}`,
         { method: "DELETE" }
       );
-      const data = await res.json().catch(() => ({}));
+      const data = await readApiResponse(res);
       if (!res.ok) throw new Error(data.error || "Failed to delete");
       // Bounce back to the employees list — we just deleted this page's
       // subject so refresh would 404.

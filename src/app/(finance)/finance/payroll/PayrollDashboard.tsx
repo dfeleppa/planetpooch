@@ -1,5 +1,7 @@
 "use client";
 
+import { readApiResponse } from "@/lib/api-response";
+
 import Link from "next/link";
 import { ChangeEvent, Fragment, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Badge } from "@/components/ui/badge";
@@ -1170,7 +1172,7 @@ export function PayrollDashboard({
       }
       const url = `/api/finance/payroll?${params.toString()}`;
       const response = await fetch(url);
-      const data = (await response.json()) as PayrollApiResponse & { error?: string };
+      const data = (await readApiResponse(response)) as PayrollApiResponse & { error?: string };
       if (!response.ok) throw new Error(data.error || "Could not load payroll.");
 
       setSavedWeeks(data.weeks);
@@ -1211,7 +1213,7 @@ export function PayrollDashboard({
       const employeeName = normalizeEmployeeName(selectedEmployeeName);
       if (employeeName) params.set("employeeName", employeeName);
       const response = await fetch(`/api/finance/payroll?${params.toString()}`);
-      const data = (await response.json()) as PayrollApiResponse & { error?: string };
+      const data = (await readApiResponse(response)) as PayrollApiResponse & { error?: string };
       if (!response.ok) throw new Error(data.error || "Could not load payroll totals.");
 
       setAnnualMobileTotals(data.annualTotals ?? null);
@@ -1237,7 +1239,7 @@ export function PayrollDashboard({
       signal: controller.signal,
     })
       .then(async (response) => {
-        const data = (await response.json()) as { reconciliations?: DailyReconciliation[]; error?: string };
+        const data = (await readApiResponse(response)) as { reconciliations?: DailyReconciliation[]; error?: string };
         if (!response.ok) throw new Error(data.error || "Could not load reconciliations.");
         setReconciliations(data.reconciliations ?? []);
       })
@@ -1258,7 +1260,7 @@ export function PayrollDashboard({
     setError(null);
     try {
       const response = await fetch(`/api/finance/payroll/mobile-grooming/closeout?weekStart=${selectedWeekStart}`);
-      const data = (await response.json()) as CloseoutResponse;
+      const data = (await readApiResponse(response)) as CloseoutResponse;
       if (!response.ok) throw new Error(data.error || "Could not load payouts.");
       if (requestId !== payoutRequestId.current) return;
       setCloseoutData(data);
@@ -1287,7 +1289,7 @@ export function PayrollDashboard({
     setLoadingPostPayoutChanges(true);
     void fetch("/api/finance/payroll/mobile-grooming/post-payout-changes", { signal: controller.signal })
       .then(async (response) => {
-        const data = (await response.json()) as PostPayoutChangesResponse;
+        const data = (await readApiResponse(response)) as PostPayoutChangesResponse;
         if (!response.ok) throw new Error(data.error || "Could not load post-payout changes.");
         if (!controller.signal.aborted) setPostPayoutChanges(data);
       })
@@ -1306,7 +1308,7 @@ export function PayrollDashboard({
     setLoadingPostPayoutCheckWeeks(true);
     void fetch("/api/finance/payroll/mobile-grooming/post-payout-check", { signal: controller.signal })
       .then(async (response) => {
-        const data = (await response.json()) as { weeks?: Array<{ weekStart: string; weekEnd: string }>; error?: string };
+        const data = (await readApiResponse(response)) as { weeks?: Array<{ weekStart: string; weekEnd: string }>; error?: string };
         if (!response.ok) throw new Error(data.error || "Could not load paid out weeks.");
         if (controller.signal.aborted) return;
         const weeks = data.weeks ?? [];
@@ -1332,7 +1334,7 @@ export function PayrollDashboard({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ weekStart, employeeName, prepared }),
       });
-      const data = (await response.json()) as { error?: string };
+      const data = (await readApiResponse(response)) as { error?: string };
       if (!response.ok) throw new Error(data.error || "Could not save pay preparation.");
       await loadPayouts(weekStart);
       setMessage(`Pay for ${employeeName} marked ${prepared ? "prepared" : "not prepared"}.`);
@@ -1352,7 +1354,7 @@ export function PayrollDashboard({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ action: "lock", weekStart, employeeName, sourceFingerprint: closeoutData?.preview.sourceFingerprint }),
       });
-      const data = (await response.json()) as { error?: string };
+      const data = (await readApiResponse(response)) as { error?: string };
       if (!response.ok) throw new Error(data.error || "Could not lock employee pay.");
       await loadPayouts(weekStart);
       setMessage(`${employeeName}'s paid amount is locked for this week.`);
@@ -1374,10 +1376,10 @@ export function PayrollDashboard({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ weekStart: postPayoutCheckWeekStart }),
       });
-      const result = (await response.json()) as { checkedCount?: number; lockedCount?: number; discrepancyCount?: number; error?: string };
+      const result = (await readApiResponse(response)) as { checkedCount?: number; lockedCount?: number; discrepancyCount?: number; error?: string };
       if (!response.ok) throw new Error(result.error || "Could not check locked pay.");
       const ledgerResponse = await fetch("/api/finance/payroll/mobile-grooming/post-payout-changes");
-      const ledger = (await ledgerResponse.json()) as PostPayoutChangesResponse;
+      const ledger = (await readApiResponse(ledgerResponse)) as PostPayoutChangesResponse;
       if (!ledgerResponse.ok) throw new Error(ledger.error || "Could not reload the pay ledger.");
       setPostPayoutChanges(ledger);
       const selectedWeek = postPayoutCheckWeeks.find((week) => week.weekStart === postPayoutCheckWeekStart);
@@ -1406,7 +1408,7 @@ export function PayrollDashboard({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ employeeName, weekStart, amountCents: Math.round(amount * 100) }),
       });
-      const data = (await response.json()) as { error?: string };
+      const data = (await readApiResponse(response)) as { error?: string };
       if (!response.ok) throw new Error(data.error || "Could not save direct deposit.");
       setDepositEditEmployee(null);
       setMessage(`Direct deposit saved for ${employeeName}. This amount repeats each week until you change it.`);
@@ -1444,7 +1446,7 @@ export function PayrollDashboard({
           note: adjustmentNoteDraft.trim(),
         }),
       });
-      const data = (await response.json()) as { error?: string };
+      const data = (await readApiResponse(response)) as { error?: string };
       if (!response.ok) throw new Error(data.error || "Could not save payout adjustment.");
       setAdjustmentEditEmployee(null);
       setMessage(`Payout adjustment saved for ${employeeName}.`);
@@ -1478,7 +1480,7 @@ export function PayrollDashboard({
           sourceFingerprint: closeoutData?.preview.sourceFingerprint,
         }),
       });
-      const data = (await response.json()) as CloseoutResponse;
+      const data = (await readApiResponse(response)) as CloseoutResponse;
       if (!response.ok) throw new Error(data.error || "Could not close the payroll week.");
       setCloseoutData(data);
       setCloseoutStep("idle");
@@ -1499,7 +1501,7 @@ export function PayrollDashboard({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ weekStart, employeeName, applyToCashPayout }),
       });
-      const data = (await response.json()) as CloseoutResponse;
+      const data = (await readApiResponse(response)) as CloseoutResponse;
       if (!response.ok) throw new Error(data.error || "Could not save the employee pay decision.");
       setCloseoutData(data);
       setCloseoutConfirmed(false);
@@ -1538,7 +1540,7 @@ export function PayrollDashboard({
           note: reconciliationNoteDraft.trim(),
         }),
       });
-      const data = (await response.json()) as { reconciliation?: DailyReconciliation; error?: string };
+      const data = (await readApiResponse(response)) as { reconciliation?: DailyReconciliation; error?: string };
       if (!response.ok || !data.reconciliation) {
         throw new Error(data.error || "Could not save the reconciliation.");
       }
@@ -1700,7 +1702,7 @@ export function PayrollDashboard({
           weekEnd,
         }),
       });
-      const data = (await response.json()) as MobileGroomingPullResponse;
+      const data = (await readApiResponse(response)) as MobileGroomingPullResponse;
       if (!response.ok || !data.entries) {
         throw new Error(data.error || "Could not pull MoeGo payroll data.");
       }
@@ -1722,7 +1724,7 @@ export function PayrollDashboard({
       const savedResponse = await fetch(
         `/api/finance/payroll?${new URLSearchParams({ business: "mobile-grooming", weekStart })}`
       );
-      const savedData = (await savedResponse.json()) as PayrollApiResponse & { error?: string };
+      const savedData = (await readApiResponse(savedResponse)) as PayrollApiResponse & { error?: string };
       if (!savedResponse.ok) {
         throw new Error(savedData.error || "Could not load the saved week before importing.");
       }
@@ -1858,7 +1860,7 @@ export function PayrollDashboard({
         mobileEntries: cleanEntries,
       }),
     });
-    const data = (await response.json()) as {
+    const data = (await readApiResponse(response)) as {
       week?: SavedPayrollWeek;
       annualTotals?: AnnualMobileGroomingTotals;
       weeklyTotals?: WeeklyMobileGroomingTotals[];
@@ -1942,7 +1944,7 @@ export function PayrollDashboard({
             : {}),
         }),
       });
-      const data = (await response.json()) as { week?: SavedPayrollWeek; error?: string };
+      const data = (await readApiResponse(response)) as { week?: SavedPayrollWeek; error?: string };
       if (!response.ok || !data.week) throw new Error(data.error || "Could not save payroll.");
 
       setWeekStart(data.week.weekStart);
@@ -2010,7 +2012,7 @@ export function PayrollDashboard({
           },
         }),
       });
-      const data = (await response.json()) as {
+      const data = (await readApiResponse(response)) as {
         week?: SavedPayrollWeek;
         annualTotals?: AnnualMobileGroomingTotals;
         weeklyTotals?: WeeklyMobileGroomingTotals[];

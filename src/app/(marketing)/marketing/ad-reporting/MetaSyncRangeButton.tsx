@@ -1,5 +1,7 @@
 "use client";
 
+import { readApiResponse } from "@/lib/api-response";
+
 import { useState } from "react";
 
 const DAY_MS = 86_400_000;
@@ -24,7 +26,7 @@ export function MetaSyncRangeButton({ from, to }: { from: string; to: string }) 
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ since: new Date(cursor).toISOString().slice(0, 10), until: new Date(through).toISOString().slice(0, 10) }),
         });
-        const result = await response.json();
+        const result = await readApiResponse(response);
         if (!response.ok) throw new Error(result.error ?? `Meta sync failed (${response.status}).`);
         completed++;
         setProgress(`Synced ${completed} of ${chunks} date windows…`);

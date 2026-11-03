@@ -1,5 +1,7 @@
 "use client";
 
+import { readApiResponse } from "@/lib/api-response";
+
 import { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { metricTrend } from "@/lib/moego/chart-profit";
@@ -135,12 +137,12 @@ export function RevenueChart({
           { cache: "no-store" }
         );
         if (!res.ok) {
-          const body = (await res.json().catch(() => ({}))) as {
+          const body = (await readApiResponse(res)) as {
             error?: string;
           };
           throw new Error(body.error ?? `HTTP ${res.status}`);
         }
-        if (!cancelled) setData((await res.json()) as ApiResponse);
+        if (!cancelled) setData((await readApiResponse(res)) as ApiResponse);
       } catch (e) {
         if (!cancelled) {
           setError(e instanceof Error ? e.message : "Failed to load net sales");

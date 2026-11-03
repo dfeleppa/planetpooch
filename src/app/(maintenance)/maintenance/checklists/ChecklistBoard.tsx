@@ -1,5 +1,7 @@
 "use client";
 
+import { readApiResponse } from "@/lib/api-response";
+
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useSession } from "next-auth/react";
 import { cn } from "@/lib/utils";
@@ -142,7 +144,7 @@ function DepartmentChecklistBoard({ canEdit, department }: { canEdit: boolean; d
     try {
       const res = await fetch(`/api/maintenance/checklists?date=${date}&department=${department}`);
       if (!res.ok) throw new Error("Unable to load checklists");
-      const data = await res.json();
+      const data = await readApiResponse(res);
       if (id !== requestId.current) return;
       setItems(data.items);
       setLoadedDate(date);
@@ -160,7 +162,7 @@ function DepartmentChecklistBoard({ canEdit, department }: { canEdit: boolean; d
   useEffect(() => {
     let cancelled = false;
     fetch(`/api/maintenance/checklists/summary?start=${stripStart}&end=${stripEnd}&department=${department}`)
-      .then((res) => (res.ok ? res.json() : null))
+      .then((res) => (res.ok ? readApiResponse(res) : null))
       .then((data) => {
         if (data && !cancelled) setSummary(data);
       });
@@ -203,7 +205,7 @@ function DepartmentChecklistBoard({ canEdit, department }: { canEdit: boolean; d
       bumpSummary(item.period, completed ? -1 : 1);
       return;
     }
-    const data = await res.json();
+    const data = await readApiResponse(res);
     setItems((prev) =>
       prev.map((i) => (i.id === item.id ? { ...i, [field]: data.completion } : i))
     );
@@ -217,7 +219,7 @@ function DepartmentChecklistBoard({ canEdit, department }: { canEdit: boolean; d
       body: JSON.stringify({ department, period, title }),
     });
     if (!res.ok) return;
-    const item = await res.json();
+    const item = await readApiResponse(res);
     setItems((prev) => [...prev, { ...item, completion: null }]);
     setSummary((prev) =>
       prev
@@ -238,7 +240,7 @@ function DepartmentChecklistBoard({ canEdit, department }: { canEdit: boolean; d
     if (res.ok) {
       await loadItems(checklistDate);
       const summaryRes = await fetch(`/api/maintenance/checklists/summary?start=${stripStart}&end=${stripEnd}&department=${department}`);
-      if (summaryRes.ok) setSummary(await summaryRes.json());
+      if (summaryRes.ok) setSummary(await readApiResponse(summaryRes));
     }
   }
 

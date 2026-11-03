@@ -1,5 +1,7 @@
 "use client";
 
+import { readApiResponse } from "@/lib/api-response";
+
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
@@ -13,7 +15,7 @@ export function SyncLeadOutcomesButton() {
     setMessage(null);
     try {
       const response = await fetch("/api/marketing/lead-outcomes/sync", { method: "POST" });
-      const result = await response.json();
+      const result = await readApiResponse(response);
       if (!response.ok) throw new Error(result.error || "MoeGo appointment sync failed");
       setMessage(result.caughtUp ? "Appointments are current." : "Backfill is still running. Sync again to continue.");
       router.refresh();

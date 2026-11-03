@@ -1,5 +1,7 @@
 "use client";
 
+import { readApiResponse } from "@/lib/api-response";
+
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
@@ -39,7 +41,7 @@ export default function LessonPage() {
   useEffect(() => {
     setLoading(true);
     fetch(`/api/lessons/${lessonId}`)
-      .then((res) => res.json())
+      .then((res) => readApiResponse(res))
       .then((data) => {
         setLesson(data);
         setLoading(false);

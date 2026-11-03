@@ -1,5 +1,7 @@
 "use client";
 
+import { readApiResponse } from "@/lib/api-response";
+
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 
@@ -13,7 +15,7 @@ const dateTime = (value: string | null) => value
 
 async function jsonRequest(url: string, options?: RequestInit) {
   const response = await fetch(url, { cache: "no-store", ...options });
-  const result = await response.json().catch(() => ({}));
+  const result = await readApiResponse(response);
   if (!response.ok) throw new Error(result.error ?? `Update failed (${response.status}).`);
   return result;
 }

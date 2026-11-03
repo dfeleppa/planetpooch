@@ -1,5 +1,7 @@
 "use client";
 
+import { readApiResponse } from "@/lib/api-response";
+
 import { groupCampaignSegments, type SegmentCampaign } from "@/lib/marketing/campaign-segments";
 import { conversionMetrics, conversionEfficiency } from "@/lib/marketing/conversions";
 
@@ -71,7 +73,7 @@ export function CampaignResultsReport({ from, to, source, rangeLabel, outcomes, 
     const load = async <T,>(url: string): Promise<T> => {
       const response = await fetch(url, { cache: "no-store" });
       if (!response.ok) throw new Error(`Report request failed: ${response.status}`);
-      return response.json();
+      return readApiResponse(response);
     };
     Promise.allSettled([
       load<LeadData>(`/api/marketing/lead-attribution?${query}`),
@@ -121,7 +123,7 @@ export function CampaignResultsReport({ from, to, source, rangeLabel, outcomes, 
         method: "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ from, to, source: editing, amount }),
       });
-      const result = await response.json();
+      const result = await readApiResponse(response);
       if (!response.ok) throw new Error(result.error || "Could not save spend.");
       setEditing(null);
       setRefresh((value) => value + 1);

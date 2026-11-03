@@ -1,5 +1,7 @@
 "use client";
 
+import { readApiResponse } from "@/lib/api-response";
+
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useSession } from "next-auth/react";
@@ -83,7 +85,7 @@ export default function AdminModulesPage() {
 
   async function loadModules() {
     const res = await fetch(`/api/modules?company=${business.company}`);
-    const data = await res.json();
+    const data = await readApiResponse(res);
     setModules(data);
     setExpandedIds(new Set());
     setLoading(false);
@@ -92,7 +94,7 @@ export default function AdminModulesPage() {
   async function loadModuleContent(moduleId: string) {
     const res = await fetch(`/api/modules/${moduleId}`);
     if (!res.ok) return;
-    const data = await res.json();
+    const data = await readApiResponse(res);
     setModules((current) =>
       current.map((mod) =>
         mod.id === moduleId
@@ -107,7 +109,7 @@ export default function AdminModulesPage() {
 
     async function loadInitialModules() {
       const res = await fetch(`/api/modules?company=${business.company}`);
-      const data = await res.json();
+      const data = await readApiResponse(res);
       if (ignore) return;
       setModules(data);
       setLoading(false);

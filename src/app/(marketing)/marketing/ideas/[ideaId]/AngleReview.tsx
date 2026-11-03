@@ -1,5 +1,7 @@
 "use client";
 
+import { readApiResponse } from "@/lib/api-response";
+
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import type { Angle, AngleStatus, EmotionalRegister, Platform } from "@prisma/client";
@@ -76,10 +78,10 @@ export function AngleReview({ ideaId, angles: initialAngles }: Props) {
         body: JSON.stringify({ model }),
       });
       if (!res.ok) {
-        const data = await res.json().catch(() => ({}));
+        const data = await readApiResponse(res);
         throw new Error(data.error || "Failed to generate angles");
       }
-      const data = await res.json();
+      const data = await readApiResponse(res);
       setAngles((prev) => [...prev, ...data.angles]);
       router.refresh();
     } catch (err) {
@@ -109,10 +111,10 @@ export function AngleReview({ ideaId, angles: initialAngles }: Props) {
         }
       );
       if (!res.ok) {
-        const data = await res.json().catch(() => ({}));
+        const data = await readApiResponse(res);
         throw new Error(data.error || "Failed to regenerate");
       }
-      const data = await res.json();
+      const data = await readApiResponse(res);
       setAngles((prev) =>
         prev.map((a) => (a.id === angleId ? { ...a, ...data.angle } : a))
       );
@@ -137,7 +139,7 @@ export function AngleReview({ ideaId, angles: initialAngles }: Props) {
         body: JSON.stringify({ status }),
       });
       if (!res.ok) {
-        const data = await res.json().catch(() => ({}));
+        const data = await readApiResponse(res);
         throw new Error(data.error || "Failed to update angle");
       }
     } catch (err) {
@@ -156,7 +158,7 @@ export function AngleReview({ ideaId, angles: initialAngles }: Props) {
         body: JSON.stringify(patch),
       });
       if (!res.ok) {
-        const data = await res.json().catch(() => ({}));
+        const data = await readApiResponse(res);
         throw new Error(data.error || "Failed to save");
       }
       setAngles((prev) =>
@@ -184,10 +186,10 @@ export function AngleReview({ ideaId, angles: initialAngles }: Props) {
         }),
       });
       if (!res.ok) {
-        const data = await res.json().catch(() => ({}));
+        const data = await readApiResponse(res);
         throw new Error(data.error || "Failed to generate scripts");
       }
-      const data = await res.json();
+      const data = await readApiResponse(res);
       if (data.failures && data.failures.length > 0) {
         setError(
           `Generated ${data.created.length}/${selected.length} — ${data.failures.length} failed.`

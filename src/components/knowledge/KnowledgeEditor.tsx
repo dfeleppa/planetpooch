@@ -1,5 +1,7 @@
 "use client";
 
+import { readApiResponse } from "@/lib/api-response";
+
 import Link from "next/link";
 import MarkdownIt from "markdown-it";
 import { FormEvent, useEffect, useMemo, useState } from "react";
@@ -52,7 +54,7 @@ export function KnowledgeEditor() {
   async function loadArticles() {
     const response = await fetch("/api/knowledge/articles");
     if (!response.ok) throw new Error("Could not load knowledge articles.");
-    setArticles(await response.json());
+    setArticles(await readApiResponse(response));
   }
 
   useEffect(() => {
@@ -60,7 +62,7 @@ export function KnowledgeEditor() {
     fetch("/api/knowledge/articles")
       .then((response) => {
         if (!response.ok) throw new Error("Could not load knowledge articles.");
-        return response.json();
+        return readApiResponse(response);
       })
       .then((data) => { if (active) setArticles(data); })
       .catch((cause) => { if (active) setError(cause.message); })
@@ -74,7 +76,7 @@ export function KnowledgeEditor() {
     try {
       const response = await fetch(`/api/knowledge/articles?id=${encodeURIComponent(id)}`);
       if (!response.ok) throw new Error("Could not open this article.");
-      setEditing(await response.json());
+      setEditing(await readApiResponse(response));
       setIsEditing(false);
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "Could not open this article.");
@@ -125,7 +127,7 @@ export function KnowledgeEditor() {
         method: "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ ...editing, id: editing.id || undefined }),
       });
-      const data = await response.json();
+      const data = await readApiResponse(response);
       if (!response.ok) throw new Error(data.error || "Could not save the article.");
       await loadArticles();
       setEditing(data);

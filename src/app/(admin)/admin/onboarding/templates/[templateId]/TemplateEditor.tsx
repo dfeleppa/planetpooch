@@ -1,5 +1,7 @@
 "use client";
 
+import { readApiResponse } from "@/lib/api-response";
+
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
@@ -95,7 +97,7 @@ export function TemplateEditor({ templateId }: { templateId: string }) {
     try {
       const res = await fetch(`/api/onboarding/templates/${templateId}`);
       if (!res.ok) throw new Error("Failed to load template");
-      const data = await res.json();
+      const data = await readApiResponse(res);
       setTemplate(data);
       setName(data.name);
       setDescription(data.description);
@@ -117,7 +119,7 @@ export function TemplateEditor({ templateId }: { templateId: string }) {
         body: JSON.stringify({ name, description, isActive }),
       });
       if (!res.ok) {
-        const data = await res.json();
+        const data = await readApiResponse(res);
         throw new Error(data.error || "Failed to save");
       }
       await load();
@@ -137,7 +139,7 @@ export function TemplateEditor({ templateId }: { templateId: string }) {
         method: "DELETE",
       });
       if (!res.ok) {
-        const data = await res.json();
+        const data = await readApiResponse(res);
         throw new Error(data.error || "Failed to delete");
       }
       router.push("/admin/onboarding/templates");
@@ -167,7 +169,7 @@ export function TemplateEditor({ templateId }: { templateId: string }) {
         }
       );
       if (!res.ok) {
-        const data = await res.json();
+        const data = await readApiResponse(res);
         throw new Error(data.error || "Failed to add task");
       }
       setShowNewTask(false);
@@ -193,7 +195,7 @@ export function TemplateEditor({ templateId }: { templateId: string }) {
         { method: "DELETE" }
       );
       if (!res.ok) {
-        const data = await res.json();
+        const data = await readApiResponse(res);
         throw new Error(data.error || "Failed to delete task");
       }
       await load();

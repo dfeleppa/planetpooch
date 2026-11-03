@@ -1,5 +1,7 @@
 "use client";
 
+import { readApiResponse } from "@/lib/api-response";
+
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { SEGMENTS, campaignIdentity, type SegmentCampaign } from "@/lib/marketing/campaign-segments";
@@ -17,7 +19,7 @@ export function CampaignSegmentAssignments({ campaigns }: { campaigns: SegmentCa
     setSaving(true); setMessage("");
     try {
       const response = await fetch("/api/marketing/campaign-segments", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ assignments: changes.map((row) => ({ source: row.source, campaignId: row.id, segment: drafts[campaignIdentity(row.source, row.id)] })) }) });
-      const result = await response.json();
+      const result = await readApiResponse(response);
       if (!response.ok) throw new Error(result.error || "Could not save segment.");
       setMessage(`Saved ${result.saved} campaign assignments.`);
       setDrafts({});

@@ -1,5 +1,7 @@
 "use client";
 
+import { readApiResponse } from "@/lib/api-response";
+
 import { useEffect, useMemo, useState, useTransition } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
@@ -275,7 +277,7 @@ export function WeeklyFinancialSnapshot({
     });
 
     fetch(`/api/finance/metrics?${params.toString()}`)
-      .then((response) => response.json().then((json) => ({ ok: response.ok, json })))
+      .then((response) => readApiResponse(response).then((json) => ({ ok: response.ok, json })))
       .then(({ ok, json }: { ok: boolean; json: MetricResponse }) => {
         if (cancelled) return;
         if (!ok) throw new Error(json.error || "Could not load weekly report.");
@@ -370,7 +372,7 @@ export function WeeklyFinancialSnapshot({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
       });
-      const json = (await response.json().catch(() => ({}))) as MetricResponse;
+      const json = (await readApiResponse(response)) as MetricResponse;
       if (!response.ok) throw new Error(json.error || "Could not save weekly report.");
 
       setLoadedWeekMetric(nextLoadedWeekMetric);

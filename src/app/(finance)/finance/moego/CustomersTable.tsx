@@ -1,5 +1,7 @@
 "use client";
 
+import { readApiResponse } from "@/lib/api-response";
+
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
@@ -124,10 +126,10 @@ export function CustomersTable({
         { cache: "no-store" }
       );
       if (!res.ok) {
-        const body = (await res.json().catch(() => ({}))) as { error?: string };
+        const body = (await readApiResponse(res)) as { error?: string };
         throw new Error(body.error ?? `HTTP ${res.status}`);
       }
-      setData((await res.json()) as ApiResponse);
+      setData((await readApiResponse(res)) as ApiResponse);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to load customers");
     } finally {

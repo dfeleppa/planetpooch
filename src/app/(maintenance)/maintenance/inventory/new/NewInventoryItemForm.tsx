@@ -1,5 +1,7 @@
 "use client";
 
+import { readApiResponse } from "@/lib/api-response";
+
 import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { Card, CardContent } from "@/components/ui/card";
@@ -38,7 +40,7 @@ export function NewInventoryItemForm({ initialCompany }: { initialCompany: Compa
       setLoadingCategories(true);
       const res = await fetch(`/api/maintenance/inventory-categories?company=${company}`);
       if (res.ok) {
-        const data: Category[] = await res.json();
+        const data: Category[] = await readApiResponse(res);
         setCategories(data);
         setCategoryId(data.length > 0 ? data[0].id : "");
       }
@@ -74,11 +76,11 @@ export function NewInventoryItemForm({ initialCompany }: { initialCompany: Compa
       });
 
       if (!res.ok) {
-        const data = await res.json();
+        const data = await readApiResponse(res);
         throw new Error(data.error || "Failed to create category");
       }
 
-      const newCategory = await res.json();
+      const newCategory = await readApiResponse(res);
       setCategories([...categories, newCategory]);
       setCategoryId(newCategory.id);
       setNewCategoryName("");
@@ -109,10 +111,10 @@ export function NewInventoryItemForm({ initialCompany }: { initialCompany: Compa
         }),
       });
       if (!res.ok) {
-        const data = await res.json();
+        const data = await readApiResponse(res);
         throw new Error(data.error || "Failed to create item");
       }
-      const item = await res.json();
+      const item = await readApiResponse(res);
       router.push(`/maintenance/inventory/${item.id}`);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Something went wrong");

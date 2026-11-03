@@ -1,5 +1,7 @@
 "use client";
 
+import { readApiResponse } from "@/lib/api-response";
+
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
@@ -172,7 +174,7 @@ export function NewEmployeeForm({
         }),
       });
       if (!res.ok) {
-        const data = await res.json();
+        const data = await readApiResponse(res);
         if (data.terminatedMatch) {
           setTerminatedMatch(data.terminatedMatch);
           setError(data.error || "Email belongs to a past employee");
@@ -180,7 +182,7 @@ export function NewEmployeeForm({
         }
         throw new Error(data.error || "Failed to create employee");
       }
-      const data = await res.json();
+      const data = await readApiResponse(res);
       setResult(data);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Something went wrong");
@@ -199,7 +201,7 @@ export function NewEmployeeForm({
         { method: "POST" }
       );
       if (!res.ok) {
-        const data = await res.json().catch(() => ({}));
+        const data = await readApiResponse(res);
         throw new Error(data.error || "Failed to reactivate");
       }
       router.push(`/admin/people/${terminatedMatch.id}`);

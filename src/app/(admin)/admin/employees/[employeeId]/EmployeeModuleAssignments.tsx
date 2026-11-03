@@ -1,5 +1,7 @@
 "use client";
 
+import { readApiResponse } from "@/lib/api-response";
+
 import { useEffect, useMemo, useState } from "react";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -30,7 +32,7 @@ export function EmployeeModuleAssignments({
   async function loadAssignments() {
     const res = await fetch(`/api/employees/${employeeId}/module-assignments`);
     if (res.ok) {
-      const data: AssignmentRow[] = await res.json();
+      const data: AssignmentRow[] = await readApiResponse(res);
       setAssignments(data);
     }
   }
@@ -38,7 +40,7 @@ export function EmployeeModuleAssignments({
   async function loadModules() {
     const res = await fetch(`/api/employees/${employeeId}/module-assignments?assignable=1`);
     if (res.ok) {
-      const data: ModuleSummary[] = await res.json();
+      const data: ModuleSummary[] = await readApiResponse(res);
       setAllModules(data);
     }
   }
@@ -58,12 +60,12 @@ export function EmployeeModuleAssignments({
       if (ignore) return;
 
       if (assignmentsRes.ok) {
-        const data: AssignmentRow[] = await assignmentsRes.json();
+        const data: AssignmentRow[] = await readApiResponse(assignmentsRes);
         if (!ignore) setAssignments(data);
       }
 
       if (modulesRes.ok) {
-        const data: ModuleSummary[] = await modulesRes.json();
+        const data: ModuleSummary[] = await readApiResponse(modulesRes);
         if (!ignore) setAllModules(data);
       }
     }

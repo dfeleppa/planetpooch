@@ -1,5 +1,7 @@
 "use client";
 
+import { readApiResponse } from "@/lib/api-response";
+
 import { useEffect, useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 
@@ -41,7 +43,7 @@ export function LeadAttributionDashboard({ from, to, source }: { from: string; t
     fetch(`/api/marketing/lead-attribution?${params}`)
       .then((response) => {
         if (!response.ok) throw new Error("Lead attribution request failed");
-        return response.json();
+        return readApiResponse(response);
       })
       .then((json: Data) => { if (!cancelled) setResult({ params, data: json, error: false }); })
       .catch(() => { if (!cancelled) setResult({ params, data: null, error: true }); });
