@@ -170,7 +170,7 @@ export async function POST(
   }
   if (file.size > MAX_FILE_SIZE_BYTES) {
     return NextResponse.json(
-      { error: "File is too large (max 10 MB)" },
+      { error: "File is too large (max 4 MB after photo resizing)" },
       { status: 413 }
     );
   }

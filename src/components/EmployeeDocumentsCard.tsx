@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { formatDateTime } from "@/lib/utils";
+import { prepareEmployeeDocument, readDocumentUploadResponse } from "@/lib/employee-document-upload";
 import {
   DOCUMENT_CATEGORY_LABELS,
   REQUIRED_DOCUMENT_CATEGORIES,
@@ -209,7 +210,7 @@ export function EmployeeDocumentsCard({
     setUploading(true);
     try {
       const fd = new FormData();
-      fd.append("file", file);
+      fd.append("file", await prepareEmployeeDocument(file));
       fd.append("category", category);
       if (isOther) fd.append("customName", customName.trim());
 
@@ -217,8 +218,7 @@ export function EmployeeDocumentsCard({
         method: "POST",
         body: fd,
       });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Upload failed");
+      const data = await readDocumentUploadResponse(res);
 
       setDocuments([data, ...documents]);
       setFile(null);
@@ -490,7 +490,10 @@ export function EmployeeDocumentsCard({
               ref={fileInputRef}
               type="file"
               accept=".pdf,.png,.jpg,.jpeg,.webp,.heic,.heif,application/pdf,image/png,image/jpeg,image/webp,image/heic,image/heif"
-              onChange={(e) => setFile(e.target.files?.[0] ?? null)}
+              onChange={(e) => {
+                setFile(e.target.files?.[0] ?? null);
+                setError("");
+              }}
               disabled={!hasDriveFolder || uploading}
               className="text-sm file:mr-3 file:rounded-md file:border-0 file:bg-gray-100 file:px-3 file:py-1.5 file:text-sm file:font-medium file:text-gray-700 hover:file:bg-gray-200 disabled:opacity-50"
             />
@@ -500,7 +503,7 @@ export function EmployeeDocumentsCard({
               </p>
             )}
             <p className="text-xs text-gray-400">
-              PDF or image, up to 10 MB.
+              PDF or image up to 4 MB. Photos up to 20 MB are automatically resized before upload.
             </p>
           </div>
 

@@ -74,8 +74,6 @@ export const ALLOWED_MIME_TYPES = new Set<string>([
   "image/heif",
 ]);
 
-/** 10 MB. Vercel's Node serverless body limit is ~4.5 MB on Pro by default,
- *  so anything close to this may need a body-size override or the Vercel Blob
- *  direct-upload pattern. For phone-scanned IDs and PDF forms, 10 MB is well
- *  under the typical file size, so this mostly serves as a sanity guard. */
-export const MAX_FILE_SIZE_BYTES = 10 * 1024 * 1024;
+/** Leave room for multipart headers below the hosting platform's 4.5 MB limit. */
+export const MAX_FILE_SIZE_BYTES = 4_000_000;
+export const MAX_SOURCE_IMAGE_BYTES = 20_000_000;
