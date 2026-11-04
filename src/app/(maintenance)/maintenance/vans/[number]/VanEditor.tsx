@@ -49,6 +49,7 @@ export function VanEditor({ number, van, records, canEdit }: { number: number; v
   const router = useRouter();
   const [profile, setProfile] = useState(van);
   const [saving, setSaving] = useState(false);
+  const [editingProfile, setEditingProfile] = useState(false);
   const [adding, setAdding] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [error, setError] = useState("");
@@ -71,12 +72,14 @@ export function VanEditor({ number, van, records, canEdit }: { number: number; v
   }
 
   async function saveProfile(event: React.FormEvent) {
-    event.preventDefault(); setError(""); setSuccess(""); setSaving(true);
+    event.preventDefault();
+    if (!canEdit || !editingProfile || saving) return;
+    setError(""); setSuccess(""); setSaving(true);
     try {
       const response = await fetch(`/api/maintenance/vans/${number}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify(profile) });
       const data = await readApiResponse(response);
       if (!response.ok) throw new Error(data.error || "Could not save vehicle details");
-      setSuccess("Vehicle details saved."); router.refresh();
+      setEditingProfile(false); setSuccess("Vehicle details saved."); router.refresh();
     } catch (cause) { setError(cause instanceof Error ? cause.message : "Could not save vehicle details"); }
     finally { setSaving(false); }
   }
@@ -110,9 +113,12 @@ export function VanEditor({ number, van, records, canEdit }: { number: number; v
   return <div className="space-y-8">
     {(error || success) && <p role="status" className={`rounded-lg px-4 py-3 text-sm ${error ? "bg-red-50 text-red-700" : "bg-green-50 text-green-700"}`}>{error || success}</p>}
     <section className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
-      <h2 className="mb-4 text-lg font-semibold text-gray-900">Vehicle details</h2>
+      <div className="mb-4 flex items-center justify-between gap-3">
+        <h2 className="text-lg font-semibold text-gray-900">Vehicle details</h2>
+        {canEdit && !editingProfile && <Button type="button" variant="secondary" onClick={() => { setProfile(van); setError(""); setSuccess(""); setEditingProfile(true); }}>Edit vehicle details</Button>}
+      </div>
       <form onSubmit={saveProfile} className="space-y-5">
-        <fieldset disabled={!canEdit || saving} className="space-y-5 disabled:opacity-75">
+        <fieldset disabled={!canEdit || !editingProfile || saving} className="space-y-5">
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             <Input label="Year" type="number" min="1900" max="2100" value={profile.year ?? ""} onChange={e => setProfile({ ...profile, year: e.target.value ? Number(e.target.value) : null })} />
             <Input label="Make" value={profile.make} onChange={e => setProfile({ ...profile, make: e.target.value })} />
@@ -131,7 +137,10 @@ export function VanEditor({ number, van, records, canEdit }: { number: number; v
           </div>
           <label className="block text-sm font-medium text-gray-700">Vehicle notes<textarea className={`${fieldClass} mt-1`} rows={3} value={profile.notes} onChange={e => setProfile({ ...profile, notes: e.target.value })} /></label>
         </fieldset>
-        {canEdit && <Button type="submit" disabled={saving}>{saving ? "Saving…" : "Save vehicle details"}</Button>}
+        {canEdit && editingProfile && <div className="flex flex-wrap gap-3">
+          <Button type="submit" disabled={saving}>{saving ? "Saving…" : "Save vehicle details"}</Button>
+          <Button type="button" variant="secondary" disabled={saving} onClick={() => { setProfile(van); setEditingProfile(false); setError(""); setSuccess(""); }}>Cancel</Button>
+        </div>}
       </form>
     </section>
 
