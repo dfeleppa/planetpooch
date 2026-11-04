@@ -7,6 +7,7 @@ import { isManagerOrAbove, requireAuth } from "@/lib/auth-helpers";
 import { getActiveBusiness } from "@/lib/business-server";
 import { prisma } from "@/lib/prisma";
 import { VanEditor } from "./VanEditor";
+import { VanDocumentUpload } from "./VanDocumentUpload";
 import { MaintenanceDocuments, VehicleDocuments } from "./VehicleDocuments";
 
 export default async function VanPage({ params }: { params: Promise<{ number: string }> }) {
@@ -35,6 +36,7 @@ export default async function VanPage({ params }: { params: Promise<{ number: st
         <p className="mt-1 text-gray-500">Vehicle profile, documents, and maintenance records</p>
       </div>
       <VanSubnav active="fleet" />
+      {canEdit && <VanDocumentUpload number={number} />}
       <VehicleDocuments number={number} canEdit={canEdit} documents={documents} />
       <VanEditor
         key={`${van.updatedAt.toISOString()}-${van.year}-${van.make}-${van.model}-${van.vin}`}
