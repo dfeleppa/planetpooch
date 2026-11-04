@@ -1,5 +1,6 @@
 import { getActiveBusiness, getEmployeeBusinessWhere } from "@/lib/business-server";
 import { moduleCompanyWhere } from "@/lib/module-company";
+import { getVisibleModuleIdsForUsers } from "@/lib/module-visibility";
 import { requireAdmin, activeUserWhere } from "@/lib/auth-helpers";
 import { prisma } from "@/lib/prisma";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
@@ -12,9 +13,11 @@ export default async function AdminModuleProgressPage() {
 
   const employees = await prisma.user.findMany({
     where: { role: "EMPLOYEE", ...activeUserWhere(), ...await getEmployeeBusinessWhere() },
-    select: { id: true, name: true, email: true },
+    select: { id: true, name: true, email: true, jobTitle: true, company: true },
     orderBy: { name: "asc" },
   });
+
+  const assignedModuleIdsByEmployee = await getVisibleModuleIdsForUsers(employees);
 
   const modules = await prisma.module.findMany({
     where: await moduleCompanyWhere((await getActiveBusiness()).company),
@@ -108,6 +111,14 @@ export default async function AdminModuleProgressPage() {
                         <p className="text-xs text-gray-400">{emp.email}</p>
                       </td>
                       {moduleLessons.map((mod) => {
+                        if (!assignedModuleIdsByEmployee.get(emp.id)?.has(mod.id)) {
+                          return (
+                            <td key={mod.id} className="text-center px-4 py-3 text-gray-400">
+                              <span aria-label="Not assigned">-</span>
+                            </td>
+                          );
+                        }
+
                         const isOutOfDate = completions.some((c) => c.userId === emp.id && c.isOutOfDate && mod.lessonIds.includes(c.lessonId));
                         const total = mod.lessonIds.length;
                         const completed = mod.lessonIds.filter((id) => userCompletions.has(id)).length;
@@ -125,6 +136,8 @@ export default async function AdminModuleProgressPage() {
                       })}
                       <td className="text-center px-4 py-3">
                         {(() => {
+                          const hasAssignedModules = moduleLessons.some((mod) => assignedModuleIdsByEmployee.get(emp.id)?.has(mod.id));
+                          if (!hasAssignedModules) return <span aria-label="No modules assigned" className="text-gray-400">-</span>;
                           const pct = empTotal > 0 ? Math.round((empCompleted / empTotal) * 100) : 0;
                           return (
                             <Badge variant={pct === 100 ? "success" : pct > 0 ? "info" : "default"}>
