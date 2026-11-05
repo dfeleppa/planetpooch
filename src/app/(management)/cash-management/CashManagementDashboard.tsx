@@ -47,6 +47,13 @@ export function CashManagementDashboard({ mobile, petResort, safeCents, initialS
   const countedSafeCents = latestSafeVerification?.countedCents ?? null;
   const changeDrawerCents = countedSafeCents ?? safeCents;
   const totalSafeCents = changeDrawerCents + mobile.onHandCents + petResort.onHandCents;
+  const [editingPetAdjustment, setEditingPetAdjustment] = useState<PetResortSummary["recentAdjustments"][number] | null>(null);
+  const [petEditDirection, setPetEditDirection] = useState<"add" | "remove">("add");
+  const [petEditAmount, setPetEditAmount] = useState("");
+  const [petEditNote, setPetEditNote] = useState("");
+  const [petEditSaving, setPetEditSaving] = useState(false);
+  const [petEditError, setPetEditError] = useState("");
+  const [petEditMessage, setPetEditMessage] = useState("");
   const [editingCash, setEditingCash] = useState<DailyCash | null>(null);
   const [editDate, setEditDate] = useState("");
   const [editAmount, setEditAmount] = useState("");
@@ -96,6 +103,35 @@ export function CashManagementDashboard({ mobile, petResort, safeCents, initialS
     } catch (cause) {
       setAdjustError(cause instanceof Error ? cause.message : "Unable to record adjustment.");
     } finally { setSavingAdjustment(false); }
+  }
+
+  function beginPetAdjustmentEdit(entry: PetResortSummary["recentAdjustments"][number]) {
+    setEditingPetAdjustment(entry);
+    setPetEditDirection(entry.amountCents > 0 ? "add" : "remove");
+    setPetEditAmount((Math.abs(entry.amountCents) / 100).toFixed(2));
+    setPetEditNote(entry.note); setPetEditError(""); setPetEditMessage("");
+  }
+
+  async function savePetAdjustmentEdit(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!editingPetAdjustment) return;
+    setPetEditError("");
+    const amountCents = Math.round(Number(petEditAmount) * 100);
+    if (!/^\d+(?:\.\d{1,2})?$/.test(petEditAmount) || !Number.isSafeInteger(amountCents) || amountCents <= 0 || amountCents > 2_147_483_647 || !petEditNote.trim()) {
+      setPetEditError("Enter a valid amount and reason."); return;
+    }
+    setPetEditSaving(true);
+    try {
+      const response = await fetch("/api/cash-management/pet-resort-adjustments", {
+        method: "PATCH", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: editingPetAdjustment.id, direction: petEditDirection, amountCents, note: petEditNote,
+          original: { amountCents: editingPetAdjustment.amountCents, note: editingPetAdjustment.note } }),
+      });
+      const result = await readApiResponse(response);
+      if (!response.ok) throw new Error(result.error ?? "Unable to update adjustment.");
+      setEditingPetAdjustment(null); setPetEditMessage("Cash adjustment updated."); router.refresh();
+    } catch (cause) { setPetEditError(cause instanceof Error ? cause.message : "Unable to update adjustment."); }
+    finally { setPetEditSaving(false); }
   }
 
   function beginCashEdit(entry: DailyCash) {
@@ -285,7 +321,19 @@ export function CashManagementDashboard({ mobile, petResort, safeCents, initialS
           </select>
         </label>
         {petHistoryFilter === "all" && <><h3 className="mt-5 text-sm font-semibold text-gray-900">Cash adjustments</h3>
-          {petResort.recentAdjustments.length ? <ul className="mt-2 divide-y divide-pp-line">{petResort.recentAdjustments.map((entry) => <li key={entry.id} className="flex justify-between gap-4 py-3 text-sm text-gray-700"><span>{new Intl.DateTimeFormat("en-US", { dateStyle: "medium", timeZone: "America/New_York" }).format(new Date(entry.recordedAt))}<span className="block whitespace-pre-wrap text-gray-500">{entry.note}</span></span><span className="font-semibold">{entry.amountCents > 0 ? "+" : "-"}{money(Math.abs(entry.amountCents))}</span></li>)}</ul> : <p className="mt-2 text-sm text-gray-500">No cash adjustments yet.</p>}</>}
+          {petResort.recentAdjustments.length ? <ul className="mt-2 divide-y divide-pp-line">{petResort.recentAdjustments.map((entry) => <li key={entry.id} className="py-3 text-sm text-gray-700">
+            {editingPetAdjustment?.id === entry.id ? <form onSubmit={savePetAdjustmentEdit} className="space-y-3 rounded-lg border border-pp-line bg-gray-50 p-3">
+              <div className="grid gap-3 sm:grid-cols-2">
+                <label className="font-medium">Action<select value={petEditDirection} onChange={(event) => setPetEditDirection(event.target.value as "add" | "remove")} className="mt-1 block w-full rounded-lg border border-pp-line bg-white px-3 py-2"><option value="add">Add cash</option><option value="remove">Remove cash</option></select></label>
+                <label className="font-medium">Amount<input type="number" min="0.01" max="21474836.47" step="0.01" required value={petEditAmount} onChange={(event) => setPetEditAmount(event.target.value)} className="mt-1 block w-full rounded-lg border border-pp-line bg-white px-3 py-2" /></label>
+              </div>
+              <label className="block font-medium">Reason<textarea required rows={2} maxLength={1000} value={petEditNote} onChange={(event) => setPetEditNote(event.target.value)} className="mt-1 block w-full rounded-lg border border-pp-line bg-white px-3 py-2" /></label>
+              {petEditError && <p role="alert" className="text-red-700">{petEditError}</p>}
+              <div className="flex gap-2"><button type="submit" disabled={petEditSaving} className="rounded-lg bg-pp-accent px-4 py-2 font-semibold text-white disabled:opacity-50">{petEditSaving ? "Saving…" : "Save changes"}</button><button type="button" disabled={petEditSaving} onClick={() => { setEditingPetAdjustment(null); setPetEditError(""); }} className="rounded-lg border border-pp-line bg-white px-4 py-2 font-medium">Cancel</button></div>
+            </form> : <div className="flex justify-between gap-4"><span>{new Intl.DateTimeFormat("en-US", { dateStyle: "medium", timeZone: "America/New_York" }).format(new Date(entry.recordedAt))}<span className="block whitespace-pre-wrap text-gray-500">{entry.note}</span></span><span className="flex items-start gap-3"><span className="font-semibold">{entry.amountCents > 0 ? "+" : "-"}{money(Math.abs(entry.amountCents))}</span><button type="button" onClick={() => beginPetAdjustmentEdit(entry)} className="font-medium text-pp-accent underline underline-offset-2" aria-label={`Edit cash adjustment for ${new Intl.DateTimeFormat("en-US", { dateStyle: "medium", timeZone: "America/New_York" }).format(new Date(entry.recordedAt))}`}>Edit</button></span></div>}
+          </li>)}</ul> : <p className="mt-2 text-sm text-gray-500">No cash adjustments yet.</p>}
+          {petEditMessage && <p role="status" className="mt-2 text-sm text-green-700">{petEditMessage}</p>}
+        </>}
         {petHistoryFilter !== "bank" && <>
         <h3 className="mt-5 text-sm font-semibold text-gray-900">Daily cash log</h3>
         {petResort.recentDailyCash.length > 0 ? <ul className="mt-2 divide-y divide-pp-line">

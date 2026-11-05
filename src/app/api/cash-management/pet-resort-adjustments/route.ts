@@ -60,3 +60,51 @@ export async function POST(request: Request) {
     throw error;
   }
 }
+
+export async function PATCH(request: Request) {
+  const session = await getSession();
+  const user = session?.user as { id?: string; role?: string } | undefined;
+  if (!user?.id || !isSuperAdmin(user.role)) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+  let body: Record<string, unknown>;
+  try { body = await request.json() as Record<string, unknown>; }
+  catch { return NextResponse.json({ error: "Invalid request." }, { status: 400 }); }
+  const { id, direction, amountCents, note, original } = body;
+  const prior = original && typeof original === "object" ? original as Record<string, unknown> : null;
+  if (typeof id !== "string" || !id || (direction !== "add" && direction !== "remove") ||
+      typeof amountCents !== "number" || !Number.isSafeInteger(amountCents) || amountCents <= 0 || amountCents > 2_147_483_647 ||
+      typeof note !== "string" || !note.trim() || note.trim().length > 1000 || !prior ||
+      typeof prior.amountCents !== "number" || !Number.isSafeInteger(prior.amountCents) || typeof prior.note !== "string") {
+    return NextResponse.json({ error: "Enter a valid direction, amount, and reason (up to 1,000 characters)." }, { status: 400 });
+  }
+  const signedAmountCents = direction === "add" ? amountCents : -amountCents;
+  try {
+    const result = await prisma.$transaction(async (tx) => {
+      await tx.$queryRaw`SELECT pg_advisory_xact_lock(20261015, 1)::text`;
+      const existing = await tx.financePetResortCashAdjustment.findUnique({ where: { id } });
+      if (!existing || existing.amountCents !== prior.amountCents || existing.note !== prior.note) {
+        return { error: "Adjustment changed. Refresh and try again." };
+      }
+      const decrease = existing.amountCents - signedAmountCents;
+      if (decrease > 0) {
+        const [received, daily, banked, adjustments] = await Promise.all([
+          tx.financePetResortCashTransaction.aggregate({ _sum: { amountCents: true } }),
+          tx.financePetResortDailyCash.aggregate({ _sum: { amountCents: true } }),
+          tx.financeCashBankDeposit.aggregate({ where: { source: PET_RESORT_SOURCE }, _sum: { amountCents: true } }),
+          tx.financePetResortCashAdjustment.aggregate({ _sum: { amountCents: true } }),
+        ]);
+        const available = petResortOnHandCents(received._sum.amountCents ?? 0, daily._sum.amountCents ?? 0, banked._sum.amountCents ?? 0, adjustments._sum.amountCents ?? 0);
+        if (decrease > available) return { error: "This change exceeds Pet Resort cash on hand." };
+      }
+      await tx.financePetResortCashAdjustment.update({ where: { id }, data: { amountCents: signedAmountCents, note: note.trim() } });
+      return { id };
+    }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
+    if ("error" in result) return NextResponse.json(result, { status: 409 });
+    return NextResponse.json(result);
+  } catch (error) {
+    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2034") {
+      return NextResponse.json({ error: "Cash balance changed. Refresh and try again." }, { status: 409 });
+    }
+    throw error;
+  }
+}
