@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { clockLabel, coverageRows, inputTime, type ScheduleShift, type WeeklySchedule } from "@/lib/schedule-formatter";
+import { clockLabel, coverageRows, employeeLabels, inputTime, type ScheduleShift, type WeeklySchedule } from "@/lib/schedule-formatter";
 
 export function ScheduleFormatter() {
   const [schedule, setSchedule] = useState<WeeklySchedule | null>(null);
@@ -10,6 +10,7 @@ export function ScheduleFormatter() {
   const [exporting, setExporting] = useState(false);
   const [error, setError] = useState("");
   const [reviewed, setReviewed] = useState(false);
+  const labels = employeeLabels(schedule?.shifts ?? []);
   let validation = "";
   let rows: ReturnType<typeof coverageRows> = [];
   try { rows = coverageRows(schedule?.shifts ?? []); }
@@ -102,7 +103,7 @@ export function ScheduleFormatter() {
               <thead><tr className="bg-pp-mint/40"><th scope="col" className="w-36 p-3">Time</th>{schedule.days.map(day => <th key={day} scope="col" className="p-3">{day}</th>)}</tr></thead>
               <tbody>{rows.map(row => <tr key={row.start} className="border-t border-pp-line even:bg-gray-50">
                 <th scope="row" className="whitespace-nowrap p-3 align-top font-medium">{clockLabel(row.start)} – {clockLabel(row.end)}</th>
-                {row.employees.map((employees, day) => <td key={day} className="border-l border-pp-line p-3 align-top"><span className="mb-1 block font-semibold">{employees.length} on duty</span><span className="text-gray-600">{employees.join("; ") || "—"}</span></td>)}
+                {row.employees.map((employees, day) => <td key={day} className="border-l border-pp-line p-3 align-top"><span className="mb-1 block font-semibold">{employees.length} on duty</span><span className="text-gray-600">{employees.map(name => labels.get(name) ?? name).join("; ") || "—"}</span></td>)}
               </tr>)}</tbody>
             </table>
           </div>

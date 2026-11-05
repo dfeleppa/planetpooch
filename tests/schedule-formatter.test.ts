@@ -58,10 +58,12 @@ test("unreadable pages, multiple weeks, and duplicate repeated pages fail instea
   assert.throws(() => parseSchedule([source(), source()]), /duplicate/);
 });
 
-test("abbreviated name collisions remain distinguishable", () => {
-  const labels = employeeLabels([shift("Smith, Alex", 360, 480), shift("Stone, Alex", 360, 480)]);
-  assert.equal(labels.get("Smith, Alex"), "Smith, Alex");
-  assert.equal(labels.get("Stone, Alex"), "Stone, Alex");
+test("staffing labels consistently use first name and last initial", () => {
+  const labels = employeeLabels([shift("Riccobono, Maxine A", 360, 480), shift("Smith, Alex", 360, 480), shift("Stone, Alex", 360, 480), shift("Sam Jones", 360, 480)]);
+  assert.equal(labels.get("Riccobono, Maxine A"), "Maxine R.");
+  assert.equal(labels.get("Smith, Alex"), "Alex S.");
+  assert.equal(labels.get("Stone, Alex"), "Alex S.");
+  assert.equal(labels.get("Sam Jones"), "Sam J.");
 });
 
 test("PDF has exactly one landscape page, and excessive detail is rejected", async () => {

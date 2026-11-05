@@ -120,11 +120,12 @@ export function coverageRows(shifts: ScheduleShift[]): CoverageRow[] {
 
 export function employeeLabels(shifts: ScheduleShift[]): Map<string, string> {
   const names = [...new Set(shifts.map(shift => shift.employee))];
-  const firstNames = names.map(name => name.includes(",") ? name.split(",")[1].trim().split(/\s+/)[0] : name);
-  const short = names.map(name => {
-    const [last, first] = name.split(",").map(part => part.trim());
-    const given = first?.split(/\s+/)[0];
-    return given ? firstNames.filter(value => value === given).length === 1 ? given : `${given} ${last[0]}.` : name;
-  });
-  return new Map(names.map((name, index) => [name, short.filter(label => label === short[index]).length > 1 ? name : short[index]]));
+  return new Map(names.map(name => {
+    const parts = name.trim().split(/\s+/);
+    const [last, first] = name.includes(",")
+      ? name.split(",").map(part => part.trim())
+      : [parts.length > 1 ? parts[parts.length - 1] : "", parts[0]];
+    const given = first?.split(/\s+/)[0] || name;
+    return [name, last ? `${given} ${last[0]}.` : given];
+  }));
 }
