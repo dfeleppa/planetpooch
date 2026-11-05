@@ -86,13 +86,14 @@ export async function PATCH(request: Request) {
         return { error: "Cash entry changed. Refresh and try again." };
       }
       if (amountCents < entry.amountCents) {
-        const [received, dailyCash, banked] = await Promise.all([
+        const [received, dailyCash, banked, adjustments] = await Promise.all([
           tx.financePetResortCashTransaction.aggregate({ _sum: { amountCents: true } }),
           tx.financePetResortDailyCash.aggregate({ _sum: { amountCents: true } }),
           tx.financeCashBankDeposit.aggregate({ where: { source: PET_RESORT_SOURCE }, _sum: { amountCents: true } }),
+          tx.financePetResortCashAdjustment.aggregate({ _sum: { amountCents: true } }),
         ]);
         const available = petResortOnHandCents(received._sum.amountCents ?? 0,
-          dailyCash._sum.amountCents ?? 0, banked._sum.amountCents ?? 0);
+          dailyCash._sum.amountCents ?? 0, banked._sum.amountCents ?? 0, adjustments._sum.amountCents ?? 0);
         if (available < entry.amountCents - amountCents) {
           return { error: "This correction would exceed Pet Resort cash on hand." };
         }

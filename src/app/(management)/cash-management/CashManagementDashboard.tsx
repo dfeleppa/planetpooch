@@ -278,12 +278,14 @@ export function CashManagementDashboard({ mobile, petResort, safeCents, initialS
       </div>
       <section className={cashView === "safe" && detailView === "history" ? "rounded-xl border border-pp-line bg-white p-6 shadow-sm" : "hidden"}>
         <h2 className="text-lg font-semibold text-gray-900">Pet Resort activity</h2>
-        <p className="mt-2 text-sm text-gray-600">{petResort.transactionCount} imported cash transactions · MoeGo cash: {money(petResort.receivedCents)} · Daily cash: {money(petResort.dailyCashCents)} · Banked: {money(petResort.bankedCents)}</p>
+        <p className="mt-2 text-sm text-gray-600">{petResort.transactionCount} imported cash transactions · MoeGo cash: {money(petResort.receivedCents)} · Daily cash: {money(petResort.dailyCashCents)} · Adjustments: {money(petResort.adjustmentCents)} · Banked: {money(petResort.bankedCents)}</p>
         <label className="mt-5 block max-w-xs text-sm font-medium text-gray-700">Show activity
           <select value={petHistoryFilter} onChange={(event) => setPetHistoryFilter(event.target.value as typeof petHistoryFilter)} className="mt-1 block w-full rounded-lg border border-pp-line bg-white px-3 py-2">
             <option value="all">All activity</option><option value="daily">Daily cash</option><option value="bank">Bank deposits</option>
           </select>
         </label>
+        {petHistoryFilter === "all" && <><h3 className="mt-5 text-sm font-semibold text-gray-900">Cash adjustments</h3>
+          {petResort.recentAdjustments.length ? <ul className="mt-2 divide-y divide-pp-line">{petResort.recentAdjustments.map((entry) => <li key={entry.id} className="flex justify-between gap-4 py-3 text-sm text-gray-700"><span>{new Intl.DateTimeFormat("en-US", { dateStyle: "medium", timeZone: "America/New_York" }).format(new Date(entry.recordedAt))}<span className="block whitespace-pre-wrap text-gray-500">{entry.note}</span></span><span className="font-semibold">{entry.amountCents > 0 ? "+" : "-"}{money(Math.abs(entry.amountCents))}</span></li>)}</ul> : <p className="mt-2 text-sm text-gray-500">No cash adjustments yet.</p>}</>}
         {petHistoryFilter !== "bank" && <>
         <h3 className="mt-5 text-sm font-semibold text-gray-900">Daily cash log</h3>
         {petResort.recentDailyCash.length > 0 ? <ul className="mt-2 divide-y divide-pp-line">

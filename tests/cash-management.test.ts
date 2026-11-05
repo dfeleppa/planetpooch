@@ -87,10 +87,16 @@ test("Pet Resort daily cash increases the available deposit and remains in the a
       aggregate: async () => ({ _sum: { amountCents: 3_000 } }),
       findMany: async () => [],
     },
+    financePetResortCashAdjustment: {
+      aggregate: async () => ({ _sum: { amountCents: -500 } }),
+      findMany: async () => [{ id: "adjust-1", amountCents: -500, note: "Count correction", recordedAt: new Date("2026-10-20T12:00:00Z") }],
+    },
   } as unknown as Parameters<typeof petResortCashSummary>[0];
 
   const summary = await petResortCashSummary(db);
-  assert.equal(summary.onHandCents, 9_500);
+  assert.equal(summary.onHandCents, 9_000);
+  assert.equal(summary.adjustmentCents, -500);
+  assert.equal(summary.recentAdjustments[0].note, "Count correction");
   assert.equal(summary.dailyCashCents, 2_500);
   assert.deepEqual(summary.recentDailyCash, [{
     id: "daily-1", cashDate: "2026-10-19", amountCents: 2_500, note: "Front desk cash",

@@ -8,8 +8,8 @@ export function cashOnHandCents(payrollCents: number, pendingCountedCents: numbe
   return payrollCents + pendingCountedCents + adjustmentCents - depositedCents;
 }
 
-export function petResortOnHandCents(importedCents: number, dailyCashCents: number, bankedCents: number) {
-  return importedCents + dailyCashCents - bankedCents;
+export function petResortOnHandCents(importedCents: number, dailyCashCents: number, bankedCents: number, adjustmentCents = 0) {
+  return importedCents + dailyCashCents + adjustmentCents - bankedCents;
 }
 
 type PendingCount = {
@@ -115,8 +115,8 @@ export async function mobileGroomingCashSummary(db: Pick<typeof prisma, "finance
   };
 }
 
-export async function petResortCashSummary(db: Pick<typeof prisma, "financePetResortCashTransaction" | "financePetResortDailyCash" | "financeCashBankDeposit"> = prisma) {
-  const [received, dailyCash, deposited, transactionCount, recentDailyCash, recentDeposits] = await Promise.all([
+export async function petResortCashSummary(db: Pick<typeof prisma, "financePetResortCashTransaction" | "financePetResortDailyCash" | "financeCashBankDeposit" | "financePetResortCashAdjustment"> = prisma) {
+  const [received, dailyCash, deposited, transactionCount, recentDailyCash, recentDeposits, adjustments, recentAdjustments] = await Promise.all([
     db.financePetResortCashTransaction.aggregate({ _sum: { amountCents: true } }),
     db.financePetResortDailyCash.aggregate({ _sum: { amountCents: true } }),
     db.financeCashBankDeposit.aggregate({ where: { source: PET_RESORT_SOURCE }, _sum: { amountCents: true } }),
@@ -129,6 +129,8 @@ export async function petResortCashSummary(db: Pick<typeof prisma, "financePetRe
       where: { source: PET_RESORT_SOURCE }, orderBy: { depositedAt: "desc" }, take: 10,
       select: { id: true, amountCents: true, depositedAt: true },
     }),
+    db.financePetResortCashAdjustment.aggregate({ _sum: { amountCents: true } }),
+    db.financePetResortCashAdjustment.findMany({ orderBy: { recordedAt: "desc" }, take: 30 }),
   ]);
   const receivedCents = received._sum.amountCents ?? 0;
   const dailyCashCents = dailyCash._sum.amountCents ?? 0;
@@ -137,7 +139,9 @@ export async function petResortCashSummary(db: Pick<typeof prisma, "financePetRe
     receivedCents,
     dailyCashCents,
     bankedCents,
-    onHandCents: petResortOnHandCents(receivedCents, dailyCashCents, bankedCents),
+    adjustmentCents: adjustments._sum.amountCents ?? 0,
+    recentAdjustments: recentAdjustments.map((entry) => ({ id: entry.id, amountCents: entry.amountCents, note: entry.note, recordedAt: entry.recordedAt.toISOString() })),
+    onHandCents: petResortOnHandCents(receivedCents, dailyCashCents, bankedCents, adjustments._sum.amountCents ?? 0),
     transactionCount,
     recentDailyCash: recentDailyCash.map((entry) => ({
       id: entry.id, cashDate: entry.cashDate.toISOString().slice(0, 10), amountCents: entry.amountCents, note: entry.note,

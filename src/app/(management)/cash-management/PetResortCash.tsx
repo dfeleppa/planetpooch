@@ -11,6 +11,8 @@ export type PetResortSummary = {
   receivedCents: number;
   dailyCashCents: number;
   bankedCents: number;
+  adjustmentCents: number;
+  recentAdjustments: { id: string; amountCents: number; note: string; recordedAt: string }[];
   onHandCents: number;
   transactionCount: number;
   recentDailyCash: DailyCash[];
@@ -21,7 +23,11 @@ const money = (cents: number) => new Intl.NumberFormat("en-US", { style: "curren
 
 export function PetResortCash({ summary }: { summary: PetResortSummary }) {
   const router = useRouter();
-  const [action, setAction] = useState<"daily" | "bank" | "import">("daily");
+  const [action, setAction] = useState<"daily" | "bank" | "import" | "adjust">("daily");
+  const [direction, setDirection] = useState<"add" | "remove">("add");
+  const [adjustAmount, setAdjustAmount] = useState("");
+  const [adjustNote, setAdjustNote] = useState("");
+  const adjustRequestId = useRef<string | null>(null);
   const [importFile, setImportFile] = useState<File | null>(null);
   const [amount, setAmount] = useState("");
   const [cashDate, setCashDate] = useState("");
@@ -71,6 +77,22 @@ export function PetResortCash({ summary }: { summary: PetResortSummary }) {
     } finally { setSavingDaily(false); }
   }
 
+  async function recordAdjustment(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault(); setError(""); setMessage("");
+    if (!/^\d+(?:\.\d{1,2})?$/.test(adjustAmount) || !adjustNote.trim()) { setError("Enter an amount and reason."); return; }
+    const amountCents = Math.round(Number(adjustAmount) * 100);
+    if (!Number.isSafeInteger(amountCents) || amountCents <= 0 || amountCents > 2147483647 || (direction === "remove" && amountCents > summary.onHandCents)) { setError("Enter a valid amount within cash on hand."); return; }
+    setSaving(true);
+    try {
+      adjustRequestId.current ??= crypto.randomUUID();
+      const response = await fetch("/api/cash-management/pet-resort-adjustments", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ direction, amountCents, note: adjustNote, requestId: adjustRequestId.current }) });
+      const result = await readApiResponse(response);
+      if (!response.ok) throw new Error(result.error ?? "Unable to save adjustment.");
+      adjustRequestId.current = null; setAdjustAmount(""); setAdjustNote(""); setMessage("Cash adjustment recorded."); router.refresh();
+    } catch (cause) { setError(cause instanceof Error ? cause.message : "Unable to save adjustment."); }
+    finally { setSaving(false); }
+  }
+
   async function importCash(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!importFile) return;
@@ -118,11 +140,12 @@ export function PetResortCash({ summary }: { summary: PetResortSummary }) {
 
   return <>
     <p className="mt-4 text-3xl font-bold text-gray-900">{money(summary.onHandCents)}</p>
-    <p className="mt-2 text-sm text-gray-500">MoeGo cash plus daily cash entries, less bank deposits recorded here.</p>
+    <p className="mt-2 text-sm text-gray-500">MoeGo cash plus daily cash and adjustments, less bank deposits recorded here.</p>
     <div className="mt-5 flex flex-wrap gap-2 border-t border-pp-line pt-5" aria-label="Pet Resort cash actions">
       {([
         { id: "daily", label: "Cash received" },
         { id: "bank", label: "Bank deposit" },
+        { id: "adjust", label: "Adjust cash" },
         { id: "import", label: "Import from MoeGo" },
       ] as const).map((item) => <button key={item.id} type="button" onClick={() => setAction(item.id)} aria-pressed={action === item.id}
         className={`rounded-lg px-3 py-2 text-sm font-semibold ${action === item.id ? "bg-pp-accent text-white" : "border border-pp-line bg-white text-gray-700 hover:bg-gray-50"}`}>{item.label}</button>)}
@@ -141,6 +164,15 @@ export function PetResortCash({ summary }: { summary: PetResortSummary }) {
         <textarea rows={2} maxLength={2000} value={dailyNote} onChange={(event) => { setDailyNote(event.target.value); dailyRequestId.current = null; }} className="mt-1 block w-full rounded-lg border border-pp-line px-3 py-2 text-sm text-gray-900" />
       </label>
       <button type="submit" disabled={savingDaily || !cashDate || !dailyAmount} className="rounded-lg bg-pp-accent px-4 py-2 text-sm font-semibold text-white disabled:opacity-50">{savingDaily ? "Saving…" : "Record cash received"}</button>
+    </form>
+    <form onSubmit={recordAdjustment} className={action === "adjust" ? "mt-5 space-y-3" : "hidden"}>
+      <h3 className="text-sm font-semibold text-gray-900">Adjust Pet Resort cash</h3>
+      <div className="grid gap-3 sm:grid-cols-2">
+        <label className="block text-sm font-medium text-gray-700">Action<select value={direction} onChange={(e) => { setDirection(e.target.value as "add" | "remove"); adjustRequestId.current = null; }} className="mt-1 block w-full rounded-lg border border-pp-line bg-white px-3 py-2"><option value="add">Add cash</option><option value="remove">Remove cash</option></select></label>
+        <label className="block text-sm font-medium text-gray-700">Amount<input type="number" min="0.01" step="0.01" required value={adjustAmount} onChange={(e) => { setAdjustAmount(e.target.value); adjustRequestId.current = null; }} placeholder="0.00" className="mt-1 block w-full rounded-lg border border-pp-line px-3 py-2" /></label>
+      </div>
+      <label className="block text-sm font-medium text-gray-700">Reason<textarea required rows={2} maxLength={1000} value={adjustNote} onChange={(e) => { setAdjustNote(e.target.value); adjustRequestId.current = null; }} className="mt-1 block w-full rounded-lg border border-pp-line px-3 py-2" /></label>
+      <button type="submit" disabled={saving || !adjustAmount || !adjustNote.trim()} className="rounded-lg bg-pp-accent px-4 py-2 text-sm font-semibold text-white disabled:opacity-50">{saving ? "Saving..." : "Record adjustment"}</button>
     </form>
     <form onSubmit={importCash} className={action === "import" ? "mt-5 space-y-2" : "hidden"}>
       <label htmlFor="pet-resort-cash-import" className="block text-sm font-medium text-gray-700">MoeGo cash import file (JSON)</label>

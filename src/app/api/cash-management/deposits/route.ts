@@ -55,10 +55,10 @@ export async function POST(request: Request) {
         source === MOBILE_GROOMING_SOURCE
           ? tx.financeMobileGroomingCashAdjustment.aggregate({ _sum: { amountCents: true } })
               .then((result) => result._sum.amountCents ?? 0)
-          : Promise.resolve(0),
+          : tx.financePetResortCashAdjustment.aggregate({ _sum: { amountCents: true } }).then((result) => result._sum.amountCents ?? 0),
       ]);
       const available = source === PET_RESORT_SOURCE
-        ? petResortOnHandCents(received, dailyCash, banked._sum.amountCents ?? 0)
+        ? petResortOnHandCents(received, dailyCash, banked._sum.amountCents ?? 0, adjustments)
         : cashOnHandCents(received, pendingCounted, banked._sum.amountCents ?? 0, adjustments);
       if (amountCents > available) return { error: "Deposit exceeds cash on hand." };
       const deposit = await tx.financeCashBankDeposit.create({
