@@ -4,11 +4,13 @@ import { getActiveBusiness } from "@/lib/business-server";
 
 type AdminPeopleView =
   | "employees"
+  | "availability"
   | "scheduling"
   | "guidelines";
 
 const adminPeopleNav: { href: string; label: string; view: AdminPeopleView }[] = [
   { href: "/admin/employees", label: "Employees", view: "employees" },
+  { href: "/admin/scheduling/availability", label: "Availability", view: "availability" },
   { href: "/admin/scheduling", label: "Scheduling", view: "scheduling" },
   { href: "/admin/scheduling/guidelines", label: "Guidelines", view: "guidelines" },
 ];

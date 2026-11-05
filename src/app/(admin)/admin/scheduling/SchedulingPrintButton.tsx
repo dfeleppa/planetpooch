@@ -10,7 +10,7 @@ export function SchedulingPrintButton() {
       className="pp-scheduling-print-button"
       onClick={() => window.print()}
     >
-      Print schedule
+      Print availability
     </Button>
   );
 }
