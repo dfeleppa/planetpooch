@@ -19,7 +19,6 @@ type MobileSummary = {
   ledger: MobileCashLedgerEntry[];
 };
 type CashView = "mobile-grooming" | "safe";
-type DetailView = "actions" | "history";
 type MobileHistoryFilter = "all" | MobileCashLedgerEntry["kind"];
 type LatestSafeVerification = { countedCents: number; verifiedAt: string } | null;
 
@@ -30,7 +29,6 @@ function money(cents: number) {
 export function CashManagementDashboard({ mobile, petResort, safeCents, initialSafeVerification }: { mobile: MobileSummary; petResort: PetResortSummary; safeCents: number; initialSafeVerification: LatestSafeVerification }) {
   const router = useRouter();
   const [cashView, setCashView] = useState<CashView | null>(null);
-  const [detailView, setDetailView] = useState<DetailView>("actions");
   const [mobileHistoryFilter, setMobileHistoryFilter] = useState<MobileHistoryFilter>("all");
   const [petHistoryFilter, setPetHistoryFilter] = useState<"all" | "daily" | "bank">("all");
   const [amount, setAmount] = useState("");
@@ -69,7 +67,6 @@ export function CashManagementDashboard({ mobile, petResort, safeCents, initialS
 
   function selectCashView(nextView: CashView) {
     setCashView(nextView);
-    setDetailView("actions");
   }
 
   async function recordAdjustment(event: React.FormEvent<HTMLFormElement>) {
@@ -205,114 +202,8 @@ export function CashManagementDashboard({ mobile, petResort, safeCents, initialS
     }
   }
 
-  return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold text-gray-900">Cash Management</h1>
-        <p className="mt-1 text-gray-500">Choose Mobile Grooming or Safe to open its tools.</p>
-      </div>
-      <section aria-labelledby="cash-areas-heading" className="space-y-3">
-        <div>
-          <h2 id="cash-areas-heading" className="text-lg font-semibold text-gray-900">Manage cash by location</h2>
-          <p className="mt-1 text-sm text-gray-600">Select a card to open its cash actions and history.</p>
-        </div>
-      <div className="grid gap-3 sm:grid-cols-2">
-        {([
-          { id: "mobile-grooming", label: "Mobile Grooming", balance: mobile.onHandCents },
-          { id: "safe", label: "Safe", balance: totalSafeCents },
-        ] as const).map((area) => (
-          <button key={area.id} type="button" onClick={() => selectCashView(area.id)} aria-pressed={cashView === area.id}
-            className={`flex min-h-40 w-full cursor-pointer flex-col rounded-xl border-2 p-4 text-left transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-pp-accent ${cashView === area.id ? "border-pp-accent bg-pp-accent-soft" : "border-pp-line bg-white hover:border-pp-accent hover:bg-pp-accent-soft"}`}>
-            <span className="text-sm font-semibold text-gray-900">{area.label}</span>
-            <span className="mt-1 text-xl font-bold tabular-nums text-gray-900">{money(area.balance)}</span>
-            <span className="mt-1 text-xs text-gray-500">{area.id === "safe" ? "Change drawer + Mobile Grooming + Pet Resort" : "Cash on hand"}</span>
-            <span className="mt-auto flex items-center justify-between pt-4 text-sm font-semibold text-pp-accent">
-              {cashView === area.id ? "Selected" : area.id === "safe" ? "Manage safe" : "Manage cash"}
-              <span aria-hidden="true">{cashView === area.id ? "↓" : "→"}</span>
-            </span>
-          </button>
-        ))}
-      </div>
-      </section>
-      {cashView === "mobile-grooming" && (
-        <section aria-labelledby="employee-verification-heading" className="rounded-xl border border-pp-accent-line bg-pp-accent-soft p-5">
-          <p className="text-xs font-semibold uppercase tracking-wide text-pp-accent">Mobile Grooming</p>
-          <h2 id="employee-verification-heading" className="mt-1 text-lg font-semibold text-gray-900">Employee verification & weekly closeout</h2>
-          <p className="mt-2 text-sm text-gray-700">Verify each employee’s cash daily. Review payouts and count the remaining cash at the end of the week.</p>
-          <div className="mt-4 flex flex-wrap gap-3">
-            <Link href="/cash-management/mobile-grooming/reconciliation" className="rounded-lg bg-pp-accent px-4 py-3 text-sm font-semibold text-white">1. Verify employees for the day →</Link>
-            <Link href="/cash-management/mobile-grooming/reconciliation?view=weekly" className="rounded-lg border border-pp-accent-line bg-white px-4 py-3 text-sm font-semibold text-pp-accent">2. Review & close a week →</Link>
-          </div>
-          <p className="mt-3 text-xs text-gray-600">Manage bank deposits and cash adjustments under Safe.</p>
-        </section>
-      )}
-      {cashView === "safe" && <nav aria-label="Cash view" className="flex flex-wrap items-center gap-2 border-b border-pp-line pb-3">
-        <p className="mr-auto w-full text-sm font-semibold text-gray-900 sm:w-auto" role="status">Safe · {detailView === "actions" ? "Actions" : "History"}</p>
-        {(["actions", "history"] as const).map((section) => (
-          <button key={section} type="button" onClick={() => setDetailView(section)} aria-pressed={detailView === section}
-            className={`min-h-11 cursor-pointer rounded-lg border px-4 py-2 text-sm font-semibold focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-pp-accent ${detailView === section ? "border-pp-accent bg-pp-accent text-white" : "border-pp-line bg-white text-gray-700 hover:bg-gray-100"}`}>
-            {section === "actions" ? "Manage safe" : "History"}
-          </button>
-        ))}
-      </nav>}
-      <div className={cashView === "safe" && detailView === "actions" ? "block" : "hidden"}>
-        <section className="rounded-xl border border-pp-line bg-white p-6 shadow-sm">
-          <h2 className="text-lg font-semibold text-gray-900">Pet Resort cash</h2>
-          <PetResortCash summary={petResort} />
-        </section>
-      </div>
-      <div className={cashView === "safe" && detailView === "actions" ? "block" : "hidden"}>
-        <section className="rounded-xl border border-pp-line bg-white p-6 shadow-sm">
-          <h2 className="text-lg font-semibold text-gray-900">Mobile Grooming cash</h2>
-          <p className="mt-4 text-3xl font-bold text-gray-900">{money(mobile.onHandCents)}</p>
-          <p className="mt-2 text-sm text-gray-500">Completed week net cash, closeout and cash adjustments, plus counted cash awaiting closeout, less bank deposits recorded here.</p>
-          {mobile.pendingCountedCents > 0 && <p className="mt-1 text-sm text-amber-800">Includes {money(mobile.pendingCountedCents)} counted cash awaiting closeout; employee cash payouts are not yet deducted from that amount.</p>}
-          <Link href="/cash-management/mobile-grooming/reconciliation" className="mt-5 block rounded-lg border border-pp-accent-line bg-pp-accent-soft px-4 py-3 text-sm font-semibold text-pp-accent hover:underline">
-            Verify employees & close the week →
-          </Link>
-          <form onSubmit={recordDeposit} className="mt-5 space-y-3">
-            <label htmlFor="mobile-deposit-amount" className="block text-sm font-medium text-gray-700">Amount to deposit at bank</label>
-            <div className="flex flex-wrap gap-2">
-              <input id="mobile-deposit-amount" type="number" min="0.01" max={Math.max(0, mobile.onHandCents / 100)} step="0.01" required value={amount} onChange={(event) => { setAmount(event.target.value); requestId.current = null; }} placeholder="0.00" className="w-36 rounded-lg border border-pp-line px-3 py-2 text-sm text-gray-900" />
-              <button type="submit" disabled={saving || mobile.onHandCents <= 0} className="rounded-lg bg-pp-accent px-4 py-2 text-sm font-semibold text-white disabled:opacity-50">{saving ? "Recording…" : "Record bank deposit"}</button>
-            </div>
-            {error && <p role="alert" className="text-sm text-red-700">{error}</p>}
-            {success && <p role="status" className="text-sm text-green-700">{success}</p>}
-          </form>
-          <details className="mt-5 border-t border-pp-line pt-5">
-            <summary className="cursor-pointer text-sm font-semibold text-pp-accent">Adjust cash on hand</summary>
-          <form onSubmit={recordAdjustment} className="mt-4 space-y-3">
-            <div className="grid gap-3 sm:grid-cols-2">
-              <label className="block text-sm font-medium text-gray-700">Adjustment
-                <select value={adjustDirection} onChange={(event) => { setAdjustDirection(event.target.value as "add" | "remove"); adjustmentRequestId.current = null; }} className="mt-1 block w-full rounded-lg border border-pp-line bg-white px-3 py-2 text-sm text-gray-900">
-                  <option value="add">Add cash</option><option value="remove">Remove cash</option>
-                </select>
-              </label>
-              <label className="block text-sm font-medium text-gray-700">Amount
-                <input type="number" min="0.01" max={adjustDirection === "remove" ? Math.max(0, mobile.onHandCents / 100) : 21474836.47} step="0.01" required value={adjustAmount} onChange={(event) => { setAdjustAmount(event.target.value); adjustmentRequestId.current = null; }} placeholder="0.00" className="mt-1 block w-full rounded-lg border border-pp-line px-3 py-2 text-sm text-gray-900" />
-              </label>
-            </div>
-            <label className="block text-sm font-medium text-gray-700">Reason
-              <textarea rows={2} maxLength={1000} required value={adjustNote} onChange={(event) => { setAdjustNote(event.target.value); adjustmentRequestId.current = null; }} className="mt-1 block w-full rounded-lg border border-pp-line px-3 py-2 text-sm text-gray-900" />
-            </label>
-            <button type="submit" disabled={savingAdjustment || (adjustDirection === "remove" && mobile.onHandCents <= 0)} className="rounded-lg bg-pp-accent px-4 py-2 text-sm font-semibold text-white disabled:opacity-50">{savingAdjustment ? "Saving…" : "Record adjustment"}</button>
-            {adjustError && <p role="alert" className="text-sm text-red-700">{adjustError}</p>}
-            {adjustSuccess && <p role="status" className="text-sm text-green-700">{adjustSuccess}</p>}
-          </form>
-          </details>
-        </section>
-      </div>
-      <div className={cashView === "safe" ? "space-y-4" : "hidden"}>
-        <section className="rounded-xl border border-pp-line bg-white p-6 shadow-sm">
-          <h2 className="text-lg font-semibold text-gray-900">Change Drawer</h2>
-          <p className="mt-4 text-3xl font-bold text-gray-900">{money(changeDrawerCents)}</p>
-          <p className="mt-2 text-sm text-gray-500">{latestSafeVerification ? `Last verified ${new Intl.DateTimeFormat("en-US", { dateStyle: "medium", timeStyle: "short", timeZone: "America/New_York" }).format(new Date(latestSafeVerification.verifiedAt))} ET · Target ${money(safeCents)}` : "Target change drawer balance · No verifications yet"}</p>
-          {countedSafeCents !== null && countedSafeCents !== safeCents && <p className="mt-1 text-sm font-medium text-amber-800">{money(Math.abs(countedSafeCents - safeCents))} {countedSafeCents > safeCents ? "over target" : "under target"}</p>}
-          <button type="button" onClick={() => setDetailView((current) => current === "history" ? "actions" : "history")} aria-expanded={detailView === "history"} className="mt-4 text-sm font-semibold text-pp-accent underline underline-offset-2">{detailView === "history" ? "Hide verification history" : "View verification history"}</button>
-          <SafeBalanceVerification expectedCents={safeCents} onLatestVerificationChange={setLatestSafeVerification} mode={detailView} />
-        </section>
-      </div>
-      <section className={cashView === "safe" && detailView === "history" ? "rounded-xl border border-pp-line bg-white p-6 shadow-sm" : "hidden"}>
+  const petHistory = <details className="mt-5 border-t border-pp-line pt-5">
+    <summary className="cursor-pointer text-sm font-semibold text-pp-accent">View Pet Resort cash history</summary>
         <h2 className="text-lg font-semibold text-gray-900">Pet Resort activity</h2>
         <p className="mt-2 text-sm text-gray-600">{petResort.transactionCount} imported cash transactions · MoeGo cash: {money(petResort.receivedCents)} · Daily cash: {money(petResort.dailyCashCents)} · Adjustments: {money(petResort.adjustmentCents)} · Banked: {money(petResort.bankedCents)}</p>
         <label className="mt-5 block max-w-xs text-sm font-medium text-gray-700">Show activity
@@ -366,8 +257,9 @@ export function CashManagementDashboard({ mobile, petResort, safeCents, initialS
           </li>)}
         </ul> : <p className="mt-4 text-sm text-gray-500">No Pet Resort bank deposits recorded yet.</p>}
         </>}
-      </section>
-      <section className={cashView === "safe" && detailView === "history" ? "rounded-xl border border-pp-line bg-white p-6 shadow-sm" : "hidden"}>
+  </details>;
+  const mobileHistory = <details className="mt-5 border-t border-pp-line pt-5">
+    <summary className="cursor-pointer text-sm font-semibold text-pp-accent">View Mobile Grooming cash history</summary>
         <h2 className="text-lg font-semibold text-gray-900">Mobile Grooming activity</h2>
         <p className="mt-2 text-sm text-gray-600">Completed week net + closeout adjustments: {money(mobile.payrollCents)} · Counted cash awaiting closeout: {money(mobile.pendingCountedCents)} · Cash adjustments: {money(mobile.adjustmentCents)} · Banked: {money(mobile.bankedCents)}</p>
         <label className="mt-5 block max-w-xs text-sm font-medium text-gray-700">Show activity
@@ -392,7 +284,109 @@ export function CashManagementDashboard({ mobile, petResort, safeCents, initialS
             </ul>
           </div>
         ) : <p className="mt-4 text-sm text-gray-500">No activity matches this filter.</p>}
+  </details>;
+
+  return (
+    <div className="space-y-6">
+      <div>
+        <h1 className="text-2xl font-bold text-gray-900">Cash Management</h1>
+        <p className="mt-1 text-gray-500">Choose Mobile Grooming or Safe to open its tools.</p>
+      </div>
+      <section aria-labelledby="cash-areas-heading" className="space-y-3">
+        <div>
+          <h2 id="cash-areas-heading" className="text-lg font-semibold text-gray-900">Manage cash by location</h2>
+          <p className="mt-1 text-sm text-gray-600">Select a card to open its cash actions and history.</p>
+        </div>
+      <div className="grid gap-3 sm:grid-cols-2">
+        {([
+          { id: "mobile-grooming", label: "Mobile Grooming", balance: mobile.onHandCents },
+          { id: "safe", label: "Safe", balance: totalSafeCents },
+        ] as const).map((area) => (
+          <button key={area.id} type="button" onClick={() => selectCashView(area.id)} aria-pressed={cashView === area.id}
+            className={`flex min-h-40 w-full cursor-pointer flex-col rounded-xl border-2 p-4 text-left transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-pp-accent ${cashView === area.id ? "border-pp-accent bg-pp-accent-soft" : "border-pp-line bg-white hover:border-pp-accent hover:bg-pp-accent-soft"}`}>
+            <span className="text-sm font-semibold text-gray-900">{area.label}</span>
+            <span className="mt-1 text-xl font-bold tabular-nums text-gray-900">{money(area.balance)}</span>
+            <span className="mt-1 text-xs text-gray-500">{area.id === "safe" ? "Change drawer + Mobile Grooming + Pet Resort" : "Cash on hand"}</span>
+            <span className="mt-auto flex items-center justify-between pt-4 text-sm font-semibold text-pp-accent">
+              {cashView === area.id ? "Selected" : area.id === "safe" ? "Manage safe" : "Manage cash"}
+              <span aria-hidden="true">{cashView === area.id ? "↓" : "→"}</span>
+            </span>
+          </button>
+        ))}
+      </div>
       </section>
+      {cashView === "mobile-grooming" && (
+        <section aria-labelledby="employee-verification-heading" className="rounded-xl border border-pp-accent-line bg-pp-accent-soft p-5">
+          <p className="text-xs font-semibold uppercase tracking-wide text-pp-accent">Mobile Grooming</p>
+          <h2 id="employee-verification-heading" className="mt-1 text-lg font-semibold text-gray-900">Employee verification & weekly closeout</h2>
+          <p className="mt-2 text-sm text-gray-700">Verify each employee’s cash daily. Review payouts and count the remaining cash at the end of the week.</p>
+          <div className="mt-4 flex flex-wrap gap-3">
+            <Link href="/cash-management/mobile-grooming/reconciliation" className="rounded-lg bg-pp-accent px-4 py-3 text-sm font-semibold text-white">1. Verify employees for the day →</Link>
+            <Link href="/cash-management/mobile-grooming/reconciliation?view=weekly" className="rounded-lg border border-pp-accent-line bg-white px-4 py-3 text-sm font-semibold text-pp-accent">2. Review & close a week →</Link>
+          </div>
+          <p className="mt-3 text-xs text-gray-600">Manage bank deposits and cash adjustments under Safe.</p>
+          {mobileHistory}
+        </section>
+      )}
+      <div className={cashView === "safe" ? "block" : "hidden"}>
+        <section className="rounded-xl border border-pp-line bg-white p-6 shadow-sm">
+          <h2 className="text-lg font-semibold text-gray-900">Pet Resort cash</h2>
+          <PetResortCash summary={petResort} />
+          {petHistory}
+        </section>
+      </div>
+      <div className={cashView === "safe" ? "block" : "hidden"}>
+        <section className="rounded-xl border border-pp-line bg-white p-6 shadow-sm">
+          <h2 className="text-lg font-semibold text-gray-900">Mobile Grooming cash</h2>
+          <p className="mt-4 text-3xl font-bold text-gray-900">{money(mobile.onHandCents)}</p>
+          <p className="mt-2 text-sm text-gray-500">Completed week net cash, closeout and cash adjustments, plus counted cash awaiting closeout, less bank deposits recorded here.</p>
+          {mobile.pendingCountedCents > 0 && <p className="mt-1 text-sm text-amber-800">Includes {money(mobile.pendingCountedCents)} counted cash awaiting closeout; employee cash payouts are not yet deducted from that amount.</p>}
+          <Link href="/cash-management/mobile-grooming/reconciliation" className="mt-5 block rounded-lg border border-pp-accent-line bg-pp-accent-soft px-4 py-3 text-sm font-semibold text-pp-accent hover:underline">
+            Verify employees & close the week →
+          </Link>
+          <form onSubmit={recordDeposit} className="mt-5 space-y-3">
+            <label htmlFor="mobile-deposit-amount" className="block text-sm font-medium text-gray-700">Amount to deposit at bank</label>
+            <div className="flex flex-wrap gap-2">
+              <input id="mobile-deposit-amount" type="number" min="0.01" max={Math.max(0, mobile.onHandCents / 100)} step="0.01" required value={amount} onChange={(event) => { setAmount(event.target.value); requestId.current = null; }} placeholder="0.00" className="w-36 rounded-lg border border-pp-line px-3 py-2 text-sm text-gray-900" />
+              <button type="submit" disabled={saving || mobile.onHandCents <= 0} className="rounded-lg bg-pp-accent px-4 py-2 text-sm font-semibold text-white disabled:opacity-50">{saving ? "Recording…" : "Record bank deposit"}</button>
+            </div>
+            {error && <p role="alert" className="text-sm text-red-700">{error}</p>}
+            {success && <p role="status" className="text-sm text-green-700">{success}</p>}
+          </form>
+          <details className="mt-5 border-t border-pp-line pt-5">
+            <summary className="cursor-pointer text-sm font-semibold text-pp-accent">Adjust cash on hand</summary>
+          <form onSubmit={recordAdjustment} className="mt-4 space-y-3">
+            <div className="grid gap-3 sm:grid-cols-2">
+              <label className="block text-sm font-medium text-gray-700">Adjustment
+                <select value={adjustDirection} onChange={(event) => { setAdjustDirection(event.target.value as "add" | "remove"); adjustmentRequestId.current = null; }} className="mt-1 block w-full rounded-lg border border-pp-line bg-white px-3 py-2 text-sm text-gray-900">
+                  <option value="add">Add cash</option><option value="remove">Remove cash</option>
+                </select>
+              </label>
+              <label className="block text-sm font-medium text-gray-700">Amount
+                <input type="number" min="0.01" max={adjustDirection === "remove" ? Math.max(0, mobile.onHandCents / 100) : 21474836.47} step="0.01" required value={adjustAmount} onChange={(event) => { setAdjustAmount(event.target.value); adjustmentRequestId.current = null; }} placeholder="0.00" className="mt-1 block w-full rounded-lg border border-pp-line px-3 py-2 text-sm text-gray-900" />
+              </label>
+            </div>
+            <label className="block text-sm font-medium text-gray-700">Reason
+              <textarea rows={2} maxLength={1000} required value={adjustNote} onChange={(event) => { setAdjustNote(event.target.value); adjustmentRequestId.current = null; }} className="mt-1 block w-full rounded-lg border border-pp-line px-3 py-2 text-sm text-gray-900" />
+            </label>
+            <button type="submit" disabled={savingAdjustment || (adjustDirection === "remove" && mobile.onHandCents <= 0)} className="rounded-lg bg-pp-accent px-4 py-2 text-sm font-semibold text-white disabled:opacity-50">{savingAdjustment ? "Saving…" : "Record adjustment"}</button>
+            {adjustError && <p role="alert" className="text-sm text-red-700">{adjustError}</p>}
+            {adjustSuccess && <p role="status" className="text-sm text-green-700">{adjustSuccess}</p>}
+          </form>
+          </details>
+          {mobileHistory}
+        </section>
+      </div>
+      <div className={cashView === "safe" ? "space-y-4" : "hidden"}>
+        <section className="rounded-xl border border-pp-line bg-white p-6 shadow-sm">
+          <h2 className="text-lg font-semibold text-gray-900">Change Drawer</h2>
+          <p className="mt-4 text-3xl font-bold text-gray-900">{money(changeDrawerCents)}</p>
+          <p className="mt-2 text-sm text-gray-500">{latestSafeVerification ? `Last verified ${new Intl.DateTimeFormat("en-US", { dateStyle: "medium", timeStyle: "short", timeZone: "America/New_York" }).format(new Date(latestSafeVerification.verifiedAt))} ET · Target ${money(safeCents)}` : "Target change drawer balance · No verifications yet"}</p>
+          {countedSafeCents !== null && countedSafeCents !== safeCents && <p className="mt-1 text-sm font-medium text-amber-800">{money(Math.abs(countedSafeCents - safeCents))} {countedSafeCents > safeCents ? "over target" : "under target"}</p>}
+          <SafeBalanceVerification expectedCents={safeCents} onLatestVerificationChange={setLatestSafeVerification} mode="both" />
+        </section>
+      </div>
+
     </div>
   );
 }
