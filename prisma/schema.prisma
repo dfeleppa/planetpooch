@@ -2056,6 +2056,17 @@ model MoegoDaycareNotActiveRow {
   @@index([nextAppointmentDate])
 }
 
+/// Weekly uploaded Pet Resort staffing schedules. Server access only.
+model ResortStaffSchedule {
+  weekStart   String   @id
+  title       String
+  schedule    Json
+  revision    Int      @default(1)
+  updatedById String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
 /// One row per day-of-week the employee is available. Times are stored as
 /// "HH:MM" 24-hour strings on 30-minute boundaries (e.g. "09:00", "17:30").
 /// Days the employee is NOT available simply have no row — absence == off.
