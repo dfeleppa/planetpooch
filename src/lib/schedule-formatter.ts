@@ -36,7 +36,8 @@ export function parseSchedule(pages: SchedulePage[]): WeeklySchedule {
     }
     const headers = items.filter(item => DAY.test(item.text)).sort((a, b) => a.x - b.x);
     if (headers.length !== 7 || headers.some(item => Math.abs(item.y - headers[0].y) > 4)) {
-      throw new Error(`Page ${pageIndex + 1} does not have a readable seven-day schedule grid. Use the original ADP Team Schedule PDF, rather than a scan.`);
+      if (result.shifts.length && items.every(item => item.y < 30 || item.y > page.height - 40)) continue;
+      throw new Error(`The day headings on page ${pageIndex + 1} could not be read clearly. Try a different ADP PDF print layout.`);
     }
     const days = headers.map(item => item.text);
     if (result.days.length && days.join("|") !== result.days.join("|")) throw new Error("The pages do not belong to the same weekly schedule.");

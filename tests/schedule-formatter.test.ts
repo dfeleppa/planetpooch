@@ -52,10 +52,11 @@ test("overnight work is counted on the following calendar day", () => {
 });
 
 test("unreadable pages, multiple weeks, and duplicate repeated pages fail instead of omitting shifts", () => {
-  assert.throws(() => parseSchedule([{ width: 800, height: 600, items: [] }]), /readable/);
+  assert.throws(() => parseSchedule([{ width: 800, height: 600, items: [] }]), /read clearly/);
   const other = source(); other.items[0].text = "Week of November 15, 2026 - November 21, 2026";
   assert.throws(() => parseSchedule([source(), other]), /different weeks/);
   assert.throws(() => parseSchedule([source(), source()]), /duplicate/);
+  assert.equal(parseSchedule([source(), { width: 800, height: 600, items: [{ text: "2/2", x: 750, y: 16, width: 20, height: 8 }] }]).shifts.length, 2);
 });
 
 test("staffing labels consistently use first name and last initial", () => {

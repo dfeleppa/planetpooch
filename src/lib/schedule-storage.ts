@@ -27,19 +27,23 @@ function calendarDate(month: string, day: string, year: string): Date {
 }
 
 /** Use the actual printed calendar week as the unique key, never the filename. */
-export function scheduleWeekStart(schedule: WeeklySchedule): string {
-  const match = /^Week of\s+([A-Za-z]+)\s+(\d{1,2}),\s*(\d{4})\s*[-–—]\s*([A-Za-z]+)\s+(\d{1,2}),\s*(\d{4})$/i.exec(schedule.title);
+export function scheduleCalendar(title: string): { weekStart: string; days: string[] } {
+  const match = /^Week of\s+([A-Za-z]+)\s+(\d{1,2}),\s*(\d{4})\s*[-–—]\s*([A-Za-z]+)\s+(\d{1,2}),\s*(\d{4})$/i.exec(title);
   if (!match) throw new Error("The schedule needs a readable 'Week of' date range before it can be saved.");
   const start = calendarDate(match[1], match[2], match[3]);
   const end = calendarDate(match[4], match[5], match[6]);
   if (start.getUTCDay() !== 0 || end.getTime() - start.getTime() !== 6 * 86400000) throw new Error("The schedule must cover one Sunday-through-Saturday week.");
   const weekdays = ["sun", "mon", "tue", "wed", "thu", "fri", "sat"];
+  return { weekStart: start.toISOString().slice(0, 10), days: weekdays.map((day, index) => `${day[0].toUpperCase()}${day.slice(1)} ${new Date(start.getTime() + index * 86400000).getUTCDate()}`) };
+}
+
+export function scheduleWeekStart(schedule: WeeklySchedule): string {
+  const calendar = scheduleCalendar(schedule.title);
   if (schedule.days.length !== 7 || schedule.days.some((label, index) => {
-    const date = new Date(start.getTime() + index * 86400000);
-    return label.slice(0, 3).toLowerCase() !== weekdays[index] || Number(label.match(/\d+$/)?.[0]) !== date.getUTCDate();
+    return label.slice(0, 3).toLowerCase() !== calendar.days[index].slice(0, 3).toLowerCase() || Number(label.match(/\d+$/)?.[0]) !== Number(calendar.days[index].match(/\d+$/)?.[0]);
   })) throw new Error("The day columns do not match the printed week dates.");
   validateShifts(schedule.shifts);
-  return start.toISOString().slice(0, 10);
+  return calendar.weekStart;
 }
 
 export function preferredScheduleWeek(weeks: SavedScheduleSummary[], today: string): string | undefined {

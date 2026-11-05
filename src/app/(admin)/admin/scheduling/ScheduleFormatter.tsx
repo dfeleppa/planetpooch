@@ -8,6 +8,7 @@ import { scheduleWeekStart, type SavedScheduleSummary, type ScheduleStorageRespo
 export function ScheduleFormatter() {
   const [schedule, setSchedule] = useState<WeeklySchedule | null>(null);
   const [busy, setBusy] = useState(false);
+  const [progress, setProgress] = useState("");
   const [exporting, setExporting] = useState(false);
   const [error, setError] = useState("");
   const [reviewed, setReviewed] = useState(false);
@@ -69,10 +70,10 @@ export function ScheduleFormatter() {
 
   async function upload(file?: File) {
     if (!file) return;
-    setBusy(true); setError(""); setReviewed(false);
+    setBusy(true); setProgress("Reading schedule…"); setError(""); setReviewed(false);
     try {
       const { readSchedulePdf } = await import("@/lib/read-schedule-pdf");
-      const parsed = await readSchedulePdf(file);
+      const parsed = await readSchedulePdf(file, setProgress);
       setSchedule(parsed); setDirty(true); setSavedAt("");
       await saveSchedule(parsed);
     } catch (error) { setError(error instanceof Error ? error.message : "This PDF could not be read. Choose the original ADP PDF."); }
@@ -129,7 +130,7 @@ export function ScheduleFormatter() {
         <input id="schedule-file" type="file" accept="application/pdf,.pdf" disabled={busy || exporting || loading || saving || dirty || loadFailed} className="block w-full text-sm file:mr-4 file:rounded-lg file:border-0 file:bg-pp-mint file:px-4 file:py-2 file:font-semibold"
           onChange={event => { void upload(event.target.files?.[0]); event.target.value = ""; }} />
         <p className="mt-3 text-sm text-gray-500">Each day shows employees on duty and their count. Hours split into separate rows wherever a shift starts or ends, including half hours.</p>
-        {busy && <p role="status" className="mt-3 text-sm">Reading schedule…</p>}
+        {busy && <p role="status" className="mt-3 text-sm">{progress}</p>}
       </section>
       {error && <p role="alert" className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-800">{error}</p>}
       {schedule && <>

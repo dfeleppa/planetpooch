@@ -18,6 +18,15 @@ const contentSecurityPolicy = [
 ].join("; ") + ";";
 
 const nextConfig: NextConfig = {
+  outputFileTracingIncludes: {
+    "/api/operations/schedule-ocr/*": [
+      "./node_modules/tesseract.js/dist/worker.min.js",
+      "./node_modules/tesseract.js-core/tesseract-core-lstm.wasm.js",
+      "./node_modules/tesseract.js-core/tesseract-core-simd-lstm.wasm.js",
+      "./node_modules/tesseract.js-core/tesseract-core-relaxedsimd-lstm.wasm.js",
+      "./node_modules/@tesseract.js-data/eng/4.0.0_best_int/eng.traineddata.gz",
+    ],
+  },
   poweredByHeader: false,
   async headers() {
     return [

@@ -1,6 +1,6 @@
 import { parseSchedule, type SchedulePage } from "./schedule-formatter";
 
-export async function readSchedulePdf(file: File) {
+export async function readSchedulePdf(file: File, progress: (message: string) => void = () => {}) {
   if (!file.size) throw new Error("This file is empty. Choose another PDF.");
   if (!/\.pdf$/i.test(file.name)) throw new Error("Choose an ADP Team Schedule PDF.");
   if (file.size > 10 * 1024 * 1024) throw new Error("Choose a PDF smaller than 10 MB.");
@@ -17,6 +17,10 @@ export async function readSchedulePdf(file: File) {
       const viewport = page.getViewport({ scale: 1 });
       pages.push({ width: viewport.width, height: viewport.height, items: content.items.flatMap(item => "str" in item ? [{ text: item.str, x: item.transform[4], y: item.transform[5], width: item.width, height: item.height }] : []) });
       page.cleanup();
+    }
+    if (pages.some(page => !page.items.some(item => /[a-z]{3}/i.test(item.text)))) {
+      const { readScheduleImage } = await import("./read-schedule-image");
+      return await readScheduleImage(pdf, progress);
     }
     return parseSchedule(pages);
   } catch (error) {
