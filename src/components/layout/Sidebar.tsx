@@ -38,6 +38,7 @@ const managerNav: NavItem[] = [
 
 const sharedNav: NavItem[] = [
   { href: "/maintenance/checklists", label: "Dashboard", icon: "✓" },
+  { href: "/admin/scheduling", label: "Scheduling", icon: "" },
   { href: "/operations/daycare", label: "Daycare Reports", icon: "☀" },
   { href: "/maintenance/vans", label: "Vans", icon: "▣" },
   { href: "/maintenance", label: "Maintenance", icon: "⚙" },
@@ -56,7 +57,6 @@ const financeNav: NavItem[] = [
 const peoplePaths = [
   "/admin",
   "/admin/employees",
-  "/admin/scheduling",
 ];
 
 const modulePaths = [
@@ -66,6 +66,14 @@ const modulePaths = [
 ];
 
 function sidebarIcon(item: NavItem) {
+  if (item.href === "/admin/scheduling") {
+    return (
+      <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+        <rect x="3" y="5" width="18" height="16" rx="2" />
+        <path d="M16 3v4M8 3v4M3 11h18M8 15h2M14 15h2" />
+      </svg>
+    );
+  }
   if (item.href === "/admin/employees" || item.href === "/admin/people") {
     return (
       <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
@@ -368,7 +376,7 @@ export function Sidebar() {
           )}
           {sidebarBusinesses(session?.user).map((company) => {
             const companyOperations = sharedNav.filter((item) => company.company === "RESORT"
-              ? item.href !== "/maintenance/vans"
+              ? item.href !== "/maintenance/vans" && (item.href !== "/admin/scheduling" || isManagerOrAbove)
               : item.href === "/maintenance/vans" || item.href === "/maintenance")
               .map((item) => company.company === "GROOMING" && item.href === "/maintenance"
                 ? { ...item, label: "Inventory" }
