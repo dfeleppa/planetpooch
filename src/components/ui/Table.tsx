@@ -15,7 +15,7 @@ type TableHeaderProps = React.ThHTMLAttributes<HTMLTableCellElement> & {
 
 export function Table({ children, className }: TableProps) {
   return (
-    <div className="overflow-x-auto rounded-lg border border-gray-200">
+    <div className="relative overflow-x-auto rounded-lg border border-gray-200">
       <table className={cn("min-w-full divide-y divide-gray-200", className)}>
         {children}
       </table>
