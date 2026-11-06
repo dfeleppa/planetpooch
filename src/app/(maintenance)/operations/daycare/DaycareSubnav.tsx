@@ -8,6 +8,7 @@ const sections = [
   { href: "/operations/daycare/packages", label: "Expiring Soon" },
   { href: "/operations/daycare/expired-packages", label: "Expired packages" },
   { href: "/operations/daycare/not-active", label: "Not Active" },
+  { href: "/operations/daycare/evaluations", label: "Evaluations" },
 ] as const;
 
 export function DaycareSubnav() {
