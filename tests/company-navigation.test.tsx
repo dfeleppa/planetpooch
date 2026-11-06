@@ -31,22 +31,21 @@ function renderNavigation(company: "RESORT" | "GROOMING", role: Role = "SUPER_AD
   );
 }
 
-test("both company groups have their Operations and HR links, with only the current company highlighted", () => {
+test("Corporate links are shared and operational links retain their company scope", () => {
   for (const company of ["RESORT", "GROOMING"] as const) {
     const html = renderNavigation(company);
-    for (const path of ["/maintenance", "/admin/employees", "/admin/module-progress"]) {
-      for (const scope of ["RESORT", "GROOMING"]) assert.ok(html.includes(`href="${path}?company=${scope}"`));
+    for (const path of ["/admin/people", "/admin/module-progress"]) {
+      assert.equal(html.split('href="' + path + '"').length - 1, 1);
     }
+    for (const scope of ["RESORT", "GROOMING"]) assert.ok(html.includes('href="/maintenance?company=' + scope + '"'));
     assert.ok(html.includes('href="/maintenance/checklists?company=RESORT"'));
     assert.ok(html.includes('href="/operations/daycare?company=RESORT"'));
     assert.ok(html.includes('href="/maintenance/vans?company=GROOMING"'));
     assert.ok(!html.includes('href="/maintenance/vans?company=RESORT"'));
-    assert.ok(!html.includes('href="/operations/daycare?company=GROOMING"'));
-    assert.match(html, new RegExp(`href="/admin/module-progress\\?company=${company}"[^>]*aria-current="page"`));
     assert.equal((html.match(/aria-current="page"/g) ?? []).length, 1);
-    assert.ok(!html.includes('id="business-selector"'));
-    assert.ok(!html.includes('>Human Resources<'));
-    assert.ok(!html.includes('>Operations<'));
+    assert.equal((html.match(/id="business-selector"/g) ?? []).length, 1);
+    assert.match(html, /Business dashboard/);
+    assert.match(html, /Daily checklists/);
   }
 });
 
@@ -63,13 +62,15 @@ test("assigned managers see their own company and employees do not gain HR navig
   }
 });
 
-test("all Operations and HR views hide the dropdown while Corporate finance retains it", () => {
+test("business-scoped operations hide the selector while shared Modules and Metrics retain it", () => {
   for (const path of ["/maintenance", "/maintenance/checklists", "/maintenance/inventory", "/maintenance/vans",
-    "/operations/daycare", "/admin/employees", "/admin/scheduling", "/admin/modules", "/admin/module-progress", "/admin/audit-log",
+    "/operations/daycare", "/admin/employees", "/admin/scheduling",
     "/admin/onboarding", "/admin/onboarding/templates", "/admin/onboarding/templates/new", "/admin/onboarding/templates/template-id"]) {
     assert.ok(!renderNavigation("RESORT", "SUPER_ADMIN", "CORPORATE", path).includes('id="business-selector"'));
   }
-  assert.ok(renderNavigation("RESORT", "SUPER_ADMIN", "CORPORATE", "/finance/kpis").includes('id="business-selector"'));
+  for (const path of ["/finance/kpis", "/admin/modules", "/admin/module-progress", "/admin/audit-log"]) {
+    assert.ok(renderNavigation("RESORT", "SUPER_ADMIN", "CORPORATE", path).includes('id="business-selector"'));
+  }
 });
 
 test("company navigation overrides an existing cookie, honors permissions, and prefetch never switches company", async () => {

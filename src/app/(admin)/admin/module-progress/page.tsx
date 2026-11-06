@@ -51,8 +51,8 @@ export default async function AdminModuleProgressPage() {
   return (
     <div className="flex flex-col gap-6">
       <div>
-        <h1 className="pp-h1">Module Progress</h1>
-        <p className="pp-sub">Employee module completion overview.</p>
+        <h1 className="pp-h1">Modules</h1>
+        <p className="pp-sub">Track employee training and module completion.</p>
       </div>
 
       <AdminModulesNav active="module-progress" />
@@ -84,7 +84,7 @@ export default async function AdminModuleProgressPage() {
         </CardHeader>
         <CardContent className="p-0">
           <div className="overflow-x-auto">
-            <table className="w-full text-sm">
+            <table className="pp-sticky-first w-full text-sm">
               <thead>
                 <tr className="border-b border-gray-200 bg-gray-50">
                   <th className="text-left px-4 py-3 font-medium text-gray-600">Employee</th>

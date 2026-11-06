@@ -1,5 +1,6 @@
 "use client";
 
+import { ReportSnapshotStatus } from "@/components/ui/ReportSnapshotStatus";
 import { readApiResponse } from "@/lib/api-response";
 
 import { useMemo, useState } from "react";
@@ -106,11 +107,7 @@ export function DaycareNotActiveReport({
                   ? `${report.customerCount} inactive daycare clients`
                   : "No stored report yet"}
               </p>
-              <p className="mt-1 text-xs text-gray-500">
-                {report
-                  ? `Last updated ${formatDateTime(report.generatedAt)}`
-                  : "Pull the report once to create the stored snapshot."}
-              </p>
+              <>{report ? <ReportSnapshotStatus generatedAt={report.generatedAt} /> : <p className="mt-1 text-sm text-pp-ink-3">Pull the report to create a snapshot.</p>}</>
               {report ? (
                 <p className="mt-1 text-xs text-gray-400">
                   Scanned {report.customersScanned} clients and found {report.daycareCustomersScanned} with completed daycare visits in the last 52 days.
@@ -250,15 +247,4 @@ function formatDate(value: string): string {
     year: "numeric",
     timeZone: "America/New_York",
   });
-}
-
-function formatDateTime(value: string): string {
-  return new Intl.DateTimeFormat("en-US", {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-    hour: "numeric",
-    minute: "2-digit",
-    timeZoneName: "short",
-  }).format(new Date(value));
 }

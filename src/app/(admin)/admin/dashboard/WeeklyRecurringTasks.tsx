@@ -196,7 +196,7 @@ export function WeeklyRecurringTasks({ dateKey }: { dateKey: string }) {
         </form>
       )}
 
-      <div className="overflow-x-auto">
+      {tasks.length === 0 ? <p className="px-5 py-4 text-sm text-pp-ink-3">No recurring tasks yet. Add a task to plan your week.</p> : <div className="overflow-x-auto">
         <DndContext sensors={sensors} onDragEnd={handleDragEnd}>
           <div className="grid min-w-[70rem] grid-cols-7 gap-px bg-pp-line">
             {DAYS.map((dayName, dayIndex) => {
@@ -218,7 +218,7 @@ export function WeeklyRecurringTasks({ dateKey }: { dateKey: string }) {
             })}
           </div>
         </DndContext>
-      </div>
+      </div>}
     </section>
   );
 }

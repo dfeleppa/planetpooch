@@ -17,7 +17,7 @@ export async function AppShell({ children }: { children: React.ReactNode }) {
         <div className="flex min-h-screen flex-col bg-pp-bg md:flex-row">
           <Sidebar />
           <main className="min-w-0 flex-1">
-            <div className="mx-auto max-w-[1600px] p-4 md:p-7 xl:p-10">
+            <div className="pp-app-content mx-auto max-w-[1600px] p-4 pb-24 md:p-7 md:pb-24 xl:p-10 xl:pb-24 print:p-0">
               <div className="mb-4 hidden justify-end print:hidden md:flex">
                 <UserMenu />
               </div>

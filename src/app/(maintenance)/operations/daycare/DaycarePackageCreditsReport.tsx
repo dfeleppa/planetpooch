@@ -1,5 +1,6 @@
 "use client";
 
+import { ReportSnapshotStatus } from "@/components/ui/ReportSnapshotStatus";
 import { readApiResponse } from "@/lib/api-response";
 
 import { useMemo, useState } from "react";
@@ -143,14 +144,7 @@ export function DaycarePackageCreditsReport({
                   ? `${report.packageCount} packages · ${report.totalRemainingCredits} credits`
                   : "No stored report yet"}
               </p>
-              <p className="mt-1 text-xs text-gray-500">
-                {report
-                  ? `Last updated ${formatDateTime(report.generatedAt)}`
-                  : "Pull the report once to create the stored snapshot."}
-              </p>
-              <p className="mt-1 text-xs text-gray-400">
-                This snapshot changes only when Refresh report is requested.
-              </p>
+              <>{report ? <ReportSnapshotStatus generatedAt={report.generatedAt} /> : <p className="mt-1 text-sm text-pp-ink-3">Pull the report to create a snapshot.</p>}</>
             </div>
             <Button onClick={refreshReport} disabled={refreshing}>
               {refreshing ? "Refreshing…" : report ? "Refresh report" : "Pull report"}
@@ -244,7 +238,7 @@ export function DaycarePackageCreditsReport({
                   <TableCell>
                     <div>{formatDate(row.expirationDate)}</div>
                     <div className="mt-0.5 text-xs text-amber-700">
-                      {formatDaysRemaining(row.daysUntilExpiration)}
+                      {formatDaysRemaining(row.daysUntilExpiration)} at snapshot
                     </div>
                   </TableCell>
                   <TableCell>
@@ -303,16 +297,6 @@ function formatDate(value: string): string {
   });
 }
 
-function formatDateTime(value: string): string {
-  return new Intl.DateTimeFormat("en-US", {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-    hour: "numeric",
-    minute: "2-digit",
-    timeZoneName: "short",
-  }).format(new Date(value));
-}
 
 function formatDaysRemaining(days: number): string {
   if (days === 0) return "Expires today";

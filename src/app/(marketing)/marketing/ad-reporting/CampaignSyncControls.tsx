@@ -8,7 +8,7 @@ import { useRouter } from "next/navigation";
 type Campaign = { id: string; name: string; business: string | null };
 type Platform = "Meta" | "Google Ads" | "MoeGo";
 const DAY_MS = 86_400_000;
-const buttonClass = "inline-flex h-10 shrink-0 items-center justify-center rounded-lg bg-slate-800 px-4 text-sm font-medium text-white hover:bg-slate-700 disabled:opacity-50";
+const buttonClass = "pp-btn pp-btn-primary shrink-0 disabled:opacity-50";
 const dateTime = (value: string | null) => value
   ? new Intl.DateTimeFormat("en-US", { timeZone: "America/New_York", dateStyle: "medium", timeStyle: "short" }).format(new Date(value))
   : "Never";

@@ -13,8 +13,8 @@ const jetBrainsMono = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Planet Pooch - Employee Onboarding",
-  description: "Employee onboarding and training platform",
+  title: "Planet Pooch",
+  description: "Planet Pooch operations, people, and reporting",
   icons: {
     icon: "/icon-mark.png",
   },

@@ -1,5 +1,6 @@
 "use client";
 
+import { PageHeader } from "@/components/ui/PageHeader";
 import { readApiResponse } from "@/lib/api-response";
 
 import Link from "next/link";
@@ -288,12 +289,9 @@ export function CashManagementDashboard({ mobile, petResort, safeCents, initialS
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold text-gray-900">Cash Management</h1>
-        <p className="mt-1 text-gray-500">Choose Mobile Grooming or Safe to open its tools.</p>
-      </div>
+      <PageHeader title="Cash Management" description="Choose a location to review cash, actions, and history." />
       <section aria-labelledby="cash-areas-heading" className="space-y-3">
-        <div>
+        <div className="sr-only">
           <h2 id="cash-areas-heading" className="text-lg font-semibold text-gray-900">Manage cash by location</h2>
           <p className="mt-1 text-sm text-gray-600">Select a card to open its cash actions and history.</p>
         </div>

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useId, useRef } from "react";
 import { Button } from "./button";
 
 interface ConfirmDialogProps {
@@ -25,31 +25,40 @@ export function ConfirmDialog({
   onCancel,
 }: ConfirmDialogProps) {
   const dialogRef = useRef<HTMLDialogElement>(null);
+  const cancelRef = useRef<HTMLButtonElement>(null);
+  const titleId = useId();
+  const descriptionId = useId();
 
   useEffect(() => {
-    if (open) {
-      dialogRef.current?.showModal();
-    } else {
-      dialogRef.current?.close();
-    }
+    const dialog = dialogRef.current;
+    if (!open || !dialog) return;
+    const previouslyFocused = document.activeElement;
+    dialog.showModal();
+    cancelRef.current?.focus();
+    return () => {
+      dialog.close();
+      if (previouslyFocused instanceof HTMLElement && previouslyFocused.isConnected) {
+        previouslyFocused.focus();
+      }
+    };
   }, [open]);
 
   if (!open) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-      <div className="bg-white rounded-xl shadow-lg p-6 max-w-md w-full mx-4">
-        <h3 className="text-lg font-semibold text-gray-900">{title}</h3>
-        <p className="mt-2 text-sm text-gray-600">{message}</p>
+    <dialog ref={dialogRef} aria-labelledby={titleId} aria-describedby={descriptionId}
+      className="m-auto w-[calc(100%-2rem)] max-w-md max-h-[calc(100dvh-2rem)] overflow-y-auto rounded-xl border border-pp-line bg-white p-6 text-pp-ink shadow-xl backdrop:bg-black/50"
+      onCancel={(event) => { event.preventDefault(); onCancel(); }}>
+        <h2 id={titleId} className="text-lg font-semibold">{title}</h2>
+        <p id={descriptionId} className="mt-2 text-sm text-pp-ink-3">{message}</p>
         <div className="mt-4 flex justify-end gap-3">
-          <Button variant="secondary" onClick={onCancel}>
+          <Button ref={cancelRef} type="button" variant="secondary" onClick={onCancel}>
             {cancelLabel}
           </Button>
-          <Button variant={variant} onClick={onConfirm}>
+          <Button type="button" variant={variant} onClick={onConfirm}>
             {confirmLabel}
           </Button>
         </div>
-      </div>
-    </div>
+    </dialog>
   );
 }

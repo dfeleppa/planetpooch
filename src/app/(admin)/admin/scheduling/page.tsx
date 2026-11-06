@@ -1,3 +1,4 @@
+import { PageHeader } from "@/components/ui/PageHeader";
 import { requireEmployeeManager } from "@/lib/auth-helpers";
 import { getActiveBusiness } from "@/lib/business-server";
 import { redirect } from "next/navigation";
@@ -10,8 +11,7 @@ export default async function SchedulingPage() {
   if (business.company === "GROOMING") redirect("/admin/employees");
   return (
     <div>
-      <h1 className="text-2xl font-bold text-gray-900">Scheduling</h1>
-      <p className="mt-1 mb-6 text-gray-500">Turn a weekly schedule into a one-page landscape staffing sheet.</p>
+      <PageHeader title="Scheduling" description="Review and print weekly staffing coverage." className="pp-scheduling-page-header mb-6" />
       <AdminPeopleNav active="scheduling" />
       <ScheduleFormatter />
     </div>

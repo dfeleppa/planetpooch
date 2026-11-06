@@ -30,8 +30,8 @@ export default async function MarketingPage({ searchParams }: { searchParams: Pr
   const tabQuery = { ...query, from: report.from, to: report.to };
   const title = BUSINESSES.find((item) => item.value === scope.business)!.label + " · " + SERVICES.find((item) => item.value === scope.service)!.label;
   return <div className={view === "results" ? "pp-marketing-print-report" : undefined}>
-    <nav aria-label="Marketing views" className="mb-6 flex flex-wrap gap-2 border-b border-gray-200 pb-4 print:hidden">
-      {[{ value: "results", label: "Campaign results" }, { value: "creatives", label: "Creative performance" }, { value: "follow-up", label: "Lead follow-up" }, { value: "assignments", label: "Campaign assignments" }].map((tab) => <Link key={tab.value} href={marketingViewUrl(tabQuery, tab.value)} aria-current={view === tab.value ? "page" : undefined} className={"rounded-lg px-4 py-2 text-sm font-medium " + (view === tab.value ? "bg-gray-900 text-white" : "bg-white text-gray-700 ring-1 ring-gray-200 hover:bg-gray-50")}>{tab.label}</Link>)}
+    <nav aria-label="Marketing views" className="pp-tabs mb-5 print:hidden">
+      {[{ value: "results", label: "Campaign results" }, { value: "creatives", label: "Creative performance" }, { value: "follow-up", label: "Lead follow-up" }, { value: "assignments", label: "Campaign assignments" }].map((tab) => <Link key={tab.value} href={marketingViewUrl(tabQuery, tab.value)} aria-current={view === tab.value ? "page" : undefined} className={"pp-tab " + (view === tab.value ? "is-on" : "")}>{tab.label}</Link>)}
     </nav>
     {view !== "assignments" && <><div className="print:hidden"><Suspense fallback={<p>Loading filters…</p>}><CampaignReportFilters key={JSON.stringify({report, scope, comparison, view})} from={report.from} to={report.to} source={report.source} days={report.days} comparison={comparison} scope={scope} view={view} /></Suspense></div>
     <p className="mb-5 text-sm text-gray-600">{title} · {report.from} to {report.to}</p></>}

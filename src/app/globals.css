@@ -17,7 +17,7 @@
   --color-pp-ink: #213640;
   --color-pp-ink-2: #324953;
   --color-pp-ink-3: #567077;
-  --color-pp-ink-4: #748a8a;
+  --color-pp-ink-4: #596f70;
   --color-pp-ink-5: #a8b9b4;
   --color-pp-accent: #324953;
   --color-pp-accent-2: #243b44;
@@ -50,6 +50,31 @@ body {
   background: var(--color-background);
   color: var(--color-foreground);
   font-family: var(--font-sans), -apple-system, "Segoe UI", system-ui, sans-serif;
+}
+
+/* Shared screen conventions; print layouts keep their own sizing. */
+@media screen {
+  .pp-page-header { display: flex; flex-wrap: wrap; align-items: flex-start; justify-content: space-between; gap: 16px; }
+  .pp-page-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+  .pp-app-content h1:not(.pp-today-intro h1) { font-size: 26px; line-height: 1.25; font-weight: 650; letter-spacing: -.02em; color: var(--color-pp-ink); }
+  .pp-app-content .text-gray-400 { color: var(--color-pp-ink-3); }
+  .pp-app-content :where(button, a, input, select, textarea, summary):focus-visible {
+    outline: 2px solid var(--color-pp-accent); outline-offset: 3px;
+  }
+  .pp-app-content .pp-tabs { flex-wrap: wrap; gap: 0 16px; }
+  .pp-app-content .pp-tab { min-height: 44px; margin-right: 0; padding: 10px 4px; font-size: 14px; }
+  .pp-app-content .pp-sub { font-size: 14px; line-height: 1.5; }
+  .pp-sticky-first :is(th, td):first-child { position: sticky; left: 0; z-index: 1; background: white; min-width: 140px; border-right: 1px solid var(--color-pp-line); }
+  .pp-sticky-first thead th:first-child { background: var(--color-pp-surface-2); z-index: 2; }
+  .pp-report-filters :is(input, select) { min-height: 40px; max-width: 100%; }
+  .pp-report-filters form { min-width: 0; }
+  @media (max-width: 767px) {
+    .pp-app-content h1:not(.pp-today-intro h1) { font-size: 24px; }
+    .pp-page-header { gap: 12px; }
+    .pp-btn, .pp-page-actions > :is(button, a) { min-height: 44px; }
+    .pp-report-filters input { min-width: 0; width: 100%; }
+    .pp-report-filters form > label { flex: 1 1 120px; min-width: 0; }
+  }
 }
 
 .pp-grooming-print {
@@ -301,7 +326,8 @@ body {
 .pp-sub {
   color: var(--color-pp-ink-3);
   margin: 0;
-  font-size: 13px;
+  font-size: 14px;
+  line-height: 1.5;
 }
 
 /* Tabs */
@@ -695,13 +721,14 @@ body {
 
 /* Buttons (page-level) */
 .pp-btn {
-  height: 32px;
+  min-height: 40px;
   padding: 0 12px;
-  border-radius: 6px;
+  border-radius: 8px;
   border: 1px solid var(--color-pp-line-2);
   background: var(--color-pp-surface);
   color: var(--color-pp-ink);
-  font-size: 13px;
+  font-size: 14px;
+  font-weight: 500;
   display: inline-flex;
   align-items: center;
   gap: 6px;
@@ -768,14 +795,14 @@ body {
 
 @media (min-width: 768px) {
   .pp-employees-page {
-    height: calc(100dvh - 4rem);
-    overflow: hidden;
+    height: auto;
+    overflow: visible;
   }
 
   .pp-employees-page .pp-roster {
     flex: 1 1 auto;
-    min-height: clamp(150px, 20dvh, 260px);
-    overflow: auto;
+    min-height: 0;
+    overflow-x: auto;
   }
 
   .pp-employees-page .pp-pagination {

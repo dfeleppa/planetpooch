@@ -1,17 +1,14 @@
 "use client";
 
+import { PageHeader } from "@/components/ui/PageHeader";
 import { usePathname } from "next/navigation";
 
 export function FinanceScreenHeader() {
   const pathname = usePathname();
-  const title = pathname.startsWith("/finance/payroll") ? "Payroll" : "Finance";
+  const title = pathname.startsWith("/finance/payroll") ? "Payroll" : "Metrics";
 
   return (
-    <div className="pp-finance-screen-header mb-6">
-      <h1 className="text-2xl font-bold text-gray-900">{title}</h1>
-      <p className="mt-1 text-gray-500">
-        Financial reporting and operating data for Planet Pooch
-      </p>
-    </div>
+    <PageHeader className="pp-finance-screen-header mb-6" title={title}
+      description={title === "Payroll" ? "Review weekly pay, reports, and payouts." : "Financial reporting and operating data for Planet Pooch."} />
   );
 }

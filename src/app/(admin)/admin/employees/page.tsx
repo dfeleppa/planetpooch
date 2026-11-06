@@ -374,7 +374,7 @@ export default async function AdminEmployeesPage({
       {/* Page head */}
       <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 sm:gap-6">
         <div>
-          <h1 className="pp-h1">Employees</h1>
+          <h1 className="pp-h1">People</h1>
           <p className="pp-sub">
             {tab === "terminated"
               ? "Past employees — records preserved for retention."

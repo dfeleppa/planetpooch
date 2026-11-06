@@ -9,7 +9,7 @@ type AdminPeopleView =
   | "guidelines";
 
 const adminPeopleNav: { href: string; label: string; view: AdminPeopleView }[] = [
-  { href: "/admin/employees", label: "Employees", view: "employees" },
+  { href: "/admin/employees", label: "People", view: "employees" },
   { href: "/admin/scheduling/availability", label: "Availability", view: "availability" },
   { href: "/admin/scheduling", label: "Scheduling", view: "scheduling" },
   { href: "/admin/scheduling/guidelines", label: "Guidelines", view: "guidelines" },
@@ -21,8 +21,10 @@ export async function AdminPeopleNav({ active, corporate = false }: { active: Ad
     corporate ? item.view === "employees" : business.company !== "GROOMING" || item.view === "employees",
   );
 
+  if (visibleItems.length < 2) return null;
+
   return (
-    <nav className="pp-tabs" aria-label="Dashboard sections">
+    <nav className="pp-tabs" aria-label="People and scheduling">
       {visibleItems.map((item) => (
         <Link
           key={item.view}

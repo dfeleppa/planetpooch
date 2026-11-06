@@ -12,16 +12,16 @@ interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
 }
 
 const variants: Record<ButtonVariant, string> = {
-  primary: "bg-blue-600 text-white hover:bg-blue-700 focus:ring-blue-500",
-  secondary: "bg-gray-200 text-gray-900 hover:bg-gray-300 focus:ring-gray-400",
+  primary: "border border-pp-accent bg-pp-accent text-white hover:bg-pp-accent-2 focus:ring-pp-accent",
+  secondary: "border border-pp-line-2 bg-white text-pp-ink hover:bg-pp-surface-2 focus:ring-pp-accent",
   danger: "bg-red-600 text-white hover:bg-red-700 focus:ring-red-500",
   ghost: "bg-transparent text-gray-700 hover:bg-gray-100 focus:ring-gray-400",
 };
 
 const sizes: Record<ButtonSize, string> = {
-  sm: "px-3 py-1.5 text-sm",
-  md: "px-4 py-2 text-sm",
-  lg: "px-6 py-3 text-base",
+  sm: "min-h-9 px-3 py-1.5 text-sm",
+  md: "min-h-10 px-4 py-2 text-sm",
+  lg: "min-h-11 px-6 py-3 text-base",
 };
 
 export const Button = forwardRef<HTMLButtonElement, ButtonProps>(

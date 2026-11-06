@@ -274,7 +274,7 @@ export function MoegoDashboard({ businesses, initialRange }: {
         </div>
       </div>
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-end gap-3 mb-6">
-        <div className="flex items-center gap-3 text-xs text-gray-500">
+        <div className="flex flex-wrap items-center gap-3 text-xs text-gray-500">
           <span>
             customers synced {relative(metrics?.lastSync.customer ?? null)} ·
             orders {relative(metrics?.lastSync.order ?? null)} · leads{" "}
@@ -288,7 +288,11 @@ export function MoegoDashboard({ businesses, initialRange }: {
           >
             {syncing ? "Syncing…" : "Sync now"}
           </Button>
+          <details className="rounded-lg border border-pp-line bg-white">
+            <summary className="cursor-pointer px-3 py-2 text-sm font-medium text-pp-ink">Data tools</summary>
+            <div className="flex flex-wrap items-center gap-3 p-3">
           <select
+            aria-label="Resync range"
             value={resyncDays}
             onChange={(e) => setResyncDays(e.target.value)}
             disabled={syncing}
@@ -331,6 +335,7 @@ export function MoegoDashboard({ businesses, initialRange }: {
             Resync window
           </Button>
           <select
+            aria-label="Resync year"
             value={resyncYear}
             onChange={(e) => setResyncYear(e.target.value)}
             disabled={syncing}
@@ -371,6 +376,8 @@ export function MoegoDashboard({ businesses, initialRange }: {
           >
             {discovering ? "Looking…" : "Find company ID"}
           </Button>
+            </div>
+          </details>
         </div>
       </div>
 

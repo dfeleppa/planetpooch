@@ -123,15 +123,15 @@ export function ScheduleFormatter() {
         </div>}
         {loadFailed && !dirty && <Button type="button" variant="secondary" className="mt-3" disabled={loading} onClick={() => void loadWeek(loadedWeek || undefined)}>Retry loading</Button>}
       </section>
-      <section className="rounded-xl border border-pp-line bg-white p-5" aria-labelledby="upload-schedule-heading">
-        <h2 id="upload-schedule-heading" className="font-semibold">Upload weekly schedule</h2>
+      <details open={!schedule} className="rounded-xl border border-pp-line bg-white p-5 print:hidden">
+        <summary id="upload-schedule-heading" className="cursor-pointer font-semibold">Upload or replace a weekly schedule</summary>
         <p className="mt-1 mb-4 text-sm text-gray-500">Choose the original ADP Team Schedule PDF (up to 10 MB). The extracted schedule saves for its week; uploading the same week replaces its saved schedule.</p>
         <label htmlFor="schedule-file" className="mb-2 block text-sm font-medium">Schedule PDF</label>
         <input id="schedule-file" type="file" accept="application/pdf,.pdf" disabled={busy || exporting || loading || saving || dirty || loadFailed} className="block w-full text-sm file:mr-4 file:rounded-lg file:border-0 file:bg-pp-mint file:px-4 file:py-2 file:font-semibold"
           onChange={event => { void upload(event.target.files?.[0]); event.target.value = ""; }} />
         <p className="mt-3 text-sm text-gray-500">Each day shows employees on duty and their count. Hours split into separate rows wherever a shift starts or ends, including half hours.</p>
         {busy && <p role="status" className="mt-3 text-sm">{progress}</p>}
-      </section>
+      </details>
       {error && <p role="alert" className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-800">{error}</p>}
       {schedule && <>
         {schedule.warnings.length > 0 && <section className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900" aria-label="Source review notes">

@@ -1,5 +1,7 @@
+"use client";
+
 import { cn } from "@/lib/utils";
-import { InputHTMLAttributes, forwardRef } from "react";
+import { InputHTMLAttributes, forwardRef, useId } from "react";
 
 interface DateInputProps extends InputHTMLAttributes<HTMLInputElement> {
   label?: string;
@@ -8,16 +10,20 @@ interface DateInputProps extends InputHTMLAttributes<HTMLInputElement> {
 
 export const DateInput = forwardRef<HTMLInputElement, DateInputProps>(
   ({ className, label, error, id, ...props }, ref) => {
+    const generatedId = useId();
+    const inputId = id ?? generatedId;
+    const errorId = `${inputId}-error`;
+    const describedBy = [props["aria-describedby"], error ? errorId : undefined].filter(Boolean).join(" ") || undefined;
     return (
       <div className="flex flex-col gap-1">
         {label && (
-          <label htmlFor={id} className="text-sm font-medium text-gray-700">
+          <label htmlFor={inputId} className="text-sm font-medium text-gray-700">
             {label}
           </label>
         )}
         <input
           ref={ref}
-          id={id}
+          id={inputId}
           type="date"
           className={cn(
             "rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:opacity-50 disabled:bg-gray-50",
@@ -25,8 +31,10 @@ export const DateInput = forwardRef<HTMLInputElement, DateInputProps>(
             className
           )}
           {...props}
+          aria-invalid={error ? true : props["aria-invalid"]}
+          aria-describedby={describedBy}
         />
-        {error && <p className="text-xs text-red-600">{error}</p>}
+        {error && <p id={errorId} role="alert" className="text-xs text-red-600">{error}</p>}
       </div>
     );
   }

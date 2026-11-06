@@ -37,7 +37,7 @@ const managerNav: NavItem[] = [
 ];
 
 const sharedNav: NavItem[] = [
-  { href: "/maintenance/checklists", label: "Dashboard", icon: "✓" },
+  { href: "/maintenance/checklists", label: "Daily checklists", icon: "✓" },
   { href: "/admin/scheduling", label: "Scheduling", icon: "" },
   { href: "/operations/daycare", label: "Daycare Reports", icon: "☀" },
   { href: "/maintenance/vans", label: "Vans", icon: "▣" },
@@ -180,7 +180,7 @@ export function Sidebar() {
     ...(isManagerOrAbove ? [{ href: "/admin/people", label: "People", icon: "" }] : []),
     ...(isSuperAdmin
       ? [
-          { href: "/admin/dashboard", label: "Dashboard", icon: "" },
+          { href: "/admin/dashboard", label: "Business dashboard", icon: "" },
           ...marketingNav,
         ]
       : []),

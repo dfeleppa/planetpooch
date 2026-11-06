@@ -13,6 +13,8 @@ export function PayrollSubnav({ active }: { active: PayrollSection }) {
     ? "/finance/payroll"
     : "/finance/payroll/mobile-grooming";
 
+  if (business.company !== "RESORT") return null;
+
   return (
     <nav className="pp-tabs" aria-label="Payroll sections">
       <Link

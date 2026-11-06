@@ -53,7 +53,7 @@ export function CampaignReportFilters({ from, to, source, days, comparison, scop
     startTransition(() => router.push(`/marketing${params.size ? `?${params}` : ""}`, { scroll: false }));
   }
 
-  return <div className={`mb-6 rounded-xl border border-gray-200 bg-white p-4 ${pending ? "opacity-60" : ""}`}>
+  return <div className={`pp-report-filters mb-4 rounded-xl border border-gray-200 bg-white p-4 ${pending ? "opacity-60" : ""}`}>
     <div className="flex flex-wrap items-end gap-3">
       <div>
         <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-gray-500">Date range</p>
@@ -78,7 +78,7 @@ export function CampaignReportFilters({ from, to, source, days, comparison, scop
             className="mt-1 block rounded-lg border border-gray-300 px-2 py-1.5 text-sm text-gray-900" />
         </label>
         <button type="submit" disabled={pending || !startDate || !endDate || startDate > endDate}
-          className="rounded-lg bg-gray-900 px-3 py-2 text-sm font-medium text-white disabled:opacity-40">Apply dates</button>
+          className="pp-btn pp-btn-primary disabled:opacity-40">Apply dates</button>
       </form>
       {view !== "creatives" && <label className="text-xs font-medium text-gray-600">Lead source
         <select aria-label="Lead source" value={source} onChange={(event) => navigate(days
@@ -90,7 +90,9 @@ export function CampaignReportFilters({ from, to, source, days, comparison, scop
       </label>}
       {[{ label: "Business", key: "business", options: BUSINESSES }, { label: "Service", key: "service", options: SERVICES }].map(({label, key, options}) => <label key={key} className="text-xs font-medium text-gray-600">{label}<select aria-label={label} value={scope[key as keyof ReportScope]} disabled={pending} onChange={(event) => navigate({ ...(days ? { days } : { from, to }), [key]: event.target.value })} className="mt-1 block rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900">{options.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}</select></label>)}
     </div>
-    {view === "results" && <div className="mt-4 flex flex-wrap items-end gap-3 border-t border-gray-100 pt-4">
+    {view === "results" && <details open={comparison !== null} className="mt-3 border-t border-pp-line-soft pt-3">
+      <summary className="cursor-pointer text-sm font-medium text-pp-ink">{comparison ? "Comparison active" : "Compare periods"}</summary>
+      <div className="mt-3 flex flex-wrap items-end gap-3">
       <label className="text-xs font-medium text-gray-600">Compare to
         <select aria-label="Compare to" value={compareMode} disabled={pending} onChange={(event) => {
           const mode = event.target.value as CompareMode;
@@ -113,9 +115,8 @@ export function CampaignReportFilters({ from, to, source, days, comparison, scop
         <label className="text-xs font-medium text-gray-600">To
           <input aria-label="Comparison to date" type="date" required min={compareFrom || undefined} value={compareTo} onChange={(event) => setCompareTo(event.target.value)} className="mt-1 block rounded-lg border border-gray-300 px-2 py-1.5 text-sm text-gray-900" />
         </label>
-        <button disabled={pending || !compareFrom || !compareTo || compareFrom > compareTo} className="rounded-lg bg-gray-900 px-3 py-2 text-sm font-medium text-white disabled:opacity-40">Apply comparison</button>
+        <button disabled={pending || !compareFrom || !compareTo || compareFrom > compareTo} className="pp-btn pp-btn-primary disabled:opacity-40">Apply comparison</button>
       </form>}
-    </div>}
-    <p className="mt-3 text-xs text-gray-500">Spend uses the selected dates. Website forms use submission dates; their MoeGo bookings and payments can occur later.</p>
+    </div></details>}
   </div>;
 }

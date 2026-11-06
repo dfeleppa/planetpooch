@@ -7,6 +7,7 @@ import { ChangeEvent, Fragment, useCallback, useEffect, useMemo, useRef, useStat
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { Tabs } from "@/components/ui/Tabs";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/Select";
 import {
@@ -2060,34 +2061,9 @@ export function PayrollDashboard({
       {!cashManagementMode && <PayrollSubnav active={business} />}
 
       {isMobileGrooming && !cashManagementMode && (
-        <div>
-          <p className="mb-1 text-sm font-medium text-gray-700">View</p>
-          <div className="pp-tabs" role="tablist" aria-label="Mobile grooming payroll view">
-            {(["summary", "employee", "report", "reconciliation", "changes"] as const).map((view) => {
-              const active = mobilePayrollView === view;
-              const label =
-                view === "summary"
-                  ? "All Staff"
-                  : view === "employee"
-                    ? "By Employee"
-                      : view === "report"
-                        ? "Weekly Report"
-                        : view === "reconciliation" ? "Payouts" : "After Payout";
-              return (
-                <button
-                  key={view}
-                  type="button"
-                  role="tab"
-                  aria-selected={active}
-                  className={cn("pp-tab", active && "is-on")}
-                  onClick={() => selectMobilePayrollView(view)}
-                >
-                  {label}
-                </button>
-              );
-            })}
-          </div>
-        </div>
+        <Tabs label="Mobile grooming payroll view" activeTab={mobilePayrollView}
+          onChange={(view) => selectMobilePayrollView(view as MobilePayrollView)}
+          tabs={[{ id: "summary", label: "All staff" }, { id: "employee", label: "By employee" }, { id: "report", label: "Weekly report" }, { id: "reconciliation", label: "Payouts" }, { id: "changes", label: "After payout" }]} />
       )}
       {isMobileGrooming && !cashManagementMode && (
         <Link href={`/cash-management/mobile-grooming/reconciliation?view=${startOnPayouts ? "weekly" : "employee"}&week=${weekStart}`} className="inline-block text-sm font-medium text-pp-accent hover:underline">
@@ -2095,7 +2071,7 @@ export function PayrollDashboard({
         </Link>
       )}
 
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+      {!cashManagementMode && <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h2 className="text-xl font-semibold text-gray-900">
             {isMobileGrooming && mobilePayrollView === "reconciliation"
@@ -2103,7 +2079,7 @@ export function PayrollDashboard({
                 ? reconciliationView === "employee" ? "Verify employees for the day" : "Review & close the week"
                 : "Payouts"
               : isMobileGrooming && mobilePayrollView === "changes" ? "Changes After Payout"
-              : "Payroll"}
+              : isMobileGrooming ? mobilePayrollView === "employee" ? "Employee payroll" : mobilePayrollView === "report" ? "Weekly report" : "Weekly payroll" : "Weekly hours"}
           </h2>
           <p className="mt-1 text-gray-500">
             {isMobileGrooming && mobilePayrollView === "changes"
@@ -2118,16 +2094,15 @@ export function PayrollDashboard({
             {showMoegoImport ? "Hide MoeGo import" : "Import from MoeGo"}
           </Button>
         ) : null}
-      </div>
+      </div>}
 
       {isMobileGrooming && cashManagementMode && mobilePayrollView === "reconciliation" && (
-        <div className="grid grid-cols-2 gap-2" role="tablist" aria-label="Reconciliation view">
+        <div className="grid grid-cols-2 gap-2" role="group" aria-label="Reconciliation steps">
           {(["employee", "weekly"] as const).map((view) => (
             <button
               key={view}
               type="button"
-              role="tab"
-              aria-selected={reconciliationView === view}
+              aria-pressed={reconciliationView === view}
               disabled={savingReconciliation || savingCloseout || Boolean(savingVarianceReview)}
               className={cn("min-h-11 cursor-pointer rounded-lg border px-3 py-2 text-sm font-semibold focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-pp-accent", reconciliationView === view ? "border-pp-accent bg-pp-accent text-white" : "border-pp-line bg-white text-pp-accent")}
               onClick={() => {
@@ -2252,309 +2227,6 @@ export function PayrollDashboard({
             />
           ))}
         </div>
-      )}
-
-      {isMobileGrooming && mobilePayrollView !== "report" && mobilePayrollView !== "reconciliation" && mobilePayrollView !== "changes" && (
-        <Card>
-          <CardContent className="space-y-4">
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-              <div>
-                <h3 className="text-base font-semibold text-gray-900">
-                  {mobileViewEmployeeName
-                    ? `${mobileViewEmployeeName} totals for ${annualYear}`
-                    : `Mobile grooming totals for ${annualYear}`}
-                </h3>
-              </div>
-              <div className="inline-flex rounded-lg border border-gray-200 bg-gray-50 p-1">
-                {(["annual", "weekly"] as const).map((view) => (
-                  <button
-                    key={view}
-                    type="button"
-                    onClick={() => setMobileSummaryView(view)}
-                    className={cn(
-                      "rounded-md px-3 py-1.5 text-sm font-medium capitalize transition-colors",
-                      mobileSummaryView === view
-                        ? "bg-white text-gray-900 shadow-sm"
-                        : "text-gray-600 hover:text-gray-900"
-                    )}
-                  >
-                    {view}
-                  </button>
-                ))}
-              </div>
-            </div>
-            {mobileSummaryView === "annual" ? (
-              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4 2xl:grid-cols-8">
-                <AnnualMetric
-                  label="Total Appointments"
-                  value={String(annualMobileTotals?.stops ?? 0)}
-                />
-                <AnnualMetric
-                  label="Total Pets"
-                  value={String(annualMobileTotals?.dogs ?? 0)}
-                />
-                <AnnualMetric
-                  label="Total Price"
-                  value={formatMoney((annualMobileTotals?.pricingCents ?? 0) / 100)}
-                />
-                <AnnualMetric
-                  label="Grooming Price"
-                  value={formatMoney(
-                    mobileGroomingPriceFromTotals(
-                      annualMobileTotals ?? emptyMobileGroomingTotals()
-                    ) / 100
-                  )}
-                />
-                <AnnualMetric
-                  label="Cash Total"
-                  value={formatMoney((annualMobileTotals?.cashCents ?? 0) / 100)}
-                />
-                <AnnualMetric
-                  label="CC Tips"
-                  value={formatMoney((annualMobileTotals?.creditCardTipCents ?? 0) / 100)}
-                />
-                <AnnualMetric
-                  label="Groomer Pay"
-                  value={formatMoney((annualMobileTotals?.groomerPayCents ?? 0) / 100)}
-                />
-                <AnnualMetric
-                  label="Upgrades ($)"
-                  value={formatMoney((annualMobileTotals?.upgradeCents ?? 0) / 100)}
-                />
-              </div>
-            ) : (
-              <div className="space-y-3">
-                {mobileQuarterGroups.map((quarter) => {
-                  const isOpen =
-                    openMobileQuarters[quarter.id] ??
-                    quarter.weeks.some((week) => week.weekStart === weekStart);
-                  return (
-                    <div key={quarter.id} className="rounded-lg border border-gray-200">
-                      <button
-                        type="button"
-                        className="flex w-full flex-col gap-2 px-4 py-3 text-left transition-colors hover:bg-gray-50 sm:flex-row sm:items-center sm:justify-between"
-                        aria-expanded={isOpen}
-                        onClick={() =>
-                          setOpenMobileQuarters((current) => ({
-                            ...current,
-                            [quarter.id]: !isOpen,
-                          }))
-                        }
-                      >
-                        <span>
-                          <span className="block text-sm font-semibold text-gray-900">
-                            {quarter.label}
-                          </span>
-                          <span className="text-xs text-gray-500">{quarter.range}</span>
-                        </span>
-                        <span className="flex flex-wrap gap-x-3 gap-y-1 text-xs text-gray-500">
-                          <span>{quarter.totals.stops} appointments</span>
-                          <span>{quarter.totals.dogs} pets</span>
-                          <span>{formatMoney(quarter.totals.pricingCents / 100)} total</span>
-                          <span>
-                            {formatMoney(mobileGroomingPriceFromTotals(quarter.totals) / 100)} grooming
-                          </span>
-                          <span>
-                            {formatMoney(quarter.totals.creditCardTipCents / 100)} cc tips
-                          </span>
-                          <span className="font-medium text-gray-700">
-                            {isOpen ? "Collapse" : "Expand"}
-                          </span>
-                        </span>
-                      </button>
-                      {isOpen ? (
-                        <div className="overflow-x-auto border-t border-gray-200">
-                          <table className="min-w-full divide-y divide-gray-200 text-sm">
-                            <thead className="bg-gray-50">
-                              <tr>
-                                <th className="px-4 py-2 text-left text-xs font-medium uppercase tracking-[0.06em] text-gray-500">
-                                  Week
-                                </th>
-                                <th className="px-4 py-2 text-left text-xs font-medium uppercase tracking-[0.06em] text-gray-500">
-                                  Appointments
-                                </th>
-                                <th className="px-4 py-2 text-left text-xs font-medium uppercase tracking-[0.06em] text-gray-500">
-                                  Pets
-                                </th>
-                                <th className="px-4 py-2 text-left text-xs font-medium uppercase tracking-[0.06em] text-gray-500">
-                                  Total Price
-                                </th>
-                                <th className="px-4 py-2 text-left text-xs font-medium uppercase tracking-[0.06em] text-gray-500">
-                                  Grooming Price
-                                </th>
-                                <th className="px-4 py-2 text-left text-xs font-medium uppercase tracking-[0.06em] text-gray-500">
-                                  Cash Total
-                                </th>
-                                <th className="px-4 py-2 text-left text-xs font-medium uppercase tracking-[0.06em] text-gray-500">
-                                  CC Tips
-                                </th>
-                                <th className="px-4 py-2 text-left text-xs font-medium uppercase tracking-[0.06em] text-gray-500">
-                                  Groomer Pay
-                                </th>
-                                <th className="px-4 py-2 text-left text-xs font-medium uppercase tracking-[0.06em] text-gray-500">
-                                  Upgrades ($)
-                                </th>
-                                <th className="px-4 py-2 text-right text-xs font-medium uppercase tracking-[0.06em] text-gray-500">
-                                  Actions
-                                </th>
-                              </tr>
-                            </thead>
-                            <tbody className="divide-y divide-gray-100">
-                              {quarter.weeks.map((week) => {
-                                const isEditing = weeklyTotalsEdit?.weekStart === week.weekStart;
-                                const edit = isEditing ? weeklyTotalsEdit : null;
-                                return (
-                                  <tr
-                                    key={week.weekStart}
-                                    className={cn(
-                                      "transition-colors",
-                                      week.weekStart === weekStart ? "bg-blue-50" : "bg-white"
-                                    )}
-                                  >
-                                    <td className="whitespace-nowrap px-4 py-2 font-medium text-gray-900">
-                                      {isEditing ? (
-                                        <span>{formatWeekRange(week.weekStart, week.weekEnd)}</span>
-                                      ) : (
-                                        <button
-                                          type="button"
-                                          className="rounded text-left text-blue-700 hover:text-blue-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
-                                          onClick={() =>
-                                            void loadWeek(week.weekStart, business, mobileViewEmployeeName)
-                                          }
-                                        >
-                                          {formatWeekRange(week.weekStart, week.weekEnd)}
-                                        </button>
-                                      )}
-                                    </td>
-                                    <td className="px-4 py-2 text-gray-700">
-                                      {edit ? (
-                                        <WeeklyTotalsInput
-                                          value={edit.stops}
-                                          step="1"
-                                          onChange={(value) => updateWeeklyTotalsEdit({ stops: value })}
-                                          disabled={savingWeeklyTotals}
-                                        />
-                                      ) : (
-                                        week.stops
-                                      )}
-                                    </td>
-                                    <td className="px-4 py-2 text-gray-700">
-                                      {edit ? (
-                                        <WeeklyTotalsInput
-                                          value={edit.dogs}
-                                          step="1"
-                                          onChange={(value) => updateWeeklyTotalsEdit({ dogs: value })}
-                                          disabled={savingWeeklyTotals}
-                                        />
-                                      ) : (
-                                        week.dogs
-                                      )}
-                                    </td>
-                                    <td className="px-4 py-2 text-gray-700">
-                                      {edit ? (
-                                        <WeeklyTotalsInput
-                                          value={edit.totalPricing}
-                                          onChange={(value) =>
-                                            updateWeeklyTotalsEdit({ totalPricing: value })
-                                          }
-                                          disabled={savingWeeklyTotals}
-                                        />
-                                      ) : (
-                                        formatMoney(week.pricingCents / 100)
-                                      )}
-                                    </td>
-                                    <td className="px-4 py-2 text-gray-700">
-                                      {edit
-                                        ? formatMoney(weeklyTotalsEditGroomingPrice(edit))
-                                        : formatMoney(mobileGroomingPriceFromTotals(week) / 100)}
-                                    </td>
-                                    <td className="px-4 py-2 text-gray-700">
-                                      {edit ? (
-                                        <WeeklyTotalsInput
-                                          value={edit.cashTotal}
-                                          onChange={(value) =>
-                                            updateWeeklyTotalsEdit({ cashTotal: value })
-                                          }
-                                          disabled={savingWeeklyTotals}
-                                        />
-                                      ) : (
-                                        formatMoney(week.cashCents / 100)
-                                      )}
-                                    </td>
-                                    <td className="px-4 py-2 text-gray-700">
-                                      {edit ? (
-                                        <WeeklyTotalsInput
-                                          value={edit.creditCardTips}
-                                          onChange={(value) =>
-                                            updateWeeklyTotalsEdit({ creditCardTips: value })
-                                          }
-                                          disabled={savingWeeklyTotals}
-                                        />
-                                      ) : (
-                                        formatMoney(week.creditCardTipCents / 100)
-                                      )}
-                                    </td>
-                                    <td className="px-4 py-2 text-gray-700">
-                                      {edit
-                                        ? formatMoney(weeklyTotalsEditGroomerPay(edit))
-                                        : formatMoney(week.groomerPayCents / 100)}
-                                    </td>
-                                    <td className="px-4 py-2 text-gray-700">
-                                      {edit ? (
-                                        <WeeklyTotalsInput
-                                          value={edit.upgrades}
-                                          onChange={(value) => updateWeeklyTotalsEdit({ upgrades: value })}
-                                          disabled={savingWeeklyTotals}
-                                        />
-                                      ) : (
-                                        formatMoney(week.upgradeCents / 100)
-                                      )}
-                                    </td>
-                                    <td className="whitespace-nowrap px-4 py-2 text-right">
-                                      {mobileViewEmployeeKey ? null : edit ? (
-                                        <div className="flex justify-end gap-2">
-                                          <button
-                                            type="button"
-                                            onClick={() => void saveWeeklyTotalsEdit()}
-                                            disabled={savingWeeklyTotals}
-                                            className="rounded-md px-2 py-1 text-xs font-medium text-blue-700 transition-colors hover:bg-blue-50 disabled:pointer-events-none disabled:opacity-50"
-                                          >
-                                            {savingWeeklyTotals ? "Saving..." : "Save"}
-                                          </button>
-                                          <button
-                                            type="button"
-                                            onClick={() => setWeeklyTotalsEdit(null)}
-                                            disabled={savingWeeklyTotals}
-                                            className="rounded-md px-2 py-1 text-xs font-medium text-gray-600 transition-colors hover:bg-gray-100 disabled:pointer-events-none disabled:opacity-50"
-                                          >
-                                            Cancel
-                                          </button>
-                                        </div>
-                                      ) : (
-                                        <button
-                                          type="button"
-                                          onClick={() => startWeeklyTotalsEdit(week)}
-                                          disabled={savingWeeklyTotals}
-                                          className="rounded-md px-2 py-1 text-xs font-medium text-blue-700 transition-colors hover:bg-blue-50 disabled:pointer-events-none disabled:opacity-50"
-                                        >
-                                          Edit
-                                        </button>
-                                      )}
-                                    </td>
-                                  </tr>
-                                );
-                              })}
-                            </tbody>
-                          </table>
-                        </div>
-                      ) : null}
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-          </CardContent>
-        </Card>
       )}
 
       {!isMobileGrooming && showMoegoImport && (
@@ -3855,6 +3527,310 @@ export function PayrollDashboard({
           )}
         </CardContent>
       </Card>}
+
+      {isMobileGrooming && mobilePayrollView !== "report" && mobilePayrollView !== "reconciliation" && mobilePayrollView !== "changes" && (
+        <details className="rounded-xl border border-pp-line bg-white">
+          <summary className="cursor-pointer px-5 py-3 text-sm font-semibold text-pp-ink">Annual totals & weekly history · {annualYear}</summary>
+          <CardContent className="space-y-4">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+              <div>
+                <h3 className="text-base font-semibold text-gray-900">
+                  {mobileViewEmployeeName
+                    ? `${mobileViewEmployeeName} totals for ${annualYear}`
+                    : `Mobile grooming totals for ${annualYear}`}
+                </h3>
+              </div>
+              <div className="inline-flex rounded-lg border border-gray-200 bg-gray-50 p-1">
+                {(["annual", "weekly"] as const).map((view) => (
+                  <button
+                    key={view}
+                    type="button"
+                    onClick={() => setMobileSummaryView(view)}
+                    className={cn(
+                      "rounded-md px-3 py-1.5 text-sm font-medium capitalize transition-colors",
+                      mobileSummaryView === view
+                        ? "bg-white text-gray-900 shadow-sm"
+                        : "text-gray-600 hover:text-gray-900"
+                    )}
+                  >
+                    {view}
+                  </button>
+                ))}
+              </div>
+            </div>
+            {mobileSummaryView === "annual" ? (
+              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4 2xl:grid-cols-8">
+                <AnnualMetric
+                  label="Total Appointments"
+                  value={String(annualMobileTotals?.stops ?? 0)}
+                />
+                <AnnualMetric
+                  label="Total Pets"
+                  value={String(annualMobileTotals?.dogs ?? 0)}
+                />
+                <AnnualMetric
+                  label="Total Price"
+                  value={formatMoney((annualMobileTotals?.pricingCents ?? 0) / 100)}
+                />
+                <AnnualMetric
+                  label="Grooming Price"
+                  value={formatMoney(
+                    mobileGroomingPriceFromTotals(
+                      annualMobileTotals ?? emptyMobileGroomingTotals()
+                    ) / 100
+                  )}
+                />
+                <AnnualMetric
+                  label="Cash Total"
+                  value={formatMoney((annualMobileTotals?.cashCents ?? 0) / 100)}
+                />
+                <AnnualMetric
+                  label="CC Tips"
+                  value={formatMoney((annualMobileTotals?.creditCardTipCents ?? 0) / 100)}
+                />
+                <AnnualMetric
+                  label="Groomer Pay"
+                  value={formatMoney((annualMobileTotals?.groomerPayCents ?? 0) / 100)}
+                />
+                <AnnualMetric
+                  label="Upgrades ($)"
+                  value={formatMoney((annualMobileTotals?.upgradeCents ?? 0) / 100)}
+                />
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {mobileQuarterGroups.map((quarter) => {
+                  const isOpen =
+                    openMobileQuarters[quarter.id] ??
+                    quarter.weeks.some((week) => week.weekStart === weekStart);
+                  return (
+                    <div key={quarter.id} className="rounded-lg border border-gray-200">
+                      <button
+                        type="button"
+                        className="flex w-full flex-col gap-2 px-4 py-3 text-left transition-colors hover:bg-gray-50 sm:flex-row sm:items-center sm:justify-between"
+                        aria-expanded={isOpen}
+                        onClick={() =>
+                          setOpenMobileQuarters((current) => ({
+                            ...current,
+                            [quarter.id]: !isOpen,
+                          }))
+                        }
+                      >
+                        <span>
+                          <span className="block text-sm font-semibold text-gray-900">
+                            {quarter.label}
+                          </span>
+                          <span className="text-xs text-gray-500">{quarter.range}</span>
+                        </span>
+                        <span className="flex flex-wrap gap-x-3 gap-y-1 text-xs text-gray-500">
+                          <span>{quarter.totals.stops} appointments</span>
+                          <span>{quarter.totals.dogs} pets</span>
+                          <span>{formatMoney(quarter.totals.pricingCents / 100)} total</span>
+                          <span>
+                            {formatMoney(mobileGroomingPriceFromTotals(quarter.totals) / 100)} grooming
+                          </span>
+                          <span>
+                            {formatMoney(quarter.totals.creditCardTipCents / 100)} cc tips
+                          </span>
+                          <span className="font-medium text-gray-700">
+                            {isOpen ? "Collapse" : "Expand"}
+                          </span>
+                        </span>
+                      </button>
+                      {isOpen ? (
+                        <div className="overflow-x-auto border-t border-gray-200">
+                          <table className="min-w-full divide-y divide-gray-200 text-sm">
+                            <thead className="bg-gray-50">
+                              <tr>
+                                <th className="px-4 py-2 text-left text-xs font-medium uppercase tracking-[0.06em] text-gray-500">
+                                  Week
+                                </th>
+                                <th className="px-4 py-2 text-left text-xs font-medium uppercase tracking-[0.06em] text-gray-500">
+                                  Appointments
+                                </th>
+                                <th className="px-4 py-2 text-left text-xs font-medium uppercase tracking-[0.06em] text-gray-500">
+                                  Pets
+                                </th>
+                                <th className="px-4 py-2 text-left text-xs font-medium uppercase tracking-[0.06em] text-gray-500">
+                                  Total Price
+                                </th>
+                                <th className="px-4 py-2 text-left text-xs font-medium uppercase tracking-[0.06em] text-gray-500">
+                                  Grooming Price
+                                </th>
+                                <th className="px-4 py-2 text-left text-xs font-medium uppercase tracking-[0.06em] text-gray-500">
+                                  Cash Total
+                                </th>
+                                <th className="px-4 py-2 text-left text-xs font-medium uppercase tracking-[0.06em] text-gray-500">
+                                  CC Tips
+                                </th>
+                                <th className="px-4 py-2 text-left text-xs font-medium uppercase tracking-[0.06em] text-gray-500">
+                                  Groomer Pay
+                                </th>
+                                <th className="px-4 py-2 text-left text-xs font-medium uppercase tracking-[0.06em] text-gray-500">
+                                  Upgrades ($)
+                                </th>
+                                <th className="px-4 py-2 text-right text-xs font-medium uppercase tracking-[0.06em] text-gray-500">
+                                  Actions
+                                </th>
+                              </tr>
+                            </thead>
+                            <tbody className="divide-y divide-gray-100">
+                              {quarter.weeks.map((week) => {
+                                const isEditing = weeklyTotalsEdit?.weekStart === week.weekStart;
+                                const edit = isEditing ? weeklyTotalsEdit : null;
+                                return (
+                                  <tr
+                                    key={week.weekStart}
+                                    className={cn(
+                                      "transition-colors",
+                                      week.weekStart === weekStart ? "bg-blue-50" : "bg-white"
+                                    )}
+                                  >
+                                    <td className="whitespace-nowrap px-4 py-2 font-medium text-gray-900">
+                                      {isEditing ? (
+                                        <span>{formatWeekRange(week.weekStart, week.weekEnd)}</span>
+                                      ) : (
+                                        <button
+                                          type="button"
+                                          className="rounded text-left text-blue-700 hover:text-blue-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+                                          onClick={() =>
+                                            void loadWeek(week.weekStart, business, mobileViewEmployeeName)
+                                          }
+                                        >
+                                          {formatWeekRange(week.weekStart, week.weekEnd)}
+                                        </button>
+                                      )}
+                                    </td>
+                                    <td className="px-4 py-2 text-gray-700">
+                                      {edit ? (
+                                        <WeeklyTotalsInput
+                                          value={edit.stops}
+                                          step="1"
+                                          onChange={(value) => updateWeeklyTotalsEdit({ stops: value })}
+                                          disabled={savingWeeklyTotals}
+                                        />
+                                      ) : (
+                                        week.stops
+                                      )}
+                                    </td>
+                                    <td className="px-4 py-2 text-gray-700">
+                                      {edit ? (
+                                        <WeeklyTotalsInput
+                                          value={edit.dogs}
+                                          step="1"
+                                          onChange={(value) => updateWeeklyTotalsEdit({ dogs: value })}
+                                          disabled={savingWeeklyTotals}
+                                        />
+                                      ) : (
+                                        week.dogs
+                                      )}
+                                    </td>
+                                    <td className="px-4 py-2 text-gray-700">
+                                      {edit ? (
+                                        <WeeklyTotalsInput
+                                          value={edit.totalPricing}
+                                          onChange={(value) =>
+                                            updateWeeklyTotalsEdit({ totalPricing: value })
+                                          }
+                                          disabled={savingWeeklyTotals}
+                                        />
+                                      ) : (
+                                        formatMoney(week.pricingCents / 100)
+                                      )}
+                                    </td>
+                                    <td className="px-4 py-2 text-gray-700">
+                                      {edit
+                                        ? formatMoney(weeklyTotalsEditGroomingPrice(edit))
+                                        : formatMoney(mobileGroomingPriceFromTotals(week) / 100)}
+                                    </td>
+                                    <td className="px-4 py-2 text-gray-700">
+                                      {edit ? (
+                                        <WeeklyTotalsInput
+                                          value={edit.cashTotal}
+                                          onChange={(value) =>
+                                            updateWeeklyTotalsEdit({ cashTotal: value })
+                                          }
+                                          disabled={savingWeeklyTotals}
+                                        />
+                                      ) : (
+                                        formatMoney(week.cashCents / 100)
+                                      )}
+                                    </td>
+                                    <td className="px-4 py-2 text-gray-700">
+                                      {edit ? (
+                                        <WeeklyTotalsInput
+                                          value={edit.creditCardTips}
+                                          onChange={(value) =>
+                                            updateWeeklyTotalsEdit({ creditCardTips: value })
+                                          }
+                                          disabled={savingWeeklyTotals}
+                                        />
+                                      ) : (
+                                        formatMoney(week.creditCardTipCents / 100)
+                                      )}
+                                    </td>
+                                    <td className="px-4 py-2 text-gray-700">
+                                      {edit
+                                        ? formatMoney(weeklyTotalsEditGroomerPay(edit))
+                                        : formatMoney(week.groomerPayCents / 100)}
+                                    </td>
+                                    <td className="px-4 py-2 text-gray-700">
+                                      {edit ? (
+                                        <WeeklyTotalsInput
+                                          value={edit.upgrades}
+                                          onChange={(value) => updateWeeklyTotalsEdit({ upgrades: value })}
+                                          disabled={savingWeeklyTotals}
+                                        />
+                                      ) : (
+                                        formatMoney(week.upgradeCents / 100)
+                                      )}
+                                    </td>
+                                    <td className="whitespace-nowrap px-4 py-2 text-right">
+                                      {mobileViewEmployeeKey ? null : edit ? (
+                                        <div className="flex justify-end gap-2">
+                                          <button
+                                            type="button"
+                                            onClick={() => void saveWeeklyTotalsEdit()}
+                                            disabled={savingWeeklyTotals}
+                                            className="rounded-md px-2 py-1 text-xs font-medium text-blue-700 transition-colors hover:bg-blue-50 disabled:pointer-events-none disabled:opacity-50"
+                                          >
+                                            {savingWeeklyTotals ? "Saving..." : "Save"}
+                                          </button>
+                                          <button
+                                            type="button"
+                                            onClick={() => setWeeklyTotalsEdit(null)}
+                                            disabled={savingWeeklyTotals}
+                                            className="rounded-md px-2 py-1 text-xs font-medium text-gray-600 transition-colors hover:bg-gray-100 disabled:pointer-events-none disabled:opacity-50"
+                                          >
+                                            Cancel
+                                          </button>
+                                        </div>
+                                      ) : (
+                                        <button
+                                          type="button"
+                                          onClick={() => startWeeklyTotalsEdit(week)}
+                                          disabled={savingWeeklyTotals}
+                                          className="rounded-md px-2 py-1 text-xs font-medium text-blue-700 transition-colors hover:bg-blue-50 disabled:pointer-events-none disabled:opacity-50"
+                                        >
+                                          Edit
+                                        </button>
+                                      )}
+                                    </td>
+                                  </tr>
+                                );
+                              })}
+                            </tbody>
+                          </table>
+                        </div>
+                      ) : null}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </CardContent>
+        </details>
+      )}
 
       {(message || error) && (
         <div

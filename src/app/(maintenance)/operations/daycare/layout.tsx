@@ -1,3 +1,4 @@
+import { PageHeader } from "@/components/ui/PageHeader";
 import { requireAuth } from "@/lib/auth-helpers";
 import { DaycareSubnav } from "./DaycareSubnav";
 import { getActiveBusiness } from "@/lib/business-server";
@@ -12,11 +13,8 @@ export default async function DaycareLayout({
   if ((await getActiveBusiness()).company !== "RESORT") redirect("/maintenance");
 
   return (
-    <div className="mx-auto max-w-7xl">
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold text-gray-900">Daycare</h1>
-        <p className="mt-1 text-gray-500">Operational reports from MoeGo</p>
-      </div>
+    <div className="min-w-0">
+      <PageHeader title="Daycare Reports" description="Operational reports from MoeGo" className="mb-6" />
       <DaycareSubnav />
       {children}
     </div>

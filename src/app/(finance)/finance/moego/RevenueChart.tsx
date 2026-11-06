@@ -8,7 +8,7 @@ import { metricTrend } from "@/lib/moego/chart-profit";
 
 type Bucket = "day" | "week" | "month" | "quarter" | "year";
 type BucketChoice = Bucket | "auto";
-const CURRENT_COLOR = "#2563eb";
+const CURRENT_COLOR = "#324953";
 const NEGATIVE_COLOR = "#dc2626";
 const COMPARISON_COLOR = "#ffd43b";
 

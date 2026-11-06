@@ -13,7 +13,8 @@ export function BusinessSelector({ options, showOnModules = false }: { options: 
   const business = useBusiness();
   const [switching, setSwitching] = useState(false);
   const [error, setError] = useState("");
-  if (!showOnModules && (isCompanySidebarPath(pathname) || ["/dashboard", "/modules", "/career", "/knowledge", "/search", "/admin/onboarding"].some((path) => pathname === path || pathname.startsWith(`${path}/`))
+  const modulePath = ["/admin/modules", "/admin/module-progress", "/admin/audit-log"].some((path) => pathname === path || pathname.startsWith(`${path}/`));
+  if (!showOnModules && !modulePath && (isCompanySidebarPath(pathname) || ["/dashboard", "/modules", "/career", "/knowledge", "/search", "/admin/onboarding"].some((path) => pathname === path || pathname.startsWith(`${path}/`))
     || pathname === "/cash-management" || pathname.startsWith("/cash-management/")
     || pathname === "/marketing"
     || pathname === "/admin/knowledge"
@@ -42,7 +43,7 @@ export function BusinessSelector({ options, showOnModules = false }: { options: 
   }
 
   return (
-    <header className="pp-business-header mb-6 flex flex-col items-end gap-3 border-b border-pp-line pb-4 print:hidden">
+    <header className="pp-business-header mb-5 flex flex-col items-start gap-2 print:hidden">
       <div className="flex min-w-0 max-w-full flex-wrap items-center justify-end gap-3">
         <label htmlFor="business-selector" className="text-xs font-medium uppercase tracking-wide text-pp-ink-3">Business</label>
         <select id="business-selector" value={business.company} disabled={switching || options.length < 2}

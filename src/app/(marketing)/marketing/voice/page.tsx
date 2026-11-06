@@ -1,3 +1,4 @@
+import { PageHeader } from "@/components/ui/PageHeader";
 import { requireMarketing } from "@/lib/auth-helpers";
 import { getLatestVoiceProfile, readProofBank } from "@/lib/marketing/voice";
 import { VoiceProfileEditor } from "./VoiceProfileEditor";
@@ -8,14 +9,7 @@ export default async function VoiceProfilePage() {
 
   return (
     <div className="w-full">
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold text-gray-900">Brand Voice Profile</h1>
-        <p className="text-gray-500 mt-1">
-          Every script, hook, and ad copy generator reads from the latest
-          version. Saving creates a new version — older ones are kept so we
-          can correlate quality changes to specific edits.
-        </p>
-      </div>
+      <PageHeader title="Brand Voice Profile" description="\r\n          Every script, hook, and ad copy generator reads from the latest\r\n          version. Saving creates a new version — older ones are kept so we\r\n          can correlate quality changes to specific edits.\r\n        " className="mb-6" />
 
       <VoiceProfileEditor
         initial={

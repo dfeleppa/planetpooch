@@ -65,6 +65,7 @@ export function CampaignResultsReport({ from, to, source, rangeLabel, outcomes, 
   const [saving, setSaving] = useState(false);
   const [expanded, setExpanded] = useState<string | null>(null);
   const [expandedSegments, setExpandedSegments] = useState<string[]>([]);
+  const [showDefinitions, setShowDefinitions] = useState(false);
   const [showLeads, setShowLeads] = useState(false);
   const [showPlatform, setShowPlatform] = useState(false);
 
@@ -160,10 +161,16 @@ export function CampaignResultsReport({ from, to, source, rangeLabel, outcomes, 
     {source !== "google-lsa" && <div className="rounded-xl border border-gray-200 bg-white p-5">
       <h3 className="font-semibold text-gray-900">Paid website lead overview</h3>
       <p className="mt-1 text-sm text-gray-600">{reportDate(from)} – {reportDate(to)} · {source === "all" ? "Meta + Google Ads" : LABELS[source]}</p>
-      <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-        {[["Ad spend", dollars(overview.spend)], ["Website leads", number(overview.leads)], ["Booked leads", number(overview.booked)], ["Cost per booked lead", dollars(overview.costPerBooked)], ["Revenue", dollars(overview.revenue)], ["Conversions", number(paidConversions.conversions)], ["Revenue per conversion", dollars(paidConversions.valuePerConversion)], ["Cost per conversion", dollars(paidEfficiency.costPerConversion)], ["Conversion rate", percentage(paidEfficiency.conversionRate)]].map(([label, value]) => <div key={label} className="rounded-lg bg-slate-50 p-4"><p className="text-xs font-medium text-gray-600">{label}</p><p className="mt-2 text-2xl font-semibold tabular-nums text-gray-900">{value}</p></div>)}
+      <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-5">
+        {[["Ad spend", dollars(overview.spend)], ["Website leads", number(overview.leads)], ["Booked leads", number(overview.booked)], ["Paying customers", number(paidConversions.conversions)], ["Revenue", dollars(overview.revenue)]].map(([label, value]) => <div key={label} className="min-w-0 rounded-lg bg-pp-surface-2 p-3"><p className="text-xs font-medium text-pp-ink-3">{label}</p><p className="mt-2 break-words text-2xl font-semibold tabular-nums text-pp-ink">{value}</p></div>)}
       </div>
-      <p className="mt-3 text-xs text-gray-600">Website submissions attributed to the selected paid sources only. Booked counts submissions with a qualifying booking, not unique new customers. LSA calls and unattributed inquiries are separate below. Conversions count unique paying customers after their lead, including returning customers; verified duplicate profiles count once. Revenue per conversion is their average net collected amount after refunds. Payments can occur after the selected dates; this is observed revenue, not proof of ad causation.</p>
+      <details className="mt-3 border-t border-pp-line-soft pt-3">
+        <summary className="cursor-pointer text-sm font-medium text-pp-ink">Cost and conversion metrics</summary>
+        <dl className="mt-3 grid grid-cols-2 gap-4 sm:grid-cols-4">
+          {[["Cost per booked lead", dollars(overview.costPerBooked)], ["Revenue per conversion", dollars(paidConversions.valuePerConversion)], ["Cost per conversion", dollars(paidEfficiency.costPerConversion)], ["Conversion rate", percentage(paidEfficiency.conversionRate)]].map(([label, value]) => <div key={label}><dt className="text-xs text-pp-ink-3">{label}</dt><dd className="mt-1 font-semibold tabular-nums text-pp-ink">{value}</dd></div>)}
+        </dl>
+      </details>
+      <p className="mt-3 text-sm text-pp-ink-3">Leads are submissions; conversions are paying customers, including returning customers. — means unavailable. <a onClick={() => setShowDefinitions(true)} href={`#${headingId}-definitions`} className="underline">How these numbers work</a></p>
       {(outcomes.incomplete || metric?.leadsLimited) && <p className="mt-2 text-sm text-amber-800">MoeGo outcomes may be incomplete. Review data freshness before acting on these figures.</p>}
     </div>}
 
@@ -312,7 +319,8 @@ export function CampaignResultsReport({ from, to, source, rangeLabel, outcomes, 
       {!current && <p className="border-t border-gray-100 px-4 py-2 text-sm text-gray-500">Loading spend and website forms…</p>}
     </div>
 
-    <details className="space-y-2 rounded-xl border border-gray-200 bg-white p-4 text-xs text-gray-600"><summary className="cursor-pointer text-sm font-medium text-gray-800">How these numbers work</summary>
+    <details open={showDefinitions} onToggle={(event) => setShowDefinitions(event.currentTarget.open)} id={`${headingId}-definitions`} className="scroll-mt-4 space-y-2 rounded-xl border border-gray-200 bg-white p-4 text-sm text-gray-600"><summary className="cursor-pointer text-sm font-medium text-gray-800">How these numbers work</summary>
+      <p>Website submissions attributed to the selected paid sources only. Booked counts submissions with a qualifying booking, not unique new customers. LSA calls and unattributed inquiries are separate below. Conversions count unique paying customers after their lead, including returning customers; verified duplicate profiles count once. Revenue per conversion is their average net collected amount after refunds. Payments can occur after the selected dates; this is observed revenue, not proof of ad causation.</p>
       <p>Revenue is net collected after the lead, after refunds. Cost per conversion is ad spend divided by unique paying customers. Conversion rate is unique paying customers divided by the displayed lead count (website submissions, or imported calls for LSA); repeat inquiries remain in the lead denominator. Zero conversions with known leads shows 0%; unavailable data or a zero denominator shows a dash.</p>
       <p>Conversions are distinct verified customers with positive net payments after a website lead. Repeat inquiries and duplicate profiles count once within each row; the subtotal deduplicates across campaigns and sources, so conversion counts are not additive. These include returning customers and do not establish first-ever purchases. Revenue per conversion divides converted customer net payments by conversions; no conversions or unavailable payment data shows a dash. The LSA source row uses unique paying customers matched to calls; its campaign rows refer only to website forms. LSA is excluded from the paid website subtotal to avoid overlap.</p>
       <p>Website forms are actual submissions; Meta platform leads may differ. The Google LSA source row uses exact-phone matches to imported calls, including existing customers. Phones matching multiple MoeGo profiles are linked but excluded from LSA bookings and payments. Because the CSV has dates rather than call times, LSA outcomes exclude MoeGo activity on a call date and use later New York calendar dates. Each appointment and order is assigned to the latest qualifying LSA call once. Booked counts leads with at least one qualifying appointment. ROAS is revenue divided by known source spend; it does not prove the ad caused a purchase.</p>

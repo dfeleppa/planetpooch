@@ -270,10 +270,10 @@ function DepartmentChecklistBoard({ canEdit, department }: { canEdit: boolean; d
   }
 
   return (
-    <div className="max-w-7xl">
+    <div className="max-w-none">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-5">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Dashboard</h1>
+          <h1 className="text-2xl font-bold text-gray-900">Daily checklists</h1>
           <p className="text-gray-500 mt-1">Pet Resort daily and weekly sign-off</p>
         </div>
         {canEdit && (
@@ -599,7 +599,7 @@ function PeriodCard({
                         </button>;
                       })}
                     </div>
-                    <span className={cn("min-w-0 flex-1 break-words text-sm", item.amCompletion && item.pmCompletion ? "text-gray-400 line-through decoration-gray-300" : "text-gray-800")}>{item.title}</span>
+                    <span className={cn("min-w-0 flex-1 break-words text-sm", item.amCompletion && item.pmCompletion ? "text-gray-600 line-through decoration-gray-300" : "text-gray-800")}>{item.title}</span>
                   </div>
                   {(item.amCompletion || item.pmCompletion) && <p className="mt-1 text-xs text-gray-400">
                     {(["AM", "PM"] as const).map((slot) => {
@@ -633,7 +633,7 @@ function PeriodCard({
                     <span
                       className={cn(
                         "block break-words text-sm",
-                        item.completion ? "text-gray-400 line-through decoration-gray-300" : "text-gray-800"
+                        item.completion ? "text-gray-600 line-through decoration-gray-300" : "text-gray-800"
                       )}
                     >
                       {item.title}

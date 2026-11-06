@@ -141,7 +141,7 @@ export function KnowledgeEditor() {
   }
 
   return (
-    <div className="mx-auto max-w-6xl space-y-6 pb-10">
+    <div className="space-y-6 pb-10">
       <header className="flex flex-wrap items-start justify-between gap-4">
         <div>
           <p className="text-xs font-semibold uppercase tracking-wide text-pp-accent">Experimental</p>
@@ -152,12 +152,12 @@ export function KnowledgeEditor() {
           className="rounded-lg bg-pp-accent px-4 py-2 text-sm font-medium text-white hover:bg-pp-accent-2">New article</button>
       </header>
 
-      <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.5fr)]">
+      <div className={`grid items-start gap-6 ${editing ? "lg:grid-cols-[minmax(0,1fr)_minmax(0,1.5fr)]" : ""}`}>
         <section className="rounded-xl border border-pp-line bg-white p-4">
           <h2 className="mb-3 font-semibold text-pp-ink">Articles</h2>
           {loading && <p className="text-sm text-pp-ink-3">Loading…</p>}
           {!loading && articles.length === 0 && <p className="text-sm text-pp-ink-3">No articles yet. Add a policy, procedure, or reference note.</p>}
-          <div className="max-h-[70vh] space-y-2 overflow-y-auto">
+          <div className={editing ? "max-h-[70vh] space-y-2 overflow-y-auto" : "grid gap-3 md:grid-cols-2 xl:grid-cols-3"}>
             {articles.map((article) => (
               <button key={article.id} type="button" onClick={() => void editArticle(article.id)}
                 className="w-full rounded-lg border border-pp-line p-3 text-left hover:border-pp-accent-line hover:bg-pp-accent-soft">
@@ -172,7 +172,7 @@ export function KnowledgeEditor() {
           </div>
         </section>
 
-        <section className="rounded-xl border border-pp-line bg-white p-5">
+        <section className={`rounded-xl border border-pp-line bg-white p-5 ${!editing ? "hidden" : ""}`}>
           {!editing ? <p className="text-sm text-pp-ink-3">Select an article or create a new one.</p> : !isEditing && editing.id ? (
             <article className="space-y-5">
               <div className="flex flex-wrap items-start justify-between gap-3">

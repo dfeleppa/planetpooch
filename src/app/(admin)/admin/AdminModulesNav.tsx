@@ -3,10 +3,7 @@
 import Link from "next/link";
 import { useSession } from "next-auth/react";
 import { cn } from "@/lib/utils";
-import { BusinessSelector } from "@/components/business/BusinessSelector";
 import { useBusiness } from "@/components/business/BusinessProvider";
-import { availableBusinesses } from "@/lib/business";
-import { canSeeCorporateSidebar } from "@/lib/sidebar-access";
 
 type AdminModulesView = "manage" | "module-progress" | "audit-log";
 
@@ -24,9 +21,6 @@ export function AdminModulesNav({ active }: { active: AdminModulesView }) {
 
   return (
     <div className="flex flex-col gap-3">
-    {session?.user && canSeeCorporateSidebar(session.user) && (
-      <BusinessSelector options={availableBusinesses(session.user)} showOnModules />
-    )}
     <nav className="pp-tabs" aria-label="Modules sections">
       {items.filter((item) => item.view !== "manage" || canManageModules).map((item) => (
         <Link
