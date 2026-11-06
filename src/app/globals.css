@@ -61,7 +61,7 @@ body {
   .pp-app-content :where(button, a, input, select, textarea, summary):focus-visible {
     outline: 2px solid var(--color-pp-accent); outline-offset: 3px;
   }
-  .pp-app-content .pp-tabs { flex-wrap: wrap; gap: 0 16px; }
+  .pp-app-content .pp-tabs { flex-wrap: wrap; gap: 0 16px; overflow: visible; }
   .pp-app-content .pp-tab { min-height: 44px; margin-right: 0; padding: 10px 4px; font-size: 14px; }
   .pp-app-content .pp-sub { font-size: 14px; line-height: 1.5; }
   .pp-sticky-first :is(th, td):first-child { position: sticky; left: 0; z-index: 1; background: white; min-width: 140px; border-right: 1px solid var(--color-pp-line); }
