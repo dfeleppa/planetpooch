@@ -31,6 +31,22 @@ function renderNavigation(company: "RESORT" | "GROOMING", role: Role = "SUPER_AD
   );
 }
 
+test("saved expanded sidebar preference does not change the initial hydration markup", () => {
+  const serverHtml = renderNavigation("RESORT");
+  const windowDescriptor = Object.getOwnPropertyDescriptor(globalThis, "window");
+  const storageDescriptor = Object.getOwnPropertyDescriptor(globalThis, "localStorage");
+  try {
+    Object.defineProperty(globalThis, "window", { configurable: true, value: { location: { href: "http://localhost/admin/module-progress" } } });
+    Object.defineProperty(globalThis, "localStorage", { configurable: true, value: { getItem: () => "false" } });
+    assert.equal(renderNavigation("RESORT"), serverHtml);
+  } finally {
+    if (windowDescriptor) Object.defineProperty(globalThis, "window", windowDescriptor);
+    else Reflect.deleteProperty(globalThis, "window");
+    if (storageDescriptor) Object.defineProperty(globalThis, "localStorage", storageDescriptor);
+    else Reflect.deleteProperty(globalThis, "localStorage");
+  }
+});
+
 test("Corporate links are shared and operational links retain their company scope", () => {
   for (const company of ["RESORT", "GROOMING"] as const) {
     const html = renderNavigation(company);

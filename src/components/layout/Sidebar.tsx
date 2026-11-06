@@ -202,11 +202,11 @@ export function Sidebar() {
   // the plain employee nav is not.
   const isAdminNav = baseNav !== employeeNav;
 
-  const [collapsed, setCollapsed] = useState(
-    () =>
-      typeof window === "undefined" ||
-      localStorage.getItem("portal-sidebar-collapsed") !== "false"
-  );
+  // Match the server on the first client render, then restore the preference.
+  const [collapsed, setCollapsed] = useState(true);
+  useEffect(() => {
+    setCollapsed(localStorage.getItem("portal-sidebar-collapsed") !== "false");
+  }, []);
   const [mobileOpen, setMobileOpen] = useState(false);
 
   // Close the drawer when the path changes (link click, back button, etc.)
