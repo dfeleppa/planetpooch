@@ -68,12 +68,19 @@ export function leadsInPeriod<T extends LsaLead>(rows: T[], from: string, to: st
 }
 
 export async function getGoogleLsaLeads(businesses: string[], from: Date, to: Date) {
+  const snapshots = await prisma.googleLsaSyncWindow.findMany({ where: { business: { in: businesses }, from, to } });
+  const apiBusinesses = new Set(snapshots.map(row => row.business));
   const rows = await prisma.financeGoogleLsaLeadReportRow.findMany({
     where: {
-      business: { in: businesses },
+      business: { in: businesses.filter(business => !apiBusinesses.has(business)) },
       periodStart: { lte: to },
       periodEnd: { gte: from },
     },
   });
-  return leadsInPeriod(rows, from.toISOString().slice(0, 10), to.toISOString().slice(0, 10));
+  const apiRows = snapshots.flatMap(snapshot => (snapshot.calls as { id: string; customer: string | null; leadReceived: string; jobType: string | null; chargeStatus: string }[]).map((call, rowOrder) => ({
+    ...call, business: snapshot.business, periodStart: from, periodEnd: to, rowOrder,
+    searchIntent: null, location: null, leadType: "Phone call", lastActivity: null, totalPaidCents: null,
+    createdAt: snapshot.syncedAt, updatedAt: snapshot.syncedAt,
+  })));
+  return [...apiRows, ...leadsInPeriod(rows, from.toISOString().slice(0, 10), to.toISOString().slice(0, 10))];
 }

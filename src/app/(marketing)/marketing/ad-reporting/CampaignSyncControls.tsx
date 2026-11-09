@@ -6,7 +6,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 
 type Campaign = { id: string; name: string; business: string | null };
-type Platform = "Meta" | "Google Ads" | "MoeGo";
+type Platform = "Meta" | "Google Ads" | "Google LSA" | "MoeGo";
 const DAY_MS = 86_400_000;
 const buttonClass = "pp-btn pp-btn-primary shrink-0 disabled:opacity-50";
 const dateTime = (value: string | null) => value
@@ -20,9 +20,10 @@ async function jsonRequest(url: string, options?: RequestInit) {
   return result;
 }
 
-export function CampaignSyncControls({ from, to, isAdmin, metaSyncedAt, googleSyncedAt, moegoSyncedAt, onUpdated = () => {}, metaOnly = false, moegoOnly = false }: {
+export function CampaignSyncControls({ from, to, isAdmin, metaSyncedAt, googleSyncedAt, googleLsaSyncedAt = null, moegoSyncedAt, onUpdated = () => {}, metaOnly = false, moegoOnly = false }: {
   from: string; to: string; isAdmin: boolean;
   metaSyncedAt: string | null; googleSyncedAt: string | null; moegoSyncedAt: string | null;
+  googleLsaSyncedAt?: string | null;
   onUpdated?: () => void; metaOnly?: boolean; moegoOnly?: boolean;
 }) {
   const router = useRouter();
@@ -63,6 +64,15 @@ export function CampaignSyncControls({ from, to, isAdmin, metaSyncedAt, googleSy
     return result.caughtUp ? "" : "MoeGo backfill is still running; update again to continue.";
   }
 
+  async function syncLsa() {
+    const response = await fetch("/api/marketing/google-lsa/sync", {
+      method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ from, to }),
+    });
+    const result = await readApiResponse(response);
+    if (result.campaigns?.length) setCampaigns(result.campaigns);
+    if (!response.ok) throw new Error(result.error ?? "Google LSA update failed.");
+  }
+
   async function backfillLsaAppointments() {
     setWorking("LSA appointments");
     setStatus("Backfilling LSA caller appointments from MoeGo…");
@@ -97,12 +107,13 @@ export function CampaignSyncControls({ from, to, isAdmin, metaSyncedAt, googleSy
     setStatus("");
     const completed: string[] = [];
     const issues: string[] = [];
-    const targets: Platform[] = platform === "all" ? (moegoOnly ? (isAdmin ? ["MoeGo"] : []) : metaOnly ? ["Meta"] : isAdmin ? ["Meta", "Google Ads", "MoeGo"] : ["Meta", "Google Ads"]) : [platform];
+    const targets: Platform[] = platform === "all" ? (moegoOnly ? (isAdmin ? ["MoeGo"] : []) : metaOnly ? ["Meta"] : isAdmin ? ["Meta", "Google Ads", "Google LSA", "MoeGo"] : ["Meta", "Google Ads", "Google LSA"]) : [platform];
     for (const target of targets) {
       try {
         setStatus(`Updating ${target}…`);
         if (target === "Meta") await syncMeta();
         if (target === "Google Ads") await syncGoogle();
+        if (target === "Google LSA") await syncLsa();
         if (target === "MoeGo") {
           const warning = await syncMoeGo();
           if (warning) issues.push(warning);
@@ -142,15 +153,16 @@ export function CampaignSyncControls({ from, to, isAdmin, metaSyncedAt, googleSy
       {!metaOnly && !moegoOnly && <details className="rounded-lg border border-gray-200 bg-white"><summary className="cursor-pointer px-4 py-2 text-sm font-medium text-gray-700">Data tools</summary><div className="flex flex-wrap gap-2 p-3">
         <button type="button" className={buttonClass} disabled={working !== null} onClick={() => update("Meta")}>Update Meta</button>
         <button type="button" className={buttonClass} disabled={working !== null} onClick={() => update("Google Ads")}>Update Google Ads</button>
+        <button type="button" className={buttonClass} disabled={working !== null} onClick={() => update("Google LSA")}>Update Google LSA</button>
         {isAdmin && <button type="button" className={buttonClass} disabled={working !== null} onClick={() => update("MoeGo")}>Update MoeGo</button>}
         {isAdmin && <button type="button" className={buttonClass} disabled={working !== null} onClick={backfillLsaAppointments}>Backfill LSA appointments</button>}
         {isAdmin && <a href="/finance/moego" className="px-3 py-2 text-sm text-blue-700 underline">Refresh MoeGo orders in Finance</a>}
       </div></details>}
     </div>
-    <p className="mt-1 text-xs text-gray-500">Last updated (ET) · Meta: {dateTime(metaSyncedAt)} {!metaOnly && <> · Google Ads: {dateTime(googleSyncedAt)} · MoeGo appointments: {dateTime(moegoSyncedAt)}</>}</p>
+    <p className="mt-1 text-xs text-gray-500">Last updated (ET) · Meta: {dateTime(metaSyncedAt)} {!metaOnly && <> · Google Ads: {dateTime(googleSyncedAt)} · Google LSA: {dateTime(googleLsaSyncedAt)} · MoeGo appointments: {dateTime(moegoSyncedAt)}</>}</p>
     {status && <p role="status" className="mt-1 text-xs text-gray-700">{status}</p>}
     {campaigns?.some((campaign) => !campaign.business) && <div className="mt-2 rounded-lg border border-gray-200 bg-white p-3">
-      <p className="mb-2 text-sm font-medium">Assign each Google Ads campaign before syncing this date range.</p>
+      <p className="mb-2 text-sm font-medium">Assign each campaign, then update its Google source again.</p>
       <div className="max-h-64 space-y-2 overflow-auto">{campaigns.map((campaign) => <label key={campaign.id} className="flex flex-wrap items-center justify-between gap-2 text-sm">
         <span>{campaign.name} <span className="text-gray-500">({campaign.id})</span></span>
         <select value={campaign.business ?? ""} onChange={(event) => assign(campaign, event.target.value)} disabled={working !== null} aria-label={`Division for ${campaign.name}`} className="rounded border border-gray-300 bg-white px-2 py-1">

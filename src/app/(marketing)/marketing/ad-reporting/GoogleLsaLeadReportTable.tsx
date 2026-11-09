@@ -20,7 +20,7 @@ type GoogleLsaLeadRow = {
   leadReceived: string | null;
   lastActivity: string | null;
   totalPaidCents: number | null;
-  leadCostCents: number;
+  leadCostCents: number | null;
 };
 
 const COLUMNS = [
@@ -59,6 +59,7 @@ export function GoogleLsaLeadReportTable({
 }) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [rows, setRows] = useState<GoogleLsaLeadRow[]>([]);
+  const [actualSpendCents, setActualSpendCents] = useState<number | null>(null);
   const [page, setPage] = useState(0);
   const [loaded, setLoaded] = useState(false);
   const [importing, setImporting] = useState(false);
@@ -78,10 +79,12 @@ export function GoogleLsaLeadReportTable({
       );
       const json = (await readApiResponse(response)) as {
         rows?: GoogleLsaLeadRow[];
+        actualSpendCents?: number | null;
         error?: string;
       };
       if (!response.ok) throw new Error(json.error ?? "Unable to load Google LSA leads.");
       setRows(Array.isArray(json.rows) ? json.rows : []);
+      setActualSpendCents(json.actualSpendCents ?? null);
       setPage(0);
     } catch (loadError) {
       setRows([]);
@@ -104,7 +107,7 @@ export function GoogleLsaLeadReportTable({
     return rows.slice(start, start + ROWS_PER_PAGE);
   }, [currentPage, rows]);
   const totalLeadCostCents = useMemo(
-    () => rows.reduce((sum, row) => sum + row.leadCostCents, 0),
+    () => rows.reduce((sum, row) => sum + (row.leadCostCents ?? 0), 0),
     [rows]
   );
 
@@ -161,7 +164,7 @@ export function GoogleLsaLeadReportTable({
         <div>
           <h2 className="text-base font-semibold text-gray-900">Google LSA Lead Report</h2>
           <p className="mt-1 text-xs text-gray-500">
-            {rows.length.toLocaleString("en-US")} leads · {formatMoney(totalLeadCostCents)} estimated cost ($28 per lead)
+            {rows.length.toLocaleString("en-US")} phone leads · {actualSpendCents !== null ? `${formatMoney(actualSpendCents)} actual Google spend (all LSA lead types); individual call costs unavailable` : `${formatMoney(totalLeadCostCents)} estimated cost ($28 per imported lead)`}
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">

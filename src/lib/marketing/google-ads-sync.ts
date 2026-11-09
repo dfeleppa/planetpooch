@@ -2,6 +2,7 @@ import { prisma } from "@/lib/prisma";
 import { getGoogleAdsAuthClient } from "@/lib/google";
 import { addCalendarDays, formatEasternDate } from "@/lib/marketing/submission-date-range";
 import { normalizeGoogleAdsCampaign, type GoogleAdsApiRow } from "./google-ads-metrics";
+import { isLsaCampaign } from "./google-lsa-metrics";
 
 const API_VERSION = "v25";
 const BUSINESSES = ["pet-resort", "mobile-grooming"] as const;
@@ -48,7 +49,7 @@ export async function fetchGoogleAdsCampaigns(from: string, to: string): Promise
   if (!accessToken) throw new GoogleAdsConfigError("Could not obtain a Google Ads access token.");
   const yesterday = addCalendarDays(formatEasternDate(new Date()), -1)!;
   const through = to < yesterday ? to : yesterday;
-  const query = `SELECT campaign.id, campaign.name, campaign.status, metrics.clicks, metrics.cost_micros, metrics.impressions FROM campaign WHERE segments.date BETWEEN '${from}' AND '${through}'`;
+  const query = `SELECT campaign.id, campaign.name, campaign.status, campaign.advertising_channel_type, campaign.pmax_campaign_settings.local_services_enabled, metrics.clicks, metrics.cost_micros, metrics.impressions FROM campaign WHERE segments.date BETWEEN '${from}' AND '${through}'`;
   const rows: Campaign[] = [];
   let pageToken: string | undefined;
   do {
@@ -65,6 +66,7 @@ export async function fetchGoogleAdsCampaigns(from: string, to: string): Promise
     const body = await response.json().catch(() => ({})) as { results?: GoogleAdsApiRow[]; nextPageToken?: string; error?: { message?: string } };
     if (!response.ok) throw new GoogleAdsApiError(body.error?.message ?? "Google Ads report request failed.", response.status);
     for (const row of body.results ?? []) {
+      if (isLsaCampaign(row)) continue;
       const normalized = normalizeGoogleAdsCampaign(row);
       if (normalized) rows.push(normalized);
     }

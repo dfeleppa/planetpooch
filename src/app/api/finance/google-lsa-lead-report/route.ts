@@ -129,10 +129,13 @@ export async function GET(req: NextRequest) {
     );
   }
 
-  const rows = (await getGoogleLsaLeads([business], periodStart, periodEnd))
-    .map((row) => ({ ...row, leadCostCents: GOOGLE_LSA_LEAD_COST_CENTS }));
+  const businesses = [business];
+  const windows = await prisma.googleLsaSyncWindow.findMany({ where: { business: { in: businesses }, from: periodStart, to: periodEnd } });
+  const actual = businesses.every(value => windows.some(row => row.business === value));
+  const rows = (await getGoogleLsaLeads(businesses, periodStart, periodEnd))
+    .map((row) => ({ ...row, leadCostCents: row.id.startsWith("customers/") ? null : GOOGLE_LSA_LEAD_COST_CENTS }));
 
-  return NextResponse.json({ rows });
+  return NextResponse.json({ rows, actualSpendCents: actual ? windows.reduce((sum, row) => sum + row.spendCents, 0) : null });
 }
 
 export async function POST(req: NextRequest) {

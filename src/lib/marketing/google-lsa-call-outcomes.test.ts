@@ -40,7 +40,7 @@ test("LSA outcomes exclude call-day activity, ambiguous phones, and duplicate ev
     order("ambiguous-profile", "c3", "2026-01-04T15:00:00Z"),
   ];
   assert.deepEqual(summarizeGoogleLsaCallOutcomes(calls, profiles, appointments, orders), {
-    linked: 3, ambiguous: 1, bookedLeads: 2, appointments: 3, netPaidCents: 3_000,
+    linked: 3, ambiguous: 1, bookedLeads: 2, appointments: 3, netPaidCents: 3_000, conversions: 1, valuePerConversion: 3_000,
   });
 });
 

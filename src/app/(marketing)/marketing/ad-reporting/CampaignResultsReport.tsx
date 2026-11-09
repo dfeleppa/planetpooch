@@ -25,7 +25,7 @@ type LeadData = {
 };
 type Metric = {
   metaAdSpend: number | null; googleAdSpend: number | null; googleLsaAdSpend: number | null;
-  googleLsaLeadCount: number;
+  googleLsaLeadCount: number | null;
   googleLsaCallOutcomes: {
     conversions: number | null; valuePerConversion: number | null;
     linked: number; ambiguous: number; bookedLeads: number | null; appointments: number | null;
@@ -36,7 +36,8 @@ type Metric = {
   metaDataComplete: boolean; metaDataThrough: string | null;
   moegoDataAvailable: boolean; leadsLimited: boolean;
   googleSpendOrigin: "manual" | "csv" | "api" | null;
-  googleLsaSpendOrigin: "manual" | "csv" | null;
+  googleLsaSpendOrigin: "manual" | "csv" | "api" | null;
+  googleLsaSyncedAt: string | null;
   metaSyncedAt: string | null; moegoSyncedAt: string | null; googleSyncedAt: string | null;
 };
 
@@ -150,7 +151,7 @@ export function CampaignResultsReport({ from, to, source, rangeLabel, outcomes, 
       </div>
       <div className="flex w-full items-start gap-2 print:hidden">
         <div className="min-w-0 flex-1"><CampaignSyncControls from={from} to={to} isAdmin={outcomes.isAdmin}
-          metaSyncedAt={metric?.metaSyncedAt ?? null} googleSyncedAt={metric?.googleSyncedAt ?? null}
+          metaSyncedAt={metric?.metaSyncedAt ?? null} googleSyncedAt={metric?.googleSyncedAt ?? null} googleLsaSyncedAt={metric?.googleLsaSyncedAt ?? null}
           moegoSyncedAt={outcomes.appointmentUpdatedAt} onUpdated={() => setRefresh((value) => value + 1)} /></div>
         <MarketingPrintButton />
       </div>
@@ -218,7 +219,7 @@ export function CampaignResultsReport({ from, to, source, rangeLabel, outcomes, 
                       <span>$</span><input aria-label={`${LABELS[rowSource]} spend in dollars`} type="number" min="0" max="21474836.47" step="0.01" required value={amount} onChange={(event) => setAmount(event.target.value)} className="w-24 rounded border border-gray-300 px-2 py-1 text-right" />
                       <button type="submit" disabled={saving} className="text-blue-700 underline print:hidden">{saving ? "Saving…" : "Save"}</button>
                       <button type="button" onClick={() => setEditing(null)} className="text-gray-600 underline print:hidden">Cancel</button>
-                    </form> : <>{dollars(spend)}{rowSource === "google-lsa" && <span className="block text-xs font-normal text-amber-800">Estimated · $28 per call</span>}{rowSource === "google-ads" && scope.business === "all" && scope.service === "all" && <button type="button" onClick={() => { setEditing(rowSource); setAmount(((spend ?? 0) / 100).toFixed(2)); setSaveError(""); }} className="ml-2 text-xs font-normal text-blue-700 underline print:hidden">Edit</button>}</>}
+                    </form> : <>{dollars(spend)}{rowSource === "google-lsa" && <span className="block text-xs font-normal text-amber-800">{metric?.googleLsaSpendOrigin === "api" ? "Actual Google spend" : metric?.googleLsaSpendOrigin === "csv" ? "Estimated · $28 per call" : "Not synced for these dates"}</span>}{rowSource === "google-ads" && scope.business === "all" && scope.service === "all" && <button type="button" onClick={() => { setEditing(rowSource); setAmount(((spend ?? 0) / 100).toFixed(2)); setSaveError(""); }} className="ml-2 text-xs font-normal text-blue-700 underline print:hidden">Edit</button>}</>}
                   </td>
                   <td className="px-4 py-3 text-right">{number(sourceLeads)}</td>
                   <td className="px-4 py-3 text-right">{costPerLead(spend, sourceLeads)}</td>
@@ -324,7 +325,7 @@ export function CampaignResultsReport({ from, to, source, rangeLabel, outcomes, 
       <p>Revenue is net collected after the lead, after refunds. Cost per conversion is ad spend divided by unique paying customers. Conversion rate is unique paying customers divided by the displayed lead count (website submissions, or imported calls for LSA); repeat inquiries remain in the lead denominator. Zero conversions with known leads shows 0%; unavailable data or a zero denominator shows a dash.</p>
       <p>Conversions are distinct verified customers with positive net payments after a website lead. Repeat inquiries and duplicate profiles count once within each row; the subtotal deduplicates across campaigns and sources, so conversion counts are not additive. These include returning customers and do not establish first-ever purchases. Revenue per conversion divides converted customer net payments by conversions; no conversions or unavailable payment data shows a dash. The LSA source row uses unique paying customers matched to calls; its campaign rows refer only to website forms. LSA is excluded from the paid website subtotal to avoid overlap.</p>
       <p>Website forms are actual submissions; Meta platform leads may differ. The Google LSA source row uses exact-phone matches to imported calls, including existing customers. Phones matching multiple MoeGo profiles are linked but excluded from LSA bookings and payments. Because the CSV has dates rather than call times, LSA outcomes exclude MoeGo activity on a call date and use later New York calendar dates. Each appointment and order is assigned to the latest qualifying LSA call once. Booked counts leads with at least one qualifying appointment. ROAS is revenue divided by known source spend; it does not prove the ad caused a purchase.</p>
-      <p>Meta, Google Ads, and unattributed leads are saved website submissions. The LSA source row counts imported calls only; tagged website forms appear separately in its campaign rows. Cost per lead is ad spend divided by leads; a dash means spend or lead count is unavailable, or there are no leads. LSA calls lack campaign attribution, so LSA campaign rows show only tagged submissions. The paid website subtotal includes only Meta and Google Ads spend and attributed website outcomes. Unattributed inquiries and LSA are excluded. LSA call outcomes can overlap with website outcomes and must not be added together.{metric?.googleLsaCallOutcomes && !metric.googleLsaCallOutcomes.appointmentsBackfilled ? " Run Backfill LSA appointments for this date range to complete the call booking counts." : ""}</p>
+      <p>Meta, Google Ads, and unattributed leads are saved website submissions. The LSA source row counts phone leads synced from Google, or imported CSV calls when this period has not been synced. Actual LSA spend includes all LSA lead types and uses Google’s reported campaign cost; CSV-only periods retain the labeled $28-per-call estimate; tagged website forms appear separately in its campaign rows. Cost per lead is ad spend divided by leads; a dash means spend or lead count is unavailable, or there are no leads. LSA calls lack campaign attribution, so LSA campaign rows show only tagged submissions. The paid website subtotal includes only Meta and Google Ads spend and attributed website outcomes. Unattributed inquiries and LSA are excluded. LSA call outcomes can overlap with website outcomes and must not be added together.{metric?.googleLsaCallOutcomes && !metric.googleLsaCallOutcomes.appointmentsBackfilled ? " Run Backfill LSA appointments for this date range to complete the call booking counts." : ""}</p>
       <p>Spend uses the selected calendar dates. Meta campaign, ad set, and ad amounts come from the same synced insight rows as the Meta source total. Google Ads campaign spend uses the saved campaign IDs for this range; campaigns with spend appear even without tagged website forms. Google Ads form tags join a spend row when its campaign name is unique after case, space, hyphen, and underscore normalization. Google manual spend covers Pet Resort and Mobile Grooming together for this exact range and takes priority over campaign totals. A dash means unavailable, not zero.</p>
       <p>Google LSA spend is estimated at $28 for each unique imported lead received in the selected dates, regardless of charge status. The CSV import is updated manually.</p>
       <p>{outcomes.linkedSubmissions} linked submissions ({outcomes.linkedCustomers} customers); {outcomes.duplicateProfileLeads} include verified duplicate MoeGo profiles. Appointments synced: {dateTime(outcomes.appointmentSyncedAt)}. Orders synced: {dateTime(outcomes.orderSyncedAt)}. Meta synced: {dateTime(metric?.metaSyncedAt ?? null)}.</p>
@@ -356,7 +357,7 @@ export function CampaignResultsReport({ from, to, source, rangeLabel, outcomes, 
           <h3 className="font-semibold text-gray-900">{business.label}</h3>
           {(source === "all" || source === "meta") && <FacebookCampaignReportTable business={business.key} from={from} to={to} />}
           {(source === "all" || source === "google-ads") && <GoogleCampaignReportTable business={business.key} from={from} to={to} />}
-          {(source === "all" || source === "google-lsa") && <GoogleLsaLeadReportTable business={business.key} from={from} to={to} />}
+          {(source === "all" || source === "google-lsa") && <GoogleLsaLeadReportTable key={`${business.key}-${refresh}`} business={business.key} from={from} to={to} />}
         </div>)}
       </div>}
     </details>

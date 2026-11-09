@@ -1347,6 +1347,20 @@ model GoogleAdsSyncWindow {
   @@unique([from, to])
 }
 
+/// Exact-window LSA API snapshots; server-only, never exposed through the Data API.
+model GoogleLsaSyncWindow {
+  id         String   @id @default(cuid())
+  business   String
+  from       DateTime @db.Date
+  to         DateTime @db.Date
+  customerId String
+  spendCents Int
+  calls      Json
+  syncedAt   DateTime @default(now())
+
+  @@unique([business, from, to])
+}
+
 /// Google Local Services Ads lead rows imported for marketing reporting.
 /// Access is restricted to the authenticated server-side reporting API.
 model FinanceGoogleLsaLeadReportRow {

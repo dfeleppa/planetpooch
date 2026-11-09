@@ -1,5 +1,5 @@
 export type GoogleAdsApiRow = {
-  campaign?: { id?: string; name?: string; status?: string };
+  campaign?: { id?: string; name?: string; status?: string; advertisingChannelType?: string; pmaxCampaignSettings?: { localServicesEnabled?: boolean } };
   metrics?: { clicks?: string; costMicros?: string; impressions?: string };
 };
 

@@ -37,7 +37,7 @@ export async function GET(req: NextRequest) {
 
   const scope = reportScope(Object.fromEntries(req.nextUrl.searchParams));
   const businesses = scope.business === "all" ? ["pet-resort", "mobile-grooming"] : [scope.business];
-  const [meta, metaSpendCampaigns, orderCursor, customerCursor, lsaBackfills, latestOrder, google, lsa, manualSpend, googleRows, googleWindow] = await Promise.all([
+  const [meta, metaSpendCampaigns, orderCursor, customerCursor, lsaBackfills, latestOrder, google, lsa, manualSpend, googleRows, googleWindow, lsaWindows] = await Promise.all([
     getMetaPeriodMetrics(scope.business, from, toExclusive),
     source === "all" || source === "meta" ? getMetaSpendBreakdown(from, toExclusive, scope.business) : Promise.resolve([]),
     prisma.moegoSyncState.findUnique({ where: { resource: "order" }, select: { lastSyncedAt: true } }),
@@ -61,13 +61,16 @@ export async function GET(req: NextRequest) {
       select: { origin: true, campaignId: true, campaign: true, costCents: true },
     }),
     prisma.googleAdsSyncWindow.findUnique({ where: { from_to: { from, to } }, select: { syncedAt: true } }),
+    prisma.googleLsaSyncWindow.findMany({ where: { business: { in: businesses }, from, to }, select: { business: true, spendCents: true, syncedAt: true } }),
   ]);
   const manualGoogle = scope.business === "all" ? manualSpend.find((item) => item.source === "google-ads") : undefined;
+  const lsaComplete = businesses.every(business => lsaWindows.some(row => row.business === business));
+  const lsaSyncedAt = lsaComplete ? new Date(Math.min(...lsaWindows.map(row => row.syncedAt.getTime()))) : null;
 
   const { staleBefore } = leadOutcomeWindow(1);
   const orderDataAvailable = Boolean(orderCursor && latestOrder._max.syncedAt && latestOrder._max.syncedAt >= staleBefore);
   const lsaImportedAt = lsa.reduce<Date | null>((latest, row) => !latest || row.updatedAt > latest ? row.updatedAt : latest, null);
-  const lsaCallOutcomes = (source === "all" || source === "google-lsa") && customerCursor
+  const lsaCallOutcomes = (source === "all" || source === "google-lsa") && customerCursor && (lsaComplete || lsa.length > 0)
     ? await getGoogleLsaCallOutcomes(lsa) : null;
   const fromDay = from.toISOString().slice(0, 10);
   const toDay = to.toISOString().slice(0, 10);
@@ -89,8 +92,8 @@ export async function GET(req: NextRequest) {
       metaSpendCampaigns: meta.complete ? metaSpendCampaigns : null,
       googleAdSpend: manualGoogle?.amountCents ?? (google._count._all ? google._sum.costCents : googleWindow ? 0 : null),
       googleSpendCampaigns: manualGoogle ? null : aggregateGoogleSpend(googleRows),
-      googleLsaAdSpend: lsa.length ? lsa.length * GOOGLE_LSA_LEAD_COST_CENTS : null,
-      googleLsaLeadCount: lsa.length,
+      googleLsaAdSpend: lsaComplete ? lsaWindows.reduce((sum, row) => sum + row.spendCents, 0) : lsa.length ? lsa.length * GOOGLE_LSA_LEAD_COST_CENTS : null,
+      googleLsaLeadCount: lsaComplete || lsa.length ? lsa.length : null,
       googleLsaCallOutcomes: lsaCallOutcomes && {
         conversions: orderDataAvailable ? lsaCallOutcomes.conversions : null,
         valuePerConversion: orderDataAvailable ? lsaCallOutcomes.valuePerConversion : null,
@@ -102,7 +105,8 @@ export async function GET(req: NextRequest) {
         appointmentsBackfilled: lsaAppointmentsBackfilled,
       },
       googleSpendOrigin: manualGoogle ? "manual" : google._count._all ? googleRows.every((row) => row.origin === "api") ? "api" : "csv" : googleWindow ? "api" : null,
-      googleLsaSpendOrigin: lsa.length ? "csv" : null,
+      googleLsaSpendOrigin: lsaComplete ? "api" : lsa.length ? "csv" : null,
+      googleLsaSyncedAt: lsaSyncedAt,
       metaRevenue: revenue?.totals.meta ?? null,
       googleRevenue: revenue?.totals["google-ads"] ?? null,
       googleLsaRevenue: revenue?.totals["google-lsa"] ?? null,
