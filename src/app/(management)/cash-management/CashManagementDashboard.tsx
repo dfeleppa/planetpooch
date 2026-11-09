@@ -323,8 +323,6 @@ export function CashManagementDashboard({ mobile, petResort, safeCents, initialS
             <Link href="/cash-management/mobile-grooming/reconciliation" className="rounded-lg bg-pp-accent px-4 py-3 text-sm font-semibold text-white">1. Verify employees for the day →</Link>
             <Link href="/cash-management/mobile-grooming/reconciliation?view=weekly" className="rounded-lg border border-pp-accent-line bg-white px-4 py-3 text-sm font-semibold text-pp-accent">2. Review & close a week →</Link>
           </div>
-          <p className="mt-3 text-xs text-gray-600">Manage bank deposits and cash adjustments under Safe.</p>
-          {mobileHistory}
         </section>
       )}
       <div className={cashView === "safe" ? "block" : "hidden"}>
@@ -334,7 +332,7 @@ export function CashManagementDashboard({ mobile, petResort, safeCents, initialS
           {petHistory}
         </section>
       </div>
-      <div className={cashView === "safe" ? "block" : "hidden"}>
+      <div className={cashView === "mobile-grooming" ? "block" : "hidden"}>
         <section className="rounded-xl border border-pp-line bg-white p-6 shadow-sm">
           <h2 className="text-lg font-semibold text-gray-900">Mobile Grooming cash</h2>
           <p className="mt-4 text-3xl font-bold text-gray-900">{money(mobile.onHandCents)}</p>
