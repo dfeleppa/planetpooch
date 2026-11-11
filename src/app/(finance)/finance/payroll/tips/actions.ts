@@ -79,6 +79,7 @@ export async function saveResortTips(input: Input): Promise<{ ok: true } | { ok:
 }
 
 export async function saveDesignatedTip(input: {
+  tipId?: string;
   employeeId: string;
   periodStart: string;
   periodEnd: string;
@@ -87,8 +88,11 @@ export async function saveDesignatedTip(input: {
 }): Promise<{ ok: true } | { ok: false; error: string }> {
   await requireSuperAdmin();
   if ((await getActiveBusiness()).company !== "RESORT") return { ok: false, error: "Select Resort to save tips." };
-  const { employeeId } = input;
+  const { employeeId, tipId } = input;
   if (!designatedTipEmployeeIds.includes(employeeId)) return { ok: false, error: "Select a designated tip employee." };
+  if (tipId !== undefined && !/^[\da-f]{8}-[\da-f]{4}-[\da-f]{4}-[\da-f]{4}-[\da-f]{12}$/i.test(tipId)) {
+    return { ok: false, error: "Select a valid tip record." };
+  }
 
   const periodStart = dateOnly(input.periodStart);
   const periodEnd = dateOnly(input.periodEnd);
@@ -102,16 +106,27 @@ export async function saveDesignatedTip(input: {
   }
 
   try {
-    const saved = await prisma.$transaction(async (tx) => {
+    const error = await prisma.$transaction(async (tx) => {
       const overlap = await tx.financeResortDesignatedTip.findFirst({
-        where: { employeeId, periodStart: { lte: periodEnd }, periodEnd: { gte: periodStart } },
+        where: {
+          employeeId,
+          ...(tipId ? { id: { not: tipId } } : {}),
+          periodStart: { lte: periodEnd },
+          periodEnd: { gte: periodStart },
+        },
         select: { id: true },
       });
-      if (overlap) return false;
-      await tx.financeResortDesignatedTip.create({ data: { employeeId, periodStart, periodEnd, paidDate, amountCents } });
-      return true;
+      if (overlap) return "This pay period overlaps a saved tip for this employee.";
+      const data = { periodStart, periodEnd, paidDate, amountCents };
+      if (tipId) {
+        const { count } = await tx.financeResortDesignatedTip.updateMany({ where: { id: tipId, employeeId }, data });
+        if (!count) return "This tip record is no longer available for this employee.";
+      } else {
+        await tx.financeResortDesignatedTip.create({ data: { employeeId, ...data } });
+      }
+      return null;
     }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
-    if (!saved) return { ok: false, error: "This pay period overlaps a saved tip for this employee." };
+    if (error) return { ok: false, error };
   } catch (error) {
     if (error instanceof Prisma.PrismaClientKnownRequestError && ["P2002", "P2034"].includes(error.code)) {
       return { ok: false, error: "Tip records changed while saving. Review the pay period and try again." };
