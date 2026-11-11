@@ -3,12 +3,14 @@
 import { type FormEvent, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { saveDesignatedTip } from "./actions";
+import { deleteDesignatedTip, saveDesignatedTip } from "./actions";
 
 type TipRecord = { id: string; periodStart: string; periodEnd: string; paidDate: string; amountCents: number };
 const dateFormat = new Intl.DateTimeFormat("en-US", { timeZone: "UTC", dateStyle: "medium" });
 const money = new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" });
 const displayDate = (value: string) => dateFormat.format(new Date(`${value}T00:00:00Z`));
+const tipSummary = (tip: TipRecord) =>
+  `${displayDate(tip.periodStart)} – ${displayDate(tip.periodEnd)} · ${money.format(tip.amountCents / 100)} · Paid ${displayDate(tip.paidDate)}`;
 const inputClass = "mt-1 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm";
 
 export function DesignatedTips({ employee, nextStart, records }: {
@@ -17,21 +19,49 @@ export function DesignatedTips({ employee, nextStart, records }: {
   records: TipRecord[];
 }) {
   const [editingId, setEditingId] = useState<string>();
+  const [deletingId, setDeletingId] = useState<string>();
+  const [deleteError, setDeleteError] = useState("");
   const headingId = `tip-${employee.id}`;
+
+  async function remove(tip: TipRecord) {
+    if (!window.confirm(`Delete this saved tip for ${employee.name}?\n\n${tipSummary(tip)}\n\nThis cannot be undone.`)) return;
+    setDeletingId(tip.id);
+    setDeleteError("");
+    try {
+      const result = await deleteDesignatedTip({
+        employeeId: employee.id,
+        tipId: tip.id,
+        periodStart: tip.periodStart,
+        periodEnd: tip.periodEnd,
+        paidDate: tip.paidDate,
+        amountCents: tip.amountCents,
+      });
+      if (!result.ok) setDeleteError(result.error);
+    } catch {
+      setDeleteError("Could not delete the tip record. Please try again.");
+    } finally {
+      setDeletingId(undefined);
+    }
+  }
 
   return <Card><CardContent className="space-y-4">
     <h4 id={headingId} className="font-semibold">{employee.name}</h4>
     <TipForm employeeId={employee.id} nextStart={nextStart} labelId={headingId} />
+    {deleteError && <p role="alert" className="text-sm text-red-600">{deleteError}</p>}
     {records.length > 0 && <details className="border-t pt-3 text-sm">
       <summary className="cursor-pointer font-medium">Paid tip history</summary>
       <ul className="mt-2 divide-y">
         {records.map((tip) => <li key={tip.id} className="space-y-3 py-2">
           <div className="flex flex-wrap items-center justify-between gap-2">
-            <span id={`record-${tip.id}`}>
-              {displayDate(tip.periodStart)} – {displayDate(tip.periodEnd)} · {money.format(tip.amountCents / 100)} · Paid {displayDate(tip.paidDate)}
-            </span>
-            {editingId !== tip.id && <Button type="button" variant="secondary" size="sm"
-              aria-describedby={`record-${tip.id}`} onClick={() => setEditingId(tip.id)}>Edit</Button>}
+            <span id={`record-${tip.id}`}>{tipSummary(tip)}</span>
+            {editingId !== tip.id && <div className="flex flex-wrap gap-2">
+              <Button type="button" variant="secondary" size="sm" disabled={Boolean(deletingId)}
+                aria-describedby={`record-${tip.id}`} onClick={() => setEditingId(tip.id)}>Edit</Button>
+              <Button type="button" variant="danger" size="sm" disabled={Boolean(deletingId)}
+                aria-describedby={`record-${tip.id}`} onClick={() => remove(tip)}>
+                {deletingId === tip.id ? "Deleting…" : "Delete"}
+              </Button>
+            </div>}
           </div>
           {editingId === tip.id && <TipForm employeeId={employee.id} nextStart={nextStart} record={tip}
             labelId={`${headingId} record-${tip.id}`} onClose={() => setEditingId(undefined)} />}

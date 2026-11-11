@@ -8,6 +8,8 @@ import { prisma } from "@/lib/prisma";
 import { allocateTipCents } from "@/lib/resort-tips";
 import { designatedTipEmployeeIds } from "./designated-employees";
 
+const tipIdPattern = /^[\da-f]{8}-[\da-f]{4}-[\da-f]{4}-[\da-f]{4}-[\da-f]{12}$/i;
+
 type Input = {
   payDate: string;
   year: string;
@@ -90,7 +92,7 @@ export async function saveDesignatedTip(input: {
   if ((await getActiveBusiness()).company !== "RESORT") return { ok: false, error: "Select Resort to save tips." };
   const { employeeId, tipId } = input;
   if (!designatedTipEmployeeIds.includes(employeeId)) return { ok: false, error: "Select a designated tip employee." };
-  if (tipId !== undefined && !/^[\da-f]{8}-[\da-f]{4}-[\da-f]{4}-[\da-f]{4}-[\da-f]{12}$/i.test(tipId)) {
+  if (tipId !== undefined && !tipIdPattern.test(tipId)) {
     return { ok: false, error: "Select a valid tip record." };
   }
 
@@ -136,4 +138,36 @@ export async function saveDesignatedTip(input: {
   }
   revalidatePath("/finance/payroll/tips");
   return { ok: true };
+}
+
+export async function deleteDesignatedTip(input: {
+  employeeId: string;
+  tipId: string;
+  periodStart: string;
+  periodEnd: string;
+  paidDate: string;
+  amountCents: number;
+}): Promise<{ ok: true } | { ok: false; error: string }> {
+  await requireSuperAdmin();
+  if ((await getActiveBusiness()).company !== "RESORT") return { ok: false, error: "Select Resort to delete tips." };
+  const { employeeId, tipId, amountCents } = input;
+  const periodStart = dateOnly(input.periodStart);
+  const periodEnd = dateOnly(input.periodEnd);
+  const paidDate = dateOnly(input.paidDate);
+  if (!designatedTipEmployeeIds.includes(employeeId) || !tipIdPattern.test(tipId) ||
+      !periodStart || !periodEnd || !paidDate || !Number.isInteger(amountCents) || amountCents <= 0 || amountCents > 2_147_483_647) {
+    return { ok: false, error: "Select a valid tip record." };
+  }
+
+  try {
+    const { count } = await prisma.financeResortDesignatedTip.deleteMany({
+      where: { id: tipId, employeeId, periodStart, periodEnd, paidDate, amountCents },
+    });
+    revalidatePath("/finance/payroll/tips");
+    if (!count) return { ok: false, error: "This tip was changed or removed. Review the updated history." };
+    return { ok: true };
+  } catch (error) {
+    console.error("Failed to delete designated Resort tip", error);
+    return { ok: false, error: "Could not delete the tip record. Please try again." };
+  }
 }
