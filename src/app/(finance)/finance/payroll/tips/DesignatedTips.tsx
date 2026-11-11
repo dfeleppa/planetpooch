@@ -48,9 +48,9 @@ export function DesignatedTips({ employee, nextStart, records }: {
     <h4 id={headingId} className="font-semibold">{employee.name}</h4>
     <TipForm employeeId={employee.id} nextStart={nextStart} labelId={headingId} />
     {deleteError && <p role="alert" className="text-sm text-red-600">{deleteError}</p>}
-    {records.length > 0 && <details className="border-t pt-3 text-sm">
-      <summary className="cursor-pointer font-medium">Paid tip history</summary>
-      <ul className="mt-2 divide-y">
+    <section aria-labelledby={`tip-history-${employee.id}`} className="border-t pt-3 text-sm">
+      <h5 id={`tip-history-${employee.id}`} className="font-medium">Paid tip history</h5>
+      {records.length === 0 ? <p className="mt-2 text-gray-500">No tips recorded yet.</p> : <ul className="mt-2 divide-y">
         {records.map((tip) => <li key={tip.id} className="space-y-3 py-2">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <span id={`record-${tip.id}`}>{tipSummary(tip)}</span>
@@ -66,8 +66,8 @@ export function DesignatedTips({ employee, nextStart, records }: {
           {editingId === tip.id && <TipForm employeeId={employee.id} nextStart={nextStart} record={tip}
             labelId={`${headingId} record-${tip.id}`} onClose={() => setEditingId(undefined)} />}
         </li>)}
-      </ul>
-    </details>}
+      </ul>}
+    </section>
   </CardContent></Card>;
 }
 

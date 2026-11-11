@@ -136,7 +136,7 @@ export async function saveDesignatedTip(input: {
     console.error("Failed to save designated Resort tip", error);
     return { ok: false, error: "Could not save the tip record. Please try again." };
   }
-  revalidatePath("/finance/payroll/tips");
+  revalidatePath("/finance/payroll/tips/groomers");
   return { ok: true };
 }
 
@@ -163,7 +163,7 @@ export async function deleteDesignatedTip(input: {
     const { count } = await prisma.financeResortDesignatedTip.deleteMany({
       where: { id: tipId, employeeId, periodStart, periodEnd, paidDate, amountCents },
     });
-    revalidatePath("/finance/payroll/tips");
+    revalidatePath("/finance/payroll/tips/groomers");
     if (!count) return { ok: false, error: "This tip was changed or removed. Review the updated history." };
     return { ok: true };
   } catch (error) {
