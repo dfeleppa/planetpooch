@@ -6,6 +6,7 @@ import { requireSuperAdmin } from "@/lib/auth-helpers";
 import { getActiveBusiness } from "@/lib/business-server";
 import { prisma } from "@/lib/prisma";
 import { allocateTipCents } from "@/lib/resort-tips";
+import { designatedTipEmployeeIds } from "./designated-employees";
 
 type Input = {
   payDate: string;
@@ -39,7 +40,7 @@ export async function saveResortTips(input: Input): Promise<{ ok: true } | { ok:
   if (!Number.isSafeInteger(totalCents) || totalCents <= 0 || totalCents > 2_147_483_647) return { ok: false, error: "Enter a valid tip total greater than zero." };
 
   const employees = await prisma.user.findMany({
-    where: { company: Company.RESORT, role: { not: "FRONT_DESK" }, terminatedAt: null },
+    where: { company: Company.RESORT, role: { not: "FRONT_DESK" }, terminatedAt: null, id: { notIn: designatedTipEmployeeIds } },
     select: { id: true, name: true },
   });
   const byId = new Map(employees.map((employee) => [employee.id, employee]));
@@ -71,6 +72,51 @@ export async function saveResortTips(input: Input): Promise<{ ok: true } | { ok:
       return { ok: false, error: "A tip entry already exists for this month." };
     }
     console.error("Failed to save Resort tips", error);
+    return { ok: false, error: "Could not save the tip record. Please try again." };
+  }
+  revalidatePath("/finance/payroll/tips");
+  return { ok: true };
+}
+
+export async function saveDesignatedTip(input: {
+  employeeId: string;
+  periodStart: string;
+  periodEnd: string;
+  paidDate: string;
+  amount: string;
+}): Promise<{ ok: true } | { ok: false; error: string }> {
+  await requireSuperAdmin();
+  if ((await getActiveBusiness()).company !== "RESORT") return { ok: false, error: "Select Resort to save tips." };
+  const { employeeId } = input;
+  if (!designatedTipEmployeeIds.includes(employeeId)) return { ok: false, error: "Select a designated tip employee." };
+
+  const periodStart = dateOnly(input.periodStart);
+  const periodEnd = dateOnly(input.periodEnd);
+  const paidDate = dateOnly(input.paidDate);
+  if (!periodStart || !periodEnd || !paidDate || periodEnd < periodStart) {
+    return { ok: false, error: "Enter a valid pay period and paid date. The end date must be on or after the start date." };
+  }
+  const amountCents = Math.round(Number(input.amount) * 100);
+  if (!/^\d+(\.\d{1,2})?$/.test(input.amount) || !Number.isSafeInteger(amountCents) || amountCents <= 0 || amountCents > 2_147_483_647) {
+    return { ok: false, error: "Enter a valid tip amount greater than zero." };
+  }
+
+  try {
+    const saved = await prisma.$transaction(async (tx) => {
+      const overlap = await tx.financeResortDesignatedTip.findFirst({
+        where: { employeeId, periodStart: { lte: periodEnd }, periodEnd: { gte: periodStart } },
+        select: { id: true },
+      });
+      if (overlap) return false;
+      await tx.financeResortDesignatedTip.create({ data: { employeeId, periodStart, periodEnd, paidDate, amountCents } });
+      return true;
+    }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
+    if (!saved) return { ok: false, error: "This pay period overlaps a saved tip for this employee." };
+  } catch (error) {
+    if (error instanceof Prisma.PrismaClientKnownRequestError && ["P2002", "P2034"].includes(error.code)) {
+      return { ok: false, error: "Tip records changed while saving. Review the pay period and try again." };
+    }
+    console.error("Failed to save designated Resort tip", error);
     return { ok: false, error: "Could not save the tip record. Please try again." };
   }
   revalidatePath("/finance/payroll/tips");

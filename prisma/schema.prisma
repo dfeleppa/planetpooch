@@ -1436,6 +1436,18 @@ model FinanceResortTipRun {
   @@index([payDate])
 }
 
+model FinanceResortDesignatedTip {
+  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  employeeId  String
+  periodStart DateTime @db.Date
+  periodEnd   DateTime @db.Date
+  paidDate    DateTime @db.Date
+  amountCents Int
+
+  @@unique([employeeId, periodStart])
+  @@index([employeeId, periodEnd])
+}
+
 model FinanceResortTipAllocation {
   id         String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   tipRunId   String @db.Uuid
