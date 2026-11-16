@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getSession, isManagerOrAbove } from "@/lib/auth-helpers";
+import { canEditGroomingCounts, canEditGroomingRequirements } from "@/lib/grooming-inventory-access";
 import { maintenanceCompanyWhere } from "@/lib/maintenance-access";
 
 export async function GET(
@@ -38,7 +39,7 @@ export async function PUT(
   { params }: { params: Promise<{ itemId: string }> }
 ) {
   const session = await getSession();
-  if (!session?.user || !isManagerOrAbove(session.user.role)) {
+  if (!session?.user || !canEditGroomingCounts(session.user)) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
@@ -46,7 +47,17 @@ export async function PUT(
   const existing = await prisma.inventoryItem.findUnique({ where: { id: itemId, ...maintenanceCompanyWhere(session.user) } });
   if (!existing) return NextResponse.json({ error: "Not found" }, { status: 404 });
   const body = await req.json();
+  if (!body || typeof body !== "object" || Array.isArray(body)) {
+    return NextResponse.json({ error: "Invalid inventory update" }, { status: 400 });
+  }
+  if (!isManagerOrAbove(session.user.role) && !canEditGroomingRequirements(session.user, existing.company, body)) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
   const { name, description, unit, minimumThreshold, categoryId } = body;
+  if (minimumThreshold !== undefined &&
+      (typeof minimumThreshold !== "number" || !Number.isSafeInteger(minimumThreshold) || minimumThreshold < 0)) {
+    return NextResponse.json({ error: "Required quantity must be a nonnegative whole number" }, { status: 400 });
+  }
 
   if (categoryId !== undefined) {
     const item = await prisma.inventoryItem.findUnique({ where: { id: itemId } });

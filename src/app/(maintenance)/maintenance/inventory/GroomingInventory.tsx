@@ -22,7 +22,7 @@ const categoryOrder = [
   "Miscellaneous",
 ];
 
-export function GroomingInventory({ items, canManage, canEditCounts }: { items: Item[]; canManage: boolean; canEditCounts: boolean }) {
+export function GroomingInventory({ items, canEditRequirements, canEditCounts }: { items: Item[]; canEditRequirements: boolean; canEditCounts: boolean }) {
   const router = useRouter();
   const [editing, setEditing] = useState(false);
   const [onHand, setOnHand] = useState<Record<string, string>>({});
@@ -56,7 +56,7 @@ export function GroomingInventory({ items, canManage, canEditCounts }: { items: 
   }
 
   async function save() {
-    const changedRequirements = canManage ? items.filter((item) => required[item.id] !== String(item.minimumThreshold)) : [];
+    const changedRequirements = canEditRequirements ? items.filter((item) => required[item.id] !== String(item.minimumThreshold)) : [];
     const changedCounts = items.filter((item) => touchedCounts.includes(item.id));
     const values = [...changedRequirements.map((item) => required[item.id]), ...changedCounts.map((item) => onHand[item.id])];
     if (values.some((value) => value === "" || !Number.isSafeInteger(Number(value)) || Number(value) < 0)) {
@@ -131,7 +131,7 @@ export function GroomingInventory({ items, canManage, canEditCounts }: { items: 
                     </td>
                     <td className="md:px-3 md:py-3">
                       <span className="mb-1 block text-xs font-medium uppercase tracking-wide text-gray-500 md:hidden">Req Quantity</span>
-                      {editing && canManage ? <input aria-label={`${item.name} required quantity`} type="number" min="0" step="1" inputMode="numeric" className="h-10 w-20 rounded border border-gray-300 px-2 py-1 md:h-auto" value={required[item.id] ?? ""} onChange={(event) => setRequired((previous) => ({ ...previous, [item.id]: event.target.value }))} /> : item.id.startsWith("mg-item-") && item.minimumThreshold === 0 ? "—" : item.minimumThreshold}
+                      {editing && canEditRequirements ? <input aria-label={`${item.name} required quantity`} type="number" min="0" step="1" inputMode="numeric" className="h-10 w-20 rounded border border-gray-300 px-2 py-1 md:h-auto" value={required[item.id] ?? ""} onChange={(event) => setRequired((previous) => ({ ...previous, [item.id]: event.target.value }))} /> : item.id.startsWith("mg-item-") && item.minimumThreshold === 0 ? "—" : item.minimumThreshold}
                     </td>
                     <td className="absolute right-2 top-2 md:static md:table-cell md:px-3 md:py-3">
                       <button type="button" aria-label={`${expanded.includes(item.id) ? "Hide" : "View"} history for ${item.name}`} aria-expanded={expanded.includes(item.id)} onClick={() => setExpanded((previous) => previous.includes(item.id) ? previous.filter((id) => id !== item.id) : [...previous, item.id])} className="flex h-10 w-10 items-center justify-center rounded text-blue-700 hover:bg-blue-50 md:inline md:h-auto md:w-auto md:hover:bg-transparent md:hover:underline">

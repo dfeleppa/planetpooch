@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { canEditGroomingCounts } from "../src/lib/grooming-inventory-access";
+import { canEditGroomingCounts, canEditGroomingRequirements } from "../src/lib/grooming-inventory-access";
 
 test("only managers and Stacey's Mobile Grooming account can record counts", () => {
   const stacey = { id: "cmobz2cwb0007k0041qnobqcz", role: "EMPLOYEE", company: "GROOMING" };
@@ -11,4 +11,17 @@ test("only managers and Stacey's Mobile Grooming account can record counts", () 
   assert.equal(canEditGroomingCounts({ ...stacey, role: "MANAGER", id: "another-user" }), true);
   assert.equal(canEditGroomingCounts({ ...stacey, role: "SUPER_ADMIN", id: "another-user" }), true);
   assert.equal(canEditGroomingCounts(null), false);
+});
+
+test("Stacey can change only required quantities for Grooming items", () => {
+  const stacey = { id: "cmobz2cwb0007k0041qnobqcz", role: "EMPLOYEE", company: "GROOMING" };
+  const update = { minimumThreshold: 5 };
+  assert.equal(canEditGroomingRequirements(stacey, "GROOMING", update), true);
+  assert.equal(canEditGroomingRequirements(stacey, "RESORT", update), false);
+  assert.equal(canEditGroomingRequirements({ ...stacey, company: "RESORT" }, "GROOMING", update), false);
+  assert.equal(canEditGroomingRequirements({ ...stacey, id: "another-user" }, "GROOMING", update), false);
+  assert.equal(canEditGroomingRequirements(null, "GROOMING", update), false);
+  for (const body of [{}, { name: "Renamed" }, { ...update, name: "Renamed" }, { ...update, categoryId: "other" }, { ...update, currentQuantity: 10 }]) {
+    assert.equal(canEditGroomingRequirements(stacey, "GROOMING", body), false);
+  }
 });

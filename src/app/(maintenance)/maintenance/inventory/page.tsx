@@ -79,7 +79,7 @@ export default async function InventoryPage({
                 id: count.id, quantity: count.quantity, countedAt: count.countedAt.toISOString(),
               })),
             }))}
-            canManage={canManage}
+            canEditRequirements={canEditCounts}
             canEditCounts={canEditCounts}
           />
         ) : <InventoryTable items={items} readOnly={user?.role === "FRONT_DESK"} />
