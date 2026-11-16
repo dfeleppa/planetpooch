@@ -1,3 +1,4 @@
+import { isPayrollEmployee } from "@/lib/payroll-eligibility";
 import { NextRequest, NextResponse } from "next/server";
 import { getSession, isSuperAdmin } from "@/lib/auth-helpers";
 import {
@@ -229,8 +230,9 @@ function staffTargets(options: {
   employeeName: string;
   employeeNames: string[];
 }) {
-  const mobileStaffs = options.staffs.filter(isMobileGroomingStaff);
+  const mobileStaffs = options.staffs.filter((staff) => isMobileGroomingStaff(staff) && isPayrollEmployee(payrollEmployeeNameForStaff(staff)));
 
+  if (options.employeeName && !isPayrollEmployee(options.employeeName)) return { targets: [], unmatchedEmployeeNames: [] };
   if (options.employeeName) {
     const staff = mobileStaffs.find((candidate) =>
       isStaffMatchForEmployee(candidate, options.employeeName)
@@ -256,6 +258,7 @@ function staffTargets(options: {
   const unmatchedEmployeeNames: string[] = [];
 
   for (const employeeName of options.employeeNames) {
+    if (!isPayrollEmployee(employeeName)) continue;
     const staff = mobileStaffs.find(
       (candidate) =>
         !usedStaffIds.has(candidate.id) && isStaffMatchForEmployee(candidate, employeeName)

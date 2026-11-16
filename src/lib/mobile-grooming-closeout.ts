@@ -1,3 +1,4 @@
+import { payrollEligibleRows } from "./payroll-eligibility";
 import { createHash } from "node:crypto";
 import { normalizeEmployeeName } from "@/lib/payroll";
 import { directDepositEmployeeKey } from "./mobile-grooming-direct-deposit";
@@ -35,6 +36,13 @@ export function mobileGroomingCloseoutPreview(
   payRules: MobilePayRule[] = [],
   postPayoutAdjustments: PostPayoutAdjustment[] = []
 ) {
+  entries = payrollEligibleRows(entries);
+  reconciliations = payrollEligibleRows(reconciliations);
+  settings = payrollEligibleRows(settings);
+  adjustments = payrollEligibleRows(adjustments);
+  varianceReviews = payrollEligibleRows(varianceReviews);
+  payRules = payrollEligibleRows(payRules);
+  postPayoutAdjustments = payrollEligibleRows(postPayoutAdjustments);
   const days = new Map<string, { employeeName: string; serviceDate: string; expectedCashCents: number }>();
   const employees = new Map<string, {
     employeeName: string;

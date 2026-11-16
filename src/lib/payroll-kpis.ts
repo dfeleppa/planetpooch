@@ -1,3 +1,4 @@
+import { payrollEmployeeWhere } from "./payroll-eligibility";
 import { PayrollCategory } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { DEFAULT_PAYROLL_BUSINESS } from "@/lib/payroll";
@@ -20,7 +21,7 @@ export async function getResortStaffHoursByWeek(
     select: {
       weekStart: true,
       rows: {
-        where: { category: PayrollCategory.RESORT },
+        where: { ...payrollEmployeeWhere, category: PayrollCategory.RESORT },
         select: { totalSeconds: true },
       },
     },

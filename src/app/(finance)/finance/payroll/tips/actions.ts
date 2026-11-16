@@ -1,5 +1,6 @@
 "use server";
 
+import { PAYROLL_EXCLUDED_USER_IDS } from "@/lib/payroll-eligibility";
 import { revalidatePath } from "next/cache";
 import { Company, Prisma } from "@prisma/client";
 import { requireSuperAdmin } from "@/lib/auth-helpers";
@@ -42,7 +43,7 @@ export async function saveResortTips(input: Input): Promise<{ ok: true } | { ok:
   if (!Number.isSafeInteger(totalCents) || totalCents <= 0 || totalCents > 2_147_483_647) return { ok: false, error: "Enter a valid tip total greater than zero." };
 
   const employees = await prisma.user.findMany({
-    where: { company: Company.RESORT, role: { not: "FRONT_DESK" }, terminatedAt: null, id: { notIn: designatedTipEmployeeIds } },
+    where: { company: Company.RESORT, role: { not: "FRONT_DESK" }, terminatedAt: null, id: { notIn: [...designatedTipEmployeeIds, ...PAYROLL_EXCLUDED_USER_IDS] } },
     select: { id: true, name: true },
   });
   const byId = new Map(employees.map((employee) => [employee.id, employee]));

@@ -1,3 +1,4 @@
+import { isPayrollEmployee, PAYROLL_EXCLUDED_USER_IDS } from "@/lib/payroll-eligibility";
 import { requireSuperAdmin } from "@/lib/auth-helpers";
 import { prisma } from "@/lib/prisma";
 import { isValidPayrollWeekStart, normalizeEmployeeName, type PayrollBusinessValue } from "@/lib/payroll";
@@ -58,7 +59,7 @@ export async function PayrollPageContent({
   > =
     business === "mobile-grooming"
       ? {
-          "mobile-grooming": mobileGroomingEmployees.map((employee) => ({
+          "mobile-grooming": mobileGroomingEmployees.filter((employee) => !PAYROLL_EXCLUDED_USER_IDS.includes(employee.id) && isPayrollEmployee(employeeName(employee))).map((employee) => ({
             id: employee.id,
             name: employeeName(employee),
           })),

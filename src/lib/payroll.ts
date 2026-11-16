@@ -1,3 +1,5 @@
+import { isPayrollEmployee } from "./payroll-eligibility";
+
 export const PAYROLL_CATEGORIES = ["TRAINING", "GROOMING", "RESORT"] as const;
 
 export type PayrollCategoryValue = (typeof PAYROLL_CATEGORIES)[number];
@@ -184,6 +186,7 @@ export function validateMoegoClockInOutUpload(
   for (const raw of rows) {
     const row = raw as Record<string, unknown>;
     const name = normalizeEmployeeName(String(row.name ?? row.employeeName ?? ""));
+    if (!isPayrollEmployee(name)) continue;
     const date = usDate(row.date) ?? isoDate(row.date);
     const time = String(row.time ?? "").trim().toLowerCase();
     if (!name) reasons.push("A clock-in/out row is missing an employee name.");

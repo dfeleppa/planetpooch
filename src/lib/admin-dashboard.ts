@@ -1,3 +1,4 @@
+import { payrollEmployeeWhere } from "./payroll-eligibility";
 import { requireSuperAdmin, activeUserWhere } from "./auth-helpers";
 import { getActiveBusiness, getEmployeeBusinessWhere } from "./business-server";
 import { prisma } from "./prisma";
@@ -55,7 +56,7 @@ export async function getAdminDashboard() {
       const [week, reviewCount, runs] = await Promise.all([
         prisma.financePayrollWeek.findUnique({
           where: { business_weekStart: { business: business.key, weekStart: periods.payrollWeekStart } },
-          select: { automationStatus: true, rows: { select: { totalSeconds: true } } },
+          select: { automationStatus: true, rows: { where: payrollEmployeeWhere, select: { totalSeconds: true } } },
         }),
         prisma.financePayrollWeek.count({ where: { business: business.key, automationStatus: "needs_review" } }),
         business.company === "RESORT"

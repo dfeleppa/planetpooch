@@ -1,3 +1,4 @@
+import { isPayrollEmployee } from "@/lib/payroll-eligibility";
 import { NextRequest, NextResponse } from "next/server";
 import { Prisma } from "@prisma/client";
 import { getSession, isSuperAdmin } from "@/lib/auth-helpers";
@@ -250,6 +251,7 @@ export async function PUT(req: NextRequest) {
   }
   const weekStart = dateParam(body.weekStart);
   const employeeName = normalizeEmployeeName(typeof body.employeeName === "string" ? body.employeeName : "");
+  if (!isPayrollEmployee(employeeName)) return NextResponse.json({ error: "This owner is excluded from payroll." }, { status: 400 });
   if (!weekStart || !employeeName || employeeName.length > 200 || typeof body.applyToCashPayout !== "boolean") {
     return NextResponse.json({ error: "A valid week, employee, and pay decision are required." }, { status: 400 });
   }
@@ -282,6 +284,7 @@ export async function PUT(req: NextRequest) {
 async function lockEmployeePay(body: Record<string, unknown>) {
   const weekStart = dateParam(body.weekStart);
   const employeeName = normalizeEmployeeName(typeof body.employeeName === "string" ? body.employeeName : "");
+  if (!isPayrollEmployee(employeeName)) return NextResponse.json({ error: "This owner is excluded from payroll." }, { status: 400 });
   if (!weekStart || !employeeName || employeeName.length > 200 || typeof body.sourceFingerprint !== "string") {
     return NextResponse.json({ error: "A valid week, employee, and current payout are required." }, { status: 400 });
   }
@@ -362,6 +365,7 @@ export async function PATCH(req: NextRequest) {
   if (body.action === "lock") return lockEmployeePay(body);
   const weekStart = dateParam(body.weekStart);
   const employeeName = normalizeEmployeeName(typeof body.employeeName === "string" ? body.employeeName : "");
+  if (!isPayrollEmployee(employeeName)) return NextResponse.json({ error: "This owner is excluded from payroll." }, { status: 400 });
   if (!weekStart || !employeeName || employeeName.length > 200 || typeof body.prepared !== "boolean") {
     return NextResponse.json({ error: "A valid week, employee, and preparation status are required." }, { status: 400 });
   }

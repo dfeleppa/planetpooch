@@ -1,3 +1,4 @@
+import { isPayrollEmployee } from "@/lib/payroll-eligibility";
 import { NextRequest, NextResponse } from "next/server";
 import { getSession, isSuperAdmin } from "@/lib/auth-helpers";
 import { normalizeEmployeeName } from "@/lib/payroll";
@@ -25,6 +26,7 @@ export async function PUT(req: NextRequest) {
   }
   const weekStart = weekStartParam(body.weekStart);
   const employeeName = normalizeEmployeeName(typeof body.employeeName === "string" ? body.employeeName : "");
+  if (!isPayrollEmployee(employeeName)) return NextResponse.json({ error: "This owner is excluded from payroll." }, { status: 400 });
   const amountCents = body.amountCents;
   const note = body.note;
   if (

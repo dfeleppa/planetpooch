@@ -1,3 +1,4 @@
+import { payrollEmployeeWhere } from "@/lib/payroll-eligibility";
 import { NextResponse } from "next/server";
 import { getSession, isSuperAdmin } from "@/lib/auth-helpers";
 import { prisma } from "@/lib/prisma";
@@ -9,7 +10,7 @@ export async function GET() {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
   const rows = await prisma.financeMobileGroomingPostPayoutAdjustment.findMany({
-    where: { amountCents: { not: 0 } },
+    where: { ...payrollEmployeeWhere, amountCents: { not: 0 } },
     include: { sourcePayrollWeek: { select: { weekStart: true, weekEnd: true } } },
     orderBy: [{ detectedAt: "desc" }, { employeeName: "asc" }],
   });

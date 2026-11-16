@@ -1,3 +1,4 @@
+import { PAYROLL_EXCLUDED_USER_IDS, payrollEligibleRows } from "@/lib/payroll-eligibility";
 import { Company } from "@prisma/client";
 import { redirect } from "next/navigation";
 import { requireSuperAdmin } from "@/lib/auth-helpers";
@@ -12,7 +13,7 @@ export default async function ResortTipsPage() {
   await requireSuperAdmin();
   if ((await getActiveBusiness()).company !== "RESORT") redirect("/finance/payroll/mobile-grooming");
   const [employees, runs] = await Promise.all([
-    prisma.user.findMany({ where: { company: Company.RESORT, role: { not: "FRONT_DESK" }, terminatedAt: null, id: { notIn: designatedTipEmployeeIds } }, select: { id: true, name: true }, orderBy: { name: "asc" } }),
+    prisma.user.findMany({ where: { company: Company.RESORT, role: { not: "FRONT_DESK" }, terminatedAt: null, id: { notIn: [...designatedTipEmployeeIds, ...PAYROLL_EXCLUDED_USER_IDS] } }, select: { id: true, name: true }, orderBy: { name: "asc" } }),
     prisma.financeResortTipRun.findMany({ include: { allocations: { orderBy: { employeeName: "asc" } } }, orderBy: [{ payDate: "desc" }, { createdAt: "desc" }] }),
   ]);
   return <div className="space-y-5">
@@ -22,8 +23,8 @@ export default async function ResortTipsPage() {
     <ResortTips employees={employees} runs={runs.map((run) => ({
       id: run.id, payDate: run.payDate.toISOString().slice(0, 10),
       periodStart: run.periodStart.toISOString().slice(0, 10), periodEnd: run.periodEnd.toISOString().slice(0, 10),
-      totalCents: run.totalCents,
-      allocations: run.allocations.map((row) => ({ id: row.id, name: row.employeeName, hoursHundredths: row.hoursHundredths, amountCents: row.amountCents })),
+      totalCents: payrollEligibleRows(run.allocations).reduce((sum, row) => sum + row.amountCents, 0),
+      allocations: payrollEligibleRows(run.allocations).map((row) => ({ id: row.id, name: row.employeeName, hoursHundredths: row.hoursHundredths, amountCents: row.amountCents })),
     }))} />
   </div>;
 }

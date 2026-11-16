@@ -1,5 +1,6 @@
 "use client";
 
+import { isPayrollEmployee, payrollEligibleRows } from "@/lib/payroll-eligibility";
 import { readApiResponse } from "@/lib/api-response";
 
 import Link from "next/link";
@@ -410,7 +411,7 @@ function centsToInput(cents: number): string {
 }
 
 function savedRowsToEditable(rows: SavedPayrollRow[]): EditableRow[] {
-  return rows.map((row) => ({
+  return payrollEligibleRows(rows).map((row) => ({
     localId: row.id || makeLocalId(),
     employeeName: row.employeeName,
     shifts: String(row.shifts),
@@ -421,7 +422,7 @@ function savedRowsToEditable(rows: SavedPayrollRow[]): EditableRow[] {
 function savedMobileEntriesToEditable(
   entries: MobileGroomingEntryRecord[] = []
 ): EditableMobileGroomingEntry[] {
-  return entries.map((entry) => ({
+  return payrollEligibleRows(entries).map((entry) => ({
     localId: entry.id || makeLocalId(),
     serviceDate: entry.serviceDate,
     employeeName: entry.employeeName,
@@ -473,7 +474,7 @@ function importRowsToEditable(rawRows: unknown): EditableRow[] {
   for (const raw of rawRows) {
     const row = raw as ImportRow;
     const employeeName = normalizeEmployeeName(String(row.employeeName ?? row.name ?? ""));
-    if (!employeeName) continue;
+    if (!employeeName || !isPayrollEmployee(employeeName)) continue;
 
     const totalSeconds = secondsFromImportRow(row);
     if (totalSeconds === null) {
@@ -1061,7 +1062,7 @@ export function PayrollDashboard({
     const byEmployee = new Map<string, EditableMobileGroomingEntry[]>();
     for (const entry of mobileEntries) {
       const employeeName = normalizeEmployeeName(entry.employeeName);
-      if (!employeeName) continue;
+      if (!employeeName || !isPayrollEmployee(employeeName)) continue;
       const current = byEmployee.get(employeeName) ?? [];
       current.push(entry);
       byEmployee.set(employeeName, current);

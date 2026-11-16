@@ -1,3 +1,4 @@
+import { payrollEligibleRows } from "./payroll-eligibility";
 import { normalizeEmployeeName } from "./payroll";
 
 /** Replace every successfully pulled employee, including employees with zero appointments. */
@@ -8,5 +9,5 @@ export function replacePulledMobileEntries<T extends { employeeName: string }>(
 ): T[] {
   const key = (name: string) => normalizeEmployeeName(name).toLocaleLowerCase();
   const pulled = new Set([...staffNames, ...imported.map((entry) => entry.employeeName)].map(key));
-  return [...saved.filter((entry) => !pulled.has(key(entry.employeeName))), ...imported];
+  return payrollEligibleRows([...saved.filter((entry) => !pulled.has(key(entry.employeeName))), ...imported]);
 }

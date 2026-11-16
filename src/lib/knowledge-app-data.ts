@@ -1,3 +1,4 @@
+import { payrollEmployeeWhere } from "./payroll-eligibility";
 import { prisma } from "@/lib/prisma";
 import type { KnowledgeSource } from "@/lib/knowledge";
 import { chartPresetRange } from "@/lib/moego/chart-date-range";
@@ -241,16 +242,16 @@ async function payrollSources(lookup: string | null, question: string): Promise<
         ? { ...(business ? { business } : {}), rows: { some: {} } }
         : { ...(business ? { business } : {}), OR: [{ rows: { some: {} } }, { mobileGroomingEntries: { some: {} } }] },
       take: 3, orderBy: { weekStart: "desc" },
-      include: { rows: true, mobileGroomingEntries: true },
+      include: { rows: { where: payrollEmployeeWhere }, mobileGroomingEntries: { where: payrollEmployeeWhere } },
     }),
     lookup && !lookup.includes("@") && !/^\d/.test(lookup)
-      ? prisma.financePayrollEmployeeHours.findMany({ where: { employeeName: { contains: lookup, mode: "insensitive" } },
+      ? prisma.financePayrollEmployeeHours.findMany({ where: { ...payrollEmployeeWhere, employeeName: { contains: lookup, mode: "insensitive" } },
         take: 3, orderBy: { createdAt: "desc" }, include: { payrollWeek: true } }) : Promise.resolve([]),
     lookup && !lookup.includes("@") && !/^\d/.test(lookup)
-      ? prisma.financeMobileGroomingPayrollEntry.findMany({ where: { employeeName: { contains: lookup, mode: "insensitive" } },
+      ? prisma.financeMobileGroomingPayrollEntry.findMany({ where: { ...payrollEmployeeWhere, employeeName: { contains: lookup, mode: "insensitive" } },
         take: 3, orderBy: { serviceDate: "desc" }, include: { payrollWeek: true } }) : Promise.resolve([]),
     lookup && !lookup.includes("@") && !/^\d/.test(lookup)
-      ? prisma.financeEmployeeCommission.findMany({ where: { employeeName: { contains: lookup, mode: "insensitive" } },
+      ? prisma.financeEmployeeCommission.findMany({ where: { ...payrollEmployeeWhere, employeeName: { contains: lookup, mode: "insensitive" } },
         take: 3, orderBy: { weekStart: "desc" } }) : Promise.resolve([]),
   ]);
   return [
@@ -289,11 +290,11 @@ async function petResortPayrollSources(question: string, asksForHours: boolean):
       range ? prisma.financePayrollWeek.findFirst({
         where: { business: "pet-resort", weekStart: new Date(`${range.start}T00:00:00.000Z`),
           weekEnd: new Date(`${range.end}T00:00:00.000Z`), rows: { some: {} } },
-        include: { rows: true },
+        include: { rows: { where: payrollEmployeeWhere } },
       }) : Promise.resolve(null),
       prisma.financePayrollWeek.findFirst({
         where: { business: "pet-resort", rows: { some: {} } },
-        orderBy: { weekStart: "desc" }, include: { rows: true },
+        orderBy: { weekStart: "desc" }, include: { rows: { where: payrollEmployeeWhere } },
       }),
     ]);
     const week = matchingWeek ?? latestWeek;

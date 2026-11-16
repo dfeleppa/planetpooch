@@ -1,3 +1,4 @@
+import { isPayrollEmployee } from "@/lib/payroll-eligibility";
 import { NextRequest, NextResponse } from "next/server";
 import { getSession, isSuperAdmin } from "@/lib/auth-helpers";
 import { normalizeEmployeeName } from "@/lib/payroll";
@@ -44,7 +45,7 @@ export async function GET(req: NextRequest) {
     where: { business_weekStart: { business: "mobile-grooming", weekStart } },
     select: { mobileGroomingReconciliations: true },
   });
-  return NextResponse.json({ reconciliations: week?.mobileGroomingReconciliations.map(serialize) ?? [] });
+  return NextResponse.json({ reconciliations: week?.mobileGroomingReconciliations.filter((row) => isPayrollEmployee(row.employeeName)).map(serialize) ?? [] });
 }
 
 export async function POST(req: NextRequest) {
@@ -58,6 +59,7 @@ export async function POST(req: NextRequest) {
   const weekStart = dateParam(body.weekStart);
   const serviceDate = dateParam(body.serviceDate);
   const employeeName = normalizeEmployeeName(typeof body.employeeName === "string" ? body.employeeName : "");
+  if (!isPayrollEmployee(employeeName)) return NextResponse.json({ error: "This owner is excluded from payroll." }, { status: 400 });
   const countedCashCents = body.countedCashCents;
   const note = body.note === undefined ? "" : body.note;
   if (

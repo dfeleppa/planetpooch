@@ -1,3 +1,4 @@
+import { isPayrollEmployee, payrollEligibleRows } from "./payroll-eligibility";
 import type { Prisma } from "@prisma/client";
 import { mobileGroomingCloseoutPreview, type MobilePayRule } from "@/lib/mobile-grooming-closeout";
 import { normalizeEmployeeName } from "@/lib/payroll";
@@ -128,6 +129,9 @@ export function payoutSnapshot(snapshot: Prisma.JsonValue): Payout[] {
 }
 
 export function earnedPayChanges(original: Payout[], revised: Payout[], previouslyCarriedNames: string[] = []) {
+  original = payrollEligibleRows(original);
+  revised = payrollEligibleRows(revised);
+  previouslyCarriedNames = previouslyCarriedNames.filter(isPayrollEmployee);
   const before = new Map(original.map((item) => [keyFor(item.employeeName), item]));
   const after = new Map(revised.map((item) => [keyFor(item.employeeName), item]));
   const carried = new Map(previouslyCarriedNames.map((name) => [keyFor(name), name]));

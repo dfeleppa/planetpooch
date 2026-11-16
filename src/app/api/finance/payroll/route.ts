@@ -1,3 +1,4 @@
+import { isPayrollEmployee, payrollEligibleRows, payrollEmployeeWhere } from "@/lib/payroll-eligibility";
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getSession, isSuperAdmin } from "@/lib/auth-helpers";
@@ -249,6 +250,7 @@ function normalizeMobileGroomingEntries(rawEntries: unknown, weekStart: Date, we
   for (const raw of rawEntries) {
     const entry = raw as MobileGroomingEntryPayload;
     const employeeName = normalizeEmployeeName(String(entry.employeeName ?? ""));
+    if (!isPayrollEmployee(employeeName)) continue;
     if (!employeeName) {
       return { error: "Each mobile grooming entry needs an employee" as const };
     }
@@ -320,7 +322,7 @@ function normalizeRows(rawRows: unknown, business: PayrollBusinessValue) {
   for (const raw of rawRows) {
     const row = raw as PayrollRowPayload;
     const employeeName = normalizeEmployeeName(String(row.employeeName ?? row.name ?? ""));
-    if (!employeeName) continue;
+    if (!employeeName || !isPayrollEmployee(employeeName)) continue;
 
     const totalSeconds = totalSecondsFromRow(row);
     if (totalSeconds === null) {
@@ -387,7 +389,7 @@ function serializeWeek(
 ) {
   if (!week) return null;
 
-  const rows = week.rows.map((row) => ({
+  const rows = payrollEligibleRows(week.rows).map((row) => ({
     id: row.id,
     employeeName: row.employeeName,
     category: row.category,
@@ -413,7 +415,7 @@ function serializeWeek(
   });
 
   const totalSeconds = rows.reduce((sum, row) => sum + row.totalSeconds, 0);
-  const mobileGroomingEntries = week.mobileGroomingEntries.map((entry) => {
+  const mobileGroomingEntries = payrollEligibleRows(week.mobileGroomingEntries).map((entry) => {
     const groomerPayCents = mobileGroomerPayCents(entry);
     const totalPriceCents = entry.priceCents + entry.upgradeCents - entry.discountCents;
     return {
@@ -535,6 +537,7 @@ async function loadAnnualMobileGroomingTotals(
 
   const entries = await prisma.financeMobileGroomingPayrollEntry.findMany({
     where: {
+      ...payrollEmployeeWhere,
       ...(employeeName ? { employeeName } : {}),
       serviceDate: {
         gte: yearStart,
@@ -610,7 +613,7 @@ async function loadWeeklyMobileGroomingTotals(
         },
       },
       mobileGroomingEntries: {
-        where: employeeName ? { employeeName } : undefined,
+        where: { ...payrollEmployeeWhere, ...(employeeName ? { employeeName } : {}) },
         select: {
           paymentType: true,
           dogs: true,
@@ -831,10 +834,10 @@ async function savePayroll(req: NextRequest) {
     });
 
     await tx.financePayrollEmployeeHours.deleteMany({
-      where: { payrollWeekId: savedWeek.id },
+      where: { ...payrollEmployeeWhere, payrollWeekId: savedWeek.id },
     });
     await tx.financeMobileGroomingPayrollEntry.deleteMany({
-      where: { payrollWeekId: savedWeek.id },
+      where: { ...payrollEmployeeWhere, payrollWeekId: savedWeek.id },
     });
     if (!isMoegoMobileImport) {
       await tx.financeMobileGroomingWeeklyOverride.deleteMany({
