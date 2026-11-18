@@ -14,7 +14,7 @@ export function BusinessSelector({ options, showOnModules = false }: { options: 
   const [switching, setSwitching] = useState(false);
   const [error, setError] = useState("");
   const modulePath = ["/admin/modules", "/admin/module-progress", "/admin/audit-log"].some((path) => pathname === path || pathname.startsWith(`${path}/`));
-  if (!showOnModules && !modulePath && (isCompanySidebarPath(pathname) || ["/dashboard", "/modules", "/career", "/knowledge", "/search", "/admin/onboarding"].some((path) => pathname === path || pathname.startsWith(`${path}/`))
+  if (!showOnModules && !modulePath && (isCompanySidebarPath(pathname) || ["/dashboard", "/operations-directory", "/modules", "/career", "/knowledge", "/search", "/admin/onboarding"].some((path) => pathname === path || pathname.startsWith(`${path}/`))
     || pathname === "/cash-management" || pathname.startsWith("/cash-management/")
     || pathname === "/marketing"
     || pathname === "/admin/knowledge"

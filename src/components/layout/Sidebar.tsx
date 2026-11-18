@@ -22,6 +22,7 @@ interface NavItem {
 
 const employeeNav: NavItem[] = [
   { href: "/dashboard", label: "Employee Dashboard", icon: "▣" },
+  { href: "/operations-directory", label: "Operations Directory", icon: "▤" },
 ];
 
 const modulesNavItem: NavItem = { href: "/admin/module-progress", label: "Modules", icon: "❏" };
@@ -256,7 +257,7 @@ export function Sidebar() {
     if (href === "/admin") return pathname === href;
     if (pathname !== href && !pathname.startsWith(href + "/")) return false;
     // Longest-prefix wins: don't highlight /maintenance when on /maintenance/inventory.
-    const candidates = [...nav, ...corporateNav, ...operationsNav, ...marketingNav, ...businessFinanceNav]
+    const candidates = [...employeeNav, ...nav, ...corporateNav, ...operationsNav, ...marketingNav, ...businessFinanceNav]
       .map((n) => n.href)
       .filter((h) => h !== "/dashboard" && h !== "/admin")
       .filter((h) => pathname === h || pathname.startsWith(h + "/"));
@@ -444,20 +445,7 @@ export function Sidebar() {
               </div>
             </>
           )}
-          {!isAdminNav && role !== "FRONT_DESK" && (
-            <div className="flex flex-col gap-px">
-              {employeeNav.map((item) => (
-                <Link key={item.href} href={item.href} title={isCollapsed ? item.label : undefined}
-                  aria-current={isActive(item.href) ? "page" : undefined} className={navItemClass(isActive(item.href))}>
-                  {activeRail(isActive(item.href))}
-                  <span className="text-[14px] w-4 text-center flex-shrink-0" aria-hidden="true">{sidebarIcon(item)}</span>
-                  {!isCollapsed && <span className="truncate">{item.label}</span>}
-                </Link>
-              ))}
-            </div>
-          )}
-          {/* Manager/Admin: Employee View section */}
-          {isManagerOrAbove && (
+          {role && role !== "FRONT_DESK" && (
             <>
               {!isCollapsed ? (
                 <div className="px-2.5 pt-1 text-[10px] font-medium uppercase tracking-[0.08em] text-pp-ink-4">
@@ -470,7 +458,7 @@ export function Sidebar() {
                 {employeeNav.map((item) => {
                   const active = isActive(item.href);
                   return (
-                    <Link key={item.href} href={item.href} title={isCollapsed ? item.label : undefined} className={navItemClass(active)}>
+                    <Link key={item.href} href={item.href} aria-label={item.label} aria-current={active ? "page" : undefined} title={isCollapsed ? item.label : undefined} className={navItemClass(active)}>
                       {activeRail(active)}
                       <span className={cn("text-[14px] w-4 text-center flex-shrink-0", active ? "text-pp-accent" : "text-pp-ink-3")}>
                         {sidebarIcon(item)}

@@ -147,6 +147,7 @@ export const config = {
     "/corporate/:path*",
     "/api/:path*",
     "/dashboard/:path*",
+      "/operations-directory/:path*",
     "/career/:path*",
     "/modules/:path*",
     "/admin/:path*",
