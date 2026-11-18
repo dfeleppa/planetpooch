@@ -33,8 +33,8 @@ function ContactValue({ value, label }: { value: string; label: string }) {
 
 export default async function Directory({ slug }: { slug: string }) {
   const session = await requireAuth();
+  if (!canAccessOperationsDirectory(session.user.id)) notFound();
   const tasks = downtimeLists.some(item => item.slug === slug);
-  if (!tasks && !canAccessOperationsDirectory(session.user.id)) notFound();
   const categories = tasks
     ? downtimeLists.map(({ slug, label, href }) => [slug, label, href + "?company=RESORT"])
     : contactCategories.map(([key, label]) => [key, label, "/operations-directory/" + key]);

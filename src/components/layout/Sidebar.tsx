@@ -173,9 +173,8 @@ export function Sidebar() {
   const { data: session } = useSession();
   const role = session?.user?.role;
   const companies = sidebarBusinesses(session?.user);
-  const resortEmployeeOnly = role === "EMPLOYEE" && session?.user?.company === "RESORT" && !companies.length;
   const showDirectory = canAccessOperationsDirectory(session?.user?.id);
-  const addResortSection = !companies.some(company => company.company === "RESORT") && (resortEmployeeOnly || showDirectory);
+  const addResortSection = !companies.some(company => company.company === "RESORT") && showDirectory;
   const visibleCompanies = addResortSection ? [BUSINESSES[0], ...companies] : companies;
   const canSeeCorporate = canSeeCorporateSidebar(session?.user);
   const jobTitle = session?.user?.jobTitle;
@@ -394,10 +393,7 @@ export function Sidebar() {
                 ? { ...item, label: "Inventory" }
                 : item);
             const limitedResort = company.company === "RESORT" && addResortSection;
-            const resourceItems = company.company === "RESORT" && role !== "FRONT_DESK" ? [
-              ...(!limitedResort || resortEmployeeOnly ? downtimeItems : []),
-              ...(showDirectory ? [directoryItem] : []),
-            ] : [];
+            const resourceItems = company.company === "RESORT" && showDirectory ? [...downtimeItems, directoryItem] : [];
             const items = limitedResort ? resourceItems : [
               ...resourceItems,
               ...companyOperations,

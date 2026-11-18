@@ -78,10 +78,10 @@ test("assigned managers see their own company and employees do not gain HR navig
   }
 });
 
-test("resort employees see both downtime lists under Pet Resort", () => {
+test("unlisted employees cannot see the Pet Resort downtime lists", () => {
   const resort = renderNavigation("RESORT", "EMPLOYEE", "RESORT", "/operations/downtime/staff");
   for (const list of ["staff", "manager"]) {
-    assert.ok(resort.includes('href="/operations/downtime/' + list + '?company=RESORT"'));
+    assert.ok(!resort.includes('href="/operations/downtime/' + list + '?company=RESORT"'));
   }
   assert.ok(!resort.includes('href="/operations-directory?company=RESORT"'));
   assert.ok(!resort.includes('href="/operations-directory"'));
@@ -95,10 +95,14 @@ test("directory navigation uses the seven named accounts across both businesses"
     "cmobzlipg0001lb04a2g895d0", "cmnq79pc100000bgkadvmrdcd", "cmoivpla80001l804n58rp80b",
     "cmobz2cwb0007k0041qnobqcz", "cmoc04tlg000pjr04uz7vvcwq"]) {
     const html = renderNavigation("GROOMING", "EMPLOYEE", "GROOMING", "/operations-directory/utilities", id);
+    assert.ok(html.includes('href="/operations/downtime/staff?company=RESORT"'));
+    assert.ok(html.includes('href="/operations/downtime/manager?company=RESORT"'));
     assert.match(html, /aria-label="Pet Resort: Operations Directory" aria-current="page"/);
     assert.ok(!html.includes('href="/maintenance?company=RESORT"'));
   }
-  assert.ok(!renderNavigation("RESORT", "SUPER_ADMIN").includes('href="/operations-directory'));
+  const unlistedAdmin = renderNavigation("RESORT", "SUPER_ADMIN");
+  assert.ok(!unlistedAdmin.includes('href="/operations-directory'));
+  assert.ok(!unlistedAdmin.includes('href="/operations/downtime/'));
 });
 
 test("business-scoped operations hide the selector while shared Modules and Metrics retain it", () => {
