@@ -1,5 +1,5 @@
 import Directory from "./Directory";
 
 export default function OperationsDirectoryPage() {
-  return <Directory slug="staff-downtime-list" />;
+  return <Directory slug="facility-service-providers" />;
 }

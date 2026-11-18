@@ -2,9 +2,9 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { requireAuth } from "@/lib/auth-helpers";
 
-const categories = [
-  ["staff-downtime-list", "Staff Downtime"],
-  ["manager-downtime-list", "Manager Downtime"],
+import { downtimeLists } from "@/lib/downtime";
+
+const contactCategories = [
   ["facility-service-providers", "Facility Service Providers"],
   ["supply-vendors", "Supply Vendors"],
   ["utilities", "Utilities"],
@@ -32,18 +32,21 @@ function ContactValue({ value, label }: { value: string; label: string }) {
 
 export default async function Directory({ slug }: { slug: string }) {
   await requireAuth();
+  const tasks = downtimeLists.some(item => item.slug === slug);
+  const categories = tasks
+    ? downtimeLists.map(({ slug, label, href }) => [slug, label, href + "?company=RESORT"])
+    : contactCategories.map(([key, label]) => [key, label, "/operations-directory/" + key]);
   if (!categories.some(([key]) => key === slug)) notFound();
   const data = process.env.OPERATIONS_DIRECTORY_CONTENT;
   if (!data) throw new Error("Operations directory content is unavailable");
   const category: Category = JSON.parse(data)[slug];
-  const tasks = category.columns[0] === "Rank";
 
   return (
     <div className="mx-auto max-w-5xl space-y-6 p-4 sm:p-8">
-      <h1 className="text-3xl font-semibold text-pp-ink">Operations Directory</h1>
-      <nav aria-label="Directory categories" className="flex flex-wrap gap-1 rounded-xl border border-pp-line bg-pp-surface-2 p-1">
-        {categories.map(([key, label]) => (
-          <Link key={key} href={`/operations-directory/${key}`} aria-current={key === slug ? "page" : undefined}
+      <h1 className="text-3xl font-semibold text-pp-ink">{tasks ? "Pet Resort Downtime" : "Operations Directory"}</h1>
+      <nav aria-label={tasks ? "Downtime lists" : "Directory categories"} className="flex flex-wrap gap-1 rounded-xl border border-pp-line bg-pp-surface-2 p-1">
+        {categories.map(([key, label, href]) => (
+          <Link key={key} href={href} aria-current={key === slug ? "page" : undefined}
             className={`rounded-lg px-3 py-2 text-sm font-medium focus-visible:outline-2 ${key === slug ? "bg-pp-ink text-white" : "text-pp-ink hover:bg-white"}`}>
             {label}
           </Link>

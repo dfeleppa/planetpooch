@@ -78,6 +78,16 @@ test("assigned managers see their own company and employees do not gain HR navig
   }
 });
 
+test("resort employees see both downtime lists under Pet Resort", () => {
+  const resort = renderNavigation("RESORT", "EMPLOYEE", "RESORT", "/operations/downtime/staff");
+  for (const list of ["staff", "manager"]) {
+    assert.ok(resort.includes('href="/operations/downtime/' + list + '?company=RESORT"'));
+  }
+  assert.ok(!resort.includes('href="/maintenance?company=RESORT"'));
+  assert.ok(!renderNavigation("GROOMING", "EMPLOYEE", "GROOMING").includes('/operations/downtime/'));
+  assert.ok(!renderNavigation("RESORT", "FRONT_DESK", "RESORT").includes('/operations/downtime/'));
+});
+
 test("business-scoped operations hide the selector while shared Modules and Metrics retain it", () => {
   for (const path of ["/maintenance", "/maintenance/checklists", "/maintenance/inventory", "/maintenance/vans",
     "/operations/daycare", "/admin/employees", "/admin/scheduling",
