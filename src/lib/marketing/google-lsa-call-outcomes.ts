@@ -31,8 +31,8 @@ function eventDay(value: Date): string {
 }
 
 /**
- * A Google LSA CSV has call dates, not times. Attribute only events on later
- * New York calendar dates, and give each event to the latest qualifying call.
+ * A Google LSA CSV has call dates, not times. Bookings include the call date. Payments require later
+ * New York calendar dates. Assign each event to the latest qualifying call.
  * Shared-phone MoeGo profiles are linked but excluded from outcomes.
  */
 export function summarizeGoogleLsaCallOutcomes(
@@ -60,11 +60,11 @@ export function summarizeGoogleLsaCallOutcomes(
     candidates.sort((a, b) => b.day.localeCompare(a.day) || b.id.localeCompare(a.id));
   }
 
-  const owner = (customerId: string | null, at: Date | null) => {
+  const owner = (customerId: string | null, at: Date | null, event: "booking" | "payment") => {
     if (!customerId || !at) return null;
     const day = eventDay(at);
     const latest = byCustomer.get(customerId)?.find((call) => call.day <= day);
-    return latest && latest.day < day ? latest.id : null;
+    return latest && (event === "booking" || latest.day < day) ? latest.id : null;
   };
   const booked = new Set<string>();
   const seenAppointments = new Set<string>();
@@ -73,7 +73,7 @@ export function summarizeGoogleLsaCallOutcomes(
     if (seenAppointments.has(appointment.moegoId) || appointment.isDeleted || appointment.noShow ||
         !BOOKED.has(appointment.status ?? "")) continue;
     seenAppointments.add(appointment.moegoId);
-    const callId = owner(appointment.customerMoegoId, appointment.createdTime);
+    const callId = owner(appointment.customerMoegoId, appointment.createdTime, "booking");
     if (!callId) continue;
     booked.add(callId);
     appointmentCount++;
@@ -84,7 +84,7 @@ export function summarizeGoogleLsaCallOutcomes(
   for (const order of orders) {
     if (seenOrders.has(order.moegoId) || !PAID.has(order.status ?? "")) continue;
     seenOrders.add(order.moegoId);
-    const callId = owner(order.customerMoegoId, order.salesDatetime ?? order.completedTime ?? order.createdTime);
+    const callId = owner(order.customerMoegoId, order.salesDatetime ?? order.completedTime ?? order.createdTime, "payment");
     if (callId) {
       netPaidCents += order.paidCents - order.refundedCents;
       customerPayments.push({ customerKey: order.customerMoegoId!, netPaidCents: order.paidCents - order.refundedCents });

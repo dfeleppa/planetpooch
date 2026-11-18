@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import { summarizeGoogleLsaCallOutcomes } from "./google-lsa-call-outcomes";
 
-test("LSA outcomes exclude call-day activity, ambiguous phones, and duplicate events", () => {
+test("LSA bookings include the call date while payments require a later date", () => {
   const calls = [
     { id: "first", leadReceived: "Jan 1, 2026", customer: "(631) 555-0100" },
     { id: "second", leadReceived: "Jan 3, 2026", customer: "6315550100" },
@@ -40,7 +40,7 @@ test("LSA outcomes exclude call-day activity, ambiguous phones, and duplicate ev
     order("ambiguous-profile", "c3", "2026-01-04T15:00:00Z"),
   ];
   assert.deepEqual(summarizeGoogleLsaCallOutcomes(calls, profiles, appointments, orders), {
-    linked: 3, ambiguous: 1, bookedLeads: 2, appointments: 3, netPaidCents: 3_000, conversions: 1, valuePerConversion: 3_000,
+    linked: 3, ambiguous: 1, bookedLeads: 2, appointments: 5, netPaidCents: 3_000, conversions: 1, valuePerConversion: 3_000,
   });
 });
 
@@ -51,7 +51,7 @@ test("New York date cutoff uses UTC timestamps across the evening boundary", () 
     [
       { moegoId: "same-evening", customerMoegoId: "customer", createdTime: new Date("2026-10-20T03:59:00Z"),
         status: "CONFIRMED", isDeleted: false, noShow: false },
-      { moegoId: "next-day", customerMoegoId: "customer", createdTime: new Date("2026-10-20T04:01:00Z"),
+      { moegoId: "before-call-day", customerMoegoId: "customer", createdTime: new Date("2026-10-19T03:59:00Z"),
         status: "CONFIRMED", isDeleted: false, noShow: false },
     ],
     [],
