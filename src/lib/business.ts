@@ -11,7 +11,7 @@ export type BusinessUser = { id: string; role?: string; company?: string | null;
 /** Operations and HR are opened from company-specific sidebar links. */
 export function isCompanySidebarPath(pathname: string): boolean {
   return pathname === "/admin" || [
-    "/maintenance", "/operations", "/admin/employees", "/admin/scheduling",
+    "/maintenance", "/operations", "/operations-directory", "/admin/employees", "/admin/scheduling",
     "/admin/modules", "/admin/module-progress", "/admin/audit-log",
   ].some((path) => pathname === path || pathname.startsWith(`${path}/`));
 }

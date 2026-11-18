@@ -17,8 +17,8 @@ import { proxy } from "../src/proxy";
 // Components use the Next.js JSX transform in production.
 Object.assign(globalThis, { React });
 
-function renderNavigation(company: "RESORT" | "GROOMING", role: Role = "SUPER_ADMIN", assigned: Company = "CORPORATE", path = "/admin/module-progress") {
-  const session: Session = { expires: "2099-01-01", user: { id: "navigation-test", name: "Test", role, company: assigned, jobTitle: null, mustChangePassword: false } };
+function renderNavigation(company: "RESORT" | "GROOMING", role: Role = "SUPER_ADMIN", assigned: Company = "CORPORATE", path = "/admin/module-progress", id = "navigation-test") {
+  const session: Session = { expires: "2099-01-01", user: { id, name: "Test", role, company: assigned, jobTitle: null, mustChangePassword: false } };
   return renderToStaticMarkup(
     <SessionProvider session={session}>
       <PathnameContext.Provider value={path}>
@@ -83,9 +83,22 @@ test("resort employees see both downtime lists under Pet Resort", () => {
   for (const list of ["staff", "manager"]) {
     assert.ok(resort.includes('href="/operations/downtime/' + list + '?company=RESORT"'));
   }
+  assert.ok(!resort.includes('href="/operations-directory?company=RESORT"'));
+  assert.ok(!resort.includes('href="/operations-directory"'));
   assert.ok(!resort.includes('href="/maintenance?company=RESORT"'));
   assert.ok(!renderNavigation("GROOMING", "EMPLOYEE", "GROOMING").includes('/operations/downtime/'));
   assert.ok(!renderNavigation("RESORT", "FRONT_DESK", "RESORT").includes('/operations/downtime/'));
+});
+
+test("directory navigation uses the seven named accounts across both businesses", () => {
+  for (const id of ["cmoc0283w000jjr04200pulk3", "cmoc059wd000rjr04x03j7h19",
+    "cmobzlipg0001lb04a2g895d0", "cmnq79pc100000bgkadvmrdcd", "cmoivpla80001l804n58rp80b",
+    "cmobz2cwb0007k0041qnobqcz", "cmoc04tlg000pjr04uz7vvcwq"]) {
+    const html = renderNavigation("GROOMING", "EMPLOYEE", "GROOMING", "/operations-directory/utilities", id);
+    assert.match(html, /aria-label="Pet Resort: Operations Directory" aria-current="page"/);
+    assert.ok(!html.includes('href="/maintenance?company=RESORT"'));
+  }
+  assert.ok(!renderNavigation("RESORT", "SUPER_ADMIN").includes('href="/operations-directory'));
 });
 
 test("business-scoped operations hide the selector while shared Modules and Metrics retain it", () => {

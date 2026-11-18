@@ -13,6 +13,7 @@ import { isKnowledgeOwner } from "@/lib/knowledge-owner";
 import { hasAskPoochAccess } from "@/lib/knowledge-access";
 import { canEditGroomingCounts } from "@/lib/grooming-inventory-access";
 import { BUSINESSES } from "@/lib/business";
+import { canAccessOperationsDirectory } from "@/lib/operations-directory-access";
 import { downtimeLists } from "@/lib/downtime";
 import { UserMenu } from "./UserMenu";
 
@@ -24,8 +25,10 @@ interface NavItem {
 
 const employeeNav: NavItem[] = [
   { href: "/dashboard", label: "Employee Dashboard", icon: "▣" },
-  { href: "/operations-directory", label: "Operations Directory", icon: "▤" },
 ];
+
+const downtimeItems: NavItem[] = downtimeLists.map(item => ({ ...item, icon: "▤" }));
+const directoryItem: NavItem = { href: "/operations-directory", label: "Operations Directory", icon: "▤" };
 
 const modulesNavItem: NavItem = { href: "/admin/module-progress", label: "Modules", icon: "❏" };
 
@@ -171,7 +174,9 @@ export function Sidebar() {
   const role = session?.user?.role;
   const companies = sidebarBusinesses(session?.user);
   const resortEmployeeOnly = role === "EMPLOYEE" && session?.user?.company === "RESORT" && !companies.length;
-  const visibleCompanies = resortEmployeeOnly ? [BUSINESSES[0]] : companies;
+  const showDirectory = canAccessOperationsDirectory(session?.user?.id);
+  const addResortSection = !companies.some(company => company.company === "RESORT") && (resortEmployeeOnly || showDirectory);
+  const visibleCompanies = addResortSection ? [BUSINESSES[0], ...companies] : companies;
   const canSeeCorporate = canSeeCorporateSidebar(session?.user);
   const jobTitle = session?.user?.jobTitle;
   const isSuperAdmin = role === "SUPER_ADMIN";
@@ -262,7 +267,7 @@ export function Sidebar() {
     if (href === "/admin") return pathname === href;
     if (pathname !== href && !pathname.startsWith(href + "/")) return false;
     // Longest-prefix wins: don't highlight /maintenance when on /maintenance/inventory.
-    const candidates = [...downtimeLists, ...employeeNav, ...nav, ...corporateNav, ...operationsNav, ...marketingNav, ...businessFinanceNav]
+    const candidates = [directoryItem, ...downtimeItems, ...employeeNav, ...nav, ...corporateNav, ...operationsNav, ...marketingNav, ...businessFinanceNav]
       .map((n) => n.href)
       .filter((h) => h !== "/dashboard" && h !== "/admin")
       .filter((h) => pathname === h || pathname.startsWith(h + "/"));
@@ -388,10 +393,13 @@ export function Sidebar() {
               .map((item) => company.company === "GROOMING" && item.href === "/maintenance"
                 ? { ...item, label: "Inventory" }
                 : item);
-            const downtimeItems = company.company === "RESORT" && role !== "FRONT_DESK"
-              ? downtimeLists.map(item => ({ ...item, icon: "▤" })) : [];
-            const items = resortEmployeeOnly ? downtimeItems : [
-              ...downtimeItems,
+            const limitedResort = company.company === "RESORT" && addResortSection;
+            const resourceItems = company.company === "RESORT" && role !== "FRONT_DESK" ? [
+              ...(!limitedResort || resortEmployeeOnly ? downtimeItems : []),
+              ...(showDirectory ? [directoryItem] : []),
+            ] : [];
+            const items = limitedResort ? resourceItems : [
+              ...resourceItems,
               ...companyOperations,
               ...(showGroomingInventory && company.company === "GROOMING"
                 ? [{ href: "/maintenance/inventory", label: "Inventory", icon: "▤" }] : []),
@@ -404,7 +412,7 @@ export function Sidebar() {
                 ) : <div className="mx-1.5 mb-2 h-px bg-pp-line" />}
                 <div className="flex flex-col gap-px">
                   {items.map((item) => {
-                    const active = business.company === company.company && isActive(item.href);
+                    const active = (item.href === directoryItem.href || business.company === company.company) && isActive(item.href);
                     return (
                       // Full navigation resets company-specific forms and cached client state.
                       <a key={item.href} href={`${item.href}?company=${company.company}`}

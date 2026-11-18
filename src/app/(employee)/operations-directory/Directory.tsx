@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { requireAuth } from "@/lib/auth-helpers";
 
+import { canAccessOperationsDirectory } from "@/lib/operations-directory-access";
 import { downtimeLists } from "@/lib/downtime";
 
 const contactCategories = [
@@ -31,8 +32,9 @@ function ContactValue({ value, label }: { value: string; label: string }) {
 }
 
 export default async function Directory({ slug }: { slug: string }) {
-  await requireAuth();
+  const session = await requireAuth();
   const tasks = downtimeLists.some(item => item.slug === slug);
+  if (!tasks && !canAccessOperationsDirectory(session.user.id)) notFound();
   const categories = tasks
     ? downtimeLists.map(({ slug, label, href }) => [slug, label, href + "?company=RESORT"])
     : contactCategories.map(([key, label]) => [key, label, "/operations-directory/" + key]);
