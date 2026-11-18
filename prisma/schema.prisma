@@ -1,3 +1,11 @@
+model CorporateMeetingNote {
+  id          String   @id @default(cuid())
+  meetingDate DateTime @db.Date
+  title       String
+  body        String
+  createdAt   DateTime @default(now())
+}
+
 generator client {
   provider = "prisma-client-js"
 }

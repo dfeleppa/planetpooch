@@ -144,6 +144,7 @@ export async function proxy(req: NextRequest) {
 
 export const config = {
   matcher: [
+    "/corporate/:path*",
     "/api/:path*",
     "/dashboard/:path*",
     "/career/:path*",

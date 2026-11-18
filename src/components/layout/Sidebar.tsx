@@ -177,6 +177,7 @@ export function Sidebar() {
   const isManagerOrAbove = isSuperAdmin || isManager;
   const canManageModules = isSuperAdmin || jobTitle === "CMO";
   const corporateNav: NavItem[] = [
+    { href: "/corporate/meeting-notes", label: "Meeting Notes", icon: "▤" },
     ...(isManagerOrAbove ? [{ href: "/admin/people", label: "People", icon: "" }] : []),
     ...(isSuperAdmin
       ? [
