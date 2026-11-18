@@ -97,7 +97,7 @@ test("directory navigation uses the seven named accounts across both businesses"
     const html = renderNavigation("GROOMING", "EMPLOYEE", "GROOMING", "/operations-directory/utilities", id);
     assert.ok(html.includes('href="/operations/downtime/staff?company=RESORT"'));
     assert.ok(html.includes('href="/operations/downtime/manager?company=RESORT"'));
-    assert.match(html, /aria-label="Pet Resort: Operations Directory" aria-current="page"/);
+    assert.match(html, /aria-label="Pet Resort: Directory" aria-current="page"/);
     assert.ok(!html.includes('href="/maintenance?company=RESORT"'));
   }
   const unlistedAdmin = renderNavigation("RESORT", "SUPER_ADMIN");

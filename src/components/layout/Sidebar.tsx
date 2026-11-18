@@ -28,7 +28,7 @@ const employeeNav: NavItem[] = [
 ];
 
 const downtimeItems: NavItem[] = downtimeLists.map(item => ({ ...item, icon: "▤" }));
-const directoryItem: NavItem = { href: "/operations-directory", label: "Operations Directory", icon: "▤" };
+const directoryItem: NavItem = { href: "/operations-directory", label: "Directory", icon: "▤" };
 
 const modulesNavItem: NavItem = { href: "/admin/module-progress", label: "Modules", icon: "❏" };
 
