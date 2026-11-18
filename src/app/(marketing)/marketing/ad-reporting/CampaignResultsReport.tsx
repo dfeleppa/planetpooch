@@ -37,7 +37,7 @@ type Metric = {
   moegoDataAvailable: boolean; leadsLimited: boolean;
   googleSpendOrigin: "manual" | "csv" | "api" | null;
   googleLsaSpendOrigin: "manual" | "csv" | "api" | null;
-  googleLsaSyncedAt: string | null;
+  googleLsaImportedAt: string | null;
   metaSyncedAt: string | null; moegoSyncedAt: string | null; googleSyncedAt: string | null;
 };
 
@@ -60,6 +60,7 @@ export function CampaignResultsReport({ from, to, source, rangeLabel, outcomes, 
   const query = new URLSearchParams({ from, to, source, ...scope }).toString();
   const [data, setData] = useState<{ query: string; leads: LeadData | null; metric: Metric | null; leadError: boolean; metricError: boolean } | null>(null);
   const [refresh, setRefresh] = useState(0);
+  const [uploadRevision, setUploadRevision] = useState(0);
   const [editing, setEditing] = useState<"google-ads" | null>(null);
   const [amount, setAmount] = useState("");
   const [saveError, setSaveError] = useState("");
@@ -91,7 +92,7 @@ export function CampaignResultsReport({ from, to, source, rangeLabel, outcomes, 
       });
     });
     return () => { cancelled = true; };
-  }, [query, refresh]);
+  }, [query, refresh, uploadRevision]);
 
   const current = data?.query === query ? data : null;
   const leads = current?.leads;
@@ -151,7 +152,7 @@ export function CampaignResultsReport({ from, to, source, rangeLabel, outcomes, 
       </div>
       <div className="flex w-full items-start gap-2 print:hidden">
         <div className="min-w-0 flex-1"><CampaignSyncControls from={from} to={to} isAdmin={outcomes.isAdmin}
-          metaSyncedAt={metric?.metaSyncedAt ?? null} googleSyncedAt={metric?.googleSyncedAt ?? null} googleLsaSyncedAt={metric?.googleLsaSyncedAt ?? null}
+          metaSyncedAt={metric?.metaSyncedAt ?? null} googleSyncedAt={metric?.googleSyncedAt ?? null} googleLsaImportedAt={metric?.googleLsaImportedAt ?? null}
           moegoSyncedAt={outcomes.appointmentUpdatedAt} onUpdated={() => setRefresh((value) => value + 1)} /></div>
         <MarketingPrintButton />
       </div>
@@ -357,7 +358,7 @@ export function CampaignResultsReport({ from, to, source, rangeLabel, outcomes, 
           <h3 className="font-semibold text-gray-900">{business.label}</h3>
           {(source === "all" || source === "meta") && <FacebookCampaignReportTable business={business.key} from={from} to={to} />}
           {(source === "all" || source === "google-ads") && <GoogleCampaignReportTable business={business.key} from={from} to={to} />}
-          {(source === "all" || source === "google-lsa") && <GoogleLsaLeadReportTable key={`${business.key}-${refresh}`} business={business.key} from={from} to={to} />}
+          {(source === "all" || source === "google-lsa") && <GoogleLsaLeadReportTable onImported={() => setUploadRevision(value => value + 1)} key={`${business.key}-${refresh}`} business={business.key} from={from} to={to} />}
         </div>)}
       </div>}
     </details>

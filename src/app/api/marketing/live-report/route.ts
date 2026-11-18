@@ -37,7 +37,7 @@ export async function GET(req: NextRequest) {
 
   const scope = reportScope(Object.fromEntries(req.nextUrl.searchParams));
   const businesses = scope.business === "all" ? ["pet-resort", "mobile-grooming"] : [scope.business];
-  const [meta, metaSpendCampaigns, orderCursor, customerCursor, lsaBackfills, latestOrder, google, lsa, manualSpend, googleRows, googleWindow, lsaWindows] = await Promise.all([
+  const [meta, metaSpendCampaigns, orderCursor, customerCursor, lsaBackfills, latestOrder, google, lsa, manualSpend, googleRows, googleWindow, lsaWindows, latestLsaUpload] = await Promise.all([
     getMetaPeriodMetrics(scope.business, from, toExclusive),
     source === "all" || source === "meta" ? getMetaSpendBreakdown(from, toExclusive, scope.business) : Promise.resolve([]),
     prisma.moegoSyncState.findUnique({ where: { resource: "order" }, select: { lastSyncedAt: true } }),
@@ -62,6 +62,10 @@ export async function GET(req: NextRequest) {
     }),
     prisma.googleAdsSyncWindow.findUnique({ where: { from_to: { from, to } }, select: { syncedAt: true } }),
     prisma.googleLsaSyncWindow.findMany({ where: { business: { in: businesses }, from, to }, select: { business: true, spendCents: true, syncedAt: true } }),
+    prisma.financeGoogleLsaLeadReportRow.aggregate({
+      where: scope.business === "all" ? {} : { business: { in: [scope.business, `${scope.business}-manual`] } },
+      _max: { createdAt: true },
+    }),
   ]);
   const manualGoogle = scope.business === "all" ? manualSpend.find((item) => item.source === "google-ads") : undefined;
   const lsaComplete = businesses.every(business => lsaWindows.some(row => row.business === business));
@@ -121,7 +125,7 @@ export async function GET(req: NextRequest) {
       moegoDataAvailable: orderDataAvailable,
       googleImportedAt: google._max.updatedAt ?? googleWindow?.syncedAt ?? null,
       googleSyncedAt: googleWindow?.syncedAt ?? null,
-      googleLsaImportedAt: lsaImportedAt,
+      googleLsaImportedAt: latestLsaUpload._max.createdAt,
     },
   });
 }

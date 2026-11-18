@@ -20,10 +20,10 @@ async function jsonRequest(url: string, options?: RequestInit) {
   return result;
 }
 
-export function CampaignSyncControls({ from, to, isAdmin, metaSyncedAt, googleSyncedAt, googleLsaSyncedAt = null, moegoSyncedAt, onUpdated = () => {}, metaOnly = false, moegoOnly = false }: {
+export function CampaignSyncControls({ from, to, isAdmin, metaSyncedAt, googleSyncedAt, googleLsaImportedAt = null, moegoSyncedAt, onUpdated = () => {}, metaOnly = false, moegoOnly = false }: {
   from: string; to: string; isAdmin: boolean;
   metaSyncedAt: string | null; googleSyncedAt: string | null; moegoSyncedAt: string | null;
-  googleLsaSyncedAt?: string | null;
+  googleLsaImportedAt?: string | null;
   onUpdated?: () => void; metaOnly?: boolean; moegoOnly?: boolean;
 }) {
   const router = useRouter();
@@ -159,7 +159,7 @@ export function CampaignSyncControls({ from, to, isAdmin, metaSyncedAt, googleSy
         {isAdmin && <a href="/finance/moego" className="px-3 py-2 text-sm text-blue-700 underline">Refresh MoeGo orders in Finance</a>}
       </div></details>}
     </div>
-    <p className="mt-1 text-xs text-gray-500">Last updated (ET) · Meta: {dateTime(metaSyncedAt)} {!metaOnly && <> · Google Ads: {dateTime(googleSyncedAt)} · Google LSA: {dateTime(googleLsaSyncedAt)} · MoeGo appointments: {dateTime(moegoSyncedAt)}</>}</p>
+    <p className="mt-1 text-xs text-gray-500">Last updated (ET) · Meta: {dateTime(metaSyncedAt)} {!metaOnly && <> · Google Ads: {dateTime(googleSyncedAt)} · Google LSA CSV upload: {dateTime(googleLsaImportedAt)} · MoeGo appointments: {dateTime(moegoSyncedAt)}</>}</p>
     {status && <p role="status" className="mt-1 text-xs text-gray-700">{status}</p>}
     {campaigns?.some((campaign) => !campaign.business) && <div className="mt-2 rounded-lg border border-gray-200 bg-white p-3">
       <p className="mb-2 text-sm font-medium">Assign each campaign, then update its Google source again.</p>

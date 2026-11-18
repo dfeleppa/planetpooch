@@ -49,10 +49,12 @@ function formatMoney(value: number | null): string {
 }
 
 export function GoogleLsaLeadReportTable({
+  onImported,
   business,
   from,
   to,
 }: {
+  onImported?: () => void;
   business: string;
   from: string;
   to: string;
@@ -143,6 +145,7 @@ export function GoogleLsaLeadReportTable({
       };
       if (!response.ok) throw new Error(json.error ?? "Unable to import Google LSA leads.");
       const imported = Array.isArray(json.rows) ? json.rows.length : 0;
+      onImported?.();
       await loadRows();
       setMessage(`${imported.toLocaleString("en-US")} Google LSA leads imported.`);
       setFileName("");
