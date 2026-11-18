@@ -3,7 +3,7 @@
 import { readApiResponse } from "@/lib/api-response";
 import { csvUploadError, MAX_LSA_CSV_BYTES } from "@/lib/csv-upload";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Card } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 
@@ -48,17 +48,19 @@ function formatMoney(value: number | null): string {
   });
 }
 
-export function GoogleLsaLeadReportTable({
-  onImported,
-  business,
-  from,
-  to,
-}: {
+type ReportProps = {
   onImported?: () => void;
   business: string;
   from: string;
   to: string;
-}) {
+};
+
+export function GoogleLsaLeadReportTable(props: ReportProps) {
+  const query = new URLSearchParams({ business: props.business || "all-businesses", from: props.from, to: props.to }).toString();
+  return <LsaReport key={query} {...props} query={query} />;
+}
+
+function LsaReport({ business, from, to, onImported, query }: ReportProps & { query: string }) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [rows, setRows] = useState<GoogleLsaLeadRow[]>([]);
   const [actualSpendCents, setActualSpendCents] = useState<number | null>(null);
@@ -70,37 +72,39 @@ export function GoogleLsaLeadReportTable({
   const [error, setError] = useState<string | null>(null);
   const businessKey = business || "all-businesses";
 
-  const loadRows = useCallback(async () => {
-    setLoaded(false);
-    setError(null);
-    const params = new URLSearchParams({ business: businessKey, from, to });
-
-    try {
-      const response = await fetch(
-        `/api/finance/google-lsa-lead-report?${params.toString()}`
-      );
-      const json = (await readApiResponse(response)) as {
-        rows?: GoogleLsaLeadRow[];
-        actualSpendCents?: number | null;
-        error?: string;
-      };
-      if (!response.ok) throw new Error(json.error ?? "Unable to load Google LSA leads.");
-      setRows(Array.isArray(json.rows) ? json.rows : []);
-      setActualSpendCents(json.actualSpendCents ?? null);
-      setPage(0);
-    } catch (loadError) {
-      setRows([]);
-      setError(
-        loadError instanceof Error ? loadError.message : "Unable to load Google LSA leads."
-      );
-    } finally {
-      setLoaded(true);
-    }
-  }, [businessKey, from, to]);
+  const [revision, setRevision] = useState(0);
 
   useEffect(() => {
-    loadRows();
-  }, [loadRows]);
+    const controller = new AbortController();
+    async function loadRows() {
+      try {
+        const response = await fetch(
+          `/api/finance/google-lsa-lead-report?${query}`, { signal: controller.signal }
+        );
+        const json = (await readApiResponse(response)) as {
+          rows?: GoogleLsaLeadRow[];
+          actualSpendCents?: number | null;
+          error?: string;
+        };
+        if (!response.ok) throw new Error(json.error ?? "Unable to load Google LSA leads.");
+        if (controller.signal.aborted) return;
+        setRows(Array.isArray(json.rows) ? json.rows : []);
+        setActualSpendCents(json.actualSpendCents ?? null);
+        setPage(0);
+      } catch (loadError) {
+        if (controller.signal.aborted) return;
+        setRows([]);
+        setActualSpendCents(null);
+        setError(
+          loadError instanceof Error ? loadError.message : "Unable to load Google LSA leads."
+        );
+      } finally {
+        if (!controller.signal.aborted) setLoaded(true);
+      }
+    }
+    void loadRows();
+    return () => controller.abort();
+  }, [query, revision]);
 
   const pageCount = Math.max(1, Math.ceil(rows.length / ROWS_PER_PAGE));
   const currentPage = Math.min(page, pageCount - 1);
@@ -146,7 +150,8 @@ export function GoogleLsaLeadReportTable({
       if (!response.ok) throw new Error(json.error ?? "Unable to import Google LSA leads.");
       const imported = Array.isArray(json.rows) ? json.rows.length : 0;
       onImported?.();
-      await loadRows();
+      setLoaded(false);
+      setRevision(value => value + 1);
       setMessage(`${imported.toLocaleString("en-US")} Google LSA leads imported.`);
       setFileName("");
       if (fileInputRef.current) fileInputRef.current.value = "";
