@@ -148,14 +148,28 @@ export function coverageRows(shifts: ScheduleShift[]): CoverageRow[] {
   }));
 }
 
-export function employeeLabels(shifts: ScheduleShift[]): Map<string, string> {
+/** Sorted in key order, with a unique, repeatable code for each name in the week. */
+export function employeeKey(shifts: ScheduleShift[]) {
   const names = [...new Set(shifts.map(shift => shift.employee))];
-  return new Map(names.map(name => {
-    const parts = name.trim().split(/\s+/);
-    const [last, first] = name.includes(",")
-      ? name.split(",").map(part => part.trim())
-      : [parts.length > 1 ? parts[parts.length - 1] : "", parts[0]];
-    const given = first?.split(/\s+/)[0] || name;
-    return [name, last ? `${given} ${last[0]}.` : given];
-  }));
+  const entries = names.map(name => {
+    const [family, given] = name.trim().split(",").map(part => part.trim());
+    const fullName = given ? `${given} ${family}` : name.trim();
+    const words = fullName.split(/\s+/);
+    const last = given ? family : words.length > 1 ? words[words.length - 1] : "";
+    const initials = (words[0].charAt(0) + last.charAt(0)).toUpperCase();
+    return { name, fullName, initials };
+  }).sort((a, b) => a.initials.localeCompare(b.initials) || a.fullName.localeCompare(b.fullName) || a.name.localeCompare(b.name));
+  const labels = new Map<string, { fullName: string; initials: string }>();
+  let occurrence = 0;
+  entries.forEach(({ name, fullName, initials }, index) => {
+    occurrence = entries[index - 1]?.initials === initials ? occurrence + 1 : 1;
+    const shared = occurrence > 1 || entries[index + 1]?.initials === initials;
+    labels.set(name, { fullName, initials: shared ? initials + occurrence : initials });
+  });
+  return labels;
+}
+
+export function coverageGroupLabel({ role, employees }: CoverageGroup): string {
+  if (!role) return `${employees.length} on duty`;
+  return `${role === "Management" ? "Mgmt" : role} · ${employees.length}`;
 }

@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
-import { clockLabel, coverageGroups, coverageRows, employeeLabels, inputTime, type ScheduleShift, type WeeklySchedule } from "@/lib/schedule-formatter";
+import { clockLabel, coverageGroupLabel, coverageGroups, coverageRows, employeeKey, inputTime, type ScheduleShift, type WeeklySchedule } from "@/lib/schedule-formatter";
 import { scheduleWeekStart, type SavedScheduleSummary, type ScheduleStorageResponse } from "@/lib/schedule-storage";
 
 export function ScheduleFormatter() {
@@ -19,7 +19,7 @@ export function ScheduleFormatter() {
   const [dirty, setDirty] = useState(false);
   const [savedAt, setSavedAt] = useState("");
   const [loadFailed, setLoadFailed] = useState(false);
-  const labels = employeeLabels(schedule?.shifts ?? []);
+  const key = employeeKey(schedule?.shifts ?? []);
   let validation = "";
   let rows: ReturnType<typeof coverageRows> = [];
   try { rows = coverageRows(schedule?.shifts ?? []); }
@@ -106,8 +106,8 @@ export function ScheduleFormatter() {
   }
 
   return (
-    <div className="mt-6 space-y-6">
-      <section className="rounded-xl border border-pp-line bg-white p-5" aria-labelledby="saved-schedules-heading">
+    <div className="mt-6 space-y-6 print:mt-0 print:space-y-1">
+      <section className="rounded-xl border border-pp-line bg-white p-5 print:hidden" aria-labelledby="saved-schedules-heading">
         <h2 id="saved-schedules-heading" className="font-semibold">Saved schedules</h2>
         <p className="mt-1 mb-3 text-sm text-gray-500">Uploads save automatically for their printed week and are shared across devices. Save changes after editing a shift.</p>
         {weeks.length > 0 && <>
@@ -138,10 +138,10 @@ export function ScheduleFormatter() {
           <h2 className="font-semibold">Check these details in the source</h2>
           <ul className="mt-2 list-disc space-y-1 pl-5">{schedule.warnings.map(warning => <li key={warning}>{warning}</li>)}</ul>
         </section>}
-        <section className="rounded-xl border border-pp-line bg-white p-5" aria-labelledby="review-shifts-heading">
+        <section className="rounded-xl border border-pp-line bg-white p-5 print:border-0 print:p-0" aria-labelledby="review-shifts-heading">
           <h2 id="review-shifts-heading" className="font-semibold">{schedule.title || "Weekly schedule"}</h2>
           <p className="mt-1 text-sm text-gray-500">{schedule.shifts.length} working shifts · {new Set(schedule.shifts.map(shift => shift.employee)).size} employees · {(schedule.shifts.reduce((sum, shift) => sum + shift.end - shift.start, 0) / 60).toFixed(2)} scheduled hours</p>
-          <details className="mt-4">
+          <details className="mt-4 print:hidden">
             <summary className="cursor-pointer text-sm font-semibold">Review or correct extracted shifts</summary>
             <fieldset disabled={exporting || saving || loading || busy}>
             <div className="mt-3 max-h-[450px] overflow-auto">
@@ -162,27 +162,27 @@ export function ScheduleFormatter() {
           {validation && <p role="alert" className="mt-4 text-sm text-red-700">{validation}</p>}
         </section>
         {rows.length > 0 && <section aria-labelledby="coverage-heading">
-          <div className="mb-3 flex flex-wrap items-center justify-between gap-4">
+          <div className="mb-3 flex flex-wrap items-center justify-between gap-4 print:hidden">
             <div><h2 id="coverage-heading" className="font-semibold">Staffing by hour</h2><p className="text-sm text-gray-500">One landscape page, using larger paper when needed for readability.</p></div>
             <Button type="button" disabled={!reviewed || exporting || busy || loading || saving || !!validation} onClick={() => void download()}>{exporting ? "Creating PDF…" : "Download landscape PDF"}</Button>
           </div>
-          <label className="mb-4 flex items-start gap-2 text-sm"><input type="checkbox" className="mt-0.5" checked={reviewed} onChange={event => setReviewed(event.target.checked)} />I checked the shifts, dates, and review notes against the source schedule.</label>
-          <div className="overflow-x-auto rounded-xl border border-pp-line bg-white">
-            <table className="w-full min-w-[1050px] text-left text-xs">
+          <label className="mb-4 flex items-start gap-2 text-sm print:hidden"><input type="checkbox" className="mt-0.5" checked={reviewed} onChange={event => setReviewed(event.target.checked)} />I checked the shifts, dates, and review notes against the source schedule.</label>
+          <div className="overflow-x-auto rounded-xl border border-pp-line bg-white print:overflow-visible print:rounded-none">
+            <table className="w-full min-w-[840px] table-fixed text-left text-xs print:min-w-0 print:text-[7pt] print:leading-tight print:[&_td]:p-[2pt] print:[&_th]:p-[2pt]">
               <caption className="sr-only">Weekly staffing coverage with employee count in every time interval</caption>
               <thead><tr className="bg-pp-mint/40"><th scope="col" className="w-36 p-3">Time</th>{schedule.days.map(day => <th key={day} scope="col" className="p-3">{day}</th>)}</tr></thead>
               {rows.map(row => {
                 const days = coverageGroups(row, schedule.days);
                 const bands = Math.max(...days.map(groups => groups.length));
-                return <tbody key={row.start} className="border-t border-pp-line even:bg-gray-50">
+                return <tbody key={row.start} className="border-t border-pp-line even:bg-gray-50 print:break-inside-avoid">
                   {Array.from({ length: bands }, (_, band) => <tr key={band}>
                     {band === 0 && <th scope="rowgroup" rowSpan={bands} className="whitespace-nowrap p-3 align-top font-medium">{clockLabel(row.start)} – {clockLabel(row.end)}</th>}
                     {days.map((groups, day) => {
                       const group = groups[band];
                       if (!group) return null;
                       return <td key={day} rowSpan={groups.length === 1 ? bands : 1} className={`border-l border-pp-line px-3 py-2 align-top ${band ? "border-t" : ""}`}>
-                        <span className="block font-semibold">{group.role ? `${group.role} · ${group.employees.length}` : `${group.employees.length} on duty`}</span>
-                        <span className="text-gray-600">{group.employees.map(name => labels.get(name) ?? name).join("; ") || "—"}</span>
+                        <span className="mr-1.5 inline-block font-semibold">{coverageGroupLabel(group)}</span>{" "}
+                        <span className="text-gray-600">{group.employees.map(name => key.get(name)?.initials).join(", ") || "—"}</span>
                       </td>;
                     })}
                   </tr>)}
@@ -190,6 +190,14 @@ export function ScheduleFormatter() {
               })}
             </table>
           </div>
+          <section aria-labelledby="employee-key-heading" className="mt-3 print:mt-1 print:break-inside-avoid">
+            <h3 id="employee-key-heading" className="text-sm font-semibold">Employee key</h3>
+            <dl className="mt-1 flex flex-wrap gap-x-5 gap-y-1 text-xs print:gap-x-3 print:gap-y-0 print:text-[7pt]">
+              {[...key.values()].map(({ initials, fullName }) => <div key={initials} className="flex gap-1.5">
+                <dt className="font-semibold">{initials}</dt><dd>{fullName}</dd>
+              </div>)}
+            </dl>
+          </section>
         </section>}
       </>}
     </div>

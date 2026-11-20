@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { coverageGroups, coverageRows, employeeLabels, parseSchedule, validateShifts, type SchedulePage, type ScheduleShift } from "../src/lib/schedule-formatter";
+import { coverageGroups, coverageRows, employeeKey, parseSchedule, validateShifts, type SchedulePage, type ScheduleShift } from "../src/lib/schedule-formatter";
 import { buildSchedulePdf } from "../src/lib/schedule-pdf";
 import { PDFDocument } from "pdf-lib";
 
@@ -75,12 +75,15 @@ test("unreadable pages, multiple weeks, and duplicate repeated pages fail instea
   assert.equal(parseSchedule([source(), { width: 800, height: 600, items: [{ text: "2/2", x: 750, y: 16, width: 20, height: 8 }] }]).shifts.length, 2);
 });
 
-test("staffing labels consistently use first name and last initial", () => {
-  const labels = employeeLabels([shift("Riccobono, Maxine A", 360, 480), shift("Smith, Alex", 360, 480), shift("Stone, Alex", 360, 480), shift("Sam Jones", 360, 480)]);
-  assert.equal(labels.get("Riccobono, Maxine A"), "Maxine R.");
-  assert.equal(labels.get("Smith, Alex"), "Alex S.");
-  assert.equal(labels.get("Stone, Alex"), "Alex S.");
-  assert.equal(labels.get("Sam Jones"), "Sam J.");
+test("the employee key gives duplicate initials distinct codes independent of shift order", () => {
+  const shifts = ["Riccobono, Maxine A", "Smith, Alex", "Stone, Alex", "Sam Jones", "Kim", "Smith, Alex"].map(name => shift(name, 360, 480));
+  const key = employeeKey(shifts);
+  assert.deepEqual([...employeeKey(shifts.reverse())], [...key]);
+  assert.deepEqual([...key.values()], [
+    { initials: "AS1", fullName: "Alex Smith" }, { initials: "AS2", fullName: "Alex Stone" },
+    { initials: "K", fullName: "Kim" }, { initials: "MR", fullName: "Maxine A Riccobono" },
+    { initials: "SJ", fullName: "Sam Jones" },
+  ]);
 });
 
 test("PDF has exactly one landscape page, and excessive detail is rejected", async () => {
