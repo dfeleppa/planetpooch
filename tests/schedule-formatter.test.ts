@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { coverageRows, employeeLabels, parseSchedule, validateShifts, type SchedulePage, type ScheduleShift } from "../src/lib/schedule-formatter";
+import { coverageGroups, coverageRows, employeeLabels, parseSchedule, validateShifts, type SchedulePage, type ScheduleShift } from "../src/lib/schedule-formatter";
 import { buildSchedulePdf } from "../src/lib/schedule-pdf";
 import { PDFDocument } from "pdf-lib";
 
@@ -26,7 +26,7 @@ test("ADP cells preserve blank days, wrapped names, exact times and nonworking a
   assert.equal(schedule.warnings.length, 2);
 });
 
-test("coverage splits only at hour boundaries and actual shift transitions, with exclusive ends", () => {
+test("coverage preserves exact shift transitions and exclusive ends", () => {
   const rows = coverageRows([shift("One, Alex", 360, 450), shift("Two, Sam", 450, 510), shift("Three, Pat", 459, 480, 1)]);
   assert.deepEqual(rows.map(row => [row.start, row.end]), [[360, 420], [420, 450], [450, 459], [459, 480], [480, 510]]);
   assert.deepEqual(rows[2].employees[0], ["Two, Sam"]);
@@ -35,6 +35,22 @@ test("coverage splits only at hour boundaries and actual shift transitions, with
   assert.equal(rows[4].employees[1].length, 0);
   // Coverage integral must equal all scheduled labor minutes.
   assert.equal(rows.reduce((total, row) => total + row.employees.reduce((sum, people) => sum + people.length * (row.end - row.start), 0), 0), 171);
+});
+
+test("management and staff split at 7:30 Monday through Saturday and rejoin at 7 PM", () => {
+  const days = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+  const managers = ["Derek Wolpert", "Salvoni, Kimberly N", "Silva-freeman,Shyanna", "Kim"];
+  const rows = coverageRows([...managers, "Derek Smith"].map(name => shift(name, 420, 1200, 6)));
+  const groupsAt = (start: number) => coverageGroups(rows.find(row => row.start === start)!, days);
+  assert.equal(groupsAt(420)[6].length, 1);
+  assert.equal(groupsAt(450)[0].length, 1);
+  assert.deepEqual(groupsAt(450)[1], [{ role: "Management", employees: [] }, { role: "Staff", employees: [] }]);
+  for (const start of [450, 1080]) {
+    const [management, staff] = groupsAt(start)[6];
+    assert.deepEqual(new Set(management.employees), new Set(managers));
+    assert.deepEqual(staff.employees, ["Derek Smith"]);
+  }
+  assert.equal(groupsAt(1140)[6].length, 1);
 });
 
 test("duplicate, overlapping, zero-length, and cross-week shifts are rejected", () => {

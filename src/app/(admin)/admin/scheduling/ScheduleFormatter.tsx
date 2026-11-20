@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
-import { clockLabel, coverageRows, employeeLabels, inputTime, type ScheduleShift, type WeeklySchedule } from "@/lib/schedule-formatter";
+import { clockLabel, coverageGroups, coverageRows, employeeLabels, inputTime, type ScheduleShift, type WeeklySchedule } from "@/lib/schedule-formatter";
 import { scheduleWeekStart, type SavedScheduleSummary, type ScheduleStorageResponse } from "@/lib/schedule-storage";
 
 export function ScheduleFormatter() {
@@ -171,10 +171,23 @@ export function ScheduleFormatter() {
             <table className="w-full min-w-[1050px] text-left text-xs">
               <caption className="sr-only">Weekly staffing coverage with employee count in every time interval</caption>
               <thead><tr className="bg-pp-mint/40"><th scope="col" className="w-36 p-3">Time</th>{schedule.days.map(day => <th key={day} scope="col" className="p-3">{day}</th>)}</tr></thead>
-              <tbody>{rows.map(row => <tr key={row.start} className="border-t border-pp-line even:bg-gray-50">
-                <th scope="row" className="whitespace-nowrap p-3 align-top font-medium">{clockLabel(row.start)} – {clockLabel(row.end)}</th>
-                {row.employees.map((employees, day) => <td key={day} className="border-l border-pp-line p-3 align-top"><span className="mb-1 block font-semibold">{employees.length} on duty</span><span className="text-gray-600">{employees.map(name => labels.get(name) ?? name).join("; ") || "—"}</span></td>)}
-              </tr>)}</tbody>
+              {rows.map(row => {
+                const days = coverageGroups(row, schedule.days);
+                const bands = Math.max(...days.map(groups => groups.length));
+                return <tbody key={row.start} className="border-t border-pp-line even:bg-gray-50">
+                  {Array.from({ length: bands }, (_, band) => <tr key={band}>
+                    {band === 0 && <th scope="rowgroup" rowSpan={bands} className="whitespace-nowrap p-3 align-top font-medium">{clockLabel(row.start)} – {clockLabel(row.end)}</th>}
+                    {days.map((groups, day) => {
+                      const group = groups[band];
+                      if (!group) return null;
+                      return <td key={day} rowSpan={groups.length === 1 ? bands : 1} className={`border-l border-pp-line px-3 py-2 align-top ${band ? "border-t" : ""}`}>
+                        <span className="block font-semibold">{group.role ? `${group.role} · ${group.employees.length}` : `${group.employees.length} on duty`}</span>
+                        <span className="text-gray-600">{group.employees.map(name => labels.get(name) ?? name).join("; ") || "—"}</span>
+                      </td>;
+                    })}
+                  </tr>)}
+                </tbody>;
+              })}
             </table>
           </div>
         </section>}

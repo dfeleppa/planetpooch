@@ -3,6 +3,34 @@ export type SchedulePage = { items: ScheduleText[]; width: number; height: numbe
 export type ScheduleShift = { id: string; employee: string; day: number; start: number; end: number };
 export type WeeklySchedule = { title: string; days: string[]; shifts: ScheduleShift[]; warnings: string[] };
 export type CoverageRow = { start: number; end: number; employees: string[][] };
+export type CoverageGroup = { role: "Management" | "Staff" | null; employees: string[] };
+
+const managementStart = 7 * 60 + 30;
+const managementEnd = 19 * 60;
+const managerSurnames = new Map([
+  ["derek", "wolpert"], ["kim", "salvoni"], ["kimberly", "salvoni"], ["shyanna", "silvafreeman"],
+]);
+
+function isResortManager(name: string): boolean {
+  const [last, given] = name.toLowerCase().trim().split(",").map(part => part.trim());
+  const words = (given === undefined ? last : given).split(/\s+/);
+  const surname = (given === undefined ? words.at(-1) : last)?.replace(/[^a-z]/g, "");
+  const expected = managerSurnames.get(words[0]);
+  return expected !== undefined && (
+    (given === undefined && words.length === 1) || surname === expected || surname === expected[0]
+  );
+}
+
+export function coverageGroups(row: CoverageRow, days: string[]): CoverageGroup[][] {
+  return row.employees.map((employees, day) => {
+    if (/^sun/i.test(days[day]) || row.start < managementStart || row.end > managementEnd) {
+      return [{ role: null, employees }];
+    }
+    const managers: string[] = [], staff: string[] = [];
+    for (const name of employees) (isResortManager(name) ? managers : staff).push(name);
+    return [{ role: "Management", employees: managers }, { role: "Staff", employees: staff }];
+  });
+}
 
 const DAY = /^(Sun|Mon|Tue|Wed|Thu|Fri|Sat)(?:day)?\s+\d{1,2}$/i;
 const RANGE = /(\d{1,2}:\d{2}\s*[AP]M)\s*[-–—]\s*(\d{1,2}:\d{2}\s*[AP]M)/gi;
@@ -111,6 +139,7 @@ export function coverageRows(shifts: ScheduleShift[]): CoverageRow[] {
   const first = Math.min(...segments.map(shift => shift.start));
   const last = Math.max(...segments.map(shift => shift.end));
   const boundaries = new Set<number>([first, last]);
+  if (first < managementStart && managementStart < last) boundaries.add(managementStart);
   for (let t = Math.ceil(first / 60) * 60; t < last; t += 60) boundaries.add(t);
   for (const shift of segments) { boundaries.add(shift.start); boundaries.add(shift.end); }
   const times = [...boundaries].sort((a, b) => a - b);
